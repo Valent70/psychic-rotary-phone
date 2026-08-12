@@ -1,0 +1,5 @@
+gate: knowledge_evolution
+command: go test ./pkg/governance/knowledge/
+exit: 0
+---
+ok  	veriqo/pkg/governance/knowledge	(cached)

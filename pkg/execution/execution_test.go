@@ -1,0 +1,473 @@
+package execution
+
+import (
+	"errors"
+	"testing"
+
+	"veriqo/pkg/canonical"
+	"veriqo/pkg/explanation"
+	"veriqo/pkg/governance/knowledge"
+	"veriqo/pkg/governance/lifecycle"
+	"veriqo/pkg/moat/decision"
+	"veriqo/pkg/moat/digitaltwin"
+	"veriqo/pkg/moat/economic"
+	"veriqo/pkg/moat/evidencegraph"
+	"veriqo/pkg/moat/fusion"
+	"veriqo/pkg/moat/intelligence/risk"
+)
+
+func caseInput() canonical.CaseInput {
+	return canonical.CaseInput{
+		Entity: digitaltwin.EntityID("IMO9999999"), Subject: "IMO9999999", Predicate: "port_call",
+		Submissions: []canonical.SourceSubmission{
+			{SourceID: fusion.SourceID("ais-vendor-a"), Value: "singapore",
+				BaseReliability: 0.8, Provider: "sat-x", UpstreamID: "feed-sat-x"},
+			{SourceID: fusion.SourceID("ais-vendor-b"), Value: "singapore",
+				BaseReliability: 0.8, Provider: "sat-x", UpstreamID: "feed-sat-x"},
+			{SourceID: fusion.SourceID("port-authority"), Value: "singapore",
+				BaseReliability: 0.9, Provider: "port", UpstreamID: "feed-port"},
+			{SourceID: fusion.SourceID("broker-report"), Value: "jakarta",
+				BaseReliability: 0.5, Provider: "broker",
+				Dependencies: []evidencegraph.DependencyRecord{
+					{UpstreamID: evidencegraph.NodeID("model-detector-v3"),
+						Kind: evidencegraph.DependsOnTransformation, Confidence: 0.6},
+				}},
+		},
+		Policy:           risk.DefaultPolicy(),
+		PatternScore:     0.7,
+		PriceAnomaly:     0.9,
+		EconomicChannels: map[string]float64{"freight": 1_000_000, "insurance": 250_000},
+		Tick:             42,
+	}
+}
+
+func ctx() Context {
+	return Context{ExecutionID: "exec-1", CaseID: "case-1", Tenant: "acme", Actor: "analyst",
+		PolicyVersion: "sanctions-screen@3", EvidencePackageID: "evp-1",
+		IdentityResolutionVersion: "ident@2", LedgerPosition: 0, Tick: 42,
+		ReplayMetadata: "unit-test"}
+}
+
+func scenarios() []economic.Scenario {
+	return []economic.Scenario{
+		{ID: "clean", Probability: 0.9, Outcome: 50_000, EvidenceRefs: []string{"e1"}},
+		{ID: "detained", Probability: 0.08, Outcome: -400_000, EvidenceRefs: []string{"e2"}},
+		{ID: "sanctioned", Probability: 0.02, Outcome: -5_000_000, EvidenceRefs: []string{"e3"}},
+	}
+}
+
+func run(t *testing.T) (*Engine, *Result) {
+	t.Helper()
+	e := NewEngine(nil)
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	return e, res
+}
+
+func TestTopologicalOrderIsDeterministicAndComplete(t *testing.T) {
+	first, err := topoOrder()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != len(graph) {
+		t.Fatalf("every stage must be ordered, got %d of %d", len(first), len(graph))
+	}
+	for i := 0; i < 50; i++ {
+		again, _ := topoOrder()
+		for j := range first {
+			if first[j] != again[j] {
+				t.Fatal("topological order must be deterministic across runs")
+			}
+		}
+	}
+	pos := map[StageID]int{}
+	for i, id := range first {
+		pos[id] = i
+	}
+	for _, g := range graph {
+		for _, d := range g.deps {
+			if pos[d] >= pos[g.id] {
+				t.Fatalf("%s must be ordered before %s", d, g.id)
+			}
+		}
+	}
+}
+
+func TestOneExecutionProducesEveryRequiredArtifact(t *testing.T) {
+	_, res := run(t)
+	if len(res.Trace.Nodes) != len(graph) {
+		t.Fatalf("the trace must cover every stage, got %d", len(res.Trace.Nodes))
+	}
+	if res.ExecutionRootHash == "" || res.Trace.ContextHash == "" {
+		t.Fatal("execution root and context hash are mandatory")
+	}
+	if res.Decision == "" {
+		t.Fatal("a decision is mandatory")
+	}
+	if res.Explanation.Hash == "" {
+		t.Fatal("a consolidated decision explanation is mandatory")
+	}
+	if res.ReplayPackage.ReplayPackageID == "" {
+		t.Fatal("a replay package is mandatory")
+	}
+	if res.Certificate.VerificationCertificateID == "" {
+		t.Fatal("a verification certificate is mandatory")
+	}
+	if !res.Certificate.Match {
+		t.Fatalf("the in-run independent replay must match, diverged at %s",
+			res.Certificate.DivergedStage)
+	}
+	if res.Economic.Hash == "" || res.Economic.CVaR < res.Economic.VaR {
+		t.Fatalf("economic consequence must be computed coherently: %+v", res.Economic)
+	}
+}
+
+func TestIncompleteContextIsRefused(t *testing.T) {
+	e := NewEngine(nil)
+	for _, mutate := range []func(*Context){
+		func(c *Context) { c.ExecutionID = "" },
+		func(c *Context) { c.Tenant = "" },
+		func(c *Context) { c.Actor = "" },
+		func(c *Context) { c.PolicyVersion = "" },
+		func(c *Context) { c.IdentityResolutionVersion = "" },
+	} {
+		c := ctx()
+		mutate(&c)
+		if _, err := e.Run(Input{Context: c, Case: caseInput()}); !errors.Is(err, ErrContextIncomplete) {
+			t.Fatalf("an incomplete execution context must be refused, got %v", err)
+		}
+	}
+}
+
+func TestEveryNodeCarriesTheRequiredShape(t *testing.T) {
+	_, res := run(t)
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == "" || n.Hash == "" || n.Version == "" {
+			t.Fatalf("node missing identity: %+v", n)
+		}
+		if n.ExecutionTick != 42 {
+			t.Fatalf("node %s carries the wrong tick: %d", n.StageID, n.ExecutionTick)
+		}
+		if n.Status != StatusOK && n.Status != StatusSkipped {
+			t.Fatalf("node %s failed: %s / %s", n.StageID, n.Status, n.Error)
+		}
+	}
+}
+
+func TestSkippedStagesAreDeclaredNotFabricated(t *testing.T) {
+	e := NewEngine(nil)
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput()}) // no scenarios
+	if err != nil {
+		t.Fatal(err)
+	}
+	var econ Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageEconomic {
+			econ = n
+		}
+	}
+	if econ.Status != StatusSkipped {
+		t.Fatalf("with no scenarios the economic stage must be SKIPPED, got %s", econ.Status)
+	}
+	if res.Economic.Hash != "" {
+		t.Fatal("a skipped economic stage must not fabricate a consequence")
+	}
+}
+
+func TestDependencyEvaluationPrecedesFusionInTheRecordedTrace(t *testing.T) {
+	_, res := run(t)
+	depIdx, fusionIdx := -1, -1
+	for i, n := range res.Trace.Nodes {
+		switch n.StageID {
+		case StageDependencyEvaluation:
+			depIdx = i
+		case StageFusion:
+			fusionIdx = i
+		}
+	}
+	if depIdx < 0 || fusionIdx < 0 || depIdx > fusionIdx {
+		t.Fatalf("dependency evaluation must be recorded before fusion: %d vs %d", depIdx, fusionIdx)
+	}
+}
+
+func TestExplanationChainRunsFromSourceToDecision(t *testing.T) {
+	_, res := run(t)
+	// P0-01: the explanation the engine returns is the exact artifact
+	// emitted by production execution, already bound to the execution
+	// root via the two-phase commitment (explanation.Commit). It must
+	// pass full verification, not just render.
+	if err := explanation.VerifyFinal(res.Explanation); err != nil {
+		t.Fatalf("the emitted explanation must verify against its own commitment: %v", err)
+	}
+	stages := map[explanation.Stage]bool{}
+	for _, l := range res.Explanation.Chain {
+		stages[l.Stage] = true
+	}
+	for _, want := range []explanation.Stage{
+		explanation.StageSource, explanation.StageEvidence, explanation.StageDependency,
+		explanation.StageWeight, explanation.StageTruth, explanation.StageFusion,
+		explanation.StageRisk, explanation.StagePolicy, explanation.StageDecision,
+	} {
+		if !stages[want] {
+			t.Fatalf("explanation chain missing %s", want)
+		}
+	}
+	if len(res.Explanation.Trace()) == 0 {
+		t.Fatal("the explanation must render a trace")
+	}
+	if res.Explanation.Why() == "" {
+		t.Fatal("the explanation must answer why in one line")
+	}
+}
+
+func TestSharedProviderIsVisibleInTheDependencyExplanation(t *testing.T) {
+	_, res := run(t)
+	found := false
+	for _, l := range res.Explanation.DependencyExplanation.Lines {
+		if contains(l, "ais-vendor-a") && contains(l, "shared fraction") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the shared-provider discount must appear in the explanation: %v",
+			res.Explanation.DependencyExplanation.Lines)
+	}
+}
+
+func TestIdenticalInputProducesIdenticalRootHash(t *testing.T) {
+	a := NewEngine(nil)
+	ra, err := a.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := NewEngine(nil)
+	rb, err := b.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ra.ExecutionRootHash != rb.ExecutionRootHash {
+		t.Fatalf("two identical executions must agree: %s vs %s",
+			ra.ExecutionRootHash, rb.ExecutionRootHash)
+	}
+}
+
+func TestContextChangeChangesTheRootHash(t *testing.T) {
+	_, base := run(t)
+	for name, mutate := range map[string]func(*Context){
+		"tenant":     func(c *Context) { c.Tenant = "other" },
+		"policy":     func(c *Context) { c.PolicyVersion = "sanctions-screen@4" },
+		"identity":   func(c *Context) { c.IdentityResolutionVersion = "ident@3" },
+		"ledger_pos": func(c *Context) { c.LedgerPosition = 7 },
+		"models":     func(c *Context) { c.ModelVersions = []string{"risk@9"} },
+		"sources":    func(c *Context) { c.SourceVersions = []string{"ais@9"} },
+	} {
+		c := ctx()
+		mutate(&c)
+		e := NewEngine(nil)
+		got, err := e.Run(Input{Context: c, Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got.ExecutionRootHash == base.ExecutionRootHash {
+			t.Fatalf("changing %s must change the execution root hash", name)
+		}
+	}
+}
+
+func TestReplayRebuildsTheWholeDAGAndMatches(t *testing.T) {
+	_, res := run(t)
+	req := ReplayRequest{Context: ctx(), Case: caseInput(), Scenarios: scenarios(),
+		Currency: "USD", Committed: res.Trace}
+	data, err := req.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := ReplayDAG(data, NewEngine(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Assert(); err != nil {
+		t.Fatalf("replay must match: %v", err)
+	}
+	if v.NodesCompared != len(graph) {
+		t.Fatalf("replay must compare every node, got %d", v.NodesCompared)
+	}
+}
+
+func TestReplayLocalisesTheFirstDivergentStage(t *testing.T) {
+	_, res := run(t)
+	tampered := res.Trace
+	tampered.Nodes = append([]Node(nil), res.Trace.Nodes...)
+	// Corrupt the risk node's hash: the divergence must be reported
+	// there, not merely as "the root differs".
+	idx := -1
+	for i, n := range tampered.Nodes {
+		if n.StageID == StageRisk {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		t.Fatal("risk stage not found")
+	}
+	tampered.Nodes[idx].Hash = "deadbeef"
+
+	req := ReplayRequest{Context: ctx(), Case: caseInput(), Scenarios: scenarios(),
+		Currency: "USD", Committed: tampered}
+	data, _ := req.Marshal()
+	v, err := ReplayDAG(data, NewEngine(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Matched {
+		t.Fatal("a tampered trace must not match")
+	}
+	if v.DivergentStage != StageRisk {
+		t.Fatalf("divergence must be localised to RISK, got %s", v.DivergentStage)
+	}
+	if v.Assert() == nil {
+		t.Fatal("Assert must convert a divergence into an error")
+	}
+}
+
+func TestChangedEvidenceIsDetectedByReplay(t *testing.T) {
+	_, res := run(t)
+	altered := caseInput()
+	altered.Submissions[0].Value = "jakarta"
+	req := ReplayRequest{Context: ctx(), Case: altered, Scenarios: scenarios(),
+		Currency: "USD", Committed: res.Trace}
+	data, _ := req.Marshal()
+	v, err := ReplayDAG(data, NewEngine(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Matched {
+		t.Fatal("replaying different evidence must not match")
+	}
+	if v.DivergentStage == "" {
+		t.Fatal("the divergence must be attributed to a stage")
+	}
+}
+
+func TestGovernanceBindingIsCommittedAndEnforcedAtReplay(t *testing.T) {
+	reg := lifecycle.NewRegistry()
+	mustActivateModel(t, reg, "risk", "1", 1)
+	e := NewEngine(nil)
+	e.Lifecycle = reg
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Trace.Context.BindingHash == "" {
+		t.Fatal("a governance binding must be committed into the context")
+	}
+	if len(res.Explanation.ModelVersions) == 0 {
+		t.Fatal("the explanation must carry the model versions the run used")
+	}
+
+	// A replayer whose registry runs a different model version must be
+	// refused before anything is recomputed.
+	other := lifecycle.NewRegistry()
+	mustActivateModel(t, other, "risk", "2", 1)
+	oe := NewEngine(nil)
+	oe.Lifecycle = other
+	req := ReplayRequest{Context: res.Trace.Context, Case: caseInput(), Scenarios: scenarios(),
+		Currency: "USD", Committed: res.Trace}
+	data, _ := req.Marshal()
+	if _, err := ReplayDAG(data, oe); !errors.Is(err, ErrBindingMismatch) {
+		t.Fatalf("replay under a different model version must be refused, got %v", err)
+	}
+}
+
+func TestKnowledgeRootIsCommitted(t *testing.T) {
+	k := knowledge.New()
+	p, err := k.Propose("analyst", "raise ais weight", []string{"e1"},
+		[]knowledge.Mutation{{Kind: knowledge.ChangeWeight, Target: "ais_weight", Value: 0.7}}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = k.Analyze(p.ID, 1)
+	_, _ = k.Simulate(p.ID, knowledge.SimulationResult{SampleSize: 10, ChangedOutcomes: 1}, 1)
+	_, _ = k.Approve(p.ID, "officer", 1)
+	_, _ = k.Activate(p.ID, 2, 2)
+
+	e := NewEngine(nil)
+	e.Knowledge = k
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Trace.Context.KnowledgeRoot == "" {
+		t.Fatal("the knowledge root must be committed into the execution context")
+	}
+	if res.Explanation.KnowledgeRoot != res.Trace.Context.KnowledgeRoot {
+		t.Fatal("the explanation must commit to the same knowledge root")
+	}
+}
+
+func TestFailedCoreFailsEveryStageAndEmitsNoCertificate(t *testing.T) {
+	e := NewEngine(nil)
+	empty := caseInput()
+	empty.Submissions = nil
+	res, err := e.Run(Input{Context: ctx(), Case: empty})
+	if err == nil {
+		t.Fatal("an empty case must fail")
+	}
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("failure must name a stage, got %v", err)
+	}
+	if res.Certificate.VerificationCertificateID != "" {
+		t.Fatal("no certificate may be emitted over a failed execution")
+	}
+	for _, n := range res.Trace.Nodes {
+		if n.Status != StatusFailed {
+			t.Fatalf("stage %s should be FAILED, got %s", n.StageID, n.Status)
+		}
+	}
+}
+
+func TestDecisionMatchesTheCanonicalDecision(t *testing.T) {
+	_, res := run(t)
+	if res.Decision != string(res.Canonical.Decision.Action) {
+		t.Fatalf("the recorded decision must be the canonical one: %s vs %s",
+			res.Decision, res.Canonical.Decision.Action)
+	}
+	if res.Decision != string(decision.ActionMonitor) &&
+		res.Decision != string(decision.ActionFlag) &&
+		res.Decision != string(decision.ActionEscalate) {
+		t.Fatalf("unexpected decision action %q", res.Decision)
+	}
+}
+
+func mustActivateModel(t *testing.T, r *lifecycle.Registry, id, ver string, tick uint64) {
+	t.Helper()
+	if _, err := r.RegisterModel(lifecycle.Model{ModelID: id, Version: ver, Type: "risk"}, "eng", tick); err != nil {
+		t.Fatal(err)
+	}
+	key := id + "@" + ver
+	if _, err := r.TransitionModel(key, lifecycle.ModelValidated, "eng", "", "", tick, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.SetCalibration(key, "cal-"+ver); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.TransitionModel(key, lifecycle.ModelCalibrated, "eng", "", "", tick, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.TransitionModel(key, lifecycle.ModelApproved, "eng", "officer", "", tick, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.TransitionModel(key, lifecycle.ModelActive, "eng", "officer", "", tick, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func contains(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}

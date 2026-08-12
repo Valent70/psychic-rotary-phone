@@ -1,0 +1,74 @@
+# Requirement Traceability Matrix — v7.12.0
+
+Status vocabulary per `docs/governance/RELEASE_GATES.md`. Every row
+either names the package that implements it and the test that proves
+it, or is honestly marked OPEN/BLOCKED. There is no row whose status
+rests on prose.
+
+This file is generated from `docs/governance/requirements.json` by
+`cmd/veriqo-requirements` (P0-04: one authoritative requirement state).
+Do not hand-edit the table or the summary below — edit the JSON and
+regenerate with `go run ./cmd/veriqo-requirements`; the `traceability_matrix`
+readiness gate fails the build if the two drift apart.
+
+| ID | Audit phase | Requirement | Owner package | Test | Status |
+|----|-------------|-------------|---------------|------|--------|
+| R-000 | 0 | Assurance plane: gates, evidence artifacts, no false green | `internal/assurance` | `TestOneCriticalGapCannotBeCompensated`, `TestDeclaredStatusWithoutEvidenceDegrades` | VERIFIED |
+| R-001 | 1 | Evidence dependency graph: record model, ledger, replay, tamper detection | `pkg/moat/evidencegraph` | `TestDependencyGraphTamperDetection`, `TestDependencyGraphReplayDeterministic` | VERIFIED |
+| R-002 | 1 | Canonical **cannot fuse** without dependency evaluation | `pkg/canonical` | `TestCanonicalUsesEvidenceDependencyGraph`, `TestCanonicalCannotFuseWithoutDependencyEvaluation` | VERIFIED |
+| R-003 | 1 | Shared satellite provider / producer / transformation / transitive discounts | `pkg/canonical`, `pkg/moat/evidencegraph` | `TestSharedSatelliteProviderCannotInflateConfidence`, `TestSharedProducerDiscount`, `TestSharedTransformationDiscount`, `TestTransitiveDependencyDiscount` | VERIFIED |
+| R-004 | 2 | Formal evidence ontology, 16 types, bitemporal, signed, versioned | `pkg/evidence/ontology` | `TestNewIsContentAddressedAndDeterministic`, `TestBitemporalAsOf`, `TestSignatureRoundTripAndTamperDetection` | VERIFIED |
+| R-005 | 3 | Unified evidence API facade; no direct engine access | `pkg/evidence/api` | `TestFacadeExposesNoInternalEngine`, `TestArbitrateThenReplayThroughFacade` | VERIFIED |
+| R-006 | 4 | Enterprise identity: candidates, scoring, authority, conflict, merge/unmerge, history | `pkg/identity` | `TestUnmergePreservesHistoricalReplay`, `TestConflictDetectedBetweenCloseCandidates` | VERIFIED |
+| R-007 | 5 | RS-CHDBN temporal: forward/backward, transition, decay, missing & contradictory obs, correlation | `pkg/moat/hbayes` | `TestBackwardSmoothingUsesFutureEvidence`, `TestMissingObservationsIncreaseUncertainty`, `TestCorrelatedObservationsCannotInflateBelief` | VERIFIED |
+| R-008 | 5 | Causal edges between Bayesian nodes; do(X) intervention | `pkg/moat/hbayes` | `TestCausalInterventionShiftsDynamics` | VERIFIED |
+| R-009 | 6 | Causal ↔ digital twin: SimulateDecision / Counterfactual / CausalIntervention with lineage | `pkg/moat/simulation` | `TestEverySimulationCarriesCompleteLineage`, `TestInterventionRaisesAndCounterfactualLowersOutcome` | VERIFIED |
+| R-010 | 8 | Trust state, transitions, decay, revocation, escalation, governance reinstatement | `pkg/trust/state` | `TestRevocationIsTerminalUntilGovernanceReinstates`, `TestTrustDecaysTowardNeutralPrior` | VERIFIED |
+| R-011 | 9 | IVF 2.0: full-lifecycle independent replay, 11 stages, divergence localisation | `pkg/replay` | `TestFullLifecycleReplayMatches`, `TestReplayDetectsTamperedEvidenceAndLocatesStage` | VERIFIED |
+| R-012 | 10 | Replay identity separation (Execution/EvidencePackage/ReplayPackage/Result/Verification) | `pkg/replay` | `TestReplayIdentitiesAreAllDistinct` | VERIFIED |
+| R-013 | 11 | KeyProvider interface, key lifecycle, rotation, revocation, expiry, purpose separation | `pkg/platform/security/keys` | `TestRotationPreservesHistoricalSignatures`, `TestRevocationInvalidatesRetroactively` | VERIFIED |
+| R-014 | 28 | Envelope encryption, AES-GCM, AAD binding, KEK rotation without re-encryption | `pkg/platform/security/keys` | `TestEnvelopeEncryptDecryptAndAADBinding`, `TestKEKRotationDoesNotReencryptPayload` | VERIFIED |
+| R-015 | 14 | Policy-as-data: versioned, signed, hashed, rollback, hot reload, dry-run, approval | `pkg/authz` | `TestAcceptance109`, `TestAcceptance110`, `TestAcceptance79` | VERIFIED |
+| R-016 | 15 | RBAC + ABAC + ReBAC, deterministic, DENY-wins, explained | `pkg/authz` | `TestAcceptance68`, `TestAcceptance108`, `FuzzDenyAlwaysWins` | VERIFIED |
+| R-017 | 34 | Acceptance suite governance: append-only, category minimums, mandatory tests | `internal/assurance`, `cmd/veriqo-readiness` | `TestAcceptanceManifestGovernance` | VERIFIED |
+| R-018 | 35 | Acceptance suite expanded to 110 permanent tests incl. a security category | `test/acceptance` | whole suite | VERIFIED |
+| R-019 | 36 | Formal invariants document, each backed by a named test | `docs/governance` | see ARCHITECTURE_INVARIANTS.md | VERIFIED |
+| R-020 | 38 | Fuzz targets for ontology, dependency ledger and policy parser | `pkg/evidence/ontology`, `pkg/moat/evidencegraph`, `pkg/authz` | `go test -run Fuzz ./pkg/...` | VERIFIED |
+| R-021 | 31/32 | SBOM, build metadata, release certificate with signature | `scripts/sbom.sh`, `internal/assurance` | `TestReleaseCertificateSignatureAndTamperDetection` | VERIFIED |
+| R-022 | 33 | CI as a release gate (verify/security/release/chaos/performance) | `.github/workflows` | pipeline definitions | IMPLEMENTED (not executed in this environment) |
+| R-023 | 52/53 | READINESS_MANIFEST.json produced by executing gates, not by assertion | `cmd/veriqo-readiness` | manifest artifact | VERIFIED |
+| R-024 | 54 | No false green: one critical gap cannot be compensated | `internal/assurance` | `TestOneCriticalGapCannotBeCompensated` | VERIFIED |
+| R-025 | 55 | Signed release certificate whose verdict cannot be hand-set | `internal/assurance` | `TestReleaseCertificateVerdictCannotBeForged` | VERIFIED |
+| R-026 | 7 | Unified Intelligence Execution Graph: explicit DAG, topological order, per-stage nodes, root hash, DAG replay | `pkg/execution` | `TestTopologicalOrderIsDeterministicAndComplete`, `TestOneExecutionProducesEveryRequiredArtifact`, `TestReplayLocalisesTheFirstDivergentStage` | VERIFIED |
+| R-027 | 12/13 | Zero-trust controls, real SPIRE deployment, mTLS rotation | `deploy/spire` | — | **BLOCKED** (needs a SPIRE cluster; network-blocked) |
+| R-028 | 16 | Sandbox policy engine: path/network/syscall/env allow-lists, resource ceilings, fail closed | `pkg/kernel/sandbox` | `TestUnenforceablePlatformDeniesExecutionEntirely`, `TestPathTraversalCannotEscapeThePrefix`, `TestUnknownRequestKindFailsClosed` | VERIFIED (OS-level seccomp/namespace enforcement remains BLOCKED) |
+| R-029 | 17/19 | Raft membership reconfiguration, snapshot, log compaction, leader transfer | `pkg/consensus/raftlite` | — | **OPEN** |
+| R-030 | 18 | Deterministic multi-node chaos: partition, latency, loss, reorder, duplication, crash, restart, disk, clock skew, leader loss, plus invariant checking | `pkg/chaos`, `test/chaos` | `TestCombinedChaosAcceptance`, `TestConvergenceAfterFullHeal`, `TestRunIsBitForBitReplayable` | VERIFIED (in-process model; OS-process SIGKILL remains BLOCKED) |
+| R-031 | 20/43 | WAL lifecycle: CRC, chained records, fsync policy, torn-write and corrupt-middle classification, compaction, retention, legal hold | `pkg/storage/wal` | `TestTornWriteAtTheTailIsTruncatedNotFatal`, `TestCorruptMiddleFailsClosed`, `TestChainTamperingIsDetected`, `TestRetentionRefusesToRemoveUncheckpointedState` | VERIFIED |
+| R-032 | 21/22/23 | API semantics: idempotency with 409 conflict, deterministic token-bucket rate limiting, RS256 OIDC verification, REST/gRPC parity registry | `pkg/api` | `TestSameKeyDifferentPayloadIsAConflict`, `TestGatewayReturns429WhenLimited`, `TestAlgNoneIsRefused`, `TestParityViolationIsDetectedInBothDirections` | VERIFIED (mTLS termination is deployment-side) |
+| R-033 | 24/25 | Telemetry schema: 13 VERIQO domains, 7-field trace correlation, 17 named business metrics, real recording Tracer | `pkg/platform/telemetry` | `TestMissingDomainsReportsUninstrumentedSubsystems`, `TestMissingMetricsIsTheObservabilityGate`, `TestSpansJoinByExecutionInOrder` | VERIFIED (OTLP network export remains BLOCKED) |
+| R-034 | 26 | Consolidated DecisionExplanation: 12 sections, source→decision chain, rejected alternatives, generic-rationale refusal, content-addressed | `pkg/explanation` | `TestBrokenChainIsRefused`, `TestGenericPolicyRationaleIsRefused`, `TestModifyingOneStageChangesTheExplanationAndItsHash` | VERIFIED |
+| R-035 | 27 | Data governance state machine: retention, TTL override, legal hold, PII redaction with pre-image proofs, purge with tombstones | `pkg/governance/data` | `TestLegalHoldBeatsRetention`, `TestRedactionRemovesValuesButKeepsProof`, `TestPurgeEmitsATombstoneThatSurvivesTheContent` | VERIFIED |
+| R-036 | 29/30 | Backup, PITR, cross-region replication, restore drill, measured RPO/RTO | `deploy/` | — | **BLOCKED** (requires multi-region infrastructure for a real DR drill with measured RPO/RTO) |
+| R-037 | 40/41 | 100-node / 1M-evidence qualification, 72h soak | — | — | **BLOCKED** (requires physical multi-node infrastructure (100-node/1M-evidence) and a long-lived host beyond a CI job (72h soak)) |
+| R-038 | 46 | Calibration: log loss, Brier, ECE/MCE, Wilson-interval reliability curve, Platt and isotonic recalibration, PSI/KL/JS/KS drift | `pkg/moat/reliability` | reliability suite | VERIFIED |
+| R-039 | 47/48 | Model and source lifecycle state machines, approval requiring calibration, hash-chained event ledger, replay binding | `pkg/governance/lifecycle` | lifecycle suite, `TestGovernanceBindingIsCommittedAndEnforcedAtReplay` | VERIFIED |
+| R-040 | 49 | HITL workflow: reviewer packet validation, self-review refusal, SLA breach recording, MachineDecision + HumanDecision = GovernedOutcome, override rate | `pkg/governance/hitl` | `TestHumanOverrideDoesNotMutateTheMachineDecision`, `TestIncompletePacketIsRefused`, `TestOverrideRateIsMeasurable` | VERIFIED |
+| R-041 | 39 | External security testing: gosec, govulncheck, staticcheck, red team | `.github/workflows/security.yml` | wired, not executable offline | **BLOCKED** (staticcheck (SAST) now runs clean, see evidence/supply_chain_scan-staticcheck.txt; govulncheck's vulnerability feed (vuln.go.dev) returns 403 under this environment's network policy; independent pentest/red team requires an external vendor) |
+| R-042 | 47 | Knowledge evolution: propose → validate → analyze → simulate → approve → activate, with time-windowed state | `pkg/governance/knowledge` | `TestKnowledgeStateAtT1IsUnchangedByAChangeAtT2`, `TestTwoConcurrentInFlightProposalsConflict` | VERIFIED |
+| R-043 | 44 | Data quality vector and learned source reliability with bounded, replayable updates | `pkg/dataquality` | dataquality suite | VERIFIED |
+| R-044 | 45 | Economic consequence: expected value, variance, VaR, CVaR from declared scenarios | `pkg/moat/economic` | economic suite | VERIFIED |
+| R-045 | V7.11.1 P0-1 | Bounded full-suite execution: per-package timeout, isolation, failure classification, hashed evidence artifact | `cmd/veriqo-testrunner` | `evidence/test-execution.json` | VERIFIED |
+| R-046 | V7.11.1 P0-2 | Formal multi-node chaos acceptance layer | `test/chaos` | 7 acceptance scenarios, `evidence/chaos-acceptance.json` | VERIFIED |
+| R-047 | V7.11.1 P0-3/P0-5 | Stress layer producing throughput, p50/p95/p99, error rate, memory, goroutines; FAILS on SLO miss; 100 transfers yield 100/100 evidence | `test/stress` | `TestOneHundredTransfersProduceOneHundredEvidenceArtifacts`, `TestSLOEvaluationFailsWhenItShould` | VERIFIED (local scale only) |
+| R-048 | V7.11.1 P0-4 | 100× deterministic replay acceptance over ReplayResultHash, Decision, Explanation and Certificate, plus perturbation sensitivity | `test/acceptance/replay` | `TestOneHundredReplaysAgreeOnEveryMaterialField` | VERIFIED |
+| R-049 | V7.11.1 P0-6 | Untested security, durability and failure branches in authz, resource, storage and plugin | `pkg/authz`, `pkg/kernel/resource`, `pkg/storage` | `*_branches_test.go`; coverage 32.5→83.1%, 58.5→90.7%, 66.7→70.4% | VERIFIED |
+| R-050 | Wave 5 | Real-world ingestion contracts (AIS, SAR, BoL, insurance, payment) | `pkg/connector` | — | **OPEN** |
+
+## Honest summary (computed, not hand-typed)
+
+44 of 51 tracked requirements are VERIFIED with named tests. 1 is IMPLEMENTED but not executed in this environment. 2 are OPEN: R-029, R-050. 4 are BLOCKED on infrastructure or third parties: R-027 (needs a SPIRE cluster; network-blocked), R-036 (requires multi-region infrastructure for a real DR drill with measured RPO/RTO), R-037 (requires physical multi-node infrastructure (100-node/1M-evidence) and a long-lived host beyond a CI job (72h soak)), R-041 (staticcheck (SAST) now runs clean, see evidence/supply_chain_scan-staticcheck.txt; govulncheck's vulnerability feed (vuln.go.dev) returns 403 under this environment's network policy; independent pentest/red team requires an external vendor).
+
+5 row(s) are marked VERIFIED **with an inline caveat** rather than silently upgraded, because part of what the phase asked for cannot be produced here: R-028 (OS-level seccomp/namespace enforcement remains BLOCKED); R-030 (in-process model; OS-process SIGKILL remains BLOCKED); R-032 (mTLS termination is deployment-side); R-033 (OTLP network export remains BLOCKED); R-047 (local scale only). Each caveat names exactly what is missing; none of them is counted as closed.
+
+Row count check: 44 VERIFIED + 1 IMPLEMENTED + 2 OPEN + 4 BLOCKED = 51, of 51 total rows (consistent).

@@ -1,0 +1,25 @@
+{
+  "iterations": 100,
+  "stable": true,
+  "fields_compared": [
+    "ReplayResultHash",
+    "Decision",
+    "Explanation",
+    "Certificate",
+    "ExecutionRootHash",
+    "DependencyRoot"
+  ],
+  "reference": {
+    "execution_root_hash": "5df79ed3908044669618d3ea2435f5c7d185a8c88be88851d0c8dc5b09735645",
+    "replay_result_hash": "4fae9a0a3a4e2a8eb9b4747d2745c77dc4106ad7ee0ac46b75d54784fbd9387a",
+    "original_result_hash": "4fae9a0a3a4e2a8eb9b4747d2745c77dc4106ad7ee0ac46b75d54784fbd9387a",
+    "decision": "ESCALATE",
+    "explanation_hash": "e3120356b65ff9cad606298592fccbc8b581cab967b59fad5382386f7709099f",
+    "certificate_id": "d15da04dca9262f52416bcbfa2df15b42dcc7d6fcd40fe946ecad111c5f4774d",
+    "certificate_match": true,
+    "dependency_root_hash": "0d0331f1ca7f28ce5ff23cad40dbdf228751430225311ac6d8489484bf5f3505"
+  },
+  "first_divergence_iteration": -1,
+  "perturbations_run": 6,
+  "perturbations_detected": 6
+}

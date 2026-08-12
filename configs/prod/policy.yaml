@@ -1,0 +1,30 @@
+# Veriqo investor-demo policy configuration.
+# Edit this file to change source reliability or risk thresholds without
+# recompiling Go — the concrete fix for "hard-coded di Go" (Yang_masih_kurang.docx).
+sources:
+  - id: AIS_VENDOR_ALPHA
+    reliability: 0.9
+    provider: SATCOM_ALPHA
+  - id: AIS_VENDOR_BETA
+    reliability: 0.88
+    provider: SATCOM_ALPHA
+  - id: SAR_IMAGERY_VENDOR
+    reliability: 0.93
+  - id: PORT_AUTHORITY_TPP
+    reliability: 0.97
+  - id: SANCTIONS_LIST_OFAC
+    reliability: 0.99
+
+policies:
+  - name: dark_vessel_risk
+    flag_threshold: 0.35
+    escalate_threshold: 0.65
+    factors:
+      - name: ais_gap_confidence
+        weight: 0.35
+      - name: sts_transfer_confidence
+        weight: 0.30
+      - name: cargo_change_confidence
+        weight: 0.20
+      - name: sanction_link_confidence
+        weight: 0.15

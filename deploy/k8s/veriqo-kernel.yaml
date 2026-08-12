@@ -1,0 +1,119 @@
+# Veriqo Kernel — Kubernetes deployment blueprint.
+#
+# Honest scope note: reviewed manually against cmd/veriqo-node's actual
+# flags (-id, -peers, -listen — see cmd/veriqo-node/main.go) and
+# cmd/veriqo-demo's actual config path (policy.yaml), but NOT applied to
+# a real cluster in this sandbox (no kubectl/cluster access here). This
+# is a blueprint showing the intended path from repo to cluster, not a
+# validated deployment.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: veriqo-policy-config
+  namespace: veriqo
+data:
+  policy.yaml: |
+    # populated from configs/prod/policy.yaml at build/deploy time
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: veriqo-cluster-mtls
+  namespace: veriqo
+type: Opaque
+# In production: populate ca.crt / node.crt / node.key here via your
+# secrets manager (Vault/KMS/sealed-secrets) — never commit real
+# material. pkg/transport/rafttcp expects a self-hosted CA per
+# docs/THREAT_MODEL.md.
+stringData:
+  ca.crt: "REPLACE_ME"
+  node.crt: "REPLACE_ME"
+  node.key: "REPLACE_ME"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: veriqo-node
+  namespace: veriqo
+spec:
+  serviceName: veriqo-node
+  replicas: 3
+  selector:
+    matchLabels:
+      app: veriqo-node
+  template:
+    metadata:
+      labels:
+        app: veriqo-node
+    spec:
+      containers:
+        - name: veriqo-node
+          image: veriqo-node:latest # built via `docker build --target veriqo-node`
+          args:
+            - "-id=$(POD_NAME)"
+            - "-listen=0.0.0.0:9001"
+            # -peers is intentionally left as a startup-script-resolved
+            # value in this blueprint (StatefulSet pod DNS names are
+            # deterministic: veriqo-node-0.veriqo-node, -1, -2, ...);
+            # cmd/veriqo-node has no built-in Kubernetes peer-discovery,
+            # which is an explicit open item, not something this
+            # manifest silently papers over.
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 9001
+              name: raft-tcp
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: 9001
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 9001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: veriqo-node
+  namespace: veriqo
+spec:
+  clusterIP: None # headless, for stable per-pod DNS used by peer discovery
+  selector:
+    app: veriqo-node
+  ports:
+    - port: 9001
+      name: raft-tcp
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: veriqo-demo-run
+  namespace: veriqo
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: veriqo-demo
+          image: veriqo-demo:latest # built via `docker build --target veriqo-demo`
+          volumeMounts:
+            - name: policy-config
+              mountPath: /policy.yaml
+              subPath: policy.yaml
+      volumes:
+        - name: policy-config
+          configMap:
+            name: veriqo-policy-config

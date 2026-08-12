@@ -1,0 +1,461 @@
+[
+  {
+    "id": "R-000",
+    "phase": "0",
+    "title": "Assurance plane: gates, evidence artifacts, no false green",
+    "owner_package": "`internal/assurance`",
+    "tests": "`TestOneCriticalGapCannotBeCompensated`, `TestDeclaredStatusWithoutEvidenceDegrades`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-001",
+    "phase": "1",
+    "title": "Evidence dependency graph: record model, ledger, replay, tamper detection",
+    "owner_package": "`pkg/moat/evidencegraph`",
+    "tests": "`TestDependencyGraphTamperDetection`, `TestDependencyGraphReplayDeterministic`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-002",
+    "phase": "1",
+    "title": "Canonical **cannot fuse** without dependency evaluation",
+    "owner_package": "`pkg/canonical`",
+    "tests": "`TestCanonicalUsesEvidenceDependencyGraph`, `TestCanonicalCannotFuseWithoutDependencyEvaluation`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-003",
+    "phase": "1",
+    "title": "Shared satellite provider / producer / transformation / transitive discounts",
+    "owner_package": "`pkg/canonical`, `pkg/moat/evidencegraph`",
+    "tests": "`TestSharedSatelliteProviderCannotInflateConfidence`, `TestSharedProducerDiscount`, `TestSharedTransformationDiscount`, `TestTransitiveDependencyDiscount`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-004",
+    "phase": "2",
+    "title": "Formal evidence ontology, 16 types, bitemporal, signed, versioned",
+    "owner_package": "`pkg/evidence/ontology`",
+    "tests": "`TestNewIsContentAddressedAndDeterministic`, `TestBitemporalAsOf`, `TestSignatureRoundTripAndTamperDetection`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-005",
+    "phase": "3",
+    "title": "Unified evidence API facade; no direct engine access",
+    "owner_package": "`pkg/evidence/api`",
+    "tests": "`TestFacadeExposesNoInternalEngine`, `TestArbitrateThenReplayThroughFacade`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-006",
+    "phase": "4",
+    "title": "Enterprise identity: candidates, scoring, authority, conflict, merge/unmerge, history",
+    "owner_package": "`pkg/identity`",
+    "tests": "`TestUnmergePreservesHistoricalReplay`, `TestConflictDetectedBetweenCloseCandidates`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-007",
+    "phase": "5",
+    "title": "RS-CHDBN temporal: forward/backward, transition, decay, missing & contradictory obs, correlation",
+    "owner_package": "`pkg/moat/hbayes`",
+    "tests": "`TestBackwardSmoothingUsesFutureEvidence`, `TestMissingObservationsIncreaseUncertainty`, `TestCorrelatedObservationsCannotInflateBelief`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-008",
+    "phase": "5",
+    "title": "Causal edges between Bayesian nodes; do(X) intervention",
+    "owner_package": "`pkg/moat/hbayes`",
+    "tests": "`TestCausalInterventionShiftsDynamics`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-009",
+    "phase": "6",
+    "title": "Causal \u2194 digital twin: SimulateDecision / Counterfactual / CausalIntervention with lineage",
+    "owner_package": "`pkg/moat/simulation`",
+    "tests": "`TestEverySimulationCarriesCompleteLineage`, `TestInterventionRaisesAndCounterfactualLowersOutcome`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-010",
+    "phase": "8",
+    "title": "Trust state, transitions, decay, revocation, escalation, governance reinstatement",
+    "owner_package": "`pkg/trust/state`",
+    "tests": "`TestRevocationIsTerminalUntilGovernanceReinstates`, `TestTrustDecaysTowardNeutralPrior`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-011",
+    "phase": "9",
+    "title": "IVF 2.0: full-lifecycle independent replay, 11 stages, divergence localisation",
+    "owner_package": "`pkg/replay`",
+    "tests": "`TestFullLifecycleReplayMatches`, `TestReplayDetectsTamperedEvidenceAndLocatesStage`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-012",
+    "phase": "10",
+    "title": "Replay identity separation (Execution/EvidencePackage/ReplayPackage/Result/Verification)",
+    "owner_package": "`pkg/replay`",
+    "tests": "`TestReplayIdentitiesAreAllDistinct`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-013",
+    "phase": "11",
+    "title": "KeyProvider interface, key lifecycle, rotation, revocation, expiry, purpose separation",
+    "owner_package": "`pkg/platform/security/keys`",
+    "tests": "`TestRotationPreservesHistoricalSignatures`, `TestRevocationInvalidatesRetroactively`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-014",
+    "phase": "28",
+    "title": "Envelope encryption, AES-GCM, AAD binding, KEK rotation without re-encryption",
+    "owner_package": "`pkg/platform/security/keys`",
+    "tests": "`TestEnvelopeEncryptDecryptAndAADBinding`, `TestKEKRotationDoesNotReencryptPayload`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-015",
+    "phase": "14",
+    "title": "Policy-as-data: versioned, signed, hashed, rollback, hot reload, dry-run, approval",
+    "owner_package": "`pkg/authz`",
+    "tests": "`TestAcceptance109`, `TestAcceptance110`, `TestAcceptance79`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-016",
+    "phase": "15",
+    "title": "RBAC + ABAC + ReBAC, deterministic, DENY-wins, explained",
+    "owner_package": "`pkg/authz`",
+    "tests": "`TestAcceptance68`, `TestAcceptance108`, `FuzzDenyAlwaysWins`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-017",
+    "phase": "34",
+    "title": "Acceptance suite governance: append-only, category minimums, mandatory tests",
+    "owner_package": "`internal/assurance`, `cmd/veriqo-readiness`",
+    "tests": "`TestAcceptanceManifestGovernance`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-018",
+    "phase": "35",
+    "title": "Acceptance suite expanded to 110 permanent tests incl. a security category",
+    "owner_package": "`test/acceptance`",
+    "tests": "whole suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-019",
+    "phase": "36",
+    "title": "Formal invariants document, each backed by a named test",
+    "owner_package": "`docs/governance`",
+    "tests": "see ARCHITECTURE_INVARIANTS.md",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-020",
+    "phase": "38",
+    "title": "Fuzz targets for ontology, dependency ledger and policy parser",
+    "owner_package": "`pkg/evidence/ontology`, `pkg/moat/evidencegraph`, `pkg/authz`",
+    "tests": "`go test -run Fuzz ./pkg/...`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-021",
+    "phase": "31/32",
+    "title": "SBOM, build metadata, release certificate with signature",
+    "owner_package": "`scripts/sbom.sh`, `internal/assurance`",
+    "tests": "`TestReleaseCertificateSignatureAndTamperDetection`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-022",
+    "phase": "33",
+    "title": "CI as a release gate (verify/security/release/chaos/performance)",
+    "owner_package": "`.github/workflows`",
+    "tests": "pipeline definitions",
+    "status": "IMPLEMENTED",
+    "note": "not executed in this environment"
+  },
+  {
+    "id": "R-023",
+    "phase": "52/53",
+    "title": "READINESS_MANIFEST.json produced by executing gates, not by assertion",
+    "owner_package": "`cmd/veriqo-readiness`",
+    "tests": "manifest artifact",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-024",
+    "phase": "54",
+    "title": "No false green: one critical gap cannot be compensated",
+    "owner_package": "`internal/assurance`",
+    "tests": "`TestOneCriticalGapCannotBeCompensated`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-025",
+    "phase": "55",
+    "title": "Signed release certificate whose verdict cannot be hand-set",
+    "owner_package": "`internal/assurance`",
+    "tests": "`TestReleaseCertificateVerdictCannotBeForged`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-026",
+    "phase": "7",
+    "title": "Unified Intelligence Execution Graph: explicit DAG, topological order, per-stage nodes, root hash, DAG replay",
+    "owner_package": "`pkg/execution`",
+    "tests": "`TestTopologicalOrderIsDeterministicAndComplete`, `TestOneExecutionProducesEveryRequiredArtifact`, `TestReplayLocalisesTheFirstDivergentStage`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-027",
+    "phase": "12/13",
+    "title": "Zero-trust controls, real SPIRE deployment, mTLS rotation",
+    "owner_package": "`deploy/spire`",
+    "tests": "\u2014",
+    "status": "BLOCKED",
+    "note": "needs a SPIRE cluster; network-blocked"
+  },
+  {
+    "id": "R-028",
+    "phase": "16",
+    "title": "Sandbox policy engine: path/network/syscall/env allow-lists, resource ceilings, fail closed",
+    "owner_package": "`pkg/kernel/sandbox`",
+    "tests": "`TestUnenforceablePlatformDeniesExecutionEntirely`, `TestPathTraversalCannotEscapeThePrefix`, `TestUnknownRequestKindFailsClosed`",
+    "status": "VERIFIED",
+    "note": "OS-level seccomp/namespace enforcement remains BLOCKED"
+  },
+  {
+    "id": "R-029",
+    "phase": "17/19",
+    "title": "Raft membership reconfiguration, snapshot, log compaction, leader transfer",
+    "owner_package": "`pkg/consensus/raftlite`",
+    "tests": "\u2014",
+    "status": "OPEN",
+    "note": ""
+  },
+  {
+    "id": "R-030",
+    "phase": "18",
+    "title": "Deterministic multi-node chaos: partition, latency, loss, reorder, duplication, crash, restart, disk, clock skew, leader loss, plus invariant checking",
+    "owner_package": "`pkg/chaos`, `test/chaos`",
+    "tests": "`TestCombinedChaosAcceptance`, `TestConvergenceAfterFullHeal`, `TestRunIsBitForBitReplayable`",
+    "status": "VERIFIED",
+    "note": "in-process model; OS-process SIGKILL remains BLOCKED"
+  },
+  {
+    "id": "R-031",
+    "phase": "20/43",
+    "title": "WAL lifecycle: CRC, chained records, fsync policy, torn-write and corrupt-middle classification, compaction, retention, legal hold",
+    "owner_package": "`pkg/storage/wal`",
+    "tests": "`TestTornWriteAtTheTailIsTruncatedNotFatal`, `TestCorruptMiddleFailsClosed`, `TestChainTamperingIsDetected`, `TestRetentionRefusesToRemoveUncheckpointedState`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-032",
+    "phase": "21/22/23",
+    "title": "API semantics: idempotency with 409 conflict, deterministic token-bucket rate limiting, RS256 OIDC verification, REST/gRPC parity registry",
+    "owner_package": "`pkg/api`",
+    "tests": "`TestSameKeyDifferentPayloadIsAConflict`, `TestGatewayReturns429WhenLimited`, `TestAlgNoneIsRefused`, `TestParityViolationIsDetectedInBothDirections`",
+    "status": "VERIFIED",
+    "note": "mTLS termination is deployment-side"
+  },
+  {
+    "id": "R-033",
+    "phase": "24/25",
+    "title": "Telemetry schema: 13 VERIQO domains, 7-field trace correlation, 17 named business metrics, real recording Tracer",
+    "owner_package": "`pkg/platform/telemetry`",
+    "tests": "`TestMissingDomainsReportsUninstrumentedSubsystems`, `TestMissingMetricsIsTheObservabilityGate`, `TestSpansJoinByExecutionInOrder`",
+    "status": "VERIFIED",
+    "note": "OTLP network export remains BLOCKED"
+  },
+  {
+    "id": "R-034",
+    "phase": "26",
+    "title": "Consolidated DecisionExplanation: 12 sections, source\u2192decision chain, rejected alternatives, generic-rationale refusal, content-addressed",
+    "owner_package": "`pkg/explanation`",
+    "tests": "`TestBrokenChainIsRefused`, `TestGenericPolicyRationaleIsRefused`, `TestModifyingOneStageChangesTheExplanationAndItsHash`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-035",
+    "phase": "27",
+    "title": "Data governance state machine: retention, TTL override, legal hold, PII redaction with pre-image proofs, purge with tombstones",
+    "owner_package": "`pkg/governance/data`",
+    "tests": "`TestLegalHoldBeatsRetention`, `TestRedactionRemovesValuesButKeepsProof`, `TestPurgeEmitsATombstoneThatSurvivesTheContent`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-036",
+    "phase": "29/30",
+    "title": "Backup, PITR, cross-region replication, restore drill, measured RPO/RTO",
+    "owner_package": "`deploy/`",
+    "tests": "\u2014",
+    "status": "BLOCKED",
+    "note": "requires multi-region infrastructure for a real DR drill with measured RPO/RTO"
+  },
+  {
+    "id": "R-037",
+    "phase": "40/41",
+    "title": "100-node / 1M-evidence qualification, 72h soak",
+    "owner_package": "\u2014",
+    "tests": "\u2014",
+    "status": "BLOCKED",
+    "note": "requires physical multi-node infrastructure (100-node/1M-evidence) and a long-lived host beyond a CI job (72h soak)"
+  },
+  {
+    "id": "R-038",
+    "phase": "46",
+    "title": "Calibration: log loss, Brier, ECE/MCE, Wilson-interval reliability curve, Platt and isotonic recalibration, PSI/KL/JS/KS drift",
+    "owner_package": "`pkg/moat/reliability`",
+    "tests": "reliability suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-039",
+    "phase": "47/48",
+    "title": "Model and source lifecycle state machines, approval requiring calibration, hash-chained event ledger, replay binding",
+    "owner_package": "`pkg/governance/lifecycle`",
+    "tests": "lifecycle suite, `TestGovernanceBindingIsCommittedAndEnforcedAtReplay`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-040",
+    "phase": "49",
+    "title": "HITL workflow: reviewer packet validation, self-review refusal, SLA breach recording, MachineDecision + HumanDecision = GovernedOutcome, override rate",
+    "owner_package": "`pkg/governance/hitl`",
+    "tests": "`TestHumanOverrideDoesNotMutateTheMachineDecision`, `TestIncompletePacketIsRefused`, `TestOverrideRateIsMeasurable`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-041",
+    "phase": "39",
+    "title": "External security testing: gosec, govulncheck, staticcheck, red team",
+    "owner_package": "`.github/workflows/security.yml`",
+    "tests": "wired, not executable offline",
+    "status": "BLOCKED",
+    "note": "staticcheck (SAST) now runs clean, see evidence/supply_chain_scan-staticcheck.txt; govulncheck's vulnerability feed (vuln.go.dev) returns 403 under this environment's network policy; independent pentest/red team requires an external vendor"
+  },
+  {
+    "id": "R-042",
+    "phase": "47",
+    "title": "Knowledge evolution: propose \u2192 validate \u2192 analyze \u2192 simulate \u2192 approve \u2192 activate, with time-windowed state",
+    "owner_package": "`pkg/governance/knowledge`",
+    "tests": "`TestKnowledgeStateAtT1IsUnchangedByAChangeAtT2`, `TestTwoConcurrentInFlightProposalsConflict`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-043",
+    "phase": "44",
+    "title": "Data quality vector and learned source reliability with bounded, replayable updates",
+    "owner_package": "`pkg/dataquality`",
+    "tests": "dataquality suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-044",
+    "phase": "45",
+    "title": "Economic consequence: expected value, variance, VaR, CVaR from declared scenarios",
+    "owner_package": "`pkg/moat/economic`",
+    "tests": "economic suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-045",
+    "phase": "V7.11.1 P0-1",
+    "title": "Bounded full-suite execution: per-package timeout, isolation, failure classification, hashed evidence artifact",
+    "owner_package": "`cmd/veriqo-testrunner`",
+    "tests": "`evidence/test-execution.json`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-046",
+    "phase": "V7.11.1 P0-2",
+    "title": "Formal multi-node chaos acceptance layer",
+    "owner_package": "`test/chaos`",
+    "tests": "7 acceptance scenarios, `evidence/chaos-acceptance.json`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-047",
+    "phase": "V7.11.1 P0-3/P0-5",
+    "title": "Stress layer producing throughput, p50/p95/p99, error rate, memory, goroutines; FAILS on SLO miss; 100 transfers yield 100/100 evidence",
+    "owner_package": "`test/stress`",
+    "tests": "`TestOneHundredTransfersProduceOneHundredEvidenceArtifacts`, `TestSLOEvaluationFailsWhenItShould`",
+    "status": "VERIFIED",
+    "note": "local scale only"
+  },
+  {
+    "id": "R-048",
+    "phase": "V7.11.1 P0-4",
+    "title": "100\u00d7 deterministic replay acceptance over ReplayResultHash, Decision, Explanation and Certificate, plus perturbation sensitivity",
+    "owner_package": "`test/acceptance/replay`",
+    "tests": "`TestOneHundredReplaysAgreeOnEveryMaterialField`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-049",
+    "phase": "V7.11.1 P0-6",
+    "title": "Untested security, durability and failure branches in authz, resource, storage and plugin",
+    "owner_package": "`pkg/authz`, `pkg/kernel/resource`, `pkg/storage`",
+    "tests": "`*_branches_test.go`; coverage 32.5\u219283.1%, 58.5\u219290.7%, 66.7\u219270.4%",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-050",
+    "phase": "Wave 5",
+    "title": "Real-world ingestion contracts (AIS, SAR, BoL, insurance, payment)",
+    "owner_package": "`pkg/connector`",
+    "tests": "\u2014",
+    "status": "OPEN",
+    "note": ""
+  }
+]

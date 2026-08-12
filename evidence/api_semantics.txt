@@ -1,0 +1,5 @@
+gate: api_semantics
+command: go test ./pkg/api/
+exit: 0
+---
+ok  	veriqo/pkg/api	(cached)

@@ -1,0 +1,5 @@
+gate: execution_graph
+command: go test ./pkg/execution/
+exit: 0
+---
+ok  	veriqo/pkg/execution	(cached)

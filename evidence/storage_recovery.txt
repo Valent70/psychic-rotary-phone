@@ -1,0 +1,6 @@
+gate: storage_recovery
+command: go test ./pkg/storage/wal/ ./pkg/storage/
+exit: 0
+---
+ok  	veriqo/pkg/storage/wal	(cached)
+ok  	veriqo/pkg/storage	(cached)

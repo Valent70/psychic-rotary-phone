@@ -1,0 +1,26 @@
+{
+  "slo": {
+    "name": "100_transfer_evidence",
+    "min_throughput_ops_per_sec": 5,
+    "max_p50_ms": 0,
+    "max_p95_ms": 500,
+    "max_p99_ms": 1000,
+    "max_error_rate": 0,
+    "max_goroutine_leak": 4,
+    "max_heap_growth_mb": 512
+  },
+  "operations": 100,
+  "errors": 0,
+  "error_rate": 0,
+  "throughput_ops_per_sec": 1306.7901771561865,
+  "p50_ms": 0.652,
+  "p95_ms": 1.436,
+  "p99_ms": 1.535,
+  "max_ms": 2.837,
+  "goroutines_before": 2,
+  "goroutines_after": 2,
+  "heap_growth_mb": 0.05707550048828125,
+  "evidence_produced": 100,
+  "breaches": null,
+  "passed": true
+}

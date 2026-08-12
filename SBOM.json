@@ -1,0 +1,13 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "metadata": {
+    "component": { "type": "application", "name": "veriqo", "version": "v7.12.0" },
+    "properties": [
+      { "name": "go.version", "value": "go1.22.2" },
+      { "name": "vcs.commit", "value": "unknown" }
+    ]
+  },
+  "components": [
+  ]
+}

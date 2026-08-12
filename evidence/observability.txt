@@ -1,0 +1,5 @@
+gate: observability
+command: go test ./pkg/platform/telemetry/
+exit: 0
+---
+ok  	veriqo/pkg/platform/telemetry	(cached)

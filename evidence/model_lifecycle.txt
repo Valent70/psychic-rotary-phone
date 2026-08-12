@@ -1,0 +1,5 @@
+gate: model_lifecycle
+command: go test ./pkg/governance/lifecycle/
+exit: 0
+---
+ok  	veriqo/pkg/governance/lifecycle	(cached)

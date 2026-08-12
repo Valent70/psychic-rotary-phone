@@ -1,0 +1,46 @@
+# IntentContract — canonical, machine-readable description of the
+# Intent Verification engine's callable surface. See trust.yaml for the
+# generation principle this file follows.
+engine: intent
+description: "Intent Verification — Intent -> Expected -> Observed -> Deviation -> Trust Delta"
+methods:
+  - name: verify
+    description: "Compare a declared intent's expected outcome to what was actually observed and compute the trust delta, without issuing a certificate."
+    params:
+      - name: intent_id
+        type: string
+      - name: subject
+        type: string
+      - name: expected_action
+        type: string
+      - name: observed_action
+        type: string
+      - name: expected_risk
+        type: float
+      - name: observed_risk
+        type: float
+      - name: tick
+        type: uint
+    returns: Verdict
+  - name: certify
+    description: "Verify, and issue a hash-chained trust certificate if the subject's running accuracy clears its policy threshold."
+    params:
+      - name: intent_id
+        type: string
+      - name: subject
+        type: string
+      - name: expected_action
+        type: string
+      - name: observed_action
+        type: string
+      - name: expected_risk
+        type: float
+      - name: observed_risk
+        type: float
+      - name: tick
+        type: uint
+    returns: Verdict
+  - name: ledger
+    description: "Return the full hash-chained trust certificate history for this Verifier."
+    params: []
+    returns: TrustCertificateList

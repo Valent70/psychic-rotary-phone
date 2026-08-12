@@ -1,0 +1,11 @@
+/veriqo-demo
+/veriqo-gateway
+/veriqo-kernel-demo
+/veriqo-live-demo
+/veriqo-node
+/veriqo-readiness
+/veriqo-requirements
+/veriqo-testrunner
+/veriqo-verify
+*.test
+*.prof

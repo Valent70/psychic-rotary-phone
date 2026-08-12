@@ -1,0 +1,5 @@
+gate: acceptance
+command: go test ./test/acceptance/
+exit: 0
+---
+ok  	veriqo/test/acceptance	(cached)
