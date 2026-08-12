@@ -1,0 +1,58 @@
+[
+  {
+    "gate_id": "pentest",
+    "description": "independent third-party penetration test",
+    "blocker": "requires an external security vendor; cannot be produced by any sandbox",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "scale_qualification",
+    "description": "100-node / 1M-evidence physical benchmark",
+    "blocker": "requires physical multi-node infrastructure",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "multi_region_dr",
+    "description": "multi-region deployment and DR drill with measured RPO/RTO",
+    "blocker": "requires multi-region infrastructure",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "hsm_kms",
+    "description": "production HSM/KMS backed signing",
+    "blocker": "interface implemented; a real HSM/KMS tenancy is a procurement action",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "live_data",
+    "description": "non-synthetic live data feeds (SWIFT/BoL/AIS/SAR)",
+    "blocker": "requires commercial data contracts",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "soak_72h",
+    "description": "72-hour continuous soak with zero leak and zero ledger corruption",
+    "blocker": "requires a long-lived environment beyond a CI job",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "spire_mtls",
+    "description": "real SPIRE deployment with workload attestation and mTLS rotation",
+    "blocker": "requires a running SPIRE cluster; network-blocked in this environment",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "supply_chain_scan",
+    "description": "govulncheck / gosec / staticcheck in CI",
+    "blocker": "staticcheck (SAST) was run for real in a network-enabled session — see evidence/supply_chain_scan-staticcheck.txt — and passes clean; govulncheck's vulnerability feed (vuln.go.dev) returned 403 under this environment's network policy even though the module proxy is reachable, so vulnerability-DB scanning is still unqualified; gosec has not yet been run. This is a narrower, evidenced blocker, not a blanket network-access claim",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  }
+]
