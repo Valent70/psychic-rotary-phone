@@ -47,7 +47,7 @@ func NewCA() (*CA, error) {
 		Subject:               pkix.Name{CommonName: "Veriqo Root CA"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
@@ -201,6 +201,7 @@ type envelope struct {
 type PeerVerifier struct {
 	ca      *CA
 	members map[string]bool
+	crl     *RevocationList
 	mu      sync.RWMutex
 }
 
@@ -221,6 +222,19 @@ func (v *PeerVerifier) SetMembers(members []string) {
 	}
 }
 
+// SetRevocationList wires a CRL into this verifier's checks (P1-06):
+// once set, Verify additionally refuses any peer whose leaf serial has
+// been revoked, even though its certificate has not yet expired and
+// its chain still verifies -- the check TLS's own handshake cannot
+// perform, since a compromised leaf's chain is still cryptographically
+// valid right up to NotAfter. A nil crl (the default) preserves the
+// exact pre-P1-06 behaviour.
+func (v *PeerVerifier) SetRevocationList(crl *RevocationList) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.crl = crl
+}
+
 // Verify independently re-checks the chain against the CA pool (Go's TLS
 // stack already did this during the handshake when ClientAuth is
 // RequireAndVerifyClientCert — this is a defense-in-depth second check by
@@ -231,6 +245,12 @@ func (v *PeerVerifier) Verify(cert *x509.Certificate) (string, error) {
 	opts := x509.VerifyOptions{Roots: v.ca.Pool(), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}
 	if _, err := cert.Verify(opts); err != nil {
 		return "", fmt.Errorf("rafttcp: chain verification failed: %w", err)
+	}
+	v.mu.RLock()
+	crl := v.crl
+	v.mu.RUnlock()
+	if crl != nil && crl.IsRevoked(cert.SerialNumber) {
+		return "", fmt.Errorf("%w: serial %s", ErrPeerCertRevoked, cert.SerialNumber.String())
 	}
 	spiffeID, err := ExtractSPIFFEID(cert)
 	if err != nil {
