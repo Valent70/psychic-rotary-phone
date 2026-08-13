@@ -16,6 +16,8 @@ package integration
 import (
 	"testing"
 
+	"veriqo/pkg/authz"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/causal"
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/digitaltwin"
@@ -150,6 +152,81 @@ func TestDarkVesselEndToEndScenario(t *testing.T) {
 	}
 	if twin.Risk["dark_vessel_risk"].Action != decision.ActionEscalate {
 		t.Fatalf("twin risk state = %+v, want ESCALATE", twin.Risk["dark_vessel_risk"])
+	}
+
+	// --- Layer 5: entity resolution ------------------------------------------------
+	// Two of this storyboard's own sources describe the SAME vessel via
+	// different identifier kinds -- the port monitor by IMO, the AIS
+	// vendor by callsign -- and resolution's job is to bind them to one
+	// entity. The vessel's beneficial owner (SHELLCORP-Y, already
+	// established by Layer 1's fusion arbitration) must resolve to a
+	// DIFFERENT entity: conflating "the vessel" with "who owns it" is
+	// exactly the failure mode audit item P0-03's adversarial tests
+	// targeted, and this storyboard is where that guarantee actually
+	// matters end to end, not just in isolation.
+	identityResolver := identity.NewResolver()
+	must(t, identityResolver.RegisterAuthority(identity.Authority{
+		SourceID: "port-monitor", Weight: 0.95, AuthoritativeFor: []identity.Kind{identity.KindIMO},
+	}))
+	must(t, identityResolver.RegisterAuthority(identity.Authority{
+		SourceID: "ais-vendor-a", Weight: 0.85, AuthoritativeFor: []identity.Kind{identity.KindCallsign},
+	}))
+
+	vesselIMO := identity.Identifier{Kind: identity.KindIMO, Value: "7778889"}
+	vesselCallsign := identity.Identifier{Kind: identity.KindCallsign, Value: "CS-7778889"}
+	_, err = identityResolver.Merge("resolution-agent", "port-monitor", vesselIMO, vesselCallsign, 5,
+		"port monitor cross-referenced the AIS callsign against the hull's IMO on visual boarding")
+	must(t, err)
+
+	vesselIdentity, err := identityResolver.Resolve(vesselIMO, 15, 0)
+	must(t, err)
+	if vesselIdentity.Confidence != 1.0 {
+		t.Fatalf("a merged identifier pair must resolve at full confidence, got %.4f", vesselIdentity.Confidence)
+	}
+
+	ownerIdentifier := identity.Identifier{Kind: identity.KindOrganization, Value: ownerRes.Winner}
+	ownerIdentity, err := identityResolver.Resolve(ownerIdentifier, 15, 0)
+	must(t, err)
+	if ownerIdentity.EntityID == vesselIdentity.EntityID {
+		t.Fatalf("the vessel and its beneficial owner must resolve to DISTINCT entities, both got %s",
+			vesselIdentity.EntityID)
+	}
+
+	// --- Layer 6: policy / authorization ---------------------------------------------
+	// The decision engine's ESCALATE recommendation (Layer 3) is not
+	// self-executing: acting on it -- opening an interdiction case on
+	// this exact vessel -- is itself an access-controlled action.
+	authzEngine := authz.NewEngine()
+	published, err := authzEngine.Publish(authz.Document{
+		ID: "veriqo-interdiction-policy", Version: 1,
+		Rules: []authz.Rule{
+			{ID: "compliance-can-escalate", Effect: authz.Allow, Roles: []string{"compliance-officer"},
+				Actions: []string{"escalate_interdiction"}, Resources: []string{"vessel/*"}},
+		},
+	})
+	must(t, err)
+	must(t, authzEngine.Activate(published.Version))
+
+	resource := "vessel/" + string(vessel)
+	if d.Action != decision.ActionEscalate {
+		t.Fatalf("this authorization check only makes sense once the decision actually escalated, got %s", d.Action)
+	}
+	allowed, err := authzEngine.Can(authz.Request{
+		Actor: "officer-jane", Roles: []string{"compliance-officer"},
+		Action: "escalate_interdiction", Resource: resource, Tick: 15,
+	})
+	must(t, err)
+	if !allowed.Allowed {
+		t.Fatalf("a compliance officer must be authorized to act on this ESCALATE recommendation: %+v", allowed)
+	}
+
+	denied, err := authzEngine.Can(authz.Request{
+		Actor: "analyst-bob", Roles: []string{"read-only-analyst"},
+		Action: "escalate_interdiction", Resource: resource, Tick: 15,
+	})
+	must(t, err)
+	if denied.Allowed {
+		t.Fatalf("a read-only analyst must NOT be authorized to escalate on the same vessel: %+v", denied)
 	}
 
 	// --- Replay consistency across every layer, end to end ------------------------
