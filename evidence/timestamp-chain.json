@@ -16,5 +16,14 @@
     "hash": "413bffe873168c56009dfd484742b29ecf3f0b52b108d0c4ab95239a8eef0c7e",
     "key_id": "3ec67aaa053d59f9",
     "signature": "235c87cd882df20a0d9872cafd78378e86e161f8f5a77df22c8aba6e0d88448fa791da1bfbb78858a73af710b9b5121b32bb300bad921e6f8a397d5a843cc20a"
+  },
+  {
+    "seq": 3,
+    "subject": "d085cb598b86fa299ff271f11e625c36a556367f6dd0fc3f1cdbe3e0d683cf3d",
+    "timestamp": 1786618403,
+    "prev_hash": "413bffe873168c56009dfd484742b29ecf3f0b52b108d0c4ab95239a8eef0c7e",
+    "hash": "e63e64000be193ba30a28ec80b65ab94d5bbe3e9170f06084915a1d5cae77bec",
+    "key_id": "3ec67aaa053d59f9",
+    "signature": "394894674b54e383ad4ff22d183e075c0b9c78ea96509cec79839fee33ef07d0a78ed0c256bace88038706f46a1d11b15ba0fe272c0b3e33c3cb14e08c66a308"
   }
 ]
