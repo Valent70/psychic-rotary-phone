@@ -9,12 +9,13 @@ ok  	veriqo/cmd/veriqo-demo	(cached)
 ?   	veriqo/cmd/veriqo-node	[no test files]
 ?   	veriqo/cmd/veriqo-readiness	[no test files]
 ?   	veriqo/cmd/veriqo-release-keygen	[no test files]
-ok  	veriqo/cmd/veriqo-requirements	(cached)
+ok  	veriqo/cmd/veriqo-requirements	1.015s
 ?   	veriqo/cmd/veriqo-testrunner	[no test files]
 ?   	veriqo/cmd/veriqo-verify	[no test files]
 ?   	veriqo/cmd/veriqo-verify-release	[no test files]
 ok  	veriqo/internal/assurance	(cached)
-ok  	veriqo/internal/sourcehash	(cached)
+ok  	veriqo/internal/sbom	1.015s
+ok  	veriqo/internal/sourcehash	1.039s
 ok  	veriqo/pkg/api	(cached)
 ok  	veriqo/pkg/authz	(cached)
 ok  	veriqo/pkg/canonical	(cached)
@@ -35,7 +36,7 @@ ok  	veriqo/pkg/governance/hitl	(cached)
 ok  	veriqo/pkg/governance/knowledge	(cached)
 ok  	veriqo/pkg/governance/lifecycle	(cached)
 ok  	veriqo/pkg/governance/precedence	(cached)
-ok  	veriqo/pkg/governance/qualification	(cached)
+ok  	veriqo/pkg/governance/qualification	1.062s
 ok  	veriqo/pkg/identity	(cached)
 ok  	veriqo/pkg/kernel/distributed	(cached)
 ok  	veriqo/pkg/kernel/execgraph	(cached)
@@ -89,11 +90,11 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	1.978s
+ok  	veriqo/test/acceptance/replay	2.090s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/integration	2.526s
-ok  	veriqo/test/soak	31.101s
-ok  	veriqo/test/stress	1.427s
+ok  	veriqo/test/integration	2.864s
+ok  	veriqo/test/soak	31.157s
+ok  	veriqo/test/stress	1.494s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -101,7 +102,7 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	(cached)
+ok  	veriqo/veriqo/gateway/rest	1.736s
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
 ok  	veriqo/veriqo/kernel	(cached)
