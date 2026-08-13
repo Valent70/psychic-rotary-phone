@@ -78,7 +78,7 @@ func (e *OSEnforcer) Available() bool {
 func (e *OSEnforcer) CreateGroup(holder string) error {
 	for _, root := range []string{memoryRoot, cpuRoot, pidsRoot} {
 		dir := filepath.Join(root, e.prefix, holder)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("resource: create cgroup dir %s: %w", dir, err)
 		}
 	}
@@ -90,7 +90,7 @@ func (e *OSEnforcer) CreateGroup(holder string) error {
 // that tries to exceed this many bytes of resident memory.
 func (e *OSEnforcer) SetMemoryLimitBytes(holder string, limitBytes uint64) error {
 	path := filepath.Join(memoryRoot, e.prefix, holder, "memory.limit_in_bytes")
-	return os.WriteFile(path, []byte(strconv.FormatUint(limitBytes, 10)), 0o644)
+	return os.WriteFile(path, []byte(strconv.FormatUint(limitBytes, 10)), 0o600)
 }
 
 // SetCPUQuota sets a hard CPU limit for holder's cgroup as a fraction of
@@ -101,10 +101,10 @@ func (e *OSEnforcer) SetCPUQuota(holder string, cores float64) error {
 	const periodUs = 100000 // 100ms, the common default period
 	quotaUs := int64(cores * periodUs)
 	dir := filepath.Join(cpuRoot, e.prefix, holder)
-	if err := os.WriteFile(filepath.Join(dir, "cpu.cfs_period_us"), []byte(strconv.Itoa(periodUs)), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "cpu.cfs_period_us"), []byte(strconv.Itoa(periodUs)), 0o600); err != nil {
 		return fmt.Errorf("resource: set cpu.cfs_period_us: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "cpu.cfs_quota_us"), []byte(strconv.FormatInt(quotaUs, 10)), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "cpu.cfs_quota_us"), []byte(strconv.FormatInt(quotaUs, 10)), 0o600); err != nil {
 		return fmt.Errorf("resource: set cpu.cfs_quota_us: %w", err)
 	}
 	return nil
@@ -117,7 +117,7 @@ func (e *OSEnforcer) SetCPUQuota(holder string, cores float64) error {
 func (e *OSEnforcer) AddPID(holder string, pid int) error {
 	for _, root := range []string{memoryRoot, cpuRoot, pidsRoot} {
 		path := filepath.Join(root, e.prefix, holder, "cgroup.procs")
-		if err := os.WriteFile(path, []byte(strconv.Itoa(pid)), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(strconv.Itoa(pid)), 0o600); err != nil {
 			return fmt.Errorf("resource: add pid %d to %s: %w", pid, path, err)
 		}
 	}
@@ -129,17 +129,17 @@ func (e *OSEnforcer) AddPID(holder string, pid int) error {
 // controller), not merely a memory ceiling.
 func (e *OSEnforcer) SetPIDsLimit(holder string, max int) error {
 	dir := filepath.Join(pidsRoot, e.prefix, holder)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("resource: create pids cgroup dir: %w", err)
 	}
-	return os.WriteFile(filepath.Join(dir, "pids.max"), []byte(strconv.Itoa(max)), 0o644)
+	return os.WriteFile(filepath.Join(dir, "pids.max"), []byte(strconv.Itoa(max)), 0o600)
 }
 
 // MemoryUsageBytes reads the live (kernel-reported, not self-declared)
 // current memory usage of holder's cgroup.
 func (e *OSEnforcer) MemoryUsageBytes(holder string) (uint64, error) {
 	path := filepath.Join(memoryRoot, e.prefix, holder, "memory.usage_in_bytes")
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) // #nosec G304 -- path is built from this process's own cgroup prefix/holder state, not external input
 	if err != nil {
 		return 0, err
 	}

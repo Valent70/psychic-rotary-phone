@@ -82,7 +82,7 @@ func main() {
 		return
 	}
 
-	if err := os.WriteFile(*out, []byte(rendered), 0o644); err != nil {
+	if err := os.WriteFile(*out, []byte(rendered), 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "veriqo-requirements: write:", err)
 		os.Exit(2)
 	}

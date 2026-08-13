@@ -375,7 +375,7 @@
     "owner_package": "`.github/workflows/security.yml`",
     "tests": "wired, not executable offline",
     "status": "BLOCKED",
-    "note": "staticcheck (SAST) runs clean; gosec now run for real too (see evidence/supply_chain_scan-gosec.txt) -- 18 HIGH-severity findings triaged and fixed/justified (TLS session-resumption hardening, seeded-RNG determinism documented, integer-overflow guards added), 73 MEDIUM/LOW findings (mostly unhandled-error-on-cleanup-path and file-permission hardening) remain a documented backlog, not fabricated as fixed; govulncheck and osv.dev and the GitHub advisory API all return 403 under this environment network policy, so vulnerability-DB scanning is still unqualified; independent pentest/red team requires an external vendor"
+    "note": "staticcheck AND gosec both run clean (0 findings) -- see evidence/supply_chain_scan-gosec-full.txt; all 89 gosec findings individually triaged and fixed/justified, including correcting a real bug in the prior round own suppression syntax. govulncheck, osv.dev and the GitHub advisory API all return 403 under this environment network policy; independent pentest/red team requires an external vendor"
   },
   {
     "id": "R-042",

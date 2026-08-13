@@ -348,7 +348,7 @@ func randDuration(min, max time.Duration) time.Duration {
 	if max <= min {
 		return min
 	}
-	return min + time.Duration(rand.Int63n(int64(max-min))) //nolint:gosec // G404: election-timeout jitter, not security-sensitive; must stay seedable for deterministic replay
+	return min + time.Duration(rand.Int63n(int64(max-min))) // #nosec G404 -- election-timeout jitter, not security-sensitive; must stay seedable for deterministic replay
 }
 
 // SetTransport (re)wires the node's Transport after construction — used
@@ -690,7 +690,7 @@ func (n *Node) replicateToAll(ctx context.Context) {
 // only when index >= n.logBase. Callers at or below logBase must not
 // call this — that range is compacted away and only reachable via a
 // snapshot (see snapshot.go).
-func (n *Node) pos(index uint64) int { return int(index - n.logBase) } //nolint:gosec // G115: callers hold index >= n.logBase as an invariant (checked at call sites), so this never underflows in practice
+func (n *Node) pos(index uint64) int { return int(index - n.logBase) } // #nosec G115 -- callers hold index >= n.logBase as an invariant (checked at call sites), so this never underflows in practice
 
 func (n *Node) replicateTo(ctx context.Context, peer string, term uint64) {
 	n.mu.Lock()
@@ -802,7 +802,7 @@ func (n *Node) advanceCommitIndex() {
 		// instead of committing against a garbage index.
 		return
 	}
-	lastIdx := n.logBase + uint64(len(n.state.log)-1)
+	lastIdx := n.logBase + uint64(len(n.state.log)-1) // #nosec G115 -- guarded by the len==0 check immediately above
 	for idx := lastIdx; idx > n.commitIndex && idx > n.logBase; idx-- {
 		if n.state.log[n.pos(idx)].Term != n.state.currentTerm {
 			continue // only commit entries from current term directly (Raft §5.4.2)

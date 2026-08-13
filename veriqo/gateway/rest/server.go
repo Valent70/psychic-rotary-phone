@@ -33,6 +33,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"veriqo/pkg/platform/audit"
@@ -98,7 +99,13 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(sw, r)
-		log.Printf("%s %s %d %s", r.Method, r.URL.Path, sw.status, time.Since(start))
+		// Explicitly sanitize before logging: strconv.Quote escapes control
+		// characters -- including a newline an attacker could put in the
+		// request path to forge additional, fake-looking log lines
+		// (CWE-117 log injection) -- into a new, clean string, rather than
+		// handing the tainted request path to log.Printf directly.
+		safePath := strconv.Quote(r.URL.Path)
+		log.Printf("%s %s %d %s", r.Method, safePath, sw.status, time.Since(start)) // #nosec G706 -- strconv.Quote above genuinely escapes newlines/control chars (verified: "\n" -> literal backslash-n); gosec's taint tracker just doesn't recognize this sanitizer
 	})
 }
 

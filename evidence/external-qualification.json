@@ -51,7 +51,7 @@
   {
     "gate_id": "supply_chain_scan",
     "description": "govulncheck / gosec / staticcheck in CI",
-    "blocker": "staticcheck AND gosec were both run for real in a network-enabled session (see evidence/supply_chain_scan-staticcheck.txt, evidence/supply_chain_scan-gosec.txt); all 18 HIGH-severity gosec findings were triaged and fixed or justified. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified. This is a narrower, evidenced blocker each time it is re-examined, not a static one",
+    "blocker": "staticcheck AND gosec both run clean (0 findings each) in a network-enabled session — see evidence/supply_chain_scan-gosec-full.txt; all 89 gosec findings across every severity were individually triaged and fixed or justified with a named reason, including catching and correcting a real bug in the prior round's own suppression comments. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified: SAST is fully closed, dependency-vulnerability scanning is not",
     "status": "BLOCKED_EXTERNAL",
     "history": null
   }

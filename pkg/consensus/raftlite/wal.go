@@ -94,8 +94,8 @@ func (f *FileStorage) Persist(s StateSnapshot) error {
 	}
 	tmpPath := tmp.Name()
 	if _, err := tmp.Write(out.Bytes()); err != nil {
-		tmp.Close()
-		os.Remove(tmpPath)
+		_ = tmp.Close() // best-effort cleanup; the write error below is what matters
+		_ = os.Remove(tmpPath)
 		return err
 	}
 	// fsync: force the new state to durable storage BEFORE the rename
@@ -103,19 +103,19 @@ func (f *FileStorage) Persist(s StateSnapshot) error {
 	// not-yet-flushed rename could still lose the write on some
 	// filesystems/mount options.
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		os.Remove(tmpPath)
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return err
 	}
 	// Atomic swap. After this line returns, Load() sees either the OLD
 	// complete file (crash before this point) or the NEW complete file
 	// (crash after) — never a torn mix of the two.
 	if err := os.Rename(tmpPath, f.path); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return err
 	}
 	return nil

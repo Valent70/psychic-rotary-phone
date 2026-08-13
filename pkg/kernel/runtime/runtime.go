@@ -153,8 +153,12 @@ func (r *Runtime) Boot(components ...Component) error {
 		if err := r.components[name].Start(); err != nil {
 			return fmt.Errorf("runtime: start %q: %w", name, err)
 		}
-		r.graph.SetStatus(name, execgraph.Running, uint64(tick)+1)
-		r.graph.SetStatus(name, execgraph.Done, uint64(tick)+1)
+		if err := r.graph.SetStatus(name, execgraph.Running, uint64(tick)+1); err != nil {
+			return fmt.Errorf("runtime: mark %q running: %w", name, err)
+		}
+		if err := r.graph.SetStatus(name, execgraph.Done, uint64(tick)+1); err != nil {
+			return fmt.Errorf("runtime: mark %q done: %w", name, err)
+		}
 	}
 
 	r.mu.Lock()

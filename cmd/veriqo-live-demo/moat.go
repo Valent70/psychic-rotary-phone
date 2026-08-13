@@ -96,7 +96,7 @@ func runMOATBenchmarks(w *narrator) moatResult {
 		flags := []string{"PA", "KP", "MH", "IR", "LR"}
 		start = time.Now()
 		for i := 0; i < policyOps; i++ {
-			store.Evaluate("trader-bench", "trade", fmt.Sprintf("vessel/%d", i), map[string]string{"flag_state": flags[i%len(flags)]})
+			_, _, _ = store.Evaluate("trader-bench", "trade", fmt.Sprintf("vessel/%d", i), map[string]string{"flag_state": flags[i%len(flags)]}) // throughput benchmark; only timing matters
 		}
 		elapsed = time.Since(start).Seconds()
 		res.PolicyThroughputPerSec = float64(policyOps) / elapsed
@@ -119,7 +119,7 @@ func runMOATBenchmarks(w *narrator) moatResult {
 
 	// --- Trust computation latency: real trust.Kernel.Evaluate calls. ---
 	tk := trust.NewKernel()
-	tk.RegisterPolicy(trust.TrustPolicy{
+	_ = tk.RegisterPolicy(trust.TrustPolicy{ // fixed, valid policy; error path benchmarked separately
 		Name: "bench-policy",
 		Rules: []trust.TrustRule{
 			trust.RuleFromEvidenceKey("signal", 1.0, "signal"),
@@ -130,7 +130,7 @@ func runMOATBenchmarks(w *narrator) moatResult {
 	samples := make([]float64, 0, trustOps)
 	for i := 0; i < trustOps; i++ {
 		s := time.Now()
-		tk.Evaluate(fmt.Sprintf("subject-%d", i%50), "bench-policy", trust.TrustEvidence{"signal": 0.7}, uint64(i))
+		_, _ = tk.Evaluate(fmt.Sprintf("subject-%d", i%50), "bench-policy", trust.TrustEvidence{"signal": 0.7}, uint64(i)) // latency benchmark; only timing matters
 		samples = append(samples, float64(time.Since(s).Microseconds())/1000.0)
 	}
 	sort.Float64s(samples)

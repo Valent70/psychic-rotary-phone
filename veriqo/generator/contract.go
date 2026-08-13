@@ -84,7 +84,7 @@ func LoadContracts(dir string) ([]Contract, error) {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
 			continue
 		}
-		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		b, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- e.Name() comes from this process's own os.ReadDir listing, not external input
 		if err != nil {
 			return nil, fmt.Errorf("generator: reading %s: %w", e.Name(), err)
 		}

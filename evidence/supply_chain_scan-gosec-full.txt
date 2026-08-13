@@ -1,0 +1,59 @@
+gate: supply_chain_scan (SAST component, full remediation)
+tool: gosec (github.com/securego/gosec/v2/cmd/gosec) + staticcheck, both run for real in a network-enabled session
+
+Timeline this session:
+1. Discovered a real bug in the PRIOR round's own gosec remediation: 12 suppression
+   comments used `//nolint:gosec` (a golangci-lint convention), which gosec run
+   directly does NOT recognize. `gosec` reported `Nosec: 0` despite 12 annotated
+   sites -- none of the prior "fixed" HIGH findings were actually suppressed.
+   Corrected all 12 to gosec's real directive: `// #nosec G<rule> -- <reason>`.
+   Confirmed fix: `Nosec: 12` now correctly counted.
+2. Full re-scan: 89 issues (up from the 91 originally found, minus dedup/line-shift
+   noise) -- every one triaged individually, not blanket-suppressed:
+   - 1 more real G115 (raft.go advanceCommitIndex) -- already guarded by an
+     explicit empty-log check from the prior round; added the matching #nosec now
+     that the real fix already covers it.
+   - 2 G118 (chaos/transport.go duplicate-RPC goroutines using context.Background) --
+     REAL FIX: replaced with context.WithTimeout(context.Background(), 10s) so the
+     goroutine still outlives the original request (required to simulate a genuine
+     network duplicate) but can no longer leak forever on a hung underlying send.
+   - 15 G306 + 8 G301 (file/dir permissions) -- REAL FIXES: tightened every flagged
+     os.WriteFile/os.Create to 0o600 and every os.MkdirAll to 0o750.
+   - 17 G304 (path from variable) -- reviewed individually: every one is either an
+     operator-supplied CLI/config path (trust files, signing keys, CA cert/key,
+     evidence dir) or an internally-derived name (WAL segment index, os.ReadDir
+     listing) -- never untrusted network/user input. Justified with #nosec + the
+     specific reason at each site.
+   - 6 G204 (subprocess with variable args) -- reviewed individually: all are fixed,
+     hardcoded invocations of `go build`/`go list`/this repo's own sibling binaries
+     from internal tooling (readiness gates, test runner, demo harness) -- never
+     external input. Justified with #nosec + reason.
+   - 2 G302 (WAL OpenFile permission bits) -- REAL FIX: same 0o600 tightening as
+     G306 resolved this at the same two sites.
+   - 1 G114 (cmd/veriqo-node admin HTTP server has no timeouts, slowloris risk) --
+     REAL FIX: replaced bare http.ListenAndServe with an http.Server carrying
+     ReadHeaderTimeout/ReadTimeout/WriteTimeout/IdleTimeout.
+   - 1 G706 (log injection via r.URL.Path reaching log.Printf unescaped, CWE-117) --
+     REAL FIX: strconv.Quote(r.URL.Path) before logging (verified empirically that
+     Quote escapes an embedded newline to a literal "\n"); gosec's taint tracker
+     doesn't recognize strconv.Quote as a sanitizer, so also carries a #nosec with
+     that verification noted.
+   - 24 G104 (unhandled errors, LOW) -- reviewed individually: cleanup-path
+     Close()/Remove() calls where a primary error is already being returned got
+     explicit `_ = ` discards with a one-line reason; two sites
+     (pkg/kernel/runtime/runtime.go's SetStatus calls) were instead wired to real
+     error handling, since silently swallowing a graph state-transition failure
+     there could mask an actual invariant violation, not just a cosmetic warning.
+
+Final result: `gosec ./...` -> 0 issues, 37 #nosec sites (every one with an inline
+reason naming the specific rule and why it does not apply or has already been
+addressed by a real code change). `staticcheck ./...` -> 0 findings.
+`go build ./...`, `go vet ./...`, `gofmt -l .` all clean. Full test suite green
+after every change in this file.
+
+govulncheck: still BLOCKED_EXTERNAL -- vuln.go.dev, osv.dev and the GitHub advisory
+API all return 403 under this environment's network policy (re-confirmed this
+session; unchanged from prior rounds). supply_chain_scan therefore remains honestly
+BLOCKED_EXTERNAL as a whole: SAST (staticcheck + gosec) is now fully clean and
+verifiably so, but vulnerability-database scanning specifically cannot run in this
+sandbox regardless of which provider is tried.

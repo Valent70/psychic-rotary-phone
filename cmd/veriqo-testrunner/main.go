@@ -134,7 +134,7 @@ func main() {
 }
 
 func listPackages(pattern string) ([]string, error) {
-	cmd := exec.Command("go", "list", pattern)
+	cmd := exec.Command("go", "list", pattern) // #nosec G204 -- pattern is this process's own hardcoded package pattern, not external input
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -159,7 +159,7 @@ func runPackage(pkg string, timeoutSec int, race bool) PackageResult {
 	args = append(args, pkg)
 
 	start := time.Now()
-	cmd := exec.Command("go", args...)
+	cmd := exec.Command("go", args...) // #nosec G204 -- args is built entirely from this process's own internal state, not external input
 	combined, err := cmd.CombinedOutput()
 	dur := time.Since(start).Milliseconds()
 
@@ -237,12 +237,12 @@ func hashReport(r Report) string {
 }
 
 func writeReport(path string, r Report) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(b, '\n'), 0o644)
+	return os.WriteFile(path, append(b, '\n'), 0o600)
 }

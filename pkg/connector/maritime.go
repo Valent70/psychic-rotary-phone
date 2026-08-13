@@ -75,7 +75,7 @@ type SyntheticReplayableAdapter struct {
 func (a *SyntheticReplayableAdapter) Name() string { return fmt.Sprintf("synthetic:%d", a.Seed) }
 
 func (a *SyntheticReplayableAdapter) Fetch(ctx context.Context) ([]Observation, error) {
-	rng := rand.New(rand.NewSource(a.Seed)) //nolint:gosec // G404: SyntheticReplayableAdapter is explicitly synthetic test fixture data, seeded for reproducibility -- never the live_data path
+	rng := rand.New(rand.NewSource(a.Seed)) // #nosec G404 -- SyntheticReplayableAdapter is explicitly synthetic test fixture data, seeded for reproducibility -- never the live_data path
 	flags := []string{"PA", "LR", "MH", "KP", "SG"}
 	out := make([]Observation, 0, a.Count)
 	for i := 0; i < a.Count; i++ {

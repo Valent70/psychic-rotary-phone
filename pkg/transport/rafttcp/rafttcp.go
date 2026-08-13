@@ -75,7 +75,7 @@ func (ca *CA) Pool() *x509.CertPool {
 // previously called NewCA() independently, so every node minted its own
 // root and no two processes could ever validate each other's leaf certs.
 func (ca *CA) SavePEM(certPath, keyPath string) error {
-	certOut, err := os.Create(certPath)
+	certOut, err := os.Create(certPath) // #nosec G304 -- certPath is an operator-supplied CLI argument, not untrusted input
 	if err != nil {
 		return fmt.Errorf("rafttcp: create cert file: %w", err)
 	}
@@ -88,7 +88,7 @@ func (ca *CA) SavePEM(certPath, keyPath string) error {
 	if err != nil {
 		return fmt.Errorf("rafttcp: marshal ca key: %w", err)
 	}
-	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- keyPath is an operator-supplied CLI argument, not untrusted input
 	if err != nil {
 		return fmt.Errorf("rafttcp: create key file: %w", err)
 	}
@@ -103,7 +103,7 @@ func (ca *CA) SavePEM(certPath, keyPath string) error {
 // independently-started OS processes can share one root of trust — the
 // concrete precondition for a real live multi-process raft cluster.
 func LoadCAPEM(certPath, keyPath string) (*CA, error) {
-	certPEM, err := os.ReadFile(certPath)
+	certPEM, err := os.ReadFile(certPath) // #nosec G304 -- certPath is an operator-supplied CLI argument, not untrusted input
 	if err != nil {
 		return nil, fmt.Errorf("rafttcp: read cert file: %w", err)
 	}
@@ -116,7 +116,7 @@ func LoadCAPEM(certPath, keyPath string) (*CA, error) {
 		return nil, fmt.Errorf("rafttcp: parse ca cert: %w", err)
 	}
 
-	keyPEM, err := os.ReadFile(keyPath)
+	keyPEM, err := os.ReadFile(keyPath) // #nosec G304 -- keyPath is an operator-supplied CLI argument, not untrusted input
 	if err != nil {
 		return nil, fmt.Errorf("rafttcp: read key file: %w", err)
 	}
@@ -413,7 +413,7 @@ func (c *Client) SetAddr(target, addr string) {
 	defer c.mu.Unlock()
 	c.addrs[target] = addr
 	if pc, ok := c.conns[target]; ok {
-		pc.conn.Close()
+		_ = pc.conn.Close() // best-effort; we're discarding this pooled conn regardless
 		delete(c.conns, target)
 	}
 }
@@ -442,7 +442,7 @@ func (c *Client) getConn(target string) (*peerConn, error) {
 	tlsConf := &tls.Config{
 		Certificates:       []tls.Certificate{c.leafCert},
 		RootCAs:            c.ca.Pool(),
-		InsecureSkipVerify: true, //nolint:gosec // G402: intentional -- VerifyPeerCertificate below performs real chain + SPIFFE-identity verification in its place; see comment above
+		InsecureSkipVerify: true, // #nosec G402 -- intentional -- VerifyPeerCertificate below performs real chain + SPIFFE-identity verification in its place; see comment above
 		MinVersion:         tls.VersionTLS12,
 		// A resumed session must still hit VerifyPeerCertificate; do not
 		// let ticket resumption bypass the SPIFFE identity check
@@ -477,12 +477,12 @@ func (c *Client) getConn(target string) (*peerConn, error) {
 	// Wait for the explicit auth-ack byte before pooling — closes the
 	// TLS 1.3 handshake-completion race described in Server.handleConn.
 	ackBuf := make([]byte, 1)
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // best-effort; a failure surfaces as a Read timeout/error below regardless
 	if _, err := conn.Read(ackBuf); err != nil || msgType(ackBuf[0]) != msgAuthAck {
-		conn.Close()
+		_ = conn.Close() // best-effort; the auth-ack rejection below is what matters
 		return nil, fmt.Errorf("rafttcp: peer %q rejected connection (no auth-ack)", target)
 	}
-	conn.SetReadDeadline(time.Time{})
+	_ = conn.SetReadDeadline(time.Time{}) // best-effort; clearing the deadline is not on any error-recovery path
 
 	pc := &peerConn{conn: conn, enc: gob.NewEncoder(conn), dec: gob.NewDecoder(bufio.NewReader(conn))}
 	c.mu.Lock()
@@ -514,7 +514,7 @@ func (c *Client) dropConn(target string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if pc, ok := c.conns[target]; ok {
-		pc.conn.Close()
+		_ = pc.conn.Close() // best-effort; we're discarding this pooled conn regardless
 		delete(c.conns, target)
 	}
 }
@@ -548,7 +548,7 @@ func (c *Client) CloseAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for id, pc := range c.conns {
-		pc.conn.Close()
+		_ = pc.conn.Close() // best-effort; we're tearing down the whole pool
 		delete(c.conns, id)
 	}
 }

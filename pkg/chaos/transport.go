@@ -35,6 +35,12 @@ import (
 	"veriqo/pkg/consensus/raftlite"
 )
 
+// duplicateSendTimeout bounds the background goroutine that fires a
+// simulated duplicate RPC (see SendRequestVote/SendAppendEntries): long
+// enough to outlive the original request it duplicates, short enough
+// that a hung underlying transport cannot leak the goroutine forever.
+const duplicateSendTimeout = 10 * time.Second
+
 // Scenario configures fault-injection probabilities/magnitudes. All
 // probabilities are in [0,1]. Zero-value Scenario is a no-op passthrough.
 type Scenario struct {
@@ -74,7 +80,7 @@ type Event struct {
 }
 
 func NewTransport(underlying raftlite.Transport, scenario Scenario, nodeSalt int64) *Transport {
-	return &Transport{underlying: underlying, scenario: scenario, rng: rand.New(rand.NewSource(scenario.Seed*1000003 + nodeSalt))} //nolint:gosec // G404: chaos fault injection must be seedable for reproducible, replayable failure scenarios
+	return &Transport{underlying: underlying, scenario: scenario, rng: rand.New(rand.NewSource(scenario.Seed*1000003 + nodeSalt))} // #nosec G404 -- chaos fault injection must be seedable for reproducible, replayable failure scenarios
 }
 
 // Events returns a defensive copy of every fault-injection decision made
@@ -155,7 +161,14 @@ func (t *Transport) SendRequestVote(ctx context.Context, target string, args raf
 		}
 	}
 	if t.shouldDuplicate(target) {
-		go func() { _, _ = t.underlying.SendRequestVote(context.Background(), target, args) }()
+		// Deliberately NOT derived from ctx: this goroutine simulates a
+		// network-level duplicate that arrives independently of, and can
+		// outlive, the original request -- that is what "duplicate
+		// delivery" means. It is still bounded (not context.Background()
+		// used unboundedly, gosec G118) so a hung underlying send cannot
+		// leak the goroutine forever.
+		dupCtx, cancel := context.WithTimeout(context.Background(), duplicateSendTimeout)
+		go func() { defer cancel(); _, _ = t.underlying.SendRequestVote(dupCtx, target, args) }()
 	}
 	return t.underlying.SendRequestVote(ctx, target, args)
 }
@@ -172,7 +185,9 @@ func (t *Transport) SendAppendEntries(ctx context.Context, target string, args r
 		}
 	}
 	if t.shouldDuplicate(target) {
-		go func() { _, _ = t.underlying.SendAppendEntries(context.Background(), target, args) }()
+		// See the identical comment in SendRequestVote above.
+		dupCtx, cancel := context.WithTimeout(context.Background(), duplicateSendTimeout)
+		go func() { defer cancel(); _, _ = t.underlying.SendAppendEntries(dupCtx, target, args) }()
 	}
 	return t.underlying.SendAppendEntries(ctx, target, args)
 }

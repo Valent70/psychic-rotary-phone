@@ -28,7 +28,7 @@ func runDemo1(w *narrator, repoRoot, outDir string, bins map[string]string) (dem
 	res := demo1Result{}
 
 	w.line("launching cmd/veriqo-demo as a child process (dark-vessel scenario)…")
-	demoOut, err := exec.Command(bins["veriqo-demo"], "-scenario", "dark-vessel", "-tick", "100").CombinedOutput()
+	demoOut, err := exec.Command(bins["veriqo-demo"], "-scenario", "dark-vessel", "-tick", "100").CombinedOutput() // #nosec G204 -- fixed, hardcoded args against this repo's own built binary, not external input
 	if err != nil {
 		return res, fmt.Errorf("veriqo-demo run: %w\n%s", err, demoOut)
 	}
@@ -48,7 +48,7 @@ func runDemo1(w *narrator, repoRoot, outDir string, bins map[string]string) (dem
 	w.line(fmt.Sprintf("evidence bundle: %s (sha256=%s…)", res.BundlePath, bh[:16]))
 
 	w.line("launching cmd/veriqo-verify as a SEPARATE, independent process against that bundle…")
-	verifyCmd := exec.Command(bins["veriqo-verify"], "-bundle", res.BundlePath, "-domain", "fusion")
+	verifyCmd := exec.Command(bins["veriqo-verify"], "-bundle", res.BundlePath, "-domain", "fusion") // #nosec G204 -- fixed args plus an internally-produced bundle path, not external input
 	verifyOut, verifyErr := verifyCmd.CombinedOutput()
 	res.VerifyStdout = string(verifyOut)
 	if verifyCmd.ProcessState != nil {

@@ -61,7 +61,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "veriqo-release-keygen: marshal trust file:", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(*trustFile, out, 0o644); err != nil {
+	if err := os.WriteFile(*trustFile, out, 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "veriqo-release-keygen: write trust file:", err)
 		os.Exit(1)
 	}

@@ -78,7 +78,7 @@ func main() {
 		"a private key to close this flag's absence")
 	flag.Parse()
 
-	if err := os.MkdirAll(*evidenceDir, 0o755); err != nil {
+	if err := os.MkdirAll(*evidenceDir, 0o750); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: cannot create evidence dir:", err)
 		os.Exit(3)
 	}
@@ -150,11 +150,11 @@ func main() {
 		{"live_data", "non-synthetic live data feeds (SWIFT/BoL/AIS/SAR)", assurance.StatusQualified, "./pkg/connector", "ingest qualified against contracted live feeds", "requires commercial data contracts"},
 		{"soak_72h", "72-hour continuous soak with zero leak and zero ledger corruption", assurance.StatusQualified, "./...", "72h run with stable memory, goroutines and ledger integrity", "the harness now exists and genuinely runs — see test/soak and evidence/soak-report.json (2188 real iterations over 90s in this session, 0 errors, goroutines flat at 2->2) — but this environment cannot honestly stay up for the required 72h continuous window; VERIQO_SOAK_MINUTES=4320 against the same unchanged test on a long-lived host produces the qualifying evidence"},
 		{"spire_mtls", "real SPIRE deployment with workload attestation and mTLS rotation", assurance.StatusQualified, "deploy/spire", "node A and node B attest, rotate and revoke identities", "a real single-node SPIRE server+agent was run in this session — see evidence/spire_mtls-local-integration.txt — with genuine attestation, X.509-SVID issuance and revocation; still requires a multi-node cluster with a production node attestor and a Workload API client wired into pkg/transport/rafttcp, none of which this evidence covers"},
-		{"supply_chain_scan", "govulncheck / gosec / staticcheck in CI", assurance.StatusQualified, ".github/workflows", "all scanners run and report clean", "staticcheck AND gosec were both run for real in a network-enabled session (see evidence/supply_chain_scan-staticcheck.txt, evidence/supply_chain_scan-gosec.txt); all 18 HIGH-severity gosec findings were triaged and fixed or justified. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified. This is a narrower, evidenced blocker each time it is re-examined, not a static one"},
+		{"supply_chain_scan", "govulncheck / gosec / staticcheck in CI", assurance.StatusQualified, ".github/workflows", "all scanners run and report clean", "staticcheck AND gosec both run clean (0 findings each) in a network-enabled session — see evidence/supply_chain_scan-gosec-full.txt; all 89 gosec findings across every severity were individually triaged and fixed or justified with a named reason, including catching and correcting a real bug in the prior round's own suppression comments. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified: SAST is fully closed, dependency-vulnerability scanning is not"},
 	}
 
 	reg := assurance.NewRegistry()
-	now := uint64(time.Now().Unix()) //nolint:gosec // G115: Unix() is positive for any realistic clock (1970..292 billion AD)
+	now := uint64(time.Now().Unix()) // #nosec G115 -- Unix() is positive for any realistic clock (1970..292 billion AD)
 	failures := 0
 
 	for _, c := range checks {
@@ -205,7 +205,7 @@ func main() {
 	} else if raw, err := doc.JSON(); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: sbom marshal:", err)
 		os.Exit(3)
-	} else if err := os.WriteFile("SBOM.json", raw, 0o644); err != nil {
+	} else if err := os.WriteFile("SBOM.json", raw, 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: sbom write:", err)
 		os.Exit(3)
 	}
@@ -265,7 +265,7 @@ func main() {
 		}
 	}
 	if qj, err := qreg.JSON(); err == nil {
-		_ = os.WriteFile(filepath.Join(*evidenceDir, "external-qualification.json"), qj, 0o644)
+		_ = os.WriteFile(filepath.Join(*evidenceDir, "external-qualification.json"), qj, 0o600)
 	}
 
 	acc := assurance.AcceptanceManifest{
@@ -319,7 +319,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "readiness: manifest:", err)
 		os.Exit(3)
 	}
-	if err := os.WriteFile(*out, raw, 0o644); err != nil {
+	if err := os.WriteFile(*out, raw, 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: write:", err)
 		os.Exit(3)
 	}
@@ -356,7 +356,7 @@ func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string
 	dir := filepath.Join(evidenceDir, "external")
 	for _, rec := range qreg.Records() {
 		path := filepath.Join(dir, rec.GateID+".json")
-		raw, err := os.ReadFile(path)
+		raw, err := os.ReadFile(path) // #nosec G304 -- path is built from this process's own registered gate IDs, not external input
 		if err != nil {
 			continue // no external evidence submitted; stays BLOCKED_EXTERNAL
 		}
@@ -393,7 +393,7 @@ func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string
 // is the correct default until an operator registers a real one.
 func loadTrustRegistry(providersPath, reviewersPath string) *qualification.TrustRegistry {
 	trust := qualification.NewTrustRegistry()
-	if raw, err := os.ReadFile(providersPath); err == nil {
+	if raw, err := os.ReadFile(providersPath); err == nil { // #nosec G304 -- providersPath is an operator-supplied CLI/default path, not untrusted input
 		var providers []qualification.Provider
 		if err := json.Unmarshal(raw, &providers); err != nil {
 			fmt.Fprintf(os.Stderr, "readiness: %s: malformed trust file: %v\n", providersPath, err)
@@ -404,7 +404,7 @@ func loadTrustRegistry(providersPath, reviewersPath string) *qualification.Trust
 			}
 		}
 	}
-	if raw, err := os.ReadFile(reviewersPath); err == nil {
+	if raw, err := os.ReadFile(reviewersPath); err == nil { // #nosec G304 -- reviewersPath is an operator-supplied CLI/default path, not untrusted input
 		var reviewers []qualification.Reviewer
 		if err := json.Unmarshal(raw, &reviewers); err != nil {
 			fmt.Fprintf(os.Stderr, "readiness: %s: malformed trust file: %v\n", reviewersPath, err)
@@ -423,7 +423,7 @@ func loadTrustRegistry(providersPath, reviewersPath string) *qualification.Trust
 // that command computed, so the two never need to agree on a label out
 // of band.
 func loadSigningKey(path string) (ed25519.PrivateKey, string, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- path is an operator-supplied CLI argument (-signing-key), not untrusted input
 	if err != nil {
 		return nil, "", err
 	}
@@ -438,7 +438,7 @@ func loadSigningKey(path string) (ed25519.PrivateKey, string, error) {
 }
 
 func run(argv []string) (string, int) {
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := exec.Command(argv[0], argv[1:]...) // #nosec G204 -- argv is this file's own hardcoded gate command table (see checks/blocked above), not external input
 	out, err := cmd.CombinedOutput()
 	code := 0
 	if err != nil {
@@ -452,7 +452,7 @@ func run(argv []string) (string, int) {
 
 func writeArtifact(dir, gate, cmdline string, code int, output string) {
 	body := fmt.Sprintf("gate: %s\ncommand: %s\nexit: %d\n---\n%s", gate, cmdline, code, output)
-	_ = os.WriteFile(filepath.Join(dir, gate+".txt"), []byte(body), 0o644)
+	_ = os.WriteFile(filepath.Join(dir, gate+".txt"), []byte(body), 0o600)
 }
 
 // externalModules returns any non-main module lines from `go list -m all`.
@@ -488,7 +488,7 @@ func countTestsWithPrefix(dir, category, prefix string) int {
 		if !strings.Contains(e.Name(), category) {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		raw, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- e.Name() comes from this process's own os.ReadDir listing, not external input
 		if err != nil {
 			continue
 		}
@@ -541,7 +541,7 @@ func sourceHash() string {
 }
 
 func fileHashOrEmpty(path string) string {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- path is an operator-supplied CLI argument, not untrusted input
 	if err != nil {
 		return ""
 	}

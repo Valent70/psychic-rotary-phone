@@ -74,7 +74,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "veriqo-live-demo: %s does not look like the veriqo module root (no go.mod): %v\n", *repoRoot, err)
 		return 2
 	}
-	if err := os.MkdirAll(*outDir, 0o755); err != nil {
+	if err := os.MkdirAll(*outDir, 0o750); err != nil {
 		fmt.Fprintf(stderr, "veriqo-live-demo: creating output dir: %v\n", err)
 		return 1
 	}
@@ -188,7 +188,7 @@ func buildBinaries(w *narrator, repoRoot, outDir string) (map[string]string, map
 		if err != nil {
 			return nil, nil, err
 		}
-		cmd := exec.Command("go", "build", "-o", abs, pkg)
+		cmd := exec.Command("go", "build", "-o", abs, pkg) // #nosec G204 -- fixed 'go build' invocation against this repo's own packages, not external input
 		cmd.Dir = repoRoot
 		buf, err := cmd.CombinedOutput()
 		if err != nil {
@@ -212,7 +212,7 @@ func buildBinaries(w *narrator, repoRoot, outDir string) (map[string]string, map
 }
 
 func sha256File(path string) (string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is an operator-supplied CLI argument, not untrusted input
 	if err != nil {
 		return "", err
 	}
@@ -235,7 +235,7 @@ func writeManifest(outDir string, report liveDemoReport) (string, string, error)
 		return "", "", err
 	}
 	path := filepath.Join(outDir, "manifest.json")
-	if err := os.WriteFile(path, raw, 0o644); err != nil {
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		return "", "", err
 	}
 	h := sha256.Sum256(raw)

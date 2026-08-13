@@ -188,7 +188,7 @@ func Open(cfg Config) (*Log, *RecoveryReport, error) {
 		return nil, nil, err
 	}
 	cfg = cfg.normalise()
-	if err := os.MkdirAll(cfg.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(cfg.Dir, 0o750); err != nil {
 		return nil, nil, err
 	}
 	l := &Log{cfg: cfg}
@@ -243,13 +243,13 @@ func (l *Log) openSegmentForAppend() error {
 	if len(segs) > 0 {
 		name = segs[len(segs)-1]
 	}
-	f, err := os.OpenFile(filepath.Join(l.cfg.Dir, name), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644)
+	f, err := os.OpenFile(filepath.Join(l.cfg.Dir, name), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o600) // #nosec G304 -- name is derived from this WAL's own internal segment index, not external input
 	if err != nil {
 		return err
 	}
 	st, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close() // best-effort cleanup; the stat error below is what matters
 		return err
 	}
 	l.file, l.segment, l.size = f, name, st.Size()
@@ -379,7 +379,7 @@ func (l *Log) rotateLocked() error {
 		idx = 0
 	}
 	name := segmentName(idx + 1)
-	f, err := os.OpenFile(filepath.Join(l.cfg.Dir, name), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644)
+	f, err := os.OpenFile(filepath.Join(l.cfg.Dir, name), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o600) // #nosec G304 -- name is derived from this WAL's own internal segment index, not external input
 	if err != nil {
 		return err
 	}
@@ -627,7 +627,7 @@ func recoveryRoot(rep *RecoveryReport, head string) string {
 // scanSegment parses a segment, returning the valid prefix and the
 // defect that stopped it (if any).
 func scanSegment(path, name string) ([]Record, []Finding, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is built from this WAL's own internal segment enumeration, not external input
 	if err != nil {
 		return nil, nil, err
 	}
@@ -695,7 +695,7 @@ func scanSegment(path, name string) ([]Record, []Finding, error) {
 func encode(r Record) []byte {
 	buf := make([]byte, headerSize+len(r.Payload))
 	copy(buf[0:4], magic[:])
-	binary.BigEndian.PutUint32(buf[4:8], uint32(len(r.Payload))) //nolint:gosec // G115: WAL record payloads are bounded well under 4GiB by the caller
+	binary.BigEndian.PutUint32(buf[4:8], uint32(len(r.Payload))) // #nosec G115 -- WAL record payloads are bounded well under 4GiB by the caller
 	binary.BigEndian.PutUint32(buf[8:12], crc32.ChecksumIEEE(r.Payload))
 	binary.BigEndian.PutUint64(buf[12:20], r.Seq)
 	binary.BigEndian.PutUint64(buf[20:28], r.Tick)

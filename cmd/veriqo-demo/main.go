@@ -387,7 +387,7 @@ func (st *demoState) verifyAgent(trace *strings.Builder) workflow.AgentFunc {
 			return nil, fmt.Errorf("marshaling bundle: %w", err)
 		}
 		st.bundlePath = filepath.Join(os.TempDir(), fmt.Sprintf("veriqo-bundle-%s.json", bundle.Manifest.RootHash[:16]))
-		if err := os.WriteFile(st.bundlePath, bundleJSON, 0o644); err != nil {
+		if err := os.WriteFile(st.bundlePath, bundleJSON, 0o600); err != nil {
 			return nil, fmt.Errorf("writing bundle file: %w", err)
 		}
 

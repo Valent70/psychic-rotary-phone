@@ -46,7 +46,7 @@ func (s *FileStore) Path() string { return s.path }
 // single atomic filesystem operation.
 func (s *FileStore) Persist(data []byte) error {
 	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("storage: mkdir %s: %w", dir, err)
 	}
 	tmp, err := os.CreateTemp(dir, ".storage-tmp-*")
@@ -60,11 +60,11 @@ func (s *FileStore) Persist(data []byte) error {
 	defer os.Remove(tmpPath)
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close() // best-effort cleanup; the write error below is what matters
 		return fmt.Errorf("storage: write temp file: %w", err)
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("storage: fsync temp file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {

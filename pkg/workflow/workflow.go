@@ -253,10 +253,10 @@ func (ex *Executor) advance(p Plan, record *RunRecord) (*RunRecord, error) {
 
 func (ex *Executor) checkpoint(record *RunRecord, result StepResult) {
 	payload := fmt.Sprintf("run=%s|step=%s|err=%s", record.RunID, result.StepName, result.Err)
-	ex.audit.Append("workflow.executor", "STEP_CHECKPOINT", payload)
+	_, _ = ex.audit.Append("workflow.executor", "STEP_CHECKPOINT", payload) // best-effort audit trail; a logging failure must not abort the workflow step
 }
 
 func (ex *Executor) checkpointDone(record *RunRecord) {
 	payload := fmt.Sprintf("run=%s|steps=%d", record.RunID, len(record.Order))
-	ex.audit.Append("workflow.executor", "RUN_COMPLETE", payload)
+	_, _ = ex.audit.Append("workflow.executor", "RUN_COMPLETE", payload) // best-effort audit trail; a logging failure must not abort a run that already succeeded
 }

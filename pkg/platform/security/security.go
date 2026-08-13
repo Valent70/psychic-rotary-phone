@@ -99,7 +99,7 @@ func LoadMutualTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, err
 	if err != nil {
 		return nil, err
 	}
-	caBytes, err := os.ReadFile(caCertFile)
+	caBytes, err := os.ReadFile(caCertFile) // #nosec G304 -- caCertFile is an operator-supplied config path, not untrusted input
 	if err != nil {
 		return nil, fmt.Errorf("security: reading CA cert: %w", err)
 	}

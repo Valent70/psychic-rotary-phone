@@ -56,7 +56,7 @@ func main() {
 func genCA(args []string) {
 	fs := flag.NewFlagSet("gen-ca", flag.ExitOnError)
 	dir := fs.String("dir", ".", "directory to write ca-cert.pem / ca-key.pem into")
-	fs.Parse(args)
+	_ = fs.Parse(args) // flag.ExitOnError: never returns a non-nil error, it os.Exit()s
 
 	ca, err := rafttcp.NewCA()
 	if err != nil {
@@ -81,7 +81,7 @@ func runNode(args []string) {
 	fsmKind := fs.String("fsm", "distributed", "FSM to run: \"distributed\" (Distributed Kernel registry) or \"kg\" (knowledge graph)")
 	walDir := fs.String("wal-dir", "", "optional directory for WAL persistence (term/vote/log survive a restart); empty means in-memory only, as every prior session")
 	adminToken := fs.String("admin-token", "", "bearer token required for ALL -admin endpoints; the admin server refuses to start without this if -admin is set, since /transfer-leadership and /propose are mutating, powerful endpoints that must not be exposed unauthenticated")
-	fs.Parse(args)
+	_ = fs.Parse(args) // flag.ExitOnError: never returns a non-nil error, it os.Exit()s
 
 	if *id == "" {
 		log.Fatal("veriqo-node: -id is required")
@@ -260,8 +260,16 @@ func runNode(args []string) {
 		})
 
 		secured := adminSecurity(mux, *adminToken, auditStore, *id)
+		adminSrv := &http.Server{
+			Addr:              *adminAddr,
+			Handler:           secured,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       60 * time.Second,
+		}
 		go func() {
-			if err := http.ListenAndServe(*adminAddr, secured); err != nil && err != http.ErrServerClosed {
+			if err := adminSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Printf("veriqo-node: admin server error: %v", err)
 			}
 		}()
@@ -280,7 +288,7 @@ func walStorage(dir, id string) raftlite.Storage {
 	if dir == "" {
 		return nil
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		log.Fatalf("veriqo-node: -wal-dir %q: %v", dir, err)
 	}
 	return raftlite.NewFileStorage(filepath.Join(dir, id+".wal"))

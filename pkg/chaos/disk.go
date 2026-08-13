@@ -22,7 +22,7 @@ type DiskCorruptingSnapshotter struct {
 }
 
 func NewDiskCorruptingSnapshotter(inner raftlite.Snapshotter, seed int64, corruptOnWrite, corruptOnRead float64) *DiskCorruptingSnapshotter {
-	return &DiskCorruptingSnapshotter{Inner: inner, CorruptOnWrite: corruptOnWrite, CorruptOnRead: corruptOnRead, Rng: rand.New(rand.NewSource(seed))} //nolint:gosec // G404: deterministic seeded fault injection for reproducible chaos tests
+	return &DiskCorruptingSnapshotter{Inner: inner, CorruptOnWrite: corruptOnWrite, CorruptOnRead: corruptOnRead, Rng: rand.New(rand.NewSource(seed))} // #nosec G404 -- deterministic seeded fault injection for reproducible chaos tests
 }
 
 func corrupt(rng *rand.Rand, data []byte) []byte {
