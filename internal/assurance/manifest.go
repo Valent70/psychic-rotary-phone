@@ -136,6 +136,36 @@ type ReleaseCertificate struct {
 	CertificateHash string `json:"certificate_hash"`
 	Signature       string `json:"signature,omitempty"`
 	PublicKey       string `json:"public_key,omitempty"`
+
+	// Timestamp attestation (audit item P1-09): a self-hosted, hash-
+	// chained notary entry (internal/timestamp) attesting to
+	// CertificateHash, signed by a key deliberately separate from the
+	// release-signing key above. Like Signature/PublicKey, these are
+	// attached AFTER Finalize/Sign and are deliberately excluded from
+	// canonical() -- the entry timestamps an already-finalized
+	// certificate, so it cannot be folded into the hash it attests to
+	// without a circular dependency. Their own tamper-evidence comes
+	// from the timestamp chain's independent hash-linkage and
+	// signature, verifiable via internal/timestamp.VerifyChain against
+	// evidence/timestamp-chain.json, not from this struct's own hash.
+	TimestampChainSeq           uint64 `json:"timestamp_chain_seq,omitempty"`
+	TimestampEntryHash          string `json:"timestamp_entry_hash,omitempty"`
+	TimestampAuthorityKeyID     string `json:"timestamp_authority_key_id,omitempty"`
+	TimestampAuthoritySignature string `json:"timestamp_authority_signature,omitempty"`
+}
+
+// WithTimestampAttestation attaches a self-hosted timestamp-authority
+// entry's identity to the certificate for display/audit purposes. It
+// does not affect CertificateHash or Signature: the entry itself
+// (persisted separately, e.g. in evidence/timestamp-chain.json) is
+// what an independent verifier actually checks via
+// internal/timestamp.VerifyChain.
+func (c ReleaseCertificate) WithTimestampAttestation(seq uint64, entryHash, authorityKeyID, authoritySignature string) ReleaseCertificate {
+	c.TimestampChainSeq = seq
+	c.TimestampEntryHash = entryHash
+	c.TimestampAuthorityKeyID = authorityKeyID
+	c.TimestampAuthoritySignature = authoritySignature
+	return c
 }
 
 // canonical is the deterministic byte form used for hash and signature.

@@ -39,6 +39,7 @@ import (
 	"veriqo/internal/assurance"
 	"veriqo/internal/sbom"
 	"veriqo/internal/sourcehash"
+	"veriqo/internal/timestamp"
 	"veriqo/internal/version"
 	"veriqo/pkg/execution"
 	"veriqo/pkg/governance/qualification"
@@ -79,6 +80,11 @@ func main() {
 	signingKey := flag.String("signing-key", "", "path to a private key file produced by cmd/veriqo-release-keygen; "+
 		"when set, the release certificate is really signed. Omit to produce an unsigned manifest -- never commit "+
 		"a private key to close this flag's absence")
+	timestampKey := flag.String("timestamp-key", "", "path to a private key file produced by cmd/veriqo-release-keygen, "+
+		"deliberately separate from -signing-key, for the self-hosted timestamp authority (P1-09); when set, this run's "+
+		"certificate hash is appended to -timestamp-chain as a new hash-chained, signed entry")
+	timestampChain := flag.String("timestamp-chain", "evidence/timestamp-chain.json",
+		"path to the persisted timestamp-authority chain file (see internal/timestamp)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*evidenceDir, 0o750); err != nil {
@@ -358,6 +364,29 @@ func main() {
 		}
 		manifest.Release = manifest.Release.Sign(priv, keyID)
 	}
+
+	// P1-09 (audit V7.12.3): the certificate's Timestamp was a bare
+	// wall-clock uint64 from this same build host -- nothing outside
+	// this process attested to it. -timestamp-key, when set, appends
+	// this run's certificate hash as a new entry onto a persisted,
+	// hash-chained, independently-signed notary log (internal/
+	// timestamp), signed by a key deliberately separate from
+	// -signing-key so a compromise of one cannot rewrite the other's
+	// history.
+	if *timestampKey != "" {
+		priv, keyID, err := loadSigningKey(*timestampKey)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: timestamp key:", err)
+			os.Exit(3)
+		}
+		release, err := attestTimestamp(manifest.Release, *timestampChain, priv, keyID, now)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: timestamp attestation:", err)
+			os.Exit(3)
+		}
+		manifest.Release = release
+	}
+
 	raw, err := manifest.JSON()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: manifest:", err)
@@ -489,6 +518,39 @@ func loadSigningKey(path string) (ed25519.PrivateKey, string, error) {
 	sum := sha256.Sum256(pub)
 	keyID := hex.EncodeToString(sum[:])[:16]
 	return ed25519.PrivateKey(priv), keyID, nil
+}
+
+// attestTimestamp appends release's certificate hash as a new entry
+// onto the persisted timestamp-authority chain at chainPath (creating
+// it if absent), signs the entry with priv/keyID, and returns release
+// with the attestation's identity attached. Extracted from main's flow
+// so it is directly unit-testable without running the full gate suite.
+func attestTimestamp(release assurance.ReleaseCertificate, chainPath string, priv ed25519.PrivateKey, keyID string, now uint64) (assurance.ReleaseCertificate, error) {
+	var chain []timestamp.Entry
+	if raw, err := os.ReadFile(chainPath); err == nil { // #nosec G304 -- chainPath is an operator-supplied CLI argument (-timestamp-chain), not untrusted input
+		if err := json.Unmarshal(raw, &chain); err != nil {
+			return release, fmt.Errorf("reading %s: %w", chainPath, err)
+		}
+	}
+	var authority *timestamp.Authority
+	if len(chain) > 0 {
+		authority = timestamp.Resume(priv, keyID, chain[len(chain)-1])
+	} else {
+		authority = timestamp.NewAuthority(priv, keyID)
+	}
+	entry, err := authority.Issue(release.CertificateHash, now)
+	if err != nil {
+		return release, fmt.Errorf("issue: %w", err)
+	}
+	chain = append(chain, entry)
+	chainRaw, err := json.MarshalIndent(chain, "", "  ")
+	if err != nil {
+		return release, fmt.Errorf("marshal chain: %w", err)
+	}
+	if err := os.WriteFile(chainPath, chainRaw, 0o600); err != nil {
+		return release, fmt.Errorf("write %s: %w", chainPath, err)
+	}
+	return release.WithTimestampAttestation(entry.Seq, entry.Hash, entry.KeyID, entry.Signature), nil
 }
 
 func run(argv []string) (string, int) {

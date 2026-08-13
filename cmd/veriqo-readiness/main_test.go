@@ -1,8 +1,15 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"veriqo/internal/assurance"
+	"veriqo/internal/timestamp"
 	"veriqo/pkg/execution"
 )
 
@@ -162,4 +169,103 @@ func contains(list []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func genTestKey(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	return pub, priv
+}
+
+// TestAttestTimestampCreatesAndExtendsAPersistedChain is P1-09's core
+// property: repeated readiness runs must chain their timestamp entries
+// onto the SAME persisted log, not each start a fresh disconnected
+// chain -- otherwise the log could never prove ordering across runs.
+func TestAttestTimestampCreatesAndExtendsAPersistedChain(t *testing.T) {
+	pub, priv := genTestKey(t)
+	dir := t.TempDir()
+	chainPath := filepath.Join(dir, "timestamp-chain.json")
+
+	release1 := assurance.ReleaseCertificate{CertificateHash: "cert-hash-run-1"}
+	release1, err := attestTimestamp(release1, chainPath, priv, "tsa-1", 1000)
+	if err != nil {
+		t.Fatalf("attestTimestamp (first run): %v", err)
+	}
+	if release1.TimestampChainSeq != 1 {
+		t.Fatalf("first attestation must be seq 1, got %d", release1.TimestampChainSeq)
+	}
+
+	release2 := assurance.ReleaseCertificate{CertificateHash: "cert-hash-run-2"}
+	release2, err = attestTimestamp(release2, chainPath, priv, "tsa-1", 2000)
+	if err != nil {
+		t.Fatalf("attestTimestamp (second run): %v", err)
+	}
+	if release2.TimestampChainSeq != 2 {
+		t.Fatalf("second attestation must chain onto the first as seq 2, got %d", release2.TimestampChainSeq)
+	}
+
+	raw, err := os.ReadFile(chainPath)
+	if err != nil {
+		t.Fatalf("read persisted chain: %v", err)
+	}
+	var chain []timestamp.Entry
+	if err := json.Unmarshal(raw, &chain); err != nil {
+		t.Fatalf("unmarshal persisted chain: %v", err)
+	}
+	if len(chain) != 2 {
+		t.Fatalf("persisted chain must hold both entries, got %d", len(chain))
+	}
+	if chain[0].Subject != "cert-hash-run-1" || chain[1].Subject != "cert-hash-run-2" {
+		t.Fatalf("persisted entries must attest to the actual certificate hash of their own run: %+v", chain)
+	}
+	if err := timestamp.VerifyChain(chain, pub); err != nil {
+		t.Fatalf("a genuinely well-formed persisted chain must verify: %v", err)
+	}
+}
+
+// TestAttestTimestampRefusesToBackdateAcrossRuns proves the chain-wide
+// monotonicity guarantee survives being re-loaded from disk between
+// runs, not just within a single in-memory Authority.
+func TestAttestTimestampRefusesToBackdateAcrossRuns(t *testing.T) {
+	_, priv := genTestKey(t)
+	dir := t.TempDir()
+	chainPath := filepath.Join(dir, "timestamp-chain.json")
+
+	if _, err := attestTimestamp(assurance.ReleaseCertificate{CertificateHash: "a"}, chainPath, priv, "tsa-1", 5000); err != nil {
+		t.Fatalf("attestTimestamp (first run): %v", err)
+	}
+	if _, err := attestTimestamp(assurance.ReleaseCertificate{CertificateHash: "b"}, chainPath, priv, "tsa-1", 100); err == nil {
+		t.Fatal("a second run claiming an earlier timestamp than the persisted chain's head must be refused")
+	}
+}
+
+// TestAttestTimestampChainDetectsTamperingOfAPersistedEntry is the
+// adversarial case an operator with disk access to evidence/ but not
+// the timestamp-authority private key would attempt: editing an
+// already-persisted entry's timestamp to backdate history. It must be
+// caught by VerifyChain even though attestTimestamp itself only reads
+// the tail, not the whole chain's content.
+func TestAttestTimestampChainDetectsTamperingOfAPersistedEntry(t *testing.T) {
+	pub, priv := genTestKey(t)
+	dir := t.TempDir()
+	chainPath := filepath.Join(dir, "timestamp-chain.json")
+
+	if _, err := attestTimestamp(assurance.ReleaseCertificate{CertificateHash: "a"}, chainPath, priv, "tsa-1", 1000); err != nil {
+		t.Fatalf("attestTimestamp: %v", err)
+	}
+	raw, err := os.ReadFile(chainPath)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	var chain []timestamp.Entry
+	if err := json.Unmarshal(raw, &chain); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	chain[0].Timestamp = 1 // attacker backdates near-epoch without the private key
+	if err := timestamp.VerifyChain(chain, pub); err == nil {
+		t.Fatal("a tampered persisted entry must fail VerifyChain")
+	}
 }
