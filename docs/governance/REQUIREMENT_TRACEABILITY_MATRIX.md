@@ -1,4 +1,4 @@
-# Requirement Traceability Matrix — v7.12.0
+# Requirement Traceability Matrix
 
 Status vocabulary per `docs/governance/RELEASE_GATES.md`. Every row
 either names the package that implements it and the test that proves

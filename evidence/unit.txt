@@ -9,11 +9,12 @@ ok  	veriqo/cmd/veriqo-demo	(cached)
 ?   	veriqo/cmd/veriqo-node	[no test files]
 ?   	veriqo/cmd/veriqo-readiness	[no test files]
 ?   	veriqo/cmd/veriqo-release-keygen	[no test files]
-ok  	veriqo/cmd/veriqo-requirements	(cached)
+ok  	veriqo/cmd/veriqo-requirements	0.003s
 ?   	veriqo/cmd/veriqo-testrunner	[no test files]
 ?   	veriqo/cmd/veriqo-verify	[no test files]
 ?   	veriqo/cmd/veriqo-verify-release	[no test files]
 ok  	veriqo/internal/assurance	(cached)
+ok  	veriqo/internal/sbom	(cached)
 ok  	veriqo/internal/sourcehash	(cached)
 ok  	veriqo/pkg/api	(cached)
 ok  	veriqo/pkg/authz	(cached)
@@ -35,7 +36,7 @@ ok  	veriqo/pkg/governance/hitl	(cached)
 ok  	veriqo/pkg/governance/knowledge	(cached)
 ok  	veriqo/pkg/governance/lifecycle	(cached)
 ok  	veriqo/pkg/governance/precedence	(cached)
-ok  	veriqo/pkg/governance/qualification	(cached)
+ok  	veriqo/pkg/governance/qualification	0.009s
 ok  	veriqo/pkg/identity	(cached)
 ok  	veriqo/pkg/kernel/distributed	(cached)
 ok  	veriqo/pkg/kernel/execgraph	(cached)
@@ -89,11 +90,11 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	0.250s
+ok  	veriqo/test/acceptance/replay	0.273s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/integration	(cached)
-ok  	veriqo/test/soak	30.026s
-ok  	veriqo/test/stress	4.600s
+ok  	veriqo/test/integration	2.727s
+ok  	veriqo/test/soak	30.048s
+ok  	veriqo/test/stress	7.266s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -101,7 +102,7 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	(cached)
+ok  	veriqo/veriqo/gateway/rest	0.774s
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
 ok  	veriqo/veriqo/kernel	(cached)

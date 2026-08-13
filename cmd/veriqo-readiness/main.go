@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"veriqo/internal/assurance"
+	"veriqo/internal/sbom"
 	"veriqo/internal/sourcehash"
 	"veriqo/pkg/governance/qualification"
 )
@@ -190,6 +191,26 @@ func main() {
 		fmt.Printf("   -> exit=%d artifact=%s\n", code, ev.ArtifactID)
 	}
 
+	// Regenerate SBOM.json from THIS release's actual identity, and
+	// compute the source-tree hash, before anything downstream (release
+	// binding checks, the certificate itself) needs either. A prior
+	// round shipped a static SBOM.json hardcoding version "v7.12.0" and
+	// vcs.commit "unknown" forever after; every release certificate
+	// since then signed a hash that committed to the wrong release.
+	// sbom.Generate refuses to produce an unidentified SBOM at all, so
+	// that defect cannot recur silently.
+	if doc, err := sbom.Generate(*version, *commit); err != nil {
+		fmt.Fprintln(os.Stderr, "readiness: sbom:", err)
+		os.Exit(3)
+	} else if raw, err := doc.JSON(); err != nil {
+		fmt.Fprintln(os.Stderr, "readiness: sbom marshal:", err)
+		os.Exit(3)
+	} else if err := os.WriteFile("SBOM.json", raw, 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "readiness: sbom write:", err)
+		os.Exit(3)
+	}
+	srcHash := sourceHash()
+
 	// External Qualification Evidence Framework (P0-03): a blocked gate
 	// is never a permanent hard-coded dead end. Each blocked gate is
 	// registered into qualification.Registry as BLOCKED_EXTERNAL; if
@@ -199,14 +220,24 @@ func main() {
 	// and the assurance registry reflects that. No evidence file is
 	// fabricated by this program. Absence of a file means the gate
 	// stays exactly what it has always honestly been: BLOCKED_EXTERNAL.
-	qreg := qualification.NewRegistry()
+	//
+	// Every submission is now also cryptographically trust-checked
+	// (V7.12.1 Layer A hardening): loadTrustRegistry reads only PUBLIC
+	// keys from docs/governance/TRUSTED_EVIDENCE_{PROVIDERS,REVIEWERS}.json
+	// (safe to commit) and ships empty by default, so nothing validates
+	// until a real provider/reviewer is actually registered; and every
+	// submission must be bound to *commit/srcHash — evidence produced
+	// against a different release is rejected regardless of whose key
+	// signed it.
+	trust := loadTrustRegistry("docs/governance/TRUSTED_EVIDENCE_PROVIDERS.json", "docs/governance/TRUSTED_EVIDENCE_REVIEWERS.json")
+	qreg := qualification.NewRegistry(trust)
 	for _, b := range blocked {
 		if err := qreg.RegisterBlocked(b.gateID, b.description, b.blocker); err != nil {
 			fmt.Fprintln(os.Stderr, "readiness: qualification register:", err)
 			os.Exit(3)
 		}
 	}
-	loadExternalQualifications(qreg, *evidenceDir, now)
+	loadExternalQualifications(qreg, *evidenceDir, now, *commit, srcHash)
 
 	for _, b := range blocked {
 		if err := reg.Register(assurance.Gate{
@@ -224,7 +255,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, "readiness: attach qualification:", err)
 				os.Exit(3)
 			}
-			fmt.Printf("== %-24s QUALIFIED by real external evidence (%s)\n", b.gateID, qrec.Evidence[len(qrec.Evidence)-1].Provider)
+			fmt.Printf("== %-24s QUALIFIED by real external evidence (provider=%s)\n", b.gateID, qrec.Evidence[len(qrec.Evidence)-1].ProviderID)
 		} else {
 			if err := reg.Block(b.gateID, b.blocker); err != nil {
 				fmt.Fprintln(os.Stderr, "readiness: block:", err)
@@ -272,7 +303,7 @@ func main() {
 	cert := assurance.ReleaseCertificate{
 		Version: *version, GitCommit: *commit, Operator: *operator,
 		Timestamp: now, GoVersion: runtime.Version(),
-		SourceHash: sourceHash(), SBOMHash: fileHashOrEmpty("SBOM.json"),
+		SourceHash: srcHash, SBOMHash: fileHashOrEmpty("SBOM.json"),
 	}
 	manifest := assurance.BuildReadinessManifest(reg, acc, cert)
 	if *signingKey != "" {
@@ -321,7 +352,7 @@ func main() {
 // harness) has placed there, and it still runs the file through the
 // full Submit -> Validate -> Qualify -> VerifyGate lifecycle, so a
 // malformed or incomplete submission does not silently pass.
-func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string, nowTick uint64) {
+func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string, nowTick uint64, releaseCommit, releaseSourceHash string) {
 	dir := filepath.Join(evidenceDir, "external")
 	for _, rec := range qreg.Records() {
 		path := filepath.Join(dir, rec.GateID+".json")
@@ -339,7 +370,7 @@ func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string
 			fmt.Fprintf(os.Stderr, "readiness: %s: submit: %v\n", rec.GateID, err)
 			continue
 		}
-		if err := qreg.Validate(rec.GateID, nowTick); err != nil {
+		if err := qreg.Validate(rec.GateID, nowTick, releaseCommit, releaseSourceHash); err != nil {
 			fmt.Fprintf(os.Stderr, "readiness: %s: evidence rejected: %v\n", rec.GateID, err)
 			continue
 		}
@@ -352,6 +383,39 @@ func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string
 			continue
 		}
 	}
+}
+
+// loadTrustRegistry reads the committed, public trust-anchor files
+// (provider/reviewer IDs and Ed25519 PUBLIC keys only -- never a
+// secret) and returns a TrustRegistry populated from them. Either file
+// missing or empty is not an error: it simply means no provider or
+// reviewer is yet trusted, so no external evidence can validate, which
+// is the correct default until an operator registers a real one.
+func loadTrustRegistry(providersPath, reviewersPath string) *qualification.TrustRegistry {
+	trust := qualification.NewTrustRegistry()
+	if raw, err := os.ReadFile(providersPath); err == nil {
+		var providers []qualification.Provider
+		if err := json.Unmarshal(raw, &providers); err != nil {
+			fmt.Fprintf(os.Stderr, "readiness: %s: malformed trust file: %v\n", providersPath, err)
+		}
+		for _, p := range providers {
+			if err := trust.RegisterProvider(p); err != nil {
+				fmt.Fprintf(os.Stderr, "readiness: %s: %v\n", providersPath, err)
+			}
+		}
+	}
+	if raw, err := os.ReadFile(reviewersPath); err == nil {
+		var reviewers []qualification.Reviewer
+		if err := json.Unmarshal(raw, &reviewers); err != nil {
+			fmt.Fprintf(os.Stderr, "readiness: %s: malformed trust file: %v\n", reviewersPath, err)
+		}
+		for _, rv := range reviewers {
+			if err := trust.RegisterReviewer(rv); err != nil {
+				fmt.Fprintf(os.Stderr, "readiness: %s: %v\n", reviewersPath, err)
+			}
+		}
+	}
+	return trust
 }
 
 // loadSigningKey reads a hex-encoded Ed25519 private key written by

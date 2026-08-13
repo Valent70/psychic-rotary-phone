@@ -125,7 +125,12 @@ func statusCell(r Requirement) string {
 
 func render(reqs []Requirement) string {
 	var b strings.Builder
-	b.WriteString("# Requirement Traceability Matrix — v7.12.0\n\n")
+	// No version number is hardcoded here on purpose: this file is
+	// regenerated on demand and a stale hardcoded version label is
+	// exactly the release-identity drift the V7.12.1 audit flagged in
+	// SBOM.json (see internal/sbom). The authoritative version for any
+	// given run lives in READINESS_MANIFEST.json's release certificate.
+	b.WriteString("# Requirement Traceability Matrix\n\n")
 	b.WriteString("Status vocabulary per `docs/governance/RELEASE_GATES.md`. Every row\n")
 	b.WriteString("either names the package that implements it and the test that proves\n")
 	b.WriteString("it, or is honestly marked OPEN/BLOCKED. There is no row whose status\n")
