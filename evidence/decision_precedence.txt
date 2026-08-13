@@ -1,0 +1,5 @@
+gate: decision_precedence
+command: go test ./pkg/governance/precedence/
+exit: 0
+---
+ok  	veriqo/pkg/governance/precedence	(cached)
