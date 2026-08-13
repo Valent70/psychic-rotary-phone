@@ -121,7 +121,7 @@ func (r *rng) intn(n int) int {
 	if n <= 0 {
 		return 0
 	}
-	return int(r.next() % uint64(n))
+	return int(r.next() % uint64(n)) //nolint:gosec // G115: n is a small bounded scenario/node count, never near int range limits
 }
 
 func (r *rng) float() float64 { return float64(r.next()%1_000_000) / 1_000_000.0 }

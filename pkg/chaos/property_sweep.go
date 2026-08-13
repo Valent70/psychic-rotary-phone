@@ -83,7 +83,7 @@ func RunSafetySweep(trials int) SweepReport {
 }
 
 func oneSweepTrial(seed int64) SweepTrialResult {
-	rng := rand.New(rand.NewSource(seed))
+	rng := rand.New(rand.NewSource(seed)) //nolint:gosec // G404: property-based sweep trial, seeded for reproducibility
 	res := SweepTrialResult{Seed: seed}
 
 	scenario := Scenario{

@@ -348,7 +348,7 @@ func randDuration(min, max time.Duration) time.Duration {
 	if max <= min {
 		return min
 	}
-	return min + time.Duration(rand.Int63n(int64(max-min)))
+	return min + time.Duration(rand.Int63n(int64(max-min))) //nolint:gosec // G404: election-timeout jitter, not security-sensitive; must stay seedable for deterministic replay
 }
 
 // SetTransport (re)wires the node's Transport after construction — used
@@ -690,7 +690,7 @@ func (n *Node) replicateToAll(ctx context.Context) {
 // only when index >= n.logBase. Callers at or below logBase must not
 // call this — that range is compacted away and only reachable via a
 // snapshot (see snapshot.go).
-func (n *Node) pos(index uint64) int { return int(index - n.logBase) }
+func (n *Node) pos(index uint64) int { return int(index - n.logBase) } //nolint:gosec // G115: callers hold index >= n.logBase as an invariant (checked at call sites), so this never underflows in practice
 
 func (n *Node) replicateTo(ctx context.Context, peer string, term uint64) {
 	n.mu.Lock()
@@ -792,6 +792,14 @@ func (n *Node) advanceCommitIndex() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if n.role != Leader {
+		return
+	}
+	if len(n.state.log) == 0 {
+		// A properly initialized node always carries at least a
+		// sentinel entry at logBase; this guard exists so that
+		// len(n.state.log)-1 below can never underflow into a huge
+		// uint64 (gosec G115) if that invariant is ever violated,
+		// instead of committing against a garbage index.
 		return
 	}
 	lastIdx := n.logBase + uint64(len(n.state.log)-1)

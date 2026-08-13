@@ -74,7 +74,7 @@ type Event struct {
 }
 
 func NewTransport(underlying raftlite.Transport, scenario Scenario, nodeSalt int64) *Transport {
-	return &Transport{underlying: underlying, scenario: scenario, rng: rand.New(rand.NewSource(scenario.Seed*1000003 + nodeSalt))}
+	return &Transport{underlying: underlying, scenario: scenario, rng: rand.New(rand.NewSource(scenario.Seed*1000003 + nodeSalt))} //nolint:gosec // G404: chaos fault injection must be seedable for reproducible, replayable failure scenarios
 }
 
 // Events returns a defensive copy of every fault-injection decision made

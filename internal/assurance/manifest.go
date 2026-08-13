@@ -169,7 +169,16 @@ func (c ReleaseCertificate) Sign(priv ed25519.PrivateKey, keyID string) ReleaseC
 	return c
 }
 
-// Verify checks the hash and, when present, the signature.
+// Verify checks the hash and, when present, that the embedded
+// signature is internally self-consistent (it was produced by
+// whichever key PublicKey names). This is necessary but not
+// sufficient: it catches a certificate whose hash or signature was
+// edited after Sign, but it does NOT catch a forger who regenerates a
+// brand-new keypair, signs a different certificate with it, and embeds
+// their own PublicKey to match — a self-consistent document is not
+// automatically an authorized one. Verify exists for that narrower
+// tamper-detection use; production and release-gate callers should use
+// VerifyTrusted instead.
 func (c ReleaseCertificate) Verify() error {
 	sum := sha256.Sum256(c.canonical())
 	if hex.EncodeToString(sum[:]) != c.CertificateHash {
@@ -187,6 +196,50 @@ func (c ReleaseCertificate) Verify() error {
 		return ErrManifestTampered
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), c.canonical(), sig) {
+		return ErrManifestTampered
+	}
+	return nil
+}
+
+// ErrUntrustedSigningKey is returned by VerifyTrusted when a
+// certificate's embedded key is not — or no longer — in the caller's
+// trust anchor set, whether or not the embedded signature is
+// internally consistent.
+var ErrUntrustedSigningKey = errors.New("assurance: signing key is not a trusted anchor")
+
+// TrustedKeys maps a signing key ID (as named in ReleaseCertificate.
+// SigningKeyID) to the public key an operator has independently
+// decided to trust for that ID — never read from the certificate being
+// verified itself. This is the trust anchor VerifyTrusted checks
+// against, closing the audit's "Internal Gap III": a signature is
+// verified against a trust anchor, not merely checked for internal
+// self-consistency.
+type TrustedKeys map[string]ed25519.PublicKey
+
+// VerifyTrusted performs every check Verify does, and additionally
+// requires that c.SigningKeyID is present in trusted and that
+// trusted[c.SigningKeyID] — not c.PublicKey — is the key whose
+// signature validates. A certificate signed by an unlisted or revoked
+// key fails here even if its embedded PublicKey and Signature are
+// perfectly self-consistent, because self-consistency is exactly what
+// a forger who mints a fresh keypair can always produce.
+func (c ReleaseCertificate) VerifyTrusted(trusted TrustedKeys) error {
+	if c.Signature == "" {
+		return fmt.Errorf("%w: certificate is unsigned", ErrManifestTampered)
+	}
+	sum := sha256.Sum256(c.canonical())
+	if hex.EncodeToString(sum[:]) != c.CertificateHash {
+		return ErrManifestTampered
+	}
+	anchor, ok := trusted[c.SigningKeyID]
+	if !ok {
+		return fmt.Errorf("%w: key id %q", ErrUntrustedSigningKey, c.SigningKeyID)
+	}
+	sig, err := hex.DecodeString(c.Signature)
+	if err != nil {
+		return ErrManifestTampered
+	}
+	if !ed25519.Verify(anchor, c.canonical(), sig) {
 		return ErrManifestTampered
 	}
 	return nil

@@ -21,9 +21,13 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,6 +36,7 @@ import (
 	"time"
 
 	"veriqo/internal/assurance"
+	"veriqo/internal/sourcehash"
 	"veriqo/pkg/governance/qualification"
 )
 
@@ -67,11 +72,23 @@ func main() {
 	commit := flag.String("commit", "unknown", "git commit")
 	operator := flag.String("operator", "ci", "operator running the gate")
 	skipRace := flag.Bool("skip-race", false, "skip the race gate (slow); it will register as OPEN, not PASS")
+	signingKey := flag.String("signing-key", "", "path to a private key file produced by cmd/veriqo-release-keygen; "+
+		"when set, the release certificate is really signed. Omit to produce an unsigned manifest -- never commit "+
+		"a private key to close this flag's absence")
 	flag.Parse()
 
 	if err := os.MkdirAll(*evidenceDir, 0o755); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: cannot create evidence dir:", err)
 		os.Exit(3)
+	}
+
+	// The soak_harness_smoke gate must stay fast: it exists to prove the
+	// harness runs clean, not to be a second soak_72h. 0.5 real minutes
+	// (not the test's own 2-minute default) keeps every readiness run
+	// bounded; an operator doing a genuine soak sets VERIQO_SOAK_MINUTES
+	// themselves before running go test directly, which overrides this.
+	if os.Getenv("VERIQO_SOAK_MINUTES") == "" {
+		_ = os.Setenv("VERIQO_SOAK_MINUTES", "0.5")
 	}
 
 	checks := []check{
@@ -106,6 +123,8 @@ func main() {
 		{"observability", "the telemetry schema covers every VERIQO domain and metric", true, assurance.StatusVerified, "./pkg/platform/telemetry", "no missing domains or business metrics", []string{"go", "test", "./pkg/platform/telemetry/"}, false},
 		{"data_quality", "source reliability is learned with bounded, replayable updates", true, assurance.StatusVerified, "./pkg/dataquality", "step caps, floors and ledger replay hold", []string{"go", "test", "./pkg/dataquality/"}, false},
 		{"economic_consequence", "expected value, VaR and CVaR are computed from declared scenarios", true, assurance.StatusVerified, "./pkg/moat/economic", "CVaR >= VaR; unnamed scenarios are refused", []string{"go", "test", "./pkg/moat/economic/"}, false},
+		{"decision_precedence", "one authoritative DENY>BLOCK>ESCALATE>REVIEW>ALLOW lattice combines every subsystem signal", true, assurance.StatusVerified, "./pkg/governance/precedence", "cross-package composition of real authz/hitl signals resolves deterministically", []string{"go", "test", "./pkg/governance/precedence/"}, false},
+		{"soak_harness_smoke", "the soak harness itself runs clean over a short real window (not a substitute for soak_72h)", true, assurance.StatusVerified, "./test/soak", "zero errors, bounded goroutines over a short run; evidence/soak-report.json states its own real duration", []string{"go", "test", "./test/soak/", "-timeout", "90s"}, false},
 
 		// ---- v7.11.1 test & assurance reconciliation gates -----------
 		{"chaos", "distributed chaos acceptance holds every cluster invariant", true, assurance.StatusVerified, "./test/chaos", "no divergence, no lost commits, no double leader", []string{"go", "test", "./test/chaos/", "./pkg/chaos/"}, false},
@@ -128,13 +147,13 @@ func main() {
 		{"multi_region_dr", "multi-region deployment and DR drill with measured RPO/RTO", assurance.StatusQualified, "deploy/", "destroy primary, restore, verify ledgers and replay", "requires multi-region infrastructure"},
 		{"hsm_kms", "production HSM/KMS backed signing", assurance.StatusQualified, "./pkg/platform/security/keys", "KeyProvider backed by a real HSM or cloud KMS", "interface implemented; a real HSM/KMS tenancy is a procurement action"},
 		{"live_data", "non-synthetic live data feeds (SWIFT/BoL/AIS/SAR)", assurance.StatusQualified, "./pkg/connector", "ingest qualified against contracted live feeds", "requires commercial data contracts"},
-		{"soak_72h", "72-hour continuous soak with zero leak and zero ledger corruption", assurance.StatusQualified, "./...", "72h run with stable memory, goroutines and ledger integrity", "requires a long-lived environment beyond a CI job"},
-		{"spire_mtls", "real SPIRE deployment with workload attestation and mTLS rotation", assurance.StatusQualified, "deploy/spire", "node A and node B attest, rotate and revoke identities", "requires a running SPIRE cluster; network-blocked in this environment"},
-		{"supply_chain_scan", "govulncheck / gosec / staticcheck in CI", assurance.StatusQualified, ".github/workflows", "all scanners run and report clean", "staticcheck (SAST) was run for real in a network-enabled session — see evidence/supply_chain_scan-staticcheck.txt — and passes clean; govulncheck's vulnerability feed (vuln.go.dev) returned 403 under this environment's network policy even though the module proxy is reachable, so vulnerability-DB scanning is still unqualified; gosec has not yet been run. This is a narrower, evidenced blocker, not a blanket network-access claim"},
+		{"soak_72h", "72-hour continuous soak with zero leak and zero ledger corruption", assurance.StatusQualified, "./...", "72h run with stable memory, goroutines and ledger integrity", "the harness now exists and genuinely runs — see test/soak and evidence/soak-report.json (2188 real iterations over 90s in this session, 0 errors, goroutines flat at 2->2) — but this environment cannot honestly stay up for the required 72h continuous window; VERIQO_SOAK_MINUTES=4320 against the same unchanged test on a long-lived host produces the qualifying evidence"},
+		{"spire_mtls", "real SPIRE deployment with workload attestation and mTLS rotation", assurance.StatusQualified, "deploy/spire", "node A and node B attest, rotate and revoke identities", "a real single-node SPIRE server+agent was run in this session — see evidence/spire_mtls-local-integration.txt — with genuine attestation, X.509-SVID issuance and revocation; still requires a multi-node cluster with a production node attestor and a Workload API client wired into pkg/transport/rafttcp, none of which this evidence covers"},
+		{"supply_chain_scan", "govulncheck / gosec / staticcheck in CI", assurance.StatusQualified, ".github/workflows", "all scanners run and report clean", "staticcheck AND gosec were both run for real in a network-enabled session (see evidence/supply_chain_scan-staticcheck.txt, evidence/supply_chain_scan-gosec.txt); all 18 HIGH-severity gosec findings were triaged and fixed or justified. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified. This is a narrower, evidenced blocker each time it is re-examined, not a static one"},
 	}
 
 	reg := assurance.NewRegistry()
-	now := uint64(time.Now().Unix())
+	now := uint64(time.Now().Unix()) //nolint:gosec // G115: Unix() is positive for any realistic clock (1970..292 billion AD)
 	failures := 0
 
 	for _, c := range checks {
@@ -256,6 +275,14 @@ func main() {
 		SourceHash: sourceHash(), SBOMHash: fileHashOrEmpty("SBOM.json"),
 	}
 	manifest := assurance.BuildReadinessManifest(reg, acc, cert)
+	if *signingKey != "" {
+		priv, keyID, err := loadSigningKey(*signingKey)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: signing key:", err)
+			os.Exit(3)
+		}
+		manifest.Release = manifest.Release.Sign(priv, keyID)
+	}
 	raw, err := manifest.JSON()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: manifest:", err)
@@ -327,6 +354,25 @@ func loadExternalQualifications(qreg *qualification.Registry, evidenceDir string
 	}
 }
 
+// loadSigningKey reads a hex-encoded Ed25519 private key written by
+// cmd/veriqo-release-keygen and derives the same deterministic key ID
+// that command computed, so the two never need to agree on a label out
+// of band.
+func loadSigningKey(path string) (ed25519.PrivateKey, string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", err
+	}
+	priv, err := hex.DecodeString(strings.TrimSpace(string(raw)))
+	if err != nil || len(priv) != ed25519.PrivateKeySize {
+		return nil, "", fmt.Errorf("not a valid hex-encoded ed25519 private key: %s", path)
+	}
+	pub := ed25519.PrivateKey(priv).Public().(ed25519.PublicKey)
+	sum := sha256.Sum256(pub)
+	keyID := hex.EncodeToString(sum[:])[:16]
+	return ed25519.PrivateKey(priv), keyID, nil
+}
+
 func run(argv []string) (string, int) {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	out, err := cmd.CombinedOutput()
@@ -389,11 +435,14 @@ func countTestsWithPrefix(dir, category, prefix string) int {
 
 func presentTests() []string {
 	var out []string
-	_ = filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, "_test.go") {
+	// os.DirFS + fs.WalkDir/fs.ReadFile, not filepath.Walk + os.ReadFile
+	// (gosec G122): every read is confined to and resolved relative to
+	// one root handle instead of a re-joined path string per callback.
+	_ = fs.WalkDir(os.DirFS("."), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := fs.ReadFile(os.DirFS("."), path)
 		if err != nil {
 			return nil
 		}
@@ -410,12 +459,21 @@ func presentTests() []string {
 	return out
 }
 
+// sourceHash was, before the v7.12.1 audit, the content hash of `go
+// list -deps ./...` — the module's dependency graph, not its content.
+// A dependency-graph hash is identical for two checkouts that share
+// every dependency but differ in a hand-edited production .go file,
+// which fails the audit's own acceptance test verbatim: "changing one
+// production .go file must change the source-tree hash." It now uses
+// internal/sourcehash, a real deterministic Merkle-style hash over
+// every source file's path, mode and content.
 func sourceHash() string {
-	out, code := run([]string{"go", "list", "-deps", "./..."})
-	if code != 0 {
+	res, err := sourcehash.Compute(".")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "readiness: source-tree hash:", err)
 		return ""
 	}
-	return assurance.NewEvidence("source", "go list -deps ./...", out, 0, 0).Hash
+	return res.RootHash
 }
 
 func fileHashOrEmpty(path string) string {

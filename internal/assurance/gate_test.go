@@ -2,6 +2,7 @@ package assurance
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -187,6 +188,52 @@ func TestReleaseCertificateSignatureAndTamperDetection(t *testing.T) {
 	tampered.Version = "v9.9.9"
 	if err := tampered.Verify(); err == nil {
 		t.Fatal("tampered release certificate verified")
+	}
+}
+
+func TestVerifyTrustedRejectsAForgedKeypairEvenWhenSelfConsistent(t *testing.T) {
+	r := regWithOneMandatory(t)
+	if err := r.Attach("unit", StatusVerified, passingEvidence("unit")); err != nil {
+		t.Fatalf("Attach: %v", err)
+	}
+	realPub, realPriv, _ := ed25519.GenerateKey(nil)
+	genuine := ReleaseCertificate{Version: "v7.12.1", GitCommit: "abc"}.
+		Finalize(r.Assess()).Sign(realPriv, "release-key-1")
+	trust := TrustedKeys{"release-key-1": realPub}
+
+	if err := genuine.VerifyTrusted(trust); err != nil {
+		t.Fatalf("a genuinely signed, trusted certificate must verify: %v", err)
+	}
+
+	// A forger cannot edit the certificate and re-sign with a fresh key
+	// of their own: Verify() alone would accept this (it is internally
+	// self-consistent), which is exactly the "Internal Gap III" the
+	// v7.12.1 audit named. VerifyTrusted must not.
+	_, forgedPriv, _ := ed25519.GenerateKey(nil)
+	forged := ReleaseCertificate{Version: "v7.12.1", GitCommit: "abc", Verdict: VerdictProductionReady}.
+		Finalize(r.Assess()).Sign(forgedPriv, "release-key-1")
+	if err := forged.Verify(); err != nil {
+		t.Fatalf("sanity: the forged certificate should be internally self-consistent, got %v", err)
+	}
+	if err := forged.VerifyTrusted(trust); !errors.Is(err, ErrManifestTampered) {
+		t.Fatalf("a forged certificate signed with an unauthorized key must fail VerifyTrusted, got %v", err)
+	}
+}
+
+func TestVerifyTrustedRejectsAnUnlistedKeyID(t *testing.T) {
+	r := regWithOneMandatory(t)
+	_, priv, _ := ed25519.GenerateKey(nil)
+	cert := ReleaseCertificate{Version: "v7.12.1"}.Finalize(r.Assess()).Sign(priv, "unknown-key")
+	if err := cert.VerifyTrusted(TrustedKeys{"release-key-1": priv.Public().(ed25519.PublicKey)}); !errors.Is(err, ErrUntrustedSigningKey) {
+		t.Fatalf("expected ErrUntrustedSigningKey for an unlisted key id, got %v", err)
+	}
+}
+
+func TestVerifyTrustedRejectsAnUnsignedCertificate(t *testing.T) {
+	r := regWithOneMandatory(t)
+	cert := ReleaseCertificate{Version: "v7.12.1"}.Finalize(r.Assess())
+	if err := cert.VerifyTrusted(TrustedKeys{}); err == nil {
+		t.Fatal("an unsigned certificate must never satisfy VerifyTrusted")
 	}
 }
 

@@ -271,6 +271,12 @@ func NewServer(id string, node *raftlite.Node, ca *CA, leafCert tls.Certificate,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    ca.Pool(),
 		MinVersion:   tls.VersionTLS12,
+		// SPIFFE identity is re-derived from the peer cert on every
+		// connection (see Client.getConn's VerifyPeerCertificate); a
+		// resumed TLS session must not let a peer skip that re-check, so
+		// session tickets are disabled rather than trusted to always
+		// invoke the verification callback (gosec G123).
+		SessionTicketsDisabled: true,
 	}
 	return &Server{id: id, node: node, verifier: verifier, tlsConf: tlsConf}
 }
@@ -436,8 +442,12 @@ func (c *Client) getConn(target string) (*peerConn, error) {
 	tlsConf := &tls.Config{
 		Certificates:       []tls.Certificate{c.leafCert},
 		RootCAs:            c.ca.Pool(),
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: true, //nolint:gosec // G402: intentional -- VerifyPeerCertificate below performs real chain + SPIFFE-identity verification in its place; see comment above
 		MinVersion:         tls.VersionTLS12,
+		// A resumed session must still hit VerifyPeerCertificate; do not
+		// let ticket resumption bypass the SPIFFE identity check
+		// (gosec G123).
+		SessionTicketsDisabled: true,
 		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 			if len(rawCerts) == 0 {
 				return errors.New("rafttcp: no peer certificate presented")

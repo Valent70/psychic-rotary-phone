@@ -232,7 +232,7 @@ func (g *OwnershipGraph) RecordOwnership(fromID, toID string, percent float64, o
 	key := edgeKey(fromID, toID, ownType)
 	supersedes := int64(-1)
 	if prevIdx, ok := g.activeIndex[key]; ok {
-		supersedes = int64(prevIdx)
+		supersedes = int64(prevIdx) //nolint:gosec // G115: prevIdx is a bounded in-process slice/version index, never near int64 range
 	}
 
 	rec := ownershipRecord{

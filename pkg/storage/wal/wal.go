@@ -695,7 +695,7 @@ func scanSegment(path, name string) ([]Record, []Finding, error) {
 func encode(r Record) []byte {
 	buf := make([]byte, headerSize+len(r.Payload))
 	copy(buf[0:4], magic[:])
-	binary.BigEndian.PutUint32(buf[4:8], uint32(len(r.Payload)))
+	binary.BigEndian.PutUint32(buf[4:8], uint32(len(r.Payload))) //nolint:gosec // G115: WAL record payloads are bounded well under 4GiB by the caller
 	binary.BigEndian.PutUint32(buf[8:12], crc32.ChecksumIEEE(r.Payload))
 	binary.BigEndian.PutUint64(buf[12:20], r.Seq)
 	binary.BigEndian.PutUint64(buf[20:28], r.Tick)

@@ -1,0 +1,145 @@
+// Package sourcehash closes the v7.12.1 master audit's "Internal Gap
+// II": the release certificate's SourceHash was, until this package,
+// the content hash of `go list -deps ./...` — a dependency graph. That
+// proves the module's dependency set, not the module's content: two
+// checkouts with identical dependencies but a hand-edited production
+// .go file produce the same dependency-graph hash. A source-tree hash
+// must not have that property.
+//
+// Compute walks the tree in deterministic order and, for every file
+// not explicitly excluded, hashes its repo-relative path, file mode
+// and content together, then folds every per-file hash into one root
+// hash in the same sorted order — a Merkle-style tree hash simple
+// enough to have no external dependency (this module has none, by
+// design) and honest enough that its own doc comment can say exactly
+// what it excludes and why, per the audit's rule that exclusions must
+// be explicit, not silent.
+package sourcehash
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io/fs"
+	"os"
+	"sort"
+	"strings"
+)
+
+// FileEntry is one hashed file, kept for anyone who wants to prove
+// which single file changed the root hash rather than just that it
+// changed.
+type FileEntry struct {
+	Path string `json:"path"`
+	Mode uint32 `json:"mode"`
+	Size int64  `json:"size"`
+	Hash string `json:"hash"`
+}
+
+// Result is the full source-tree hash computation.
+type Result struct {
+	RootHash  string      `json:"root_hash"`
+	FileCount int         `json:"file_count"`
+	Files     []FileEntry `json:"files,omitempty"`
+}
+
+// DefaultExclusions are the only paths this package treats as
+// generated/ephemeral rather than source, named explicitly so the
+// exclusion list itself is auditable:
+//
+//   - .git/            — VCS metadata, not tree content
+//   - evidence/         — gate output written BY this same readiness
+//     run; including it would make the hash of a fixed commit change
+//     every time the gates are re-run, which is the opposite of what a
+//     source-tree hash is for
+//   - READINESS_MANIFEST.json — the file this hash itself is embedded
+//     in; hashing it would be self-referential
+//   - binaries this repo's .gitignore names (go build output)
+var DefaultExclusions = []string{
+	".git/",
+	"evidence/",
+	"READINESS_MANIFEST.json",
+	"veriqo-demo", "veriqo-gateway", "veriqo-kernel-demo", "veriqo-live-demo",
+	"veriqo-node", "veriqo-readiness", "veriqo-requirements", "veriqo-testrunner", "veriqo-verify",
+}
+
+func excluded(relPath string, exclusions []string) bool {
+	for _, ex := range exclusions {
+		if strings.HasSuffix(ex, "/") {
+			if relPath == strings.TrimSuffix(ex, "/") || strings.HasPrefix(relPath, ex) {
+				return true
+			}
+			continue
+		}
+		if relPath == ex {
+			return true
+		}
+	}
+	return false
+}
+
+// Compute walks root and hashes every non-excluded regular file in
+// deterministic (lexicographic path) order. It reads through an
+// fs.FS rooted at root (os.DirFS) rather than re-joining path strings
+// per callback, which is the standard mitigation for the TOCTOU race
+// between listing a directory entry and opening it that a hand-rolled
+// filepath.WalkDir + os.ReadFile(path) pairing is exposed to (gosec
+// G122): every read below is confined to, and resolved relative to,
+// the single root handle.
+func Compute(root string, extraExclusions ...string) (Result, error) {
+	exclusions := append(append([]string{}, DefaultExclusions...), extraExclusions...)
+	fsys := os.DirFS(root)
+
+	var files []FileEntry
+	walkErr := fs.WalkDir(fsys, ".", func(rel string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		if d.IsDir() {
+			if excluded(rel+"/", exclusions) {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if excluded(rel, exclusions) {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		content, err := fs.ReadFile(fsys, rel)
+		if err != nil {
+			return err
+		}
+		h := sha256.New()
+		fmt.Fprintf(h, "veriqo.sourcehash.file/v1|path=%s|mode=%o|size=%d|",
+			rel, uint32(info.Mode().Perm()), info.Size())
+		h.Write(content)
+		files = append(files, FileEntry{
+			Path: rel, Mode: uint32(info.Mode().Perm()), Size: info.Size(),
+			Hash: hex.EncodeToString(h.Sum(nil)),
+		})
+		return nil
+	})
+	if walkErr != nil {
+		return Result{}, walkErr
+	}
+
+	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+
+	rootH := sha256.New()
+	rootH.Write([]byte("veriqo.sourcehash.tree/v1\n"))
+	for _, f := range files {
+		fmt.Fprintf(rootH, "%s|%s\n", f.Path, f.Hash)
+	}
+
+	return Result{
+		RootHash:  hex.EncodeToString(rootH.Sum(nil)),
+		FileCount: len(files),
+		Files:     files,
+	}, nil
+}

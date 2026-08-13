@@ -204,7 +204,7 @@ func (a *ReasoningAPI) Assert(subject, predicate, object string) (string, error)
 // many new facts were derived.
 func (a *ReasoningAPI) Infer() (uint64, error) {
 	n, err := a.kb.Infer()
-	return uint64(n), err
+	return uint64(n), err //nolint:gosec // G115: n is a monotonic count of newly derived facts, never negative
 }
 
 // Query returns every fact matching a pattern; a leading "?" on any
