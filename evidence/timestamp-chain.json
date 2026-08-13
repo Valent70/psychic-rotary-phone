@@ -1,0 +1,11 @@
+[
+  {
+    "seq": 1,
+    "subject": "4e465ee536f25bcf9de3f0e4bf4fc1aee8f9437c60bb3d8d55179d25b576e9a3",
+    "timestamp": 1786616983,
+    "prev_hash": "",
+    "hash": "6cb9631e2b0d6270220700287700f6460fe4fc48cfc9e4c9c56dc96096389127",
+    "key_id": "3ec67aaa053d59f9",
+    "signature": "402d41808e0774281c787461dd00404ab775e677f90b71ef52a614fc5bdb30d949a8ee450c52fbdbe802a45fa14656c41c45703e8de616f6be5b04ef47d61f0a"
+  }
+]
