@@ -32,12 +32,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
 	"veriqo/internal/assurance"
 	"veriqo/internal/sbom"
 	"veriqo/internal/sourcehash"
+	"veriqo/internal/version"
+	"veriqo/pkg/execution"
 	"veriqo/pkg/governance/qualification"
 )
 
@@ -69,7 +72,7 @@ type blockedGate struct {
 func main() {
 	out := flag.String("out", "READINESS_MANIFEST.json", "path to write the readiness manifest")
 	evidenceDir := flag.String("evidence-dir", "evidence", "directory for raw evidence artifacts")
-	version := flag.String("version", "v7.12.0", "release version")
+	releaseVersion := flag.String("version", version.Current, "release version")
 	commit := flag.String("commit", "unknown", "git commit")
 	operator := flag.String("operator", "ci", "operator running the gate")
 	skipRace := flag.Bool("skip-race", false, "skip the race gate (slow); it will register as OPEN, not PASS")
@@ -105,6 +108,7 @@ func main() {
 		{"assurance_self", "the assurance plane refuses false green", true, assurance.StatusVerified, "./internal/assurance", "no-false-green tests pass", []string{"go", "test", "./internal/assurance/"}, false},
 		{"fuzz_smoke", "fuzz targets execute their seed corpus", true, assurance.StatusVerified, "./...", "all Fuzz* targets run clean on seeds", []string{"go", "test", "-run", "Fuzz", "./pkg/..."}, false},
 		{"zero_dependency", "the module depends only on the Go standard library", true, assurance.StatusVerified, "go.mod", "no external module requirements", []string{"go", "list", "-m", "all"}, false},
+		{"determinism_boundary", "no forbidden nondeterministic API in a package declared deterministic", true, assurance.StatusVerified, "internal/determinism", "zero violations across pkg/canonical, pkg/execution, pkg/replay", []string{"go", "test", "./internal/determinism/"}, false},
 
 		// ---- v7.12.0 capability gates -------------------------------
 		// Each new capability closed in v7.12.0 gets its own executable
@@ -156,6 +160,8 @@ func main() {
 	reg := assurance.NewRegistry()
 	now := uint64(time.Now().Unix()) // #nosec G115 -- Unix() is positive for any realistic clock (1970..292 billion AD)
 	failures := 0
+	gateHashes := make(map[string]string, len(checks))
+	gatePassed := make(map[string]bool, len(checks))
 
 	for _, c := range checks {
 		if err := reg.Register(assurance.Gate{
@@ -179,6 +185,8 @@ func main() {
 		}
 		ev := assurance.NewEvidence(c.gateID, cmdline, output, code, now)
 		writeArtifact(*evidenceDir, c.gateID, cmdline, code, output)
+		gateHashes[c.gateID] = ev.Hash
+		gatePassed[c.gateID] = code == 0
 		status := assurance.StatusVerified
 		if code != 0 {
 			status = assurance.StatusImplemented
@@ -199,7 +207,7 @@ func main() {
 	// since then signed a hash that committed to the wrong release.
 	// sbom.Generate refuses to produce an unidentified SBOM at all, so
 	// that defect cannot recur silently.
-	if doc, err := sbom.Generate(*version, *commit); err != nil {
+	if doc, err := sbom.Generate(*releaseVersion, *commit); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: sbom:", err)
 		os.Exit(3)
 	} else if raw, err := doc.JSON(); err != nil {
@@ -238,6 +246,17 @@ func main() {
 		}
 	}
 	loadExternalQualifications(qreg, *evidenceDir, now, *commit, srcHash)
+
+	// P0-02 (audit V7.12.3): ExpireStale existed and was unit-tested
+	// (qualification_test.go) but was never actually called from this
+	// pipeline -- a gate qualified in a prior run whose evidence had
+	// since expired, or whose provider/reviewer key had since been
+	// revoked, stayed marked QUALIFIED/VERIFIED in the registry until
+	// someone happened to re-submit evidence. Calling it here, right
+	// after loading whatever external evidence exists and before any
+	// gate below reads qreg's status, makes staleness a real, applied
+	// state transition instead of dead code with a passing unit test.
+	qreg.ExpireStale(now)
 
 	for _, b := range blocked {
 		if err := reg.Register(assurance.Gate{
@@ -300,10 +319,35 @@ func main() {
 		failures++
 	}
 
+	// P0-01 (audit V7.12.3): the certificate previously left BuildHash,
+	// TestManifestHash, SecurityManifestHash, BenchmarkManifestHash,
+	// ChaosManifestHash and ReplayManifestHash as zero-value empty
+	// strings forever -- declared fields that folded into the signed
+	// canonical hash as constants, never actually binding the
+	// certificate to any gate's real evidence content. Every one of
+	// them is now computed from the real per-gate evidence hashes
+	// collected during the gate loop above, categorized by what each
+	// gate actually measures.
+	binaryHash, buildID := binaryIdentity()
 	cert := assurance.ReleaseCertificate{
-		Version: *version, GitCommit: *commit, Operator: *operator,
+		Version: *releaseVersion, GitCommit: *commit, Operator: *operator,
 		Timestamp: now, GoVersion: runtime.Version(),
 		SourceHash: srcHash, SBOMHash: fileHashOrEmpty("SBOM.json"),
+		BuildHash:  categoryHash(gateHashes, "build", "vet", "format"),
+		BinaryHash: binaryHash, BuildID: buildID,
+		EvidenceRootHash: evidenceRootHash(gateHashes),
+		TestManifestHash: categoryHash(gateHashes,
+			"unit", "acceptance", "dependency_integration", "identity", "api_semantics",
+			"storage_recovery", "model_lifecycle", "knowledge_evolution", "data_governance",
+			"hitl", "calibration", "economic_consequence", "decision_precedence",
+			"observability", "data_quality", "bounded_test_execution", "traceability_matrix",
+			"soak_harness_smoke", "execution_graph", "decision_explanation", "fuzz_smoke",
+			"zero_dependency", "assurance_self", "race", "determinism_boundary"),
+		SecurityManifestHash: categoryHash(gateHashes,
+			"security_unit", "sandbox", "supply_chain_scan", "hsm_kms", "spire_mtls"),
+		BenchmarkManifestHash: categoryHash(gateHashes, "stress_slo", "scale_qualification"),
+		ChaosManifestHash:     categoryHash(gateHashes, "chaos"),
+		ReplayManifestHash:    categoryHash(gateHashes, "replay", "replay_determinism_100x"),
 	}
 	manifest := assurance.BuildReadinessManifest(reg, acc, cert)
 	if *signingKey != "" {
@@ -322,6 +366,16 @@ func main() {
 	if err := os.WriteFile(*out, raw, 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "readiness: write:", err)
 		os.Exit(3)
+	}
+
+	// P0-05 (audit V7.12.3): no engine_registry.json existed anywhere.
+	// Generated here, not hand-maintained, from pkg/execution's actual
+	// declared DAG (execution.Registry()) plus this run's real gate
+	// results -- INTEGRATED/TESTED/REPLAYABLE/VERIFIED are computed
+	// from whether execution_graph and replay_determinism_100x actually
+	// passed just now, not asserted.
+	if raw, err := json.MarshalIndent(buildEngineRegistry(gatePassed), "", "  "); err == nil {
+		_ = os.WriteFile("engine_registry.json", raw, 0o600)
 	}
 
 	a := manifest.Assessment
@@ -546,4 +600,161 @@ func fileHashOrEmpty(path string) string {
 		return ""
 	}
 	return assurance.NewEvidence("sbom", path, string(raw), 0, 0).Hash
+}
+
+// engineRegistryRow is one entry in engine_registry.json, matching the
+// fields audit item P0-05 named: engine_id, version, contract, adapter,
+// dependencies, input_schema, output_schema, determinism,
+// replay_support, evidence_support, trust_support, telemetry_support,
+// status.
+type engineRegistryRow struct {
+	EngineID         string   `json:"engine_id"`
+	Version          string   `json:"version"`
+	Contract         string   `json:"contract"`
+	Adapter          string   `json:"adapter"`
+	Dependencies     []string `json:"dependencies"`
+	InputSchema      string   `json:"input_schema"`
+	OutputSchema     string   `json:"output_schema"`
+	Determinism      string   `json:"determinism"`
+	ReplaySupport    bool     `json:"replay_support"`
+	EvidenceSupport  bool     `json:"evidence_support"`
+	TrustSupport     bool     `json:"trust_support"`
+	TelemetrySupport bool     `json:"telemetry_support"`
+	Status           []string `json:"status"`
+}
+
+type engineRegistry struct {
+	GeneratedFrom string              `json:"generated_from"`
+	Engines       []engineRegistryRow `json:"engines"`
+}
+
+// buildEngineRegistry derives engine_registry.json from
+// execution.Registry() (the DAG's own declared shape) rather than a
+// hand-maintained list that could silently drift from the real graph.
+// gatePassed carries this run's real pass/fail for execution_graph and
+// replay_determinism_100x, which is what decides whether a stage is
+// marked TESTED/REPLAYABLE/VERIFIED -- an entry can never claim VERIFIED
+// on a run where those gates did not both actually pass.
+func buildEngineRegistry(gatePassed map[string]bool) engineRegistry {
+	executionGraphPassed := gatePassed["execution_graph"]
+	replayPassed := gatePassed["replay_determinism_100x"]
+
+	entries := execution.Registry()
+	rows := make([]engineRegistryRow, 0, len(entries))
+	for _, e := range entries {
+		deps := make([]string, len(e.Dependencies))
+		for i, d := range e.Dependencies {
+			deps[i] = string(d)
+		}
+
+		status := []string{"IMPLEMENTED"}
+		if !e.AlwaysSkipped {
+			status = append(status, "INTEGRATED")
+		}
+		if executionGraphPassed {
+			status = append(status, "TESTED")
+		}
+		if replayPassed && !e.AlwaysSkipped {
+			status = append(status, "REPLAYABLE")
+		}
+		if executionGraphPassed && replayPassed && !e.AlwaysSkipped {
+			status = append(status, "VERIFIED")
+		}
+
+		determinism := "deterministic given identical release, evidence, entity state and logical tick"
+		if e.AlwaysSkipped {
+			determinism = "not applicable -- this stage is unconditionally skipped in the current wiring, see always_skipped_in_current_wiring"
+		}
+
+		rows = append(rows, engineRegistryRow{
+			EngineID: string(e.StageID), Version: "execution/" + version.Current,
+			Contract: "pkg/execution.Node", Adapter: e.Package, Dependencies: deps,
+			InputSchema: "pkg/execution.Input", OutputSchema: "pkg/execution.Node",
+			Determinism: determinism, ReplaySupport: replayPassed && !e.AlwaysSkipped,
+			EvidenceSupport: true, TrustSupport: e.StageID == execution.StageTrust,
+			TelemetrySupport: false, Status: status,
+		})
+	}
+	return engineRegistry{GeneratedFrom: "pkg/execution.Registry() + this run's execution_graph/replay_determinism_100x gate results", Engines: rows}
+}
+
+// categoryHash folds the real per-gate evidence hashes of gateIDs into
+// one deterministic digest, so a category field on the release
+// certificate (TestManifestHash, SecurityManifestHash, ...) actually
+// binds to what those gates measured instead of being a permanently
+// empty declared field (audit P0-01's finding). Sorted so gate
+// registration order never changes the result. A gateID with no
+// matching evidence (e.g. -skip-race) is simply omitted, not treated
+// as an error -- the hash still binds everything that did run.
+func categoryHash(gateHashes map[string]string, gateIDs ...string) string {
+	present := make([]string, 0, len(gateIDs))
+	for _, id := range gateIDs {
+		if h, ok := gateHashes[id]; ok {
+			present = append(present, id+"="+h)
+		}
+	}
+	sort.Strings(present)
+	h := sha256.New()
+	fmt.Fprint(h, "veriqo.category_hash/v1|")
+	for _, entry := range present {
+		fmt.Fprint(h, entry, "|")
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// evidenceRootHash folds every gate's evidence hash into one root,
+// answering audit P0-01's "EvidenceRootHash" field: a single value that
+// changes if ANY gate's evidence changes, letting a verifier confirm
+// the entire evidence set with one comparison instead of trusting each
+// category hash was actually computed correctly.
+func evidenceRootHash(gateHashes map[string]string) string {
+	ids := make([]string, 0, len(gateHashes))
+	for id := range gateHashes {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	h := sha256.New()
+	fmt.Fprint(h, "veriqo.evidence_root/v1|")
+	for _, id := range ids {
+		fmt.Fprint(h, id, "=", gateHashes[id], "|")
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// binaryIdentity compiles the real deployable kernel binary
+// (cmd/veriqo-node) into a temp file, hashes the actual compiled bytes
+// (BinaryHash), and reads back the Go toolchain's own content-addressed
+// build identifier via `go tool buildid` (BuildID) -- both real,
+// verifiable outputs of this release's actual build, not asserted
+// strings. Returns ("", "") if the build or buildid step fails; the
+// certificate is still produced, just without these two fields, rather
+// than aborting the whole readiness run over a secondary identity field.
+func binaryIdentity() (binaryHash, buildID string) {
+	tmp, err := os.CreateTemp("", "veriqo-node-*")
+	if err != nil {
+		return "", ""
+	}
+	binPath := tmp.Name()
+	_ = tmp.Close()
+	defer func() { _ = os.Remove(binPath) }()
+
+	// The module-qualified import path (not a "./"-relative one) is
+	// required here: this function is also exercised by this package's
+	// own tests, whose working directory is cmd/veriqo-readiness, not
+	// the repository root, so a relative path would silently resolve
+	// against the wrong directory.
+	if _, code := run([]string{"go", "build", "-o", binPath, "veriqo/cmd/veriqo-node"}); code != 0 {
+		return "", ""
+	}
+	raw, err := os.ReadFile(binPath) // #nosec G304 -- binPath is created by this process via os.CreateTemp, not external input
+	if err != nil {
+		return "", ""
+	}
+	sum := sha256.Sum256(raw)
+	binaryHash = hex.EncodeToString(sum[:])
+
+	if out, code := run([]string{"go", "tool", "buildid", binPath}); code == 0 {
+		buildID = strings.TrimSpace(out)
+	}
+	return binaryHash, buildID
 }

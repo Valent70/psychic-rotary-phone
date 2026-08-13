@@ -44,6 +44,7 @@ import (
 	"strconv"
 	"strings"
 
+	"veriqo/internal/version"
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/explanation"
 	"veriqo/pkg/governance/knowledge"
@@ -232,7 +233,7 @@ func NewEngine(p *canonical.Pipeline) *Engine {
 	if p == nil {
 		p = canonical.NewPipeline(nil)
 	}
-	return &Engine{Pipeline: p, Version: "execution/v7.12.0"}
+	return &Engine{Pipeline: p, Version: "execution/" + version.Current}
 }
 
 // graph is the declared DAG. Edges are data so the shape can be read,
@@ -257,6 +258,73 @@ var graph = []struct {
 	{StageExplanation, []StageID{StageDecision, StageTrust, StageEconomic, StageDependencyEvaluation}},
 	{StageReplayPackage, []StageID{StageExplanation}},
 	{StageVerificationCertificate, []StageID{StageReplayPackage}},
+}
+
+// stagePackage names the package whose real logic backs each stage.
+// Most stages are attributed to pkg/canonical because that is where
+// their computation genuinely happens -- this file's own doc comment
+// explains why: the DAG node ATTRIBUTES a specific artifact of one
+// canonical run to a stage rather than recomputing it, per the
+// integrate-don't-rewrite rule. A few stages have their own dedicated
+// package. Kept as data (not inferred by parsing this file) so it can
+// be read and diffed like the graph above.
+var stagePackage = map[StageID]string{
+	StageEvidenceIngestion:       "veriqo/pkg/canonical",
+	StageIdentityResolution:      "veriqo/pkg/canonical",
+	StageDependencyEvaluation:    "veriqo/pkg/canonical",
+	StageTruthArbitration:        "veriqo/pkg/canonical",
+	StageContradiction:           "veriqo/pkg/canonical",
+	StageFusion:                  "veriqo/pkg/canonical",
+	StageTemporal:                "veriqo/pkg/moat/hbayes",
+	StageCausal:                  "veriqo/pkg/canonical",
+	StageRisk:                    "veriqo/pkg/canonical",
+	StageDecision:                "veriqo/pkg/canonical",
+	StageTrust:                   "veriqo/pkg/trust/state",
+	StageDigitalTwin:             "veriqo/pkg/canonical",
+	StageEconomic:                "veriqo/pkg/moat/economic",
+	StageExplanation:             "veriqo/pkg/explanation",
+	StageReplayPackage:           "veriqo/pkg/replay",
+	StageVerificationCertificate: "veriqo/pkg/replay",
+}
+
+// stageAlwaysSkipped names stages whose Run() case unconditionally
+// records StatusSkipped today, regardless of input -- an honest gap,
+// not a hidden one. StageTemporal is the one real instance: the switch
+// case above always returns "no temporal observation series supplied",
+// because nothing in this codebase currently populates one; pkg/moat/hbayes
+// itself has real forward inference, backward smoothing, decay and
+// contradiction handling with its own passing tests, but Run() never
+// calls it. StageTrust and StageEconomic are also conditionally
+// skipped (when TrustSubject/Scenarios are omitted), but real callers
+// (e.g. test/soak) do supply them, so they are not listed here.
+var stageAlwaysSkipped = map[StageID]bool{
+	StageTemporal: true,
+}
+
+// EngineEntry is one row of the audit's required engine_registry.json
+// (P0-05): which stage, which package implements it, its declared DAG
+// dependencies, and whether it is unconditionally bypassed in the
+// current wiring. IMPLEMENTED/INTEGRATED/TESTED/REPLAYABLE/VERIFIED
+// status is computed by the caller (cmd/veriqo-readiness) from real
+// gate results, not asserted here.
+type EngineEntry struct {
+	StageID       StageID   `json:"engine_id"`
+	Package       string    `json:"package"`
+	Dependencies  []StageID `json:"dependencies"`
+	AlwaysSkipped bool      `json:"always_skipped_in_current_wiring"`
+}
+
+// Registry returns one EngineEntry per DAG stage, in the graph's
+// declared (topologically valid) order.
+func Registry() []EngineEntry {
+	entries := make([]EngineEntry, 0, len(graph))
+	for _, g := range graph {
+		entries = append(entries, EngineEntry{
+			StageID: g.id, Package: stagePackage[g.id], Dependencies: g.deps,
+			AlwaysSkipped: stageAlwaysSkipped[g.id],
+		})
+	}
+	return entries
 }
 
 // topoOrder returns the deterministic execution order: Kahn's algorithm

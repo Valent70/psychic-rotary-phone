@@ -22,6 +22,22 @@ import (
 	"runtime/debug"
 )
 
+// buildEnvironment reports the build-time OS/arch/compiler triple that
+// actually produced this binary -- audit item P1-08 named
+// "build environment" as a required SBOM field this document was
+// missing. runtime.GOOS/GOARCH/Compiler describe the running process,
+// which for `go run`/`go build` invoking this package IS the build
+// environment being documented, not a separate reflected value.
+type buildEnvironment struct {
+	OS       string
+	Arch     string
+	Compiler string
+}
+
+func currentBuildEnvironment() buildEnvironment {
+	return buildEnvironment{OS: runtime.GOOS, Arch: runtime.GOARCH, Compiler: runtime.Compiler}
+}
+
 // ErrUnidentifiedRelease is returned by Generate when either version
 // or gitCommit is empty: an SBOM that cannot name its own release is
 // exactly the "vcs.commit: unknown" defect this package exists to
@@ -73,6 +89,7 @@ func Generate(version, gitCommit string) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
+	env := currentBuildEnvironment()
 	return Document{
 		BOMFormat:   "CycloneDX",
 		SpecVersion: "1.5",
@@ -81,6 +98,9 @@ func Generate(version, gitCommit string) (Document, error) {
 			Properties: []Property{
 				{Name: "go.version", Value: runtime.Version()},
 				{Name: "vcs.commit", Value: gitCommit},
+				{Name: "build.os", Value: env.OS},
+				{Name: "build.arch", Value: env.Arch},
+				{Name: "build.compiler", Value: env.Compiler},
 			},
 		},
 		Components: deps,

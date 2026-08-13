@@ -28,7 +28,7 @@ COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 echo "== running production readiness gates =="
 go run ./cmd/veriqo-readiness \
-  --version "${VERIQO_VERSION:-v7.12.0}" \
+  --version "${VERIQO_VERSION:-$(cat VERSION)}" \
   --commit "$COMMIT" \
   --operator "${USER:-ci}" \
   --out READINESS_MANIFEST.json \

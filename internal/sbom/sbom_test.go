@@ -2,6 +2,7 @@ package sbom
 
 import (
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -31,6 +32,32 @@ func TestGenerateEmbedsTheExactReleaseIdentity(t *testing.T) {
 	}
 	if gotCommit != "077b823abcdef" {
 		t.Fatalf("expected vcs.commit 077b823abcdef, got %q -- this is exactly the audit-caught defect (stale/'unknown' commit)", gotCommit)
+	}
+}
+
+// TestGenerateIncludesRealBuildEnvironment covers audit item P1-08's
+// specific finding: the SBOM previously captured go.version and
+// vcs.commit but nothing about the build environment (OS/arch/compiler)
+// itself.
+func TestGenerateIncludesRealBuildEnvironment(t *testing.T) {
+	doc, err := Generate("v7.12.1", "077b823abcdef")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]string{}
+	for _, p := range doc.Metadata.Properties {
+		found[p.Name] = p.Value
+	}
+	for _, key := range []string{"build.os", "build.arch", "build.compiler"} {
+		if found[key] == "" {
+			t.Errorf("expected a non-empty %s property, got %q", key, found[key])
+		}
+	}
+	if found["build.os"] != runtime.GOOS {
+		t.Errorf("expected build.os=%s, got %s", runtime.GOOS, found["build.os"])
+	}
+	if found["build.arch"] != runtime.GOARCH {
+		t.Errorf("expected build.arch=%s, got %s", runtime.GOARCH, found["build.arch"])
 	}
 }
 

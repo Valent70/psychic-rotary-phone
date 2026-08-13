@@ -108,13 +108,18 @@ func (m AcceptanceManifest) ComputeHash() string {
 // --- PHASE 55: release certificate -----------------------------------
 
 // ReleaseCertificate is the signed artifact every VERIQO release
-// produces. Its fields are exactly those the audit enumerated.
+// produces. Its fields are exactly those the audit enumerated, plus
+// BuildID/BinaryHash/EvidenceRootHash added to close audit item P0-01,
+// which named those three as required and absent.
 type ReleaseCertificate struct {
 	Version                string     `json:"version"`
 	GitCommit              string     `json:"git_commit"`
 	BuildHash              string     `json:"build_hash"`
+	BuildID                string     `json:"build_id"`
+	BinaryHash             string     `json:"binary_hash"`
 	SourceHash             string     `json:"source_hash"`
 	SBOMHash               string     `json:"sbom_hash"`
+	EvidenceRootHash       string     `json:"evidence_root_hash"`
 	TestManifestHash       string     `json:"test_manifest_hash"`
 	AcceptanceManifestHash string     `json:"acceptance_manifest_hash"`
 	SecurityManifestHash   string     `json:"security_manifest_hash"`
@@ -136,10 +141,10 @@ type ReleaseCertificate struct {
 // canonical is the deterministic byte form used for hash and signature.
 func (c ReleaseCertificate) canonical() []byte {
 	h := fmt.Sprintf(
-		"veriqo.release_certificate/v1\nversion=%s\ncommit=%s\nbuild=%s\nsource=%s\nsbom=%s\n"+
+		"veriqo.release_certificate/v1\nversion=%s\ncommit=%s\nbuild=%s\nbuild_id=%s\nbinary=%s\nsource=%s\nsbom=%s\nevidence_root=%s\n"+
 			"test=%s\nacceptance=%s\nsecurity=%s\nbenchmark=%s\nchaos=%s\nreplay=%s\n"+
 			"operator=%s\nts=%d\nkey=%s\ngo=%s\nverdict=%s\nmandatory=%d/%d\n",
-		c.Version, c.GitCommit, c.BuildHash, c.SourceHash, c.SBOMHash,
+		c.Version, c.GitCommit, c.BuildHash, c.BuildID, c.BinaryHash, c.SourceHash, c.SBOMHash, c.EvidenceRootHash,
 		c.TestManifestHash, c.AcceptanceManifestHash, c.SecurityManifestHash,
 		c.BenchmarkManifestHash, c.ChaosManifestHash, c.ReplayManifestHash,
 		c.Operator, c.Timestamp, c.SigningKeyID, c.GoVersion, c.Verdict,
