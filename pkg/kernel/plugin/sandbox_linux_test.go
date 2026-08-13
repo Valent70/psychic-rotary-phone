@@ -5,6 +5,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +39,39 @@ func main() {
 const hangPluginSource = `package main
 import "time"
 func main() { time.Sleep(30 * time.Second) }
+`
+
+// nsReportPluginSource reports what the sandboxed process itself
+// observes about its own process and network namespace -- the ground
+// truth for proving CLONE_NEWPID/CLONE_NEWNET isolation actually took
+// effect, not merely that the flags were set.
+const nsReportPluginSource = `package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"net"
+	"os"
+)
+
+type req struct{}
+type resp struct {
+	PID        int
+	Interfaces []string
+}
+
+func main() {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	var names []string
+	if ifaces, err := net.Interfaces(); err == nil {
+		for _, i := range ifaces {
+			names = append(names, i.Name)
+		}
+	}
+	out, _ := json.Marshal(resp{PID: os.Getpid(), Interfaces: names})
+	os.Stdout.Write(append(out, '\n'))
+}
 `
 
 const memhogPluginSource = `package main
@@ -134,5 +168,47 @@ func TestSandboxRunner_MemoryLimitKillsRunawayPlugin(t *testing.T) {
 		struct{}{}, &resp)
 	if !errors.Is(err, ErrSandboxCrashed) {
 		t.Fatalf("want ErrSandboxCrashed (OOM-killed by cgroup), got %v", err)
+	}
+}
+
+// TestSandboxRunner_NamespaceIsolation_ChildIsPID1WithNoHostInterfaces
+// is the ground-truth proof for P1-05: the sandboxed plugin, from ITS
+// OWN perspective (not this test's assumption), must observe itself as
+// PID 1 of a fresh process namespace and must NOT see this host's real
+// network interfaces -- both properties a naive "just exec it" runner
+// (the pre-P1-05 behaviour) cannot provide, since a plain child process
+// shares the host's PID and network namespace.
+func TestSandboxRunner_NamespaceIsolation_ChildIsPID1WithNoHostInterfaces(t *testing.T) {
+	runner := NewSandboxRunner("veriqo-plugin-test")
+	if !runner.Available() {
+		t.Skip("cgroup v1 not writable in this environment")
+	}
+	bin := buildHelperBinary(t, "nsreportplugin", nsReportPluginSource)
+
+	hostIfaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("host net.Interfaces: %v", err)
+	}
+
+	var resp struct {
+		PID        int
+		Interfaces []string
+	}
+	if err := runner.RunOnce(context.Background(), "nsreport-holder", bin,
+		SandboxLimits{MemoryBytes: 64 * 1024 * 1024, CPUCores: 1, Timeout: 5 * time.Second},
+		struct{}{}, &resp); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+
+	if resp.PID != 1 {
+		t.Fatalf("sandboxed plugin must be PID 1 of its own process namespace, observed PID %d -- "+
+			"CLONE_NEWPID isolation did not take effect", resp.PID)
+	}
+	for _, name := range resp.Interfaces {
+		if name != "lo" {
+			t.Fatalf("sandboxed plugin must not see any host network interface, observed %q -- "+
+				"CLONE_NEWNET isolation did not take effect (host had %d interfaces: %v)",
+				name, len(hostIfaces), hostIfaces)
+		}
 	}
 }

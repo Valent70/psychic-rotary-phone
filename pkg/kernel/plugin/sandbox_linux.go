@@ -23,11 +23,32 @@
 //     binary under a restricted user/namespace, which is a deployment
 //     concern this package does not prescribe).
 //
-// Honest scope: this is real process + cgroup isolation, not a full
-// seccomp/namespace/WASM sandbox — there is no syscall filtering and no
-// filesystem/network namespace confinement here. That remains a further,
-// separable hardening step (seccomp-bpf profiles, or compiling plugins
-// to WASM) and is not fabricated as done.
+// Namespace isolation (P1-06 -> P1-05 follow-up): the plugin subprocess
+// is additionally started with CLONE_NEWPID|CLONE_NEWNS|CLONE_NEWUTS|
+// CLONE_NEWIPC|CLONE_NEWNET, so it (a) is PID 1 of its own process
+// namespace and cannot see or signal the host's or any other plugin's
+// processes, (b) has a private mount table (mount/unmount inside it
+// never propagates to the host), (c) has its own hostname, (d) has its
+// own System V IPC/message-queue namespace, and (e) starts in a fresh,
+// empty network namespace with no configured interfaces -- consistent
+// with the design's own stated fact that a plugin talks to the host
+// ONLY over its stdin/stdout pipes (already-open file descriptors,
+// unaffected by CLONE_NEWNET) and needs no ambient network reachability.
+// This unconditionally requires CAP_SYS_ADMIN, which RunOnce already
+// requires today for cgroup enforcement (Available() gates on it), so
+// it adds no new privilege precondition beyond what this function
+// already demanded.
+//
+// Honest scope: this closes the "no filesystem/network namespace
+// confinement" half of the prior gap for THIS process-visibility and
+// network-reachability slice. It does NOT add: full filesystem
+// confinement (chroot/pivot_root into a minimal rootfs — a much larger
+// change risking breaking arbitrary plugin binaries that need shared
+// libraries from the host filesystem), a user namespace (UID/GID
+// remapping), or seccomp-bpf syscall filtering (hand-authoring a
+// correct BPF allow-list for an arbitrary Go/native plugin binary
+// without over- or under-restricting it is separable, higher-risk
+// work, not attempted here). None of those are fabricated as done.
 package plugin
 
 import (
@@ -37,6 +58,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"veriqo/pkg/kernel/resource"
@@ -121,6 +143,10 @@ func (s *SandboxRunner) RunOnce(ctx context.Context, holder, binary string, limi
 	}()
 
 	cmd := exec.CommandContext(runCtx, binary)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWIPC | syscall.CLONE_NEWNET,
+	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("plugin: stdin pipe: %w", err)
