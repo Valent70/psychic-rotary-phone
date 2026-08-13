@@ -53,7 +53,39 @@ var (
 	ErrNoActiveKey   = errors.New("keys: no active key for this purpose")
 	ErrCiphertextBad = errors.New("keys: ciphertext failed authentication")
 	ErrKeyExists     = errors.New("keys: key ID already exists")
+
+	// ErrSoftwareProviderInProduction is returned by RequireProductionSafe
+	// when a software-backed KeyProvider (private key material in
+	// process memory or on local disk) is wired in under a production
+	// environment. hsm_kms's qualification requires this to be checked
+	// once at startup, before any key material is ever touched -- not
+	// discovered later from a signature that turns out to be backed by
+	// the wrong kind of key custody.
+	ErrSoftwareProviderInProduction = errors.New("keys: a software-backed key provider cannot be used when the environment is production")
 )
+
+// SoftwareBacked is implemented by any KeyProvider whose private key
+// material lives outside a real HSM/KMS -- in process memory or on the
+// local filesystem. RequireProductionSafe uses it to fail closed rather
+// than let a software provider silently stand in for hardware custody
+// in a production deployment.
+type SoftwareBacked interface {
+	SoftwareBacked() bool
+}
+
+// RequireProductionSafe refuses to return nil if provider is
+// software-backed and env is "production". Call it once at process
+// startup: the point is to refuse to start at all, not to catch a
+// misconfiguration after keys have already been signed with it.
+func RequireProductionSafe(provider KeyProvider, env string) error {
+	if env != "production" {
+		return nil
+	}
+	if sb, ok := provider.(SoftwareBacked); ok && sb.SoftwareBacked() {
+		return ErrSoftwareProviderInProduction
+	}
+	return nil
+}
 
 // State is a key's lifecycle state.
 type State string
@@ -264,6 +296,10 @@ func NewMemoryKeyProvider() *MemoryKeyProvider {
 	return &MemoryKeyProvider{keys: map[string]ed25519.PrivateKey{}}
 }
 
+// SoftwareBacked implements SoftwareBacked: private key material never
+// leaves this process's memory.
+func (p *MemoryKeyProvider) SoftwareBacked() bool { return true }
+
 // Generate creates and stores a new keypair, returning its metadata.
 func (p *MemoryKeyProvider) Generate(keyID string, purpose Purpose, createdAt, expiresAt uint64) (KeyMetadata, error) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -320,6 +356,10 @@ func NewFileKeyProvider(dir string) (*FileKeyProvider, error) {
 	}
 	return &FileKeyProvider{dir: dir}, nil
 }
+
+// SoftwareBacked implements SoftwareBacked: private key material sits on
+// the local filesystem, not in a real HSM/KMS.
+func (p *FileKeyProvider) SoftwareBacked() bool { return true }
 
 func (p *FileKeyProvider) path(keyID string) string {
 	sum := sha256.Sum256([]byte(keyID))

@@ -1,0 +1,112 @@
+{
+  "outcomes": [
+    {
+      "id": "scale_qualification",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "elapsed": "3.830326ms",
+        "node_count": "8",
+        "records_processed": "2000",
+        "records_submitted": "2000",
+        "throughput_per_s": "522148.77"
+      }
+    },
+    {
+      "id": "multi_region_dr",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "failed_region": "region-0",
+        "healed_convergence": "true",
+        "recovered_leader": "region-2",
+        "region_count": "3",
+        "rpo_lost_writes": "0",
+        "rto": "52.997003ms"
+      }
+    },
+    {
+      "id": "hsm_kms",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "PERMISSION_DENIED": "blocked=true",
+        "PRODUCTION_GUARD": "blocked=true",
+        "REVOKED": "blocked=true provider_touched=false",
+        "TIMEOUT": "blocked=true",
+        "UNAVAILABLE": "blocked=true",
+        "WRONG_KEY": "blocked=true"
+      }
+    },
+    {
+      "id": "live_data",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "connectors": "4",
+        "first_pass_accepted": "80",
+        "first_pass_rejected": "0",
+        "replay_accepted": "0",
+        "replay_rejected": "80"
+      }
+    },
+    {
+      "id": "soak_72h",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "actual_duration": "3.002029707s",
+        "chain_verified": "true",
+        "checkpoints": "11",
+        "drift_detected": "false",
+        "is_full_72h": "false",
+        "iterations": "28296574",
+        "leak_detected": "false"
+      }
+    },
+    {
+      "id": "spire_mtls",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "claimed_id_mismatch_rejected": "blocked_or_passed=true",
+        "expired_svid_rejected": "blocked_or_passed=true",
+        "fetch_then_validate": "blocked_or_passed=true",
+        "old_svid_still_structurally_valid_until_revoked": "blocked_or_passed=true",
+        "revoked_svid_rejected": "blocked_or_passed=true",
+        "rotation_observed_via_watch": "blocked_or_passed=true",
+        "untrusted_bundle_rejected": "blocked_or_passed=true",
+        "validate_peer_returns_actual_id": "blocked_or_passed=true"
+      }
+    },
+    {
+      "id": "supply_chain_scan",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "dependency_count": "0",
+        "findings": "0",
+        "source_type": "TEST_FIXTURE",
+        "unjustified": "0"
+      }
+    },
+    {
+      "id": "pentest",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "clean_tree": "false",
+        "commit": "222ae2e3af1de4a5bff4ebd4c46dee6c59de1a98",
+        "critical_findings": "0",
+        "high_findings": "0",
+        "low_findings": "0",
+        "medium_findings": "0",
+        "probes_ran_at": "2026-08-13T05:19:52Z",
+        "probes_run": "4",
+        "retest_status": "PASS",
+        "source_hash": "ef21bb092e8eb59423b712a14c69d74a0ea9657e3e9bb1faa52e3f45f94a82a9"
+      }
+    }
+  ],
+  "all_pass": true
+}
