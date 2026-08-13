@@ -14,7 +14,19 @@
       },
       {
         "name": "vcs.commit",
-        "value": "a8df6ee2728a5266b1b2599cb0b557fe1e1a4fb4"
+        "value": "eeaa98c458bad5bb8f66fb1e9f1594b393802a99"
+      },
+      {
+        "name": "build.os",
+        "value": "linux"
+      },
+      {
+        "name": "build.arch",
+        "value": "amd64"
+      },
+      {
+        "name": "build.compiler",
+        "value": "gc"
       }
     ]
   },

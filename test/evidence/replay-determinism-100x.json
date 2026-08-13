@@ -10,7 +10,7 @@
     "DependencyRoot"
   ],
   "reference": {
-    "execution_root_hash": "6c2681e486584762f78b917c2f4c9c2c28f626087cceedea833978e235a84422",
+    "execution_root_hash": "54f8fdf088aab9b5c54a6fda52bed585f22d5afe8997ea6e3e30260ec118a71e",
     "replay_result_hash": "4fae9a0a3a4e2a8eb9b4747d2745c77dc4106ad7ee0ac46b75d54784fbd9387a",
     "original_result_hash": "4fae9a0a3a4e2a8eb9b4747d2745c77dc4106ad7ee0ac46b75d54784fbd9387a",
     "decision": "ESCALATE",
