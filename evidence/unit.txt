@@ -42,12 +42,12 @@ ok  	veriqo/pkg/kernel/distributed	(cached)
 ok  	veriqo/pkg/kernel/execgraph	(cached)
 ok  	veriqo/pkg/kernel/intent	(cached)
 ok  	veriqo/pkg/kernel/intentgraph	(cached)
-ok  	veriqo/pkg/kernel/mission	0.003s
+ok  	veriqo/pkg/kernel/mission	(cached)
 ok  	veriqo/pkg/kernel/ontology	(cached)
-ok  	veriqo/pkg/kernel/plugin	2.984s
+ok  	veriqo/pkg/kernel/plugin	(cached)
 ok  	veriqo/pkg/kernel/policy	(cached)
 ok  	veriqo/pkg/kernel/reasoning	(cached)
-ok  	veriqo/pkg/kernel/resource	0.544s
+ok  	veriqo/pkg/kernel/resource	(cached)
 ok  	veriqo/pkg/kernel/runtime	(cached)
 ok  	veriqo/pkg/kernel/sandbox	(cached)
 ok  	veriqo/pkg/kernel/selfheal	(cached)
@@ -90,11 +90,11 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	0.278s
+ok  	veriqo/test/acceptance/replay	0.327s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/integration	2.374s
-ok  	veriqo/test/soak	30.079s
-ok  	veriqo/test/stress	7.552s
+ok  	veriqo/test/integration	2.555s
+ok  	veriqo/test/soak	30.020s
+ok  	veriqo/test/stress	7.220s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -102,10 +102,10 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	0.876s
+ok  	veriqo/veriqo/gateway/rest	(cached)
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
-ok  	veriqo/veriqo/kernel	0.007s
+ok  	veriqo/veriqo/kernel	(cached)
 ok  	veriqo/veriqo/moat/scorecard	(cached)
-ok  	veriqo/veriqo/registry	0.017s
+ok  	veriqo/veriqo/registry	(cached)
 ok  	veriqo/veriqo/sdk/go	(cached)
