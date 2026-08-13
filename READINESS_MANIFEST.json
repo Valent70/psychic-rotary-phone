@@ -2,21 +2,21 @@
   "schema_version": "veriqo.readiness_manifest/v1",
   "release": {
     "version": "v7.12.1",
-    "git_commit": "8aa1746d88f0f5ba6bec8dc3770b7c9bf57f2460",
-    "build_hash": "ec6aa58d4054e2142b25a9a3e07644f018a1f4df13f14ac812f77d0637f6fcf6",
-    "build_id": "lX-SWbLZxkUAUIChtY0l/7RrzflsjwBsIomYk6bYk/Uu4ID2HVjrXA-uPmkBV-/WFyzfM2uLD8HRKdxcioW",
-    "binary_hash": "bfc33b88d8e31263547be4de396b9bd50c19ea54974ba369c04472605771a760",
-    "source_hash": "00924602280c9adad1f24a9b7226b89372de62005b06cf60d2e5866d4103ba09",
-    "sbom_hash": "c890d8984796ad305f444502bdac3f733880890521d04901b4510e25bd29369e",
-    "evidence_root_hash": "e7ea5633877fd426587cf205fb465f19abc2635d37706dcd5dbb22b431430d29",
-    "test_manifest_hash": "1f59069516ee6e7da7778c32e7e71dfed239a72a6fa2b07501ba56e84fe9128f",
+    "git_commit": "85c0019042904a12b017278cbd9ca7617dbcf15f",
+    "build_hash": "7230f146e116520e4fc9a59be6e15ae67fe21e967f50897cc1e446aca07ec78e",
+    "build_id": "bWAiQCIsqy8qc5dwlh95/C4_kc1IkFllS8grxalY6/Uu4ID2HVjrXA-uPmkBV-/DghGQlAhbcv6wK0_K0xo",
+    "binary_hash": "837cf26d4b8c7bedf05f976a0d630375a59e8ee129c6e951d66fb8a1eb932db8",
+    "source_hash": "92133adcddfb39c9adfd9bc782308ebc868cc56eb1d6d3dc583a898bad110b2b",
+    "sbom_hash": "75829bfcbca047961b0838c1fe7b4b66699573d2efd8812f035369835a1d419d",
+    "evidence_root_hash": "7164f863f4393d88ffa7b519847bc249587d775202b4668b9472a824e95d1ce3",
+    "test_manifest_hash": "72b45fc78c2536925aa717e06f8a35568c0db0dac21e00e45e1db25623dfcba8",
     "acceptance_manifest_hash": "288c7b71d85bfa20dd74a2c50504cf135201aa39b9c73e52b9b790268b2d5370",
-    "security_manifest_hash": "7c3b4b5bccdf5df9ebdff1cf369547afa827d06d0490cb2ca605904def04f7d9",
-    "benchmark_manifest_hash": "d359e356aa47bd7acd8f43739a079e0f299d7c45ada259424566b410279b290b",
-    "chaos_manifest_hash": "91f3756a542d7126f10091ff074b787c180f097bea1343b7951e284af7799719",
-    "replay_manifest_hash": "12cb1ad81e2bd6fc10a3e5b2ed85c5f9b47d72195024666dc795ea4db1520b52",
-    "operator": "claude-code-audit-v7.12.3-round6b",
-    "timestamp": 1786616983,
+    "security_manifest_hash": "576dd807cf435ecb8984826ea0fb171ef4991cf3380ca7e5e7654e730f10d01d",
+    "benchmark_manifest_hash": "29e02f18b7193417a2a6bd82a6f49be971437616b66f7b3ae45300976ef7aa2c",
+    "chaos_manifest_hash": "6cbffcbca9897a168419fcd8f94a9b9fa5335688307a89682bd28c156da717e7",
+    "replay_manifest_hash": "fa348883324e736233ae120bbc4cf50f28c0555de01e76949a7d59b269211f7e",
+    "operator": "claude-code-audit-v7.12.3-round6c",
+    "timestamp": 1786617718,
     "signing_key_id": "b696638ac6de4335",
     "go_version": "go1.24.7",
     "verdict": "NOT_PRODUCTION_READY",
@@ -47,13 +47,13 @@
         "supply_chain_scan: BLOCKED by staticcheck AND gosec both run clean (0 findings each) in a network-enabled session — see evidence/supply_chain_scan-gosec-full.txt; all 89 gosec findings across every severity were individually triaged and fixed or justified with a named reason, including catching and correcting a real bug in the prior round's own suppression comments. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified: SAST is fully closed, dependency-vulnerability scanning is not. pkg/blockers/supplychain now has a real `go list -m all` dependency-discovery step, a policy engine, and a real HTTP-backed VulnerabilityProvider (unit-tested against a local server since the real endpoints are network-blocked here) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION on the pipeline; the vulnerability-DB query itself is still unqualified against a real feed)."
       ]
     },
-    "certificate_hash": "4e465ee536f25bcf9de3f0e4bf4fc1aee8f9437c60bb3d8d55179d25b576e9a3",
-    "signature": "50e7175d4f1895f94c7c82d052a4e311382fb0c756897513e6807886f1ddd672672e8874c2bd34029a3623e0b8c901a0efb95d747cdef56d0259c8555d0e480e",
+    "certificate_hash": "9c180aa6512d925d5b35e1ee8b24df00a30d7a29f8901a26cd8d848ea9f0fec9",
+    "signature": "d6b3d01107a11acee1173ebfe5870baea470fff1cb6d2de6ed1dd986d413d391c8246f66a87bb9a349c05a162f9f1dd8d6c9eed5fc4b8382882f0c3ab33c0402",
     "public_key": "4c4db0b375412720b871b67c5238fe0441ebc9707f4ccf37393bce4b2234dbd4",
-    "timestamp_chain_seq": 1,
-    "timestamp_entry_hash": "6cb9631e2b0d6270220700287700f6460fe4fc48cfc9e4c9c56dc96096389127",
+    "timestamp_chain_seq": 2,
+    "timestamp_entry_hash": "413bffe873168c56009dfd484742b29ecf3f0b52b108d0c4ab95239a8eef0c7e",
     "timestamp_authority_key_id": "3ec67aaa053d59f9",
-    "timestamp_authority_signature": "402d41808e0774281c787461dd00404ab775e677f90b71ef52a614fc5bdb30d949a8ee450c52fbdbe802a45fa14656c41c45703e8de616f6be5b04ef47d61f0a"
+    "timestamp_authority_signature": "235c87cd882df20a0d9872cafd78378e86e161f8f5a77df22c8aba6e0d88448fa791da1bfbb78858a73af710b9b5121b32bb300bad921e6f8a397d5a843cc20a"
   },
   "acceptance": {
     "categories": [
@@ -1476,13 +1476,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "dcd75c7adf6d5c7c",
+          "artifact_id": "8a9f4335a02f8f7e",
           "gate_id": "build",
           "command": "go build ./...",
           "output": "",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "dcd75c7adf6d5c7c6de789d794f89ce3bf9ac756d333d6e238fa866fdbf2d6da"
+          "produced_at": 1786617718,
+          "hash": "8a9f4335a02f8f7e876685f97cf5808508352904aa2aa0e3bcac3b261c801ef7"
         }
       ]
     },
@@ -1496,13 +1496,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "cdbb7ccb0d0ed62d",
+          "artifact_id": "133905042f48b5a7",
           "gate_id": "vet",
           "command": "go vet ./...",
           "output": "",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "cdbb7ccb0d0ed62d475473a3a4d85782e3f0dcf399862d9bb69af90a9df5b9b2"
+          "produced_at": 1786617718,
+          "hash": "133905042f48b5a75b9e16b8f4bd9512ddbcf11ef83cb59fe1067b0baa7b0ca4"
         }
       ]
     },
@@ -1516,13 +1516,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "d637bb186df2c8a9",
+          "artifact_id": "746019646c05b8d7",
           "gate_id": "format",
           "command": "gofmt -l .",
           "output": "",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "d637bb186df2c8a92a6ee97d316e71885f85c85038cfe91a80f84464203d4ef0"
+          "produced_at": 1786617718,
+          "hash": "746019646c05b8d76319e81c7a2565bd16966cb68beddb7edefe6abe2b8e0da4"
         }
       ]
     },
@@ -1536,13 +1536,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "389355d719186a06",
+          "artifact_id": "787b86ebd999a34c",
           "gate_id": "unit",
           "command": "go test ./...",
-          "output": "ok  \tveriqo/cmd/veriqo-demo\t(cached)\n?   \tveriqo/cmd/veriqo-gateway\t[no test files]\n?   \tveriqo/cmd/veriqo-kernel-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-live-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-node\t[no test files]\n?   \tveriqo/cmd/veriqo-qualification\t[no test files]\nok  \tveriqo/cmd/veriqo-readiness\t0.765s\n?   \tveriqo/cmd/veriqo-release-keygen\t[no test files]\nok  \tveriqo/cmd/veriqo-requirements\t(cached)\n?   \tveriqo/cmd/veriqo-testrunner\t[no test files]\n?   \tveriqo/cmd/veriqo-verify\t[no test files]\n?   \tveriqo/cmd/veriqo-verify-release\t[no test files]\nok  \tveriqo/internal/assurance\t(cached)\nok  \tveriqo/internal/determinism\t(cached)\nok  \tveriqo/internal/sbom\t(cached)\nok  \tveriqo/internal/sourcehash\t(cached)\nok  \tveriqo/internal/timestamp\t(cached)\nok  \tveriqo/internal/version\t(cached)\nok  \tveriqo/pkg/api\t(cached)\nok  \tveriqo/pkg/authz\t(cached)\nok  \tveriqo/pkg/blockers\t(cached)\nok  \tveriqo/pkg/blockers/dr\t(cached)\nok  \tveriqo/pkg/blockers/hsmkms\t(cached)\nok  \tveriqo/pkg/blockers/livedata\t(cached)\n?   \tveriqo/pkg/blockers/orchestrator\t[no test files]\nok  \tveriqo/pkg/blockers/pentest\t1.619s\nok  \tveriqo/pkg/blockers/scale\t(cached)\nok  \tveriqo/pkg/blockers/soak\t(cached)\nok  \tveriqo/pkg/blockers/spiffe\t(cached)\nok  \tveriqo/pkg/blockers/supplychain\t0.015s\nok  \tveriqo/pkg/canonical\t(cached)\nok  \tveriqo/pkg/chaos\t(cached)\nok  \tveriqo/pkg/connector\t(cached)\nok  \tveriqo/pkg/consensus/raftlite\t(cached)\nok  \tveriqo/pkg/core/trustcalc\t(cached)\nok  \tveriqo/pkg/dataplatform/ingest\t(cached)\nok  \tveriqo/pkg/dataquality\t(cached)\nok  \tveriqo/pkg/engine\t(cached)\nok  \tveriqo/pkg/evidence/api\t(cached)\nok  \tveriqo/pkg/evidence/graph\t(cached)\nok  \tveriqo/pkg/evidence/ontology\t(cached)\nok  \tveriqo/pkg/execution\t(cached)\nok  \tveriqo/pkg/explanation\t(cached)\nok  \tveriqo/pkg/governance/data\t(cached)\nok  \tveriqo/pkg/governance/hitl\t(cached)\nok  \tveriqo/pkg/governance/knowledge\t(cached)\nok  \tveriqo/pkg/governance/lifecycle\t(cached)\nok  \tveriqo/pkg/governance/precedence\t(cached)\nok  \tveriqo/pkg/governance/qualification\t(cached)\nok  \tveriqo/pkg/identity\t(cached)\nok  \tveriqo/pkg/kernel/distributed\t(cached)\nok  \tveriqo/pkg/kernel/execgraph\t(cached)\nok  \tveriqo/pkg/kernel/intent\t(cached)\nok  \tveriqo/pkg/kernel/intentgraph\t(cached)\nok  \tveriqo/pkg/kernel/mission\t(cached)\nok  \tveriqo/pkg/kernel/ontology\t(cached)\nok  \tveriqo/pkg/kernel/plugin\t(cached)\nok  \tveriqo/pkg/kernel/policy\t(cached)\nok  \tveriqo/pkg/kernel/reasoning\t(cached)\nok  \tveriqo/pkg/kernel/resource\t(cached)\nok  \tveriqo/pkg/kernel/runtime\t(cached)\nok  \tveriqo/pkg/kernel/sandbox\t(cached)\nok  \tveriqo/pkg/kernel/selfheal\t(cached)\nok  \tveriqo/pkg/lifecycle\t(cached)\nok  \tveriqo/pkg/moat/calibration\t(cached)\nok  \tveriqo/pkg/moat/causal\t(cached)\nok  \tveriqo/pkg/moat/contradiction\t(cached)\nok  \tveriqo/pkg/moat/decision\t(cached)\nok  \tveriqo/pkg/moat/digitaltwin\t(cached)\nok  \tveriqo/pkg/moat/domain/maritime\t(cached)\nok  \tveriqo/pkg/moat/economic\t(cached)\nok  \tveriqo/pkg/moat/entity\t(cached)\nok  \tveriqo/pkg/moat/evidencegraph\t(cached)\nok  \tveriqo/pkg/moat/fusion\t(cached)\nok  \tveriqo/pkg/moat/fusion/hbayes\t(cached)\nok  \tveriqo/pkg/moat/hbayes\t(cached)\nok  \tveriqo/pkg/moat/intelligence/evidence\t(cached)\nok  \tveriqo/pkg/moat/intelligence/patterns\t(cached)\nok  \tveriqo/pkg/moat/intelligence/pricing\t(cached)\nok  \tveriqo/pkg/moat/intelligence/risk\t(cached)\nok  \tveriqo/pkg/moat/kg\t(cached)\nok  \tveriqo/pkg/moat/metaintelligence\t(cached)\nok  \tveriqo/pkg/moat/provenance\t(cached)\nok  \tveriqo/pkg/moat/reliability\t(cached)\nok  \tveriqo/pkg/moat/simulation\t(cached)\nok  \tveriqo/pkg/moat/temporal\t(cached)\nok  \tveriqo/pkg/platform/audit\t(cached)\nok  \tveriqo/pkg/platform/config\t(cached)\nok  \tveriqo/pkg/platform/observability\t(cached)\nok  \tveriqo/pkg/platform/security\t(cached)\nok  \tveriqo/pkg/platform/security/keys\t(cached)\nok  \tveriqo/pkg/platform/telemetry\t(cached)\nok  \tveriqo/pkg/replay\t(cached)\nok  \tveriqo/pkg/storage\t(cached)\nok  \tveriqo/pkg/storage/wal\t0.108s\nok  \tveriqo/pkg/transport/flowcontrol\t(cached)\nok  \tveriqo/pkg/transport/rafttcp\t(cached)\nok  \tveriqo/pkg/trust\t(cached)\nok  \tveriqo/pkg/trust/state\t(cached)\nok  \tveriqo/pkg/verification\t(cached)\nok  \tveriqo/pkg/workflow\t(cached)\nok  \tveriqo/test/acceptance\t(cached)\nok  \tveriqo/test/acceptance/replay\t0.301s\nok  \tveriqo/test/chaos\t(cached)\nok  \tveriqo/test/e2e/eight_blockers\t19.195s\nok  \tveriqo/test/integration\t2.600s\nok  \tveriqo/test/soak\t30.051s\nok  \tveriqo/test/stress\t8.212s\nok  \tveriqo/veriqo/cli\t(cached)\nok  \tveriqo/veriqo/core/evidence\t(cached)\nok  \tveriqo/veriqo/core/execution\t(cached)\nok  \tveriqo/veriqo/core/intelligence\t(cached)\nok  \tveriqo/veriqo/core/knowledge\t(cached)\nok  \tveriqo/veriqo/core/runtime\t(cached)\nok  \tveriqo/veriqo/examples\t(cached)\nok  \tveriqo/veriqo/gateway/rest\t0.787s\nok  \tveriqo/veriqo/generator\t(cached)\n?   \tveriqo/veriqo/generator/cmd/gen\t[no test files]\nok  \tveriqo/veriqo/kernel\t(cached)\nok  \tveriqo/veriqo/moat/scorecard\t(cached)\nok  \tveriqo/veriqo/registry\t(cached)\nok  \tveriqo/veriqo/sdk/go\t(cached)\n",
+          "output": "ok  \tveriqo/cmd/veriqo-demo\t(cached)\n?   \tveriqo/cmd/veriqo-gateway\t[no test files]\n?   \tveriqo/cmd/veriqo-kernel-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-live-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-node\t[no test files]\n?   \tveriqo/cmd/veriqo-qualification\t[no test files]\nok  \tveriqo/cmd/veriqo-readiness\t(cached)\n?   \tveriqo/cmd/veriqo-release-keygen\t[no test files]\nok  \tveriqo/cmd/veriqo-requirements\t(cached)\n?   \tveriqo/cmd/veriqo-testrunner\t[no test files]\n?   \tveriqo/cmd/veriqo-verify\t[no test files]\n?   \tveriqo/cmd/veriqo-verify-release\t[no test files]\nok  \tveriqo/internal/assurance\t(cached)\nok  \tveriqo/internal/determinism\t(cached)\nok  \tveriqo/internal/sbom\t(cached)\nok  \tveriqo/internal/sourcehash\t(cached)\nok  \tveriqo/internal/timestamp\t(cached)\nok  \tveriqo/internal/version\t(cached)\nok  \tveriqo/pkg/api\t(cached)\nok  \tveriqo/pkg/authz\t(cached)\nok  \tveriqo/pkg/blockers\t(cached)\nok  \tveriqo/pkg/blockers/dr\t(cached)\nok  \tveriqo/pkg/blockers/hsmkms\t(cached)\nok  \tveriqo/pkg/blockers/livedata\t(cached)\n?   \tveriqo/pkg/blockers/orchestrator\t[no test files]\nok  \tveriqo/pkg/blockers/pentest\t1.170s\nok  \tveriqo/pkg/blockers/scale\t(cached)\nok  \tveriqo/pkg/blockers/soak\t(cached)\nok  \tveriqo/pkg/blockers/spiffe\t(cached)\nok  \tveriqo/pkg/blockers/supplychain\t0.020s\nok  \tveriqo/pkg/canonical\t(cached)\nok  \tveriqo/pkg/chaos\t(cached)\nok  \tveriqo/pkg/connector\t(cached)\nok  \tveriqo/pkg/consensus/raftlite\t(cached)\nok  \tveriqo/pkg/core/trustcalc\t(cached)\nok  \tveriqo/pkg/dataplatform/ingest\t(cached)\nok  \tveriqo/pkg/dataquality\t(cached)\nok  \tveriqo/pkg/engine\t(cached)\nok  \tveriqo/pkg/evidence/api\t(cached)\nok  \tveriqo/pkg/evidence/graph\t(cached)\nok  \tveriqo/pkg/evidence/ontology\t(cached)\nok  \tveriqo/pkg/execution\t(cached)\nok  \tveriqo/pkg/explanation\t(cached)\nok  \tveriqo/pkg/governance/data\t(cached)\nok  \tveriqo/pkg/governance/hitl\t(cached)\nok  \tveriqo/pkg/governance/knowledge\t(cached)\nok  \tveriqo/pkg/governance/lifecycle\t(cached)\nok  \tveriqo/pkg/governance/precedence\t(cached)\nok  \tveriqo/pkg/governance/qualification\t(cached)\nok  \tveriqo/pkg/identity\t(cached)\nok  \tveriqo/pkg/kernel/distributed\t(cached)\nok  \tveriqo/pkg/kernel/execgraph\t(cached)\nok  \tveriqo/pkg/kernel/intent\t(cached)\nok  \tveriqo/pkg/kernel/intentgraph\t(cached)\nok  \tveriqo/pkg/kernel/mission\t(cached)\nok  \tveriqo/pkg/kernel/ontology\t(cached)\nok  \tveriqo/pkg/kernel/plugin\t(cached)\nok  \tveriqo/pkg/kernel/policy\t(cached)\nok  \tveriqo/pkg/kernel/reasoning\t(cached)\nok  \tveriqo/pkg/kernel/resource\t(cached)\nok  \tveriqo/pkg/kernel/runtime\t(cached)\nok  \tveriqo/pkg/kernel/sandbox\t(cached)\nok  \tveriqo/pkg/kernel/selfheal\t(cached)\nok  \tveriqo/pkg/lifecycle\t(cached)\nok  \tveriqo/pkg/moat/calibration\t(cached)\nok  \tveriqo/pkg/moat/causal\t(cached)\nok  \tveriqo/pkg/moat/contradiction\t(cached)\nok  \tveriqo/pkg/moat/decision\t(cached)\nok  \tveriqo/pkg/moat/digitaltwin\t(cached)\nok  \tveriqo/pkg/moat/domain/maritime\t(cached)\nok  \tveriqo/pkg/moat/economic\t(cached)\nok  \tveriqo/pkg/moat/entity\t(cached)\nok  \tveriqo/pkg/moat/evidencegraph\t(cached)\nok  \tveriqo/pkg/moat/fusion\t(cached)\nok  \tveriqo/pkg/moat/fusion/hbayes\t(cached)\nok  \tveriqo/pkg/moat/hbayes\t(cached)\nok  \tveriqo/pkg/moat/intelligence/evidence\t(cached)\nok  \tveriqo/pkg/moat/intelligence/patterns\t(cached)\nok  \tveriqo/pkg/moat/intelligence/pricing\t(cached)\nok  \tveriqo/pkg/moat/intelligence/risk\t(cached)\nok  \tveriqo/pkg/moat/kg\t(cached)\nok  \tveriqo/pkg/moat/metaintelligence\t(cached)\nok  \tveriqo/pkg/moat/provenance\t(cached)\nok  \tveriqo/pkg/moat/reliability\t(cached)\nok  \tveriqo/pkg/moat/simulation\t(cached)\nok  \tveriqo/pkg/moat/temporal\t(cached)\nok  \tveriqo/pkg/platform/audit\t(cached)\nok  \tveriqo/pkg/platform/config\t(cached)\nok  \tveriqo/pkg/platform/observability\t(cached)\nok  \tveriqo/pkg/platform/security\t(cached)\nok  \tveriqo/pkg/platform/security/keys\t(cached)\nok  \tveriqo/pkg/platform/telemetry\t(cached)\nok  \tveriqo/pkg/replay\t(cached)\nok  \tveriqo/pkg/storage\t(cached)\nok  \tveriqo/pkg/storage/wal\t(cached)\nok  \tveriqo/pkg/transport/flowcontrol\t(cached)\nok  \tveriqo/pkg/transport/rafttcp\t(cached)\nok  \tveriqo/pkg/trust\t(cached)\nok  \tveriqo/pkg/trust/state\t(cached)\nok  \tveriqo/pkg/verification\t(cached)\nok  \tveriqo/pkg/workflow\t(cached)\nok  \tveriqo/test/acceptance\t(cached)\nok  \tveriqo/test/acceptance/replay\t0.345s\nok  \tveriqo/test/chaos\t(cached)\nok  \tveriqo/test/e2e/eight_blockers\t20.325s\nok  \tveriqo/test/integration\t2.730s\nok  \tveriqo/test/soak\t30.037s\nok  \tveriqo/test/stress\t9.638s\nok  \tveriqo/veriqo/cli\t(cached)\nok  \tveriqo/veriqo/core/evidence\t(cached)\nok  \tveriqo/veriqo/core/execution\t(cached)\nok  \tveriqo/veriqo/core/intelligence\t(cached)\nok  \tveriqo/veriqo/core/knowledge\t(cached)\nok  \tveriqo/veriqo/core/runtime\t(cached)\nok  \tveriqo/veriqo/examples\t(cached)\nok  \tveriqo/veriqo/gateway/rest\t(cached)\nok  \tveriqo/veriqo/generator\t(cached)\n?   \tveriqo/veriqo/generator/cmd/gen\t[no test files]\nok  \tveriqo/veriqo/kernel\t(cached)\nok  \tveriqo/veriqo/moat/scorecard\t(cached)\nok  \tveriqo/veriqo/registry\t(cached)\nok  \tveriqo/veriqo/sdk/go\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "389355d719186a06922cf88c014f6c6a5567601eef9a7a827ca46a74357827c5"
+          "produced_at": 1786617718,
+          "hash": "787b86ebd999a34ca1e1cd54bc3f52182eb2abab86d1dd0a4685eb3739e47c8c"
         }
       ]
     },
@@ -1556,13 +1556,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "d4df908a16d18b77",
+          "artifact_id": "e43b16a3744a7c02",
           "gate_id": "acceptance",
           "command": "go test ./test/acceptance/",
           "output": "ok  \tveriqo/test/acceptance\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "d4df908a16d18b776db09f43d4a7d8d8a746dd841718909f2d8cfc174c003c6f"
+          "produced_at": 1786617718,
+          "hash": "e43b16a3744a7c02b0661bf49f0b783dcc4ed45113df268c494c0fde10fc8ed4"
         }
       ]
     },
@@ -1576,13 +1576,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "770faa8cb54a58f6",
+          "artifact_id": "78447df7111708e9",
           "gate_id": "dependency_integration",
           "command": "go test -run Dependency ./pkg/canonical/",
           "output": "ok  \tveriqo/pkg/canonical\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "770faa8cb54a58f6628baebcaea4d4ac4ebe013faf66779a91fa2f1d9dfc9f97"
+          "produced_at": 1786617718,
+          "hash": "78447df7111708e91993e4418a33dc234439df394c9cd4161d1aa9433dec6d98"
         }
       ]
     },
@@ -1596,13 +1596,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "6dc6d143722ef72c",
+          "artifact_id": "96c21538a0816f73",
           "gate_id": "replay",
           "command": "go test ./pkg/replay/",
           "output": "ok  \tveriqo/pkg/replay\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "6dc6d143722ef72cec9e0b26d316fc0ac652126d762c8c6bb315345786f8cccc"
+          "produced_at": 1786617718,
+          "hash": "96c21538a0816f73d27142af77c4b107387c97508e2b4a9de336b7df7af18e54"
         }
       ]
     },
@@ -1616,13 +1616,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "eba85412bd0d6283",
+          "artifact_id": "6fcc3f2de947e207",
           "gate_id": "identity",
           "command": "go test ./pkg/identity/",
           "output": "ok  \tveriqo/pkg/identity\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "eba85412bd0d6283be922e549b9caf5345db3aaaf07df7114caa6d66c32f3010"
+          "produced_at": 1786617718,
+          "hash": "6fcc3f2de947e207169ceaa4ad9d5fef1f81a9d116f002abf7cf229b91709b9a"
         }
       ]
     },
@@ -1636,13 +1636,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "487c440e30405106",
+          "artifact_id": "ed15c5899fe2c825",
           "gate_id": "security_unit",
           "command": "go test ./pkg/platform/security/... ./pkg/authz/",
           "output": "ok  \tveriqo/pkg/platform/security\t(cached)\nok  \tveriqo/pkg/platform/security/keys\t(cached)\nok  \tveriqo/pkg/authz\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "487c440e30405106448db5efbcc57e48c4090dcc77810af80f06fc57a2260bea"
+          "produced_at": 1786617718,
+          "hash": "ed15c5899fe2c825f43aded3b7cc7b2c1f732c018af1c7fc527f7ea720326397"
         }
       ]
     },
@@ -1656,13 +1656,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "cd7fa483d99520b8",
+          "artifact_id": "62cbf040ab8a17ae",
           "gate_id": "assurance_self",
           "command": "go test ./internal/assurance/",
           "output": "ok  \tveriqo/internal/assurance\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "cd7fa483d99520b8af77d55a3486ded5eff4809a3a1e92402fbf81fa47cb9f63"
+          "produced_at": 1786617718,
+          "hash": "62cbf040ab8a17aef750a2b24528735a7406639082bbd95e1223a1fc0e0c8745"
         }
       ]
     },
@@ -1676,13 +1676,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "8ed3439d683ad85c",
+          "artifact_id": "08397b5b3b926041",
           "gate_id": "fuzz_smoke",
           "command": "go test -run Fuzz ./pkg/...",
-          "output": "ok  \tveriqo/pkg/api\t(cached) [no tests to run]\nok  \tveriqo/pkg/authz\t(cached)\nok  \tveriqo/pkg/blockers\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/dr\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/hsmkms\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/livedata\t(cached) [no tests to run]\n?   \tveriqo/pkg/blockers/orchestrator\t[no test files]\nok  \tveriqo/pkg/blockers/pentest\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/scale\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/soak\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/spiffe\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/supplychain\t(cached) [no tests to run]\nok  \tveriqo/pkg/canonical\t(cached) [no tests to run]\nok  \tveriqo/pkg/chaos\t(cached) [no tests to run]\nok  \tveriqo/pkg/connector\t(cached) [no tests to run]\nok  \tveriqo/pkg/consensus/raftlite\t(cached) [no tests to run]\nok  \tveriqo/pkg/core/trustcalc\t(cached) [no tests to run]\nok  \tveriqo/pkg/dataplatform/ingest\t(cached) [no tests to run]\nok  \tveriqo/pkg/dataquality\t(cached) [no tests to run]\nok  \tveriqo/pkg/engine\t(cached) [no tests to run]\nok  \tveriqo/pkg/evidence/api\t(cached) [no tests to run]\nok  \tveriqo/pkg/evidence/graph\t(cached) [no tests to run]\nok  \tveriqo/pkg/evidence/ontology\t(cached)\nok  \tveriqo/pkg/execution\t(cached) [no tests to run]\nok  \tveriqo/pkg/explanation\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/data\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/hitl\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/knowledge\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/lifecycle\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/precedence\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/qualification\t(cached) [no tests to run]\nok  \tveriqo/pkg/identity\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/distributed\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/execgraph\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/intent\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/intentgraph\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/mission\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/ontology\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/plugin\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/policy\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/reasoning\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/resource\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/runtime\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/sandbox\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/selfheal\t(cached) [no tests to run]\nok  \tveriqo/pkg/lifecycle\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/calibration\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/causal\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/contradiction\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/decision\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/digitaltwin\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/domain/maritime\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/economic\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/entity\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/evidencegraph\t(cached)\nok  \tveriqo/pkg/moat/fusion\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/fusion/hbayes\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/hbayes\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/evidence\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/patterns\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/pricing\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/risk\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/kg\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/metaintelligence\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/provenance\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/reliability\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/simulation\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/temporal\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/audit\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/config\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/observability\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/security\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/security/keys\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/telemetry\t(cached) [no tests to run]\nok  \tveriqo/pkg/replay\t(cached) [no tests to run]\nok  \tveriqo/pkg/storage\t(cached) [no tests to run]\nok  \tveriqo/pkg/storage/wal\t0.004s [no tests to run]\nok  \tveriqo/pkg/transport/flowcontrol\t(cached) [no tests to run]\nok  \tveriqo/pkg/transport/rafttcp\t(cached) [no tests to run]\nok  \tveriqo/pkg/trust\t(cached) [no tests to run]\nok  \tveriqo/pkg/trust/state\t(cached) [no tests to run]\nok  \tveriqo/pkg/verification\t(cached) [no tests to run]\nok  \tveriqo/pkg/workflow\t(cached) [no tests to run]\n",
+          "output": "ok  \tveriqo/pkg/api\t(cached) [no tests to run]\nok  \tveriqo/pkg/authz\t(cached)\nok  \tveriqo/pkg/blockers\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/dr\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/hsmkms\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/livedata\t(cached) [no tests to run]\n?   \tveriqo/pkg/blockers/orchestrator\t[no test files]\nok  \tveriqo/pkg/blockers/pentest\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/scale\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/soak\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/spiffe\t(cached) [no tests to run]\nok  \tveriqo/pkg/blockers/supplychain\t(cached) [no tests to run]\nok  \tveriqo/pkg/canonical\t(cached) [no tests to run]\nok  \tveriqo/pkg/chaos\t(cached) [no tests to run]\nok  \tveriqo/pkg/connector\t(cached) [no tests to run]\nok  \tveriqo/pkg/consensus/raftlite\t(cached) [no tests to run]\nok  \tveriqo/pkg/core/trustcalc\t(cached) [no tests to run]\nok  \tveriqo/pkg/dataplatform/ingest\t(cached) [no tests to run]\nok  \tveriqo/pkg/dataquality\t(cached) [no tests to run]\nok  \tveriqo/pkg/engine\t(cached) [no tests to run]\nok  \tveriqo/pkg/evidence/api\t(cached) [no tests to run]\nok  \tveriqo/pkg/evidence/graph\t(cached) [no tests to run]\nok  \tveriqo/pkg/evidence/ontology\t(cached)\nok  \tveriqo/pkg/execution\t(cached) [no tests to run]\nok  \tveriqo/pkg/explanation\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/data\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/hitl\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/knowledge\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/lifecycle\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/precedence\t(cached) [no tests to run]\nok  \tveriqo/pkg/governance/qualification\t(cached) [no tests to run]\nok  \tveriqo/pkg/identity\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/distributed\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/execgraph\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/intent\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/intentgraph\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/mission\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/ontology\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/plugin\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/policy\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/reasoning\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/resource\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/runtime\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/sandbox\t(cached) [no tests to run]\nok  \tveriqo/pkg/kernel/selfheal\t(cached) [no tests to run]\nok  \tveriqo/pkg/lifecycle\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/calibration\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/causal\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/contradiction\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/decision\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/digitaltwin\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/domain/maritime\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/economic\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/entity\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/evidencegraph\t(cached)\nok  \tveriqo/pkg/moat/fusion\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/fusion/hbayes\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/hbayes\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/evidence\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/patterns\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/pricing\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/intelligence/risk\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/kg\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/metaintelligence\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/provenance\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/reliability\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/simulation\t(cached) [no tests to run]\nok  \tveriqo/pkg/moat/temporal\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/audit\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/config\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/observability\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/security\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/security/keys\t(cached) [no tests to run]\nok  \tveriqo/pkg/platform/telemetry\t(cached) [no tests to run]\nok  \tveriqo/pkg/replay\t(cached) [no tests to run]\nok  \tveriqo/pkg/storage\t(cached) [no tests to run]\nok  \tveriqo/pkg/storage/wal\t(cached) [no tests to run]\nok  \tveriqo/pkg/transport/flowcontrol\t(cached) [no tests to run]\nok  \tveriqo/pkg/transport/rafttcp\t(cached) [no tests to run]\nok  \tveriqo/pkg/trust\t(cached) [no tests to run]\nok  \tveriqo/pkg/trust/state\t(cached) [no tests to run]\nok  \tveriqo/pkg/verification\t(cached) [no tests to run]\nok  \tveriqo/pkg/workflow\t(cached) [no tests to run]\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "8ed3439d683ad85c3dc27ecb29a94085ea42033ec60775b692193041af5f0044"
+          "produced_at": 1786617718,
+          "hash": "08397b5b3b92604161f7f7859616fa619f328d1d770a40a2a78058ca929d9780"
         }
       ]
     },
@@ -1696,13 +1696,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "4a15f442603df0eb",
+          "artifact_id": "0380c2d4be907bb4",
           "gate_id": "zero_dependency",
           "command": "go list -m all",
           "output": "veriqo\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "4a15f442603df0ebd23bb3858e0e43ab58b7b316600483a875165149a9a55796"
+          "produced_at": 1786617718,
+          "hash": "0380c2d4be907bb47d9f6a7ec8c921bd21a667834f89ff142584b4ea5e6e12d7"
         }
       ]
     },
@@ -1716,13 +1716,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "f59dc7df3fb3fe28",
+          "artifact_id": "b4e611302790b383",
           "gate_id": "determinism_boundary",
           "command": "go test ./internal/determinism/",
           "output": "ok  \tveriqo/internal/determinism\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "f59dc7df3fb3fe28d27275f6b2fae7428ff0bdcd16c2f5d87c6e41b430b44958"
+          "produced_at": 1786617718,
+          "hash": "b4e611302790b3836598d7398479106e1fd4c0e962ad41501c71c2a239a2cbbb"
         }
       ]
     },
@@ -1736,13 +1736,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "4b91fb67dd004832",
+          "artifact_id": "b421e13a1ef5acb6",
           "gate_id": "calibration",
           "command": "go test ./pkg/moat/reliability/",
           "output": "ok  \tveriqo/pkg/moat/reliability\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "4b91fb67dd004832741b9ce8ad248e223ddea24e41113d0b8aa591539e74e1a5"
+          "produced_at": 1786617718,
+          "hash": "b421e13a1ef5acb6a517d7f710b4179be5ab6e4435ff43deea30470d798afac1"
         }
       ]
     },
@@ -1756,13 +1756,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "470d1a1159d4df4a",
+          "artifact_id": "7bfb2c6ddabcd12d",
           "gate_id": "model_lifecycle",
           "command": "go test ./pkg/governance/lifecycle/",
           "output": "ok  \tveriqo/pkg/governance/lifecycle\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "470d1a1159d4df4a993450ac03191f1a4d3408c1975579ebdb1c3762b266c3ed"
+          "produced_at": 1786617718,
+          "hash": "7bfb2c6ddabcd12dbc96ba698be4ca6937198ba18ee83093c7b77cc670abad81"
         }
       ]
     },
@@ -1776,13 +1776,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "7ec0b9ca9db98493",
+          "artifact_id": "b21d031c0f31d2d7",
           "gate_id": "knowledge_evolution",
           "command": "go test ./pkg/governance/knowledge/",
           "output": "ok  \tveriqo/pkg/governance/knowledge\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "7ec0b9ca9db98493bd141054f6f95b99ce88963886084a7aae0b0351b7836d3f"
+          "produced_at": 1786617718,
+          "hash": "b21d031c0f31d2d78e60629c4fdc49131ed91a731e9309ad37de25acff33b339"
         }
       ]
     },
@@ -1796,13 +1796,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "a268721c2a7f4cfb",
+          "artifact_id": "58e01d412cdfa62d",
           "gate_id": "data_governance",
           "command": "go test ./pkg/governance/data/",
           "output": "ok  \tveriqo/pkg/governance/data\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "a268721c2a7f4cfb48a9cab800853fad8357ce412d365d6b222b788f8c9aa232"
+          "produced_at": 1786617718,
+          "hash": "58e01d412cdfa62d88f18b037677e452906f550a410c2410d2a9fad297d0f08d"
         }
       ]
     },
@@ -1816,13 +1816,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "f4daa741f18a124b",
+          "artifact_id": "c4d280b3a0000a45",
           "gate_id": "hitl",
           "command": "go test ./pkg/governance/hitl/",
           "output": "ok  \tveriqo/pkg/governance/hitl\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "f4daa741f18a124baa8e5f32215460fb85f86d9c290a0e1107c2ca996fd52cc3"
+          "produced_at": 1786617718,
+          "hash": "c4d280b3a0000a4519282337ef7d93f94500ab535983bbbb35f5f29d9ab75818"
         }
       ]
     },
@@ -1836,13 +1836,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "dade319d224503fa",
+          "artifact_id": "fb4b33532bd8bbbb",
           "gate_id": "decision_explanation",
           "command": "go test ./pkg/explanation/",
           "output": "ok  \tveriqo/pkg/explanation\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "dade319d224503faac46eaa357e766c539e57529d552fcdf7b09ebccd15af4d7"
+          "produced_at": 1786617718,
+          "hash": "fb4b33532bd8bbbb6b73d8e7bf671226a8db1610c1f57a0d571a6048d1f132f5"
         }
       ]
     },
@@ -1856,13 +1856,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "324c6ff984a29081",
+          "artifact_id": "de8bf3ef56317bfe",
           "gate_id": "execution_graph",
           "command": "go test ./pkg/execution/",
           "output": "ok  \tveriqo/pkg/execution\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "324c6ff984a29081ae4b811ca7385e1bcd558fc0a5f5e170f71c974e23cda278"
+          "produced_at": 1786617718,
+          "hash": "de8bf3ef56317bfe9ef1d80ddb33e941b0f496026cc80b68f0de43f938e64169"
         }
       ]
     },
@@ -1876,13 +1876,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "106e5edf4b23f138",
+          "artifact_id": "6442d093e23938f1",
           "gate_id": "api_semantics",
           "command": "go test ./pkg/api/",
           "output": "ok  \tveriqo/pkg/api\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "106e5edf4b23f138df64de532b229fc42bd363c0e6206052b81e6b5444abf19f"
+          "produced_at": 1786617718,
+          "hash": "6442d093e23938f104ba2ada319da4475ffb1e9bf6696cf865eaa46c7a5f9ba8"
         }
       ]
     },
@@ -1896,13 +1896,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "972eeaab76c2fdf5",
+          "artifact_id": "7f46df02b4223dfe",
           "gate_id": "storage_recovery",
           "command": "go test ./pkg/storage/wal/ ./pkg/storage/",
           "output": "ok  \tveriqo/pkg/storage/wal\t(cached)\nok  \tveriqo/pkg/storage\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "972eeaab76c2fdf54071958d0561edba5ce5fcf72197f5d2be322cbefe2eb8ac"
+          "produced_at": 1786617718,
+          "hash": "7f46df02b4223dfe5b327f34c8f4c14a10e8901295a774a2620ad66d0bb06b63"
         }
       ]
     },
@@ -1916,13 +1916,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "bad2d94976d606eb",
+          "artifact_id": "90f694495c4bd0e0",
           "gate_id": "sandbox",
           "command": "go test ./pkg/kernel/sandbox/",
           "output": "ok  \tveriqo/pkg/kernel/sandbox\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "bad2d94976d606eb04bcca0c8c2b1cd5ef0ff7e1d6f80df8adbde3f79491859a"
+          "produced_at": 1786617718,
+          "hash": "90f694495c4bd0e0a6d4d92172abc2f1aefbb57872078bcdae7527142ce0f121"
         }
       ]
     },
@@ -1936,13 +1936,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "4f6053a88feeecdd",
+          "artifact_id": "7e3edfc040755b8a",
           "gate_id": "observability",
           "command": "go test ./pkg/platform/telemetry/",
           "output": "ok  \tveriqo/pkg/platform/telemetry\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "4f6053a88feeecdd11802f4b9560d6e988791e650c374c3d1b5804a8fd3e6288"
+          "produced_at": 1786617718,
+          "hash": "7e3edfc040755b8a86d42d13f16962a98eae986d001fe5af59f03f559e0b6edb"
         }
       ]
     },
@@ -1956,13 +1956,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "e669db8d04fc6d2e",
+          "artifact_id": "749ac42c4e1200ee",
           "gate_id": "data_quality",
           "command": "go test ./pkg/dataquality/",
           "output": "ok  \tveriqo/pkg/dataquality\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "e669db8d04fc6d2ef2348deff6400b18a512c5f4a9d8e5123083159300d8910d"
+          "produced_at": 1786617718,
+          "hash": "749ac42c4e1200ee6f5704ee0f7e1457e27f8c172752e4107b26ba4f93a8f23e"
         }
       ]
     },
@@ -1976,13 +1976,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "fb06f0b54dbdeaa1",
+          "artifact_id": "7cc0dbe3015b3530",
           "gate_id": "economic_consequence",
           "command": "go test ./pkg/moat/economic/",
           "output": "ok  \tveriqo/pkg/moat/economic\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "fb06f0b54dbdeaa1740f3cfbac7ebfe40720e5a87b2833d3c150d8c432ba59d8"
+          "produced_at": 1786617718,
+          "hash": "7cc0dbe3015b353089a543d98a817d0f5cf7d9875eadff6c81f3e04b83fc0e7b"
         }
       ]
     },
@@ -1996,13 +1996,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "aa81bc11214b68f5",
+          "artifact_id": "9486b54392c190dd",
           "gate_id": "decision_precedence",
           "command": "go test ./pkg/governance/precedence/",
           "output": "ok  \tveriqo/pkg/governance/precedence\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "aa81bc11214b68f556e81110b4f0c297656e3bd6326bafefe1aab89ffaafee68"
+          "produced_at": 1786617718,
+          "hash": "9486b54392c190ddb3694baf54912d1fb91f64029b6b6f4526898c897805140b"
         }
       ]
     },
@@ -2016,13 +2016,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "340424d49e673383",
+          "artifact_id": "300d980ee555b5d4",
           "gate_id": "soak_harness_smoke",
           "command": "go test ./test/soak/ -timeout 90s",
-          "output": "ok  \tveriqo/test/soak\t30.044s\n",
+          "output": "ok  \tveriqo/test/soak\t30.038s\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "340424d49e67338343f5bb3120ac0d982b7af7da6a4f610ef67fbf697a56936a"
+          "produced_at": 1786617718,
+          "hash": "300d980ee555b5d44883f773ce2710c534fd7760a34fec5c5d54c647c4d313fb"
         }
       ]
     },
@@ -2036,13 +2036,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "9033caef8608c402",
+          "artifact_id": "52152ad8e2ea0c0a",
           "gate_id": "chaos",
           "command": "go test ./test/chaos/ ./pkg/chaos/",
           "output": "ok  \tveriqo/test/chaos\t(cached)\nok  \tveriqo/pkg/chaos\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "9033caef8608c4024f851bccc67903bb2c036e4f81041ea1989056193d3dec1f"
+          "produced_at": 1786617718,
+          "hash": "52152ad8e2ea0c0aefbabe8dedbc2e7dc64ee6c514b1c084e75cbcb9382f3181"
         }
       ]
     },
@@ -2056,13 +2056,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "df694fc5aa93505d",
+          "artifact_id": "acbd70213e160d6a",
           "gate_id": "stress_slo",
           "command": "go test ./test/stress/",
-          "output": "ok  \tveriqo/test/stress\t6.118s\n",
+          "output": "ok  \tveriqo/test/stress\t6.400s\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "df694fc5aa93505d27bf2e19a9422be027f64aac42e80029f67c02f70df8c4d7"
+          "produced_at": 1786617718,
+          "hash": "acbd70213e160d6a70610355e15d288250d9d79f3e75b4843e0bb1fd2f17050e"
         }
       ]
     },
@@ -2076,13 +2076,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "8817bbc102a4e6fd",
+          "artifact_id": "72544dd9eb9b5b18",
           "gate_id": "replay_determinism_100x",
           "command": "go test ./test/acceptance/replay/",
-          "output": "ok  \tveriqo/test/acceptance/replay\t0.182s\n",
+          "output": "ok  \tveriqo/test/acceptance/replay\t0.196s\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "8817bbc102a4e6fd2259b8f868ffa946eb5328148a6fa2b8808be118720e7ca7"
+          "produced_at": 1786617718,
+          "hash": "72544dd9eb9b5b180808c79569eeb82fbdb94b0341ff4bd36b5347f4cb4f2787"
         }
       ]
     },
@@ -2096,13 +2096,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "44c5707da714c07b",
+          "artifact_id": "c809fe262f5d3d4a",
           "gate_id": "bounded_test_execution",
           "command": "go build ./cmd/veriqo-testrunner/",
           "output": "",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "44c5707da714c07b7410ebd7e77aa26d3a6e7a2b8d3ec26ba5ab0692aafcf945"
+          "produced_at": 1786617718,
+          "hash": "c809fe262f5d3d4a6ac67f6037e545bbb76fbfcd531ed060aa5fb0078037e01a"
         }
       ]
     },
@@ -2116,13 +2116,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "dd20986f41e246dd",
+          "artifact_id": "188783358f9e4634",
           "gate_id": "traceability_matrix",
           "command": "go run ./cmd/veriqo-requirements -check",
           "output": "veriqo-requirements: matrix matches requirements.json\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "dd20986f41e246dd60449b79d7b12f94d1852c8e5aabb4c47b6d17dee4225f27"
+          "produced_at": 1786617718,
+          "hash": "188783358f9e4634e1b04bbc74deb947d71f2c1aea0b75a86a2d92b1ead01e4c"
         }
       ]
     },
@@ -2136,13 +2136,13 @@
       "status": "VERIFIED",
       "evidence": [
         {
-          "artifact_id": "6916d669da0d0ae5",
+          "artifact_id": "3d17c7bc36e31e3d",
           "gate_id": "race",
           "command": "go test -race -p 1 ./...",
-          "output": "ok  \tveriqo/cmd/veriqo-demo\t(cached)\n?   \tveriqo/cmd/veriqo-gateway\t[no test files]\n?   \tveriqo/cmd/veriqo-kernel-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-live-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-node\t[no test files]\n?   \tveriqo/cmd/veriqo-qualification\t[no test files]\nok  \tveriqo/cmd/veriqo-readiness\t1.616s\n?   \tveriqo/cmd/veriqo-release-keygen\t[no test files]\nok  \tveriqo/cmd/veriqo-requirements\t(cached)\n?   \tveriqo/cmd/veriqo-testrunner\t[no test files]\n?   \tveriqo/cmd/veriqo-verify\t[no test files]\n?   \tveriqo/cmd/veriqo-verify-release\t[no test files]\nok  \tveriqo/internal/assurance\t1.028s\nok  \tveriqo/internal/determinism\t(cached)\nok  \tveriqo/internal/sbom\t(cached)\nok  \tveriqo/internal/sourcehash\t(cached)\nok  \tveriqo/internal/timestamp\t1.026s\nok  \tveriqo/internal/version\t1.013s\nok  \tveriqo/pkg/api\t(cached)\nok  \tveriqo/pkg/authz\t(cached)\nok  \tveriqo/pkg/blockers\t(cached)\nok  \tveriqo/pkg/blockers/dr\t(cached)\nok  \tveriqo/pkg/blockers/hsmkms\t(cached)\nok  \tveriqo/pkg/blockers/livedata\t(cached)\n?   \tveriqo/pkg/blockers/orchestrator\t[no test files]\nok  \tveriqo/pkg/blockers/pentest\t4.316s\nok  \tveriqo/pkg/blockers/scale\t(cached)\nok  \tveriqo/pkg/blockers/soak\t(cached)\nok  \tveriqo/pkg/blockers/spiffe\t(cached)\nok  \tveriqo/pkg/blockers/supplychain\t1.028s\nok  \tveriqo/pkg/canonical\t(cached)\nok  \tveriqo/pkg/chaos\t(cached)\nok  \tveriqo/pkg/connector\t(cached)\nok  \tveriqo/pkg/consensus/raftlite\t(cached)\nok  \tveriqo/pkg/core/trustcalc\t(cached)\nok  \tveriqo/pkg/dataplatform/ingest\t(cached)\nok  \tveriqo/pkg/dataquality\t(cached)\nok  \tveriqo/pkg/engine\t(cached)\nok  \tveriqo/pkg/evidence/api\t(cached)\nok  \tveriqo/pkg/evidence/graph\t(cached)\nok  \tveriqo/pkg/evidence/ontology\t(cached)\nok  \tveriqo/pkg/execution\t(cached)\nok  \tveriqo/pkg/explanation\t(cached)\nok  \tveriqo/pkg/governance/data\t(cached)\nok  \tveriqo/pkg/governance/hitl\t(cached)\nok  \tveriqo/pkg/governance/knowledge\t(cached)\nok  \tveriqo/pkg/governance/lifecycle\t(cached)\nok  \tveriqo/pkg/governance/precedence\t(cached)\nok  \tveriqo/pkg/governance/qualification\t(cached)\nok  \tveriqo/pkg/identity\t(cached)\nok  \tveriqo/pkg/kernel/distributed\t(cached)\nok  \tveriqo/pkg/kernel/execgraph\t(cached)\nok  \tveriqo/pkg/kernel/intent\t(cached)\nok  \tveriqo/pkg/kernel/intentgraph\t(cached)\nok  \tveriqo/pkg/kernel/mission\t(cached)\nok  \tveriqo/pkg/kernel/ontology\t(cached)\nok  \tveriqo/pkg/kernel/plugin\t(cached)\nok  \tveriqo/pkg/kernel/policy\t(cached)\nok  \tveriqo/pkg/kernel/reasoning\t(cached)\nok  \tveriqo/pkg/kernel/resource\t(cached)\nok  \tveriqo/pkg/kernel/runtime\t(cached)\nok  \tveriqo/pkg/kernel/sandbox\t(cached)\nok  \tveriqo/pkg/kernel/selfheal\t(cached)\nok  \tveriqo/pkg/lifecycle\t(cached)\nok  \tveriqo/pkg/moat/calibration\t(cached)\nok  \tveriqo/pkg/moat/causal\t(cached)\nok  \tveriqo/pkg/moat/contradiction\t(cached)\nok  \tveriqo/pkg/moat/decision\t(cached)\nok  \tveriqo/pkg/moat/digitaltwin\t(cached)\nok  \tveriqo/pkg/moat/domain/maritime\t(cached)\nok  \tveriqo/pkg/moat/economic\t(cached)\nok  \tveriqo/pkg/moat/entity\t(cached)\nok  \tveriqo/pkg/moat/evidencegraph\t(cached)\nok  \tveriqo/pkg/moat/fusion\t(cached)\nok  \tveriqo/pkg/moat/fusion/hbayes\t(cached)\nok  \tveriqo/pkg/moat/hbayes\t(cached)\nok  \tveriqo/pkg/moat/intelligence/evidence\t(cached)\nok  \tveriqo/pkg/moat/intelligence/patterns\t(cached)\nok  \tveriqo/pkg/moat/intelligence/pricing\t(cached)\nok  \tveriqo/pkg/moat/intelligence/risk\t(cached)\nok  \tveriqo/pkg/moat/kg\t(cached)\nok  \tveriqo/pkg/moat/metaintelligence\t(cached)\nok  \tveriqo/pkg/moat/provenance\t(cached)\nok  \tveriqo/pkg/moat/reliability\t(cached)\nok  \tveriqo/pkg/moat/simulation\t(cached)\nok  \tveriqo/pkg/moat/temporal\t(cached)\nok  \tveriqo/pkg/platform/audit\t(cached)\nok  \tveriqo/pkg/platform/config\t(cached)\nok  \tveriqo/pkg/platform/observability\t(cached)\nok  \tveriqo/pkg/platform/security\t(cached)\nok  \tveriqo/pkg/platform/security/keys\t(cached)\nok  \tveriqo/pkg/platform/telemetry\t(cached)\nok  \tveriqo/pkg/replay\t(cached)\nok  \tveriqo/pkg/storage\t(cached)\nok  \tveriqo/pkg/storage/wal\t1.082s\nok  \tveriqo/pkg/transport/flowcontrol\t(cached)\nok  \tveriqo/pkg/transport/rafttcp\t(cached)\nok  \tveriqo/pkg/trust\t(cached)\nok  \tveriqo/pkg/trust/state\t(cached)\nok  \tveriqo/pkg/verification\t(cached)\nok  \tveriqo/pkg/workflow\t(cached)\nok  \tveriqo/test/acceptance\t1.389s\nok  \tveriqo/test/acceptance/replay\t2.096s\nok  \tveriqo/test/chaos\t(cached)\nok  \tveriqo/test/e2e/eight_blockers\t24.409s\nok  \tveriqo/test/integration\t2.767s\nok  \tveriqo/test/soak\t31.079s\nok  \tveriqo/test/stress\t1.467s\nok  \tveriqo/veriqo/cli\t(cached)\nok  \tveriqo/veriqo/core/evidence\t(cached)\nok  \tveriqo/veriqo/core/execution\t(cached)\nok  \tveriqo/veriqo/core/intelligence\t(cached)\nok  \tveriqo/veriqo/core/knowledge\t(cached)\nok  \tveriqo/veriqo/core/runtime\t(cached)\nok  \tveriqo/veriqo/examples\t(cached)\nok  \tveriqo/veriqo/gateway/rest\t1.578s\nok  \tveriqo/veriqo/generator\t(cached)\n?   \tveriqo/veriqo/generator/cmd/gen\t[no test files]\nok  \tveriqo/veriqo/kernel\t(cached)\nok  \tveriqo/veriqo/moat/scorecard\t(cached)\nok  \tveriqo/veriqo/registry\t(cached)\nok  \tveriqo/veriqo/sdk/go\t(cached)\n",
+          "output": "ok  \tveriqo/cmd/veriqo-demo\t(cached)\n?   \tveriqo/cmd/veriqo-gateway\t[no test files]\n?   \tveriqo/cmd/veriqo-kernel-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-live-demo\t[no test files]\n?   \tveriqo/cmd/veriqo-node\t[no test files]\n?   \tveriqo/cmd/veriqo-qualification\t[no test files]\nok  \tveriqo/cmd/veriqo-readiness\t(cached)\n?   \tveriqo/cmd/veriqo-release-keygen\t[no test files]\nok  \tveriqo/cmd/veriqo-requirements\t(cached)\n?   \tveriqo/cmd/veriqo-testrunner\t[no test files]\n?   \tveriqo/cmd/veriqo-verify\t[no test files]\n?   \tveriqo/cmd/veriqo-verify-release\t[no test files]\nok  \tveriqo/internal/assurance\t(cached)\nok  \tveriqo/internal/determinism\t(cached)\nok  \tveriqo/internal/sbom\t(cached)\nok  \tveriqo/internal/sourcehash\t(cached)\nok  \tveriqo/internal/timestamp\t(cached)\nok  \tveriqo/internal/version\t(cached)\nok  \tveriqo/pkg/api\t(cached)\nok  \tveriqo/pkg/authz\t(cached)\nok  \tveriqo/pkg/blockers\t(cached)\nok  \tveriqo/pkg/blockers/dr\t(cached)\nok  \tveriqo/pkg/blockers/hsmkms\t(cached)\nok  \tveriqo/pkg/blockers/livedata\t(cached)\n?   \tveriqo/pkg/blockers/orchestrator\t[no test files]\nok  \tveriqo/pkg/blockers/pentest\t3.747s\nok  \tveriqo/pkg/blockers/scale\t(cached)\nok  \tveriqo/pkg/blockers/soak\t(cached)\nok  \tveriqo/pkg/blockers/spiffe\t(cached)\nok  \tveriqo/pkg/blockers/supplychain\t1.026s\nok  \tveriqo/pkg/canonical\t(cached)\nok  \tveriqo/pkg/chaos\t(cached)\nok  \tveriqo/pkg/connector\t(cached)\nok  \tveriqo/pkg/consensus/raftlite\t(cached)\nok  \tveriqo/pkg/core/trustcalc\t(cached)\nok  \tveriqo/pkg/dataplatform/ingest\t(cached)\nok  \tveriqo/pkg/dataquality\t(cached)\nok  \tveriqo/pkg/engine\t(cached)\nok  \tveriqo/pkg/evidence/api\t(cached)\nok  \tveriqo/pkg/evidence/graph\t(cached)\nok  \tveriqo/pkg/evidence/ontology\t(cached)\nok  \tveriqo/pkg/execution\t(cached)\nok  \tveriqo/pkg/explanation\t(cached)\nok  \tveriqo/pkg/governance/data\t(cached)\nok  \tveriqo/pkg/governance/hitl\t(cached)\nok  \tveriqo/pkg/governance/knowledge\t(cached)\nok  \tveriqo/pkg/governance/lifecycle\t(cached)\nok  \tveriqo/pkg/governance/precedence\t(cached)\nok  \tveriqo/pkg/governance/qualification\t(cached)\nok  \tveriqo/pkg/identity\t(cached)\nok  \tveriqo/pkg/kernel/distributed\t(cached)\nok  \tveriqo/pkg/kernel/execgraph\t(cached)\nok  \tveriqo/pkg/kernel/intent\t(cached)\nok  \tveriqo/pkg/kernel/intentgraph\t(cached)\nok  \tveriqo/pkg/kernel/mission\t(cached)\nok  \tveriqo/pkg/kernel/ontology\t(cached)\nok  \tveriqo/pkg/kernel/plugin\t(cached)\nok  \tveriqo/pkg/kernel/policy\t(cached)\nok  \tveriqo/pkg/kernel/reasoning\t(cached)\nok  \tveriqo/pkg/kernel/resource\t(cached)\nok  \tveriqo/pkg/kernel/runtime\t(cached)\nok  \tveriqo/pkg/kernel/sandbox\t(cached)\nok  \tveriqo/pkg/kernel/selfheal\t(cached)\nok  \tveriqo/pkg/lifecycle\t(cached)\nok  \tveriqo/pkg/moat/calibration\t(cached)\nok  \tveriqo/pkg/moat/causal\t(cached)\nok  \tveriqo/pkg/moat/contradiction\t(cached)\nok  \tveriqo/pkg/moat/decision\t(cached)\nok  \tveriqo/pkg/moat/digitaltwin\t(cached)\nok  \tveriqo/pkg/moat/domain/maritime\t(cached)\nok  \tveriqo/pkg/moat/economic\t(cached)\nok  \tveriqo/pkg/moat/entity\t(cached)\nok  \tveriqo/pkg/moat/evidencegraph\t(cached)\nok  \tveriqo/pkg/moat/fusion\t(cached)\nok  \tveriqo/pkg/moat/fusion/hbayes\t(cached)\nok  \tveriqo/pkg/moat/hbayes\t(cached)\nok  \tveriqo/pkg/moat/intelligence/evidence\t(cached)\nok  \tveriqo/pkg/moat/intelligence/patterns\t(cached)\nok  \tveriqo/pkg/moat/intelligence/pricing\t(cached)\nok  \tveriqo/pkg/moat/intelligence/risk\t(cached)\nok  \tveriqo/pkg/moat/kg\t(cached)\nok  \tveriqo/pkg/moat/metaintelligence\t(cached)\nok  \tveriqo/pkg/moat/provenance\t(cached)\nok  \tveriqo/pkg/moat/reliability\t(cached)\nok  \tveriqo/pkg/moat/simulation\t(cached)\nok  \tveriqo/pkg/moat/temporal\t(cached)\nok  \tveriqo/pkg/platform/audit\t(cached)\nok  \tveriqo/pkg/platform/config\t(cached)\nok  \tveriqo/pkg/platform/observability\t(cached)\nok  \tveriqo/pkg/platform/security\t(cached)\nok  \tveriqo/pkg/platform/security/keys\t(cached)\nok  \tveriqo/pkg/platform/telemetry\t(cached)\nok  \tveriqo/pkg/replay\t(cached)\nok  \tveriqo/pkg/storage\t(cached)\nok  \tveriqo/pkg/storage/wal\t(cached)\nok  \tveriqo/pkg/transport/flowcontrol\t(cached)\nok  \tveriqo/pkg/transport/rafttcp\t(cached)\nok  \tveriqo/pkg/trust\t(cached)\nok  \tveriqo/pkg/trust/state\t(cached)\nok  \tveriqo/pkg/verification\t(cached)\nok  \tveriqo/pkg/workflow\t(cached)\nok  \tveriqo/test/acceptance\t(cached)\nok  \tveriqo/test/acceptance/replay\t2.061s\nok  \tveriqo/test/chaos\t(cached)\nok  \tveriqo/test/e2e/eight_blockers\t22.940s\nok  \tveriqo/test/integration\t2.809s\nok  \tveriqo/test/soak\t31.169s\nok  \tveriqo/test/stress\t1.476s\nok  \tveriqo/veriqo/cli\t(cached)\nok  \tveriqo/veriqo/core/evidence\t(cached)\nok  \tveriqo/veriqo/core/execution\t(cached)\nok  \tveriqo/veriqo/core/intelligence\t(cached)\nok  \tveriqo/veriqo/core/knowledge\t(cached)\nok  \tveriqo/veriqo/core/runtime\t(cached)\nok  \tveriqo/veriqo/examples\t(cached)\nok  \tveriqo/veriqo/gateway/rest\t(cached)\nok  \tveriqo/veriqo/generator\t(cached)\n?   \tveriqo/veriqo/generator/cmd/gen\t[no test files]\nok  \tveriqo/veriqo/kernel\t(cached)\nok  \tveriqo/veriqo/moat/scorecard\t(cached)\nok  \tveriqo/veriqo/registry\t(cached)\nok  \tveriqo/veriqo/sdk/go\t(cached)\n",
           "exit_code": 0,
-          "produced_at": 1786616983,
-          "hash": "6916d669da0d0ae50f160bb63314ba059cfb6468907e4d75cbcb2bf084ccd410"
+          "produced_at": 1786617718,
+          "hash": "3d17c7bc36e31e3d5e0c6d00982a1583248d154a0ddc6b9db2368b01ed150496"
         }
       ]
     },
