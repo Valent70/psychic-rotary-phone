@@ -26,11 +26,11 @@ ok  	veriqo/pkg/blockers/dr	(cached)
 ok  	veriqo/pkg/blockers/hsmkms	(cached)
 ok  	veriqo/pkg/blockers/livedata	(cached)
 ?   	veriqo/pkg/blockers/orchestrator	[no test files]
-ok  	veriqo/pkg/blockers/pentest	7.116s
+ok  	veriqo/pkg/blockers/pentest	3.048s
 ok  	veriqo/pkg/blockers/scale	(cached)
 ok  	veriqo/pkg/blockers/soak	(cached)
 ok  	veriqo/pkg/blockers/spiffe	(cached)
-ok  	veriqo/pkg/blockers/supplychain	1.035s
+ok  	veriqo/pkg/blockers/supplychain	1.034s
 ok  	veriqo/pkg/canonical	(cached)
 ok  	veriqo/pkg/chaos	(cached)
 ok  	veriqo/pkg/connector	(cached)
@@ -39,7 +39,7 @@ ok  	veriqo/pkg/core/trustcalc	(cached)
 ok  	veriqo/pkg/dataplatform/ingest	(cached)
 ok  	veriqo/pkg/dataquality	(cached)
 ok  	veriqo/pkg/engine	(cached)
-ok  	veriqo/pkg/evidence/api	(cached)
+ok  	veriqo/pkg/evidence/api	1.038s
 ok  	veriqo/pkg/evidence/graph	(cached)
 ok  	veriqo/pkg/evidence/ontology	(cached)
 ok  	veriqo/pkg/execution	(cached)
@@ -50,7 +50,7 @@ ok  	veriqo/pkg/governance/knowledge	(cached)
 ok  	veriqo/pkg/governance/lifecycle	(cached)
 ok  	veriqo/pkg/governance/precedence	(cached)
 ok  	veriqo/pkg/governance/qualification	(cached)
-ok  	veriqo/pkg/identity	(cached)
+ok  	veriqo/pkg/identity	1.026s
 ok  	veriqo/pkg/kernel/distributed	(cached)
 ok  	veriqo/pkg/kernel/execgraph	(cached)
 ok  	veriqo/pkg/kernel/intent	(cached)
@@ -102,13 +102,13 @@ ok  	veriqo/pkg/trust	(cached)
 ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
-ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	2.264s
+ok  	veriqo/test/acceptance	1.299s
+ok  	veriqo/test/acceptance/replay	2.272s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/e2e/eight_blockers	24.825s
-ok  	veriqo/test/integration	3.107s
-ok  	veriqo/test/soak	31.095s
-ok  	veriqo/test/stress	1.565s
+ok  	veriqo/test/e2e/eight_blockers	23.587s
+ok  	veriqo/test/integration	3.139s
+ok  	veriqo/test/soak	31.091s
+ok  	veriqo/test/stress	1.580s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
