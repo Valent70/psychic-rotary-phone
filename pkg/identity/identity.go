@@ -59,6 +59,17 @@ const (
 	KindPort         Kind = "PORT"
 	KindOrganization Kind = "ORGANIZATION"
 	KindPerson       Kind = "PERSON"
+	// The seven kinds below close audit item P0-03's entity-type gap:
+	// Charterer, Terminal, Refinery, Trade, Shipment, Bill of Lading and
+	// GeographicEntity were named in the audit's required scope but had
+	// no identifier Kind here yet.
+	KindCharterer        Kind = "CHARTERER"
+	KindTerminal         Kind = "TERMINAL"
+	KindRefinery         Kind = "REFINERY"
+	KindTrade            Kind = "TRADE"
+	KindShipment         Kind = "SHIPMENT"
+	KindBillOfLading     Kind = "BILL_OF_LADING"
+	KindGeographicEntity Kind = "GEOGRAPHIC_ENTITY"
 )
 
 // discriminatingPower is how much a shared identifier of this kind
@@ -80,6 +91,26 @@ var discriminatingPower = map[Kind]float64{
 	KindCommodity:    0.30,
 	KindFlag:         0.10,
 	KindName:         0.20,
+	// A Bill of Lading number is issued once per shipment by a single
+	// carrier and essentially never reused -- ranked with REGISTRY_ID.
+	KindBillOfLading: 0.85,
+	// Shipment and trade references are issued per-transaction by a
+	// counterparty system; strong but occasionally recycled across
+	// systems that don't coordinate numbering, so ranked below IMO/BoL.
+	KindShipment: 0.75,
+	KindTrade:    0.70,
+	// Terminal and refinery are named facilities, structurally the same
+	// discriminating value as PORT (a shared physical-location code).
+	KindTerminal: 0.50,
+	KindRefinery: 0.50,
+	// Charterer is a relationship role like OWNER/OPERATOR/MANAGER: a
+	// real link, but one entity can charter many vessels and one vessel
+	// can have many charterers over its life, so it is ranked with them.
+	KindCharterer: 0.35,
+	// A geographic entity (country, region) is the broadest, most
+	// reused kind of all -- ranked at FLAG's level, the existing
+	// broadest-geography kind.
+	KindGeographicEntity: 0.10,
 }
 
 // KnownKinds returns every modelled identifier kind, deterministically.

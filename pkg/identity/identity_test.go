@@ -263,8 +263,219 @@ func TestHistoryReturnsEveryTouchingEvent(t *testing.T) {
 }
 
 func TestKnownKindsCoversTheAuditList(t *testing.T) {
-	if len(KnownKinds()) != 13 {
-		t.Fatalf("expected 13 identifier kinds, got %d", len(KnownKinds()))
+	if len(KnownKinds()) != 20 {
+		t.Fatalf("expected 20 identifier kinds (13 original + 7 added for audit item P0-03: Charterer, "+
+			"Terminal, Refinery, Trade, Shipment, BillOfLading, GeographicEntity), got %d", len(KnownKinds()))
+	}
+}
+
+func org(v string) Identifier      { return Identifier{Kind: KindOrganization, Value: v} }
+func registry(v string) Identifier { return Identifier{Kind: KindRegistryID, Value: v} }
+
+// --- Audit item P0-03 adversarial scenarios ---------------------------
+
+// TestVesselRenamingPreservesIdentityAndDoesNotAdoptTheOldName is the
+// audit's named "vessel renaming" scenario: a vessel keeps its IMO but
+// changes its displayed name (a routine, legitimate event). Identity
+// must survive the rename (old and new names both resolve to the one
+// vessel), and if a DIFFERENT vessel later reuses the freed-up old
+// name, that must NOT silently merge it into the renamed vessel's
+// identity -- NAME alone is far too weak evidence for that.
+func TestVesselRenamingPreservesIdentityAndDoesNotAdoptTheOldName(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) {
+		return r.Merge("op", "flag-registry", imo("9998887"), name("SEA STAR"), 1, "vessel registered")
+	})
+	must2(t, func() (Event, error) {
+		return r.Merge("op", "flag-registry", imo("9998887"), name("OCEAN PRIDE"), 10, "renamed per IMO filing")
+	})
+
+	same, err := r.SameEntityAt(name("SEA STAR"), name("OCEAN PRIDE"), 20)
+	must(t, err)
+	if !same {
+		t.Fatal("renamed vessel's old and new names no longer resolve to the same entity")
+	}
+
+	// A different, unrelated vessel later reuses the freed-up old name.
+	// Only a weak NAME-based signal links it to the renamed vessel's
+	// history -- that must not be treated as identity.
+	must2(t, func() (Event, error) {
+		return r.Assert("op", "aggregator", imo("1112223"), name("SEA STAR"), 30, "new vessel registered under the freed name")
+	})
+	stillSame, err := r.SameEntityAt(imo("9998887"), imo("1112223"), 40)
+	must(t, err)
+	if stillSame {
+		t.Fatal("a different vessel reusing a freed vessel name was incorrectly merged into the original vessel's identity")
+	}
+}
+
+// TestVesselSaleChangesOwnerWithoutMergingOldAndNewOwnerEntities is the
+// audit's named "vessel sale" scenario: ownership is a RELATIONSHIP
+// between two distinct entities (vessel, owner), not an identity claim
+// -- so it must be recorded via Assert (evidence), never Merge (same
+// entity). Two different owners of the same vessel over time must
+// never be treated as the same organization.
+func TestVesselSaleChangesOwnerWithoutMergingOldAndNewOwnerEntities(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) {
+		return r.Merge("op", "flag-registry", imo("9998887"), name("SEA STAR"), 1, "vessel registered")
+	})
+	must2(t, func() (Event, error) {
+		return r.Assert("op", "flag-registry", imo("9998887"), org("SHIPCO ALPHA"), 5, "ownership at registration")
+	})
+	// The vessel is sold.
+	must2(t, func() (Event, error) {
+		return r.Assert("op", "flag-registry", imo("9998887"), org("SHIPCO BETA"), 20, "bill of sale filed")
+	})
+
+	sameOwner, err := r.SameEntityAt(org("SHIPCO ALPHA"), org("SHIPCO BETA"), 30)
+	must(t, err)
+	if sameOwner {
+		t.Fatal("the vessel's former and current owners were incorrectly merged into one entity")
+	}
+	// The vessel's own identity must be completely unaffected by who
+	// owns it.
+	before, err := r.EntityIDAt(imo("9998887"), 5)
+	must(t, err)
+	after, err := r.EntityIDAt(imo("9998887"), 30)
+	must(t, err)
+	if before != after {
+		t.Fatal("the vessel's identity changed when its ownership changed")
+	}
+}
+
+// TestCompanyMergerCombinesTwoOrganizationsGoingForwardOnly is the
+// audit's named "company merger" scenario: two previously-distinct
+// companies become one entity at the tick the merger is filed, and
+// historical replay before that tick must still show them separate.
+func TestCompanyMergerCombinesTwoOrganizationsGoingForwardOnly(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	beforeMerger, err := r.SameEntityAt(org("HOLDCO ALPHA"), org("HOLDCO BETA"), 10)
+	must(t, err)
+	if beforeMerger {
+		t.Fatal("two independent companies were already treated as the same entity before any merger event")
+	}
+
+	must2(t, func() (Event, error) {
+		return r.Merge("op", "flag-registry", org("HOLDCO ALPHA"), org("HOLDCO BETA"), 50, "corporate merger, registry filing 2026-M-1")
+	})
+
+	afterMerger, err := r.SameEntityAt(org("HOLDCO ALPHA"), org("HOLDCO BETA"), 60)
+	must(t, err)
+	if !afterMerger {
+		t.Fatal("a filed corporate merger did not combine the two organizations' identity")
+	}
+	stillSeparateHistorically, err := r.SameEntityAt(org("HOLDCO ALPHA"), org("HOLDCO BETA"), 10)
+	must(t, err)
+	if stillSeparateHistorically {
+		t.Fatal("the merger retroactively rewrote history -- the two companies now appear merged before the merger was ever filed")
+	}
+}
+
+// TestCompanySplitUnmergesFormerlyCombinedOrganizations is the audit's
+// named "company split" scenario: a conglomerate divests a division
+// into an independent company, using Unmerge -- the same mechanism
+// that closes a wrongly-merged vessel identity, applied here to an
+// intentional, correct corporate separation.
+func TestCompanySplitUnmergesFormerlyCombinedOrganizations(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) {
+		return r.Merge("op", "flag-registry", org("CONGLOMERATE"), org("DIVISION SPINCO"), 1, "division operated under parent entity")
+	})
+	stillOneCompany, err := r.SameEntityAt(org("CONGLOMERATE"), org("DIVISION SPINCO"), 10)
+	must(t, err)
+	if !stillOneCompany {
+		t.Fatal("the division was not initially recorded as part of the parent entity")
+	}
+
+	must2(t, func() (Event, error) {
+		return r.Unmerge("op", "flag-registry", org("CONGLOMERATE"), org("DIVISION SPINCO"), 50, "divestiture, spin-off filing 2026-S-1")
+	})
+
+	afterSplit, err := r.SameEntityAt(org("CONGLOMERATE"), org("DIVISION SPINCO"), 60)
+	must(t, err)
+	if afterSplit {
+		t.Fatal("the spun-off division still resolves as the same entity as its former parent after the split")
+	}
+	beforeSplit, err := r.SameEntityAt(org("CONGLOMERATE"), org("DIVISION SPINCO"), 10)
+	must(t, err)
+	if !beforeSplit {
+		t.Fatal("the split retroactively rewrote history -- replay before the split no longer shows the pre-split combined entity")
+	}
+}
+
+// TestDuplicateEntityRecordsSurfaceAsCandidateNotAutoMerge is the
+// audit's named "duplicate entities" scenario: two independently
+// data-entered registry records that MIGHT denote the same real
+// vessel must be surfaced as a low-confidence candidate for review,
+// never silently coalesced by a weak, non-authoritative signal alone.
+func TestDuplicateEntityRecordsSurfaceAsCandidateNotAutoMerge(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	reg1, reg2 := registry("REG-1001"), registry("REG-1002")
+	must2(t, func() (Event, error) {
+		return r.Assert("dedup-bot", "aggregator", reg1, reg2, 1, "possible duplicate: matching name and near-identical address")
+	})
+
+	same, err := r.SameEntityAt(reg1, reg2, 10)
+	must(t, err)
+	if same {
+		t.Fatal("two merely-similar registry records were silently auto-merged instead of surfaced for review")
+	}
+
+	cands, err := r.Candidates(reg1, 10)
+	must(t, err)
+	wantID := entityIDOf([]string{reg2.Key()})
+	var found *Candidate
+	for i := range cands {
+		if cands[i].EntityID == wantID {
+			found = &cands[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("the possible-duplicate record did not appear as a candidate at all -- the evidence was dropped, not just left unmerged")
+	}
+	if found.Confidence <= 0 || found.Confidence >= 0.5 {
+		t.Fatalf("expected the duplicate candidate at low-but-nonzero confidence for human review, got %.4f", found.Confidence)
+	}
+
+	if _, err := r.ResolveWithThreshold(reg1, 10, 0.5); !errors.Is(err, ErrLowConfidence) {
+		t.Fatalf("a weak duplicate-detection signal cleared the auto-resolve confidence threshold: %v", err)
+	}
+}
+
+// TestDeliberateFalseMatchFromWeakSourceLosesToAuthoritativeIdentity is
+// the audit's named "deliberate false match" scenario: an adversarial
+// or merely-wrong low-authority source asserts that a real, registry-
+// verified vessel is the same as a second, unrelated vessel (the
+// sanctions-evasion pattern: claiming a flagged vessel's IMO equals a
+// clean vessel's). Because Assert never merges and confidence is
+// authority-weighted, the false claim must never displace or tie with
+// the authoritative truth.
+func TestDeliberateFalseMatchFromWeakSourceLosesToAuthoritativeIdentity(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) {
+		return r.Merge("op", "flag-registry", imo("9998887"), name("REAL SHIP"), 1, "verified registry filing")
+	})
+	must2(t, func() (Event, error) {
+		return r.Assert("adversary", "aggregator", imo("9998887"), imo("6666666"), 5,
+			"unverified claim submitted by a low-authority source that this is the same vessel as a second IMO")
+	})
+
+	res, err := r.Resolve(imo("9998887"), 10, 0)
+	must(t, err)
+	if res.Conflict {
+		t.Fatal("a single weak, non-authoritative false-match claim was strong enough to create an unresolved identity conflict against a verified merge")
+	}
+	trueID, err := r.EntityIDAt(imo("9998887"), 10)
+	must(t, err)
+	if res.EntityID != trueID {
+		t.Fatal("the adversarial false-match claim displaced the authoritative, registry-verified vessel identity")
+	}
+	falseMatch, err := r.SameEntityAt(imo("9998887"), imo("6666666"), 10)
+	must(t, err)
+	if falseMatch {
+		t.Fatal("an unverified assertion alone was enough to merge two different vessels' identities")
 	}
 }
 
