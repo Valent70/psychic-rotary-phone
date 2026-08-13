@@ -39,15 +39,24 @@ var (
 type FaultKind string
 
 const (
-	FaultPartition       FaultKind = "NETWORK_PARTITION"
-	FaultLatency         FaultKind = "NETWORK_LATENCY"
-	FaultJitter          FaultKind = "NETWORK_JITTER"
-	FaultLoss            FaultKind = "PACKET_LOSS"
-	FaultDuplication     FaultKind = "PACKET_DUPLICATION"
-	FaultReorder         FaultKind = "PACKET_REORDER"
-	FaultNodeCrash       FaultKind = "NODE_CRASH"
-	FaultNodeRestart     FaultKind = "NODE_RESTART"
-	FaultDiskFailure     FaultKind = "DISK_FAILURE"
+	FaultPartition   FaultKind = "NETWORK_PARTITION"
+	FaultLatency     FaultKind = "NETWORK_LATENCY"
+	FaultJitter      FaultKind = "NETWORK_JITTER"
+	FaultLoss        FaultKind = "PACKET_LOSS"
+	FaultDuplication FaultKind = "PACKET_DUPLICATION"
+	FaultReorder     FaultKind = "PACKET_REORDER"
+	FaultNodeCrash   FaultKind = "NODE_CRASH"
+	FaultNodeRestart FaultKind = "NODE_RESTART"
+	FaultDiskFailure FaultKind = "DISK_FAILURE"
+	// FaultDiskFull is audit item P0-09's named scenario, distinct from
+	// FaultDiskFailure: a disk failure LOSES uncommitted data, but a
+	// full disk loses NOTHING -- the node stays fully readable and
+	// network-reachable, it simply cannot durably persist any NEW
+	// write until space is freed. Modelled by excluding the node from
+	// the write-eligible quorum in Propose (see writable()) while
+	// leaving its log, committed map, and network/leadership status
+	// completely untouched.
+	FaultDiskFull        FaultKind = "DISK_FULL"
 	FaultClockSkew       FaultKind = "CLOCK_SKEW"
 	FaultLeaderLoss      FaultKind = "LEADER_LOSS"
 	FaultMinorityIsolate FaultKind = "MINORITY_ISOLATION"
@@ -194,6 +203,7 @@ type nodeState struct {
 	id        string
 	alive     bool
 	isolated  bool
+	diskFull  bool
 	term      uint64
 	leader    bool
 	committed map[uint64]string // index -> value
@@ -273,6 +283,24 @@ func (c *Cluster) reachable() []*nodeState {
 	return out
 }
 
+// writable is reachable() further restricted to nodes that can
+// currently persist a new log entry. A disk-full node is reachable
+// (network-wise) and still fully participates in leadership and reads
+// of its existing data, but cannot receive a new write until it heals
+// -- this is the set Propose must use for both the quorum-size check
+// and for who actually gets the new entry, or a disk-full node could
+// be silently counted toward quorum for an entry it never durably
+// received.
+func (c *Cluster) writable() []*nodeState {
+	var out []*nodeState
+	for _, n := range c.reachable() {
+		if !n.diskFull {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
 // Apply injects one fault.
 func (c *Cluster) Apply(f Fault) {
 	switch f.Kind {
@@ -304,6 +332,12 @@ func (c *Cluster) Apply(f Fault) {
 				n.log = nil
 			}
 		}
+	case FaultDiskFull:
+		for _, id := range f.Nodes {
+			if n, ok := c.nodes[id]; ok {
+				n.diskFull = true
+			}
+		}
 	case FaultClockSkew:
 		for _, id := range f.Nodes {
 			if n, ok := c.nodes[id]; ok {
@@ -319,6 +353,7 @@ func (c *Cluster) Apply(f Fault) {
 			if n, ok := c.nodes[id]; ok {
 				n.isolated = false
 				n.alive = true
+				n.diskFull = false
 			}
 		}
 	}
@@ -340,7 +375,15 @@ func (c *Cluster) Propose(value string) bool {
 	if l == nil {
 		return false
 	}
-	quorum := c.reachable()
+	if l.diskFull {
+		// The leader itself cannot append to its own log with a full
+		// disk -- it cannot durably order a new entry at all, so the
+		// propose fails outright rather than silently committing
+		// through followers only.
+		c.events = append(c.events, "propose refused: leader disk full")
+		return false
+	}
+	quorum := c.writable()
 	if len(quorum) < c.plan.QuorumSize {
 		c.events = append(c.events, "propose refused: "+strconv.Itoa(len(quorum))+
 			" reachable < quorum "+strconv.Itoa(c.plan.QuorumSize))
@@ -381,7 +424,10 @@ func (c *Cluster) Converge() {
 	}
 	for _, id := range c.order {
 		n := c.nodes[id]
-		if !n.alive || n.isolated {
+		if !n.alive || n.isolated || n.diskFull {
+			// A still-disk-full node cannot durably accept the catch-up
+			// either; it stays owing its pending debt until FaultHeal
+			// actually frees its disk.
 			continue
 		}
 		for i, v := range leaderView {

@@ -56,14 +56,15 @@ const (
 
 // Errors.
 var (
-	ErrNoPolicy         = errors.New("authz: no policy version is active")
-	ErrUnknownVersion   = errors.New("authz: unknown policy version")
-	ErrPolicyInvalid    = errors.New("authz: policy document failed validation")
-	ErrPolicyExpired    = errors.New("authz: policy version is past its expiry tick")
-	ErrApprovalRequired = errors.New("authz: policy version requires approval before activation")
-	ErrChainBroken      = errors.New("authz: policy version chain is broken")
-	ErrSignatureInvalid = errors.New("authz: policy signature does not verify")
-	ErrRelationCycle    = errors.New("authz: relationship graph depth limit exceeded")
+	ErrNoPolicy           = errors.New("authz: no policy version is active")
+	ErrUnknownVersion     = errors.New("authz: unknown policy version")
+	ErrPolicyInvalid      = errors.New("authz: policy document failed validation")
+	ErrPolicyExpired      = errors.New("authz: policy version is past its expiry tick")
+	ErrPolicyNotYetActive = errors.New("authz: policy version has not reached its activation tick")
+	ErrApprovalRequired   = errors.New("authz: policy version requires approval before activation")
+	ErrChainBroken        = errors.New("authz: policy version chain is broken")
+	ErrSignatureInvalid   = errors.New("authz: policy signature does not verify")
+	ErrRelationCycle      = errors.New("authz: relationship graph depth limit exceeded")
 )
 
 // Condition is one ABAC attribute predicate.
@@ -89,6 +90,20 @@ type Rule struct {
 	// Obligations are side conditions the caller MUST honour when the
 	// rule allows (e.g. "redact_pii", "log_to_audit").
 	Obligations []string `json:"obligations,omitempty"`
+	// Priority orders rule evaluation within one effect class: a higher
+	// Priority rule is considered before a lower one when multiple
+	// ALLOW rules could match the same request, deciding which rule's
+	// ID/Obligations get attributed in the Explanation. Priority is
+	// data, not a safety override: it cannot make a DENY lose to an
+	// ALLOW, because Can() still returns the instant ANY matching DENY
+	// is found, at whatever position it falls in the (now
+	// priority-ordered) evaluation sequence -- see
+	// TestPriorityCannotOverrideDenyWins. Ties (equal Priority, the
+	// zero-value default) fall back to the pre-existing deterministic
+	// ID-order tie-break, so this field is purely additive: a document
+	// with every rule at Priority 0 evaluates identically to before
+	// this field existed.
+	Priority int `json:"priority,omitempty"`
 }
 
 // Document is a versioned, hashable, signable policy artifact.
@@ -101,23 +116,28 @@ type Document struct {
 	RequiresApproval bool   `json:"requires_approval"`
 	ApprovedBy       string `json:"approved_by,omitempty"`
 	ExpiresAtTick    uint64 `json:"expires_at_tick"` // 0 = no expiry
-	PrevHash         string `json:"prev_hash"`
-	Hash             string `json:"hash"`
-	Signature        string `json:"signature,omitempty"`
-	SigningKeyID     string `json:"signing_key_id,omitempty"`
-	PublicKey        string `json:"public_key,omitempty"`
+	// ActivatesAtTick is the effective-from tick: a request evaluated
+	// before it is default-denied exactly like a request evaluated
+	// after ExpiresAtTick. 0 = active immediately (the default,
+	// matching every document written before this field existed).
+	ActivatesAtTick uint64 `json:"activates_at_tick"`
+	PrevHash        string `json:"prev_hash"`
+	Hash            string `json:"hash"`
+	Signature       string `json:"signature,omitempty"`
+	SigningKeyID    string `json:"signing_key_id,omitempty"`
+	PublicKey       string `json:"public_key,omitempty"`
 }
 
 // canonicalBytes is the deterministic serialization for hash+signature.
 func (d Document) canonicalBytes() []byte {
 	var b strings.Builder
-	fmt.Fprintf(&b, "veriqo.policy/v1\nid=%s\nversion=%d\nprev=%s\napproval=%v\napprover=%s\nexpires=%d\n",
-		d.ID, d.Version, d.PrevHash, d.RequiresApproval, d.ApprovedBy, d.ExpiresAtTick)
+	fmt.Fprintf(&b, "veriqo.policy/v1\nid=%s\nversion=%d\nprev=%s\napproval=%v\napprover=%s\nexpires=%d\nactivates=%d\n",
+		d.ID, d.Version, d.PrevHash, d.RequiresApproval, d.ApprovedBy, d.ExpiresAtTick, d.ActivatesAtTick)
 	rules := append([]Rule(nil), d.Rules...)
 	sort.Slice(rules, func(i, j int) bool { return rules[i].ID < rules[j].ID })
 	for _, r := range rules {
-		fmt.Fprintf(&b, "rule=%s|effect=%s|roles=%s|actions=%s|resources=%s|relation=%s|obligations=%s",
-			r.ID, r.Effect, join(r.Roles), join(r.Actions), join(r.Resources), r.Relation, join(r.Obligations))
+		fmt.Fprintf(&b, "rule=%s|effect=%s|priority=%d|roles=%s|actions=%s|resources=%s|relation=%s|obligations=%s",
+			r.ID, r.Effect, r.Priority, join(r.Roles), join(r.Actions), join(r.Resources), r.Relation, join(r.Obligations))
 		conds := append([]Condition(nil), r.Conditions...)
 		sort.Slice(conds, func(i, j int) bool {
 			if conds[i].Attribute != conds[j].Attribute {
@@ -416,9 +436,24 @@ func (e *Engine) Can(req Request) (Explanation, error) {
 		ex.Reason = fmt.Sprintf("policy version %d expired at tick %d: default deny", d.Version, d.ExpiresAtTick)
 		return ex, ErrPolicyExpired
 	}
+	if d.ActivatesAtTick != 0 && req.Tick < d.ActivatesAtTick {
+		ex.Reason = fmt.Sprintf("policy version %d does not activate until tick %d: default deny", d.Version, d.ActivatesAtTick)
+		return ex, ErrPolicyNotYetActive
+	}
 
 	rules := append([]Rule(nil), d.Rules...)
-	sort.Slice(rules, func(i, j int) bool { return rules[i].ID < rules[j].ID })
+	// Priority orders evaluation (higher first); equal priority (the
+	// zero-value default for every rule written before this field
+	// existed) falls back to the original ID-order tie-break. This
+	// changes only WHICH allow rule gets attributed when several would
+	// match -- see Rule.Priority's doc comment for why it cannot affect
+	// the deny-wins outcome itself.
+	sort.Slice(rules, func(i, j int) bool {
+		if rules[i].Priority != rules[j].Priority {
+			return rules[i].Priority > rules[j].Priority
+		}
+		return rules[i].ID < rules[j].ID
+	})
 
 	var allowRule *Rule
 	for i := range rules {

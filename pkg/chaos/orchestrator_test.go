@@ -11,7 +11,7 @@ func plan(seed uint64) FaultPlan {
 		Seed:  seed, Ticks: 90, FaultsPerTick: 0.35, HealAfter: 7, QuorumSize: 3,
 		Kinds: []FaultKind{FaultPartition, FaultLatency, FaultLoss, FaultReorder,
 			FaultDuplication, FaultNodeCrash, FaultNodeRestart, FaultDiskFailure,
-			FaultClockSkew, FaultLeaderLoss, FaultMinorityIsolate},
+			FaultDiskFull, FaultClockSkew, FaultLeaderLoss, FaultMinorityIsolate},
 	}
 }
 
@@ -268,6 +268,87 @@ func TestDiskFailureDoesNotLoseCommittedState(t *testing.T) {
 		if x.Invariant == "no_committed_loss" {
 			t.Fatalf("a disk fault must not lose committed state: %+v", x)
 		}
+	}
+}
+
+func TestDiskFullNodeKeepsExistingDataButMissesNewWritesUntilHealed(t *testing.T) {
+	c, _ := NewCluster(plan(3))
+	if !c.Propose("before") {
+		t.Fatal("propose before disk-full must succeed")
+	}
+	c.Apply(Fault{Tick: 1, Kind: FaultDiskFull, Nodes: []string{"n2"}})
+	if !c.Propose("after") {
+		t.Fatal("propose must still succeed using the remaining writable quorum")
+	}
+	n2 := c.nodes["n2"]
+	foundBefore, foundAfter := false, false
+	for _, v := range n2.committed {
+		if v == "before" {
+			foundBefore = true
+		}
+		if v == "after" {
+			foundAfter = true
+		}
+	}
+	if !foundBefore {
+		t.Fatal("a disk-full node must keep the data it already durably committed")
+	}
+	if foundAfter {
+		t.Fatal("a disk-full node must not receive a write it cannot durably persist")
+	}
+	if len(c.pending["n2"]) == 0 {
+		t.Fatal("the missed write must accrue as pending debt, not silently vanish")
+	}
+	for _, x := range c.CheckInvariants(1) {
+		if x.Invariant == "no_committed_loss" {
+			t.Fatalf("a node with pending debt must not be flagged as having lost committed data: %+v", x)
+		}
+	}
+	c.Apply(Fault{Tick: 2, Kind: FaultHeal, Nodes: []string{"n2"}})
+	c.Converge()
+	if n2.diskFull {
+		t.Fatal("heal must clear diskFull")
+	}
+	found := false
+	for _, v := range n2.committed {
+		if v == "after" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("convergence after heal must deliver the write the disk-full node missed")
+	}
+	if len(c.pending["n2"]) != 0 {
+		t.Fatal("pending debt must clear once convergence delivers the missed write")
+	}
+}
+
+func TestDiskFullLeaderRefusesToProposeRatherThanSilentlyCommittingThroughFollowers(t *testing.T) {
+	c, _ := NewCluster(plan(4))
+	l := c.leader()
+	if l == nil {
+		t.Fatal("cluster must start with a leader")
+	}
+	c.Apply(Fault{Tick: 1, Kind: FaultDiskFull, Nodes: []string{l.id}})
+	if c.Propose("should-not-commit") {
+		t.Fatal("a disk-full leader must refuse to propose, not commit through followers alone")
+	}
+}
+
+func TestDiskFullBelowQuorumRefusesProposeRatherThanUnderReplicating(t *testing.T) {
+	c, _ := NewCluster(plan(5))
+	l := c.leader()
+	var others []string
+	for _, id := range c.order {
+		if id != l.id {
+			others = append(others, id)
+		}
+	}
+	// Disk-full 3 of the other 4 nodes, leaving leader + 1 follower = 2
+	// writable, below plan(5)'s QuorumSize of 3.
+	c.Apply(Fault{Tick: 1, Kind: FaultDiskFull, Nodes: others[:3]})
+	if c.Propose("x") {
+		t.Fatal("propose must refuse when writable nodes fall below quorum size")
 	}
 }
 

@@ -378,3 +378,130 @@ func TestParseDocumentRejectsGarbage(t *testing.T) {
 		t.Fatal("a structurally valid but semantically empty policy must be rejected")
 	}
 }
+
+// --- Audit item P1-04: Priority and ActivatesAtTick -------------------
+
+// TestHigherPriorityAllowRuleIsAttributedOverLowerPriorityMatch proves
+// Priority actually orders evaluation: two ALLOW rules both match the
+// same request, and the higher-Priority one must be the one named in
+// the Explanation, regardless of ID order.
+func TestHigherPriorityAllowRuleIsAttributedOverLowerPriorityMatch(t *testing.T) {
+	e := NewEngine()
+	low := allowRule("z-low-priority", "read", "case/*", "analyst")
+	low.Priority = 1
+	high := allowRule("a-high-priority", "read", "case/*", "analyst")
+	high.Priority = 10
+	publishActive(t, e, doc(1, []Rule{low, high}))
+
+	ex, err := e.Can(Request{Actor: "a", Roles: []string{"analyst"}, Action: "read", Resource: "case/1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ex.Allowed {
+		t.Fatalf("expected allow: %+v", ex)
+	}
+	if ex.MatchedRule != "a-high-priority" {
+		t.Fatalf("expected the higher-Priority rule to be attributed despite losing on ID order, got %q", ex.MatchedRule)
+	}
+}
+
+// TestZeroPriorityRulesFallBackToIDOrder confirms a document where
+// every rule is left at the Priority zero-value (every document
+// written before this field existed) evaluates identically to the
+// original ID-only tie-break.
+func TestZeroPriorityRulesFallBackToIDOrder(t *testing.T) {
+	e := NewEngine()
+	publishActive(t, e, doc(1, []Rule{
+		allowRule("z-rule", "read", "case/*", "analyst"),
+		allowRule("a-rule", "read", "case/*", "analyst"),
+	}))
+	ex, err := e.Can(Request{Actor: "a", Roles: []string{"analyst"}, Action: "read", Resource: "case/1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ex.MatchedRule != "a-rule" {
+		t.Fatalf("expected ID-order tie-break (a-rule before z-rule) when priorities are equal, got %q", ex.MatchedRule)
+	}
+}
+
+// TestPriorityCannotOverrideDenyWins is the safety-critical adversarial
+// test named in Rule.Priority's own doc comment: a maximum-Priority
+// ALLOW rule must still lose to a minimum-Priority DENY rule that
+// matches the same request. Priority orders WHICH allow is attributed;
+// it must never be usable to rank an allow above a deny.
+func TestPriorityCannotOverrideDenyWins(t *testing.T) {
+	e := NewEngine()
+	allow := allowRule("z-allow-max-priority", "read", "case/sealed*", "analyst")
+	allow.Priority = 1000
+	deny := Rule{ID: "a-deny-min-priority", Effect: Deny, Priority: -1000,
+		Roles: []string{"analyst"}, Actions: []string{"read"}, Resources: []string{"case/sealed*"}}
+	publishActive(t, e, doc(1, []Rule{allow, deny}))
+
+	ex, err := e.Can(Request{Actor: "a", Roles: []string{"analyst"}, Action: "read", Resource: "case/sealed-9"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ex.Allowed {
+		t.Fatalf("a maximum-Priority ALLOW rule overrode a minimum-Priority DENY rule: %+v", ex)
+	}
+	if ex.MatchedRule != "a-deny-min-priority" {
+		t.Fatalf("expected the deny rule to be the deciding rule regardless of priority ordering: %+v", ex)
+	}
+}
+
+// TestPolicyNotYetActiveDeniesRatherThanHonouringIt is
+// ActivatesAtTick's mirror of the existing ExpiresAtTick test: a
+// request evaluated before the policy's effective-from tick must be
+// denied, not silently evaluated against rules that are not supposed
+// to be live yet.
+func TestPolicyNotYetActiveDeniesRatherThanHonouringIt(t *testing.T) {
+	e := NewEngine()
+	d := doc(1, []Rule{allowRule("r1", "read", "case/*", "analyst")})
+	d.ActivatesAtTick = 100
+	publishActive(t, e, d)
+
+	ex, err := e.Can(Request{Actor: "a", Roles: []string{"analyst"}, Action: "read", Resource: "case/1", Tick: 50})
+	if !errors.Is(err, ErrPolicyNotYetActive) {
+		t.Fatalf("expected ErrPolicyNotYetActive before the activation tick, got %v", err)
+	}
+	if ex.Allowed {
+		t.Fatal("a not-yet-active policy version must not be honoured")
+	}
+
+	ex2, err := e.Can(Request{Actor: "a", Roles: []string{"analyst"}, Action: "read", Resource: "case/1", Tick: 100})
+	if err != nil {
+		t.Fatalf("expected the policy to be active at its own activation tick: %v", err)
+	}
+	if !ex2.Allowed {
+		t.Fatal("expected allow once the policy has reached its activation tick")
+	}
+}
+
+// TestActivatesAtTickIsCryptographicallyBound confirms tampering with
+// ActivatesAtTick after signing invalidates the signature -- the field
+// is folded into canonicalBytes, not a decorative addition.
+func TestActivatesAtTickIsCryptographicallyBound(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = pub
+	e := NewEngine()
+	published, err := e.Publish(doc(1, []Rule{allowRule("r1", "read", "case/*", "analyst")}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Sign(published.Version, priv, "test-key"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.VerifySignature(published.Version); err != nil {
+		t.Fatalf("a freshly signed document must verify: %v", err)
+	}
+
+	e.mu.Lock()
+	e.versions[0].ActivatesAtTick = 999999
+	e.mu.Unlock()
+	if err := e.VerifySignature(published.Version); !errors.Is(err, ErrSignatureInvalid) {
+		t.Fatalf("tampering with ActivatesAtTick after signing must invalidate the signature, got %v", err)
+	}
+}
