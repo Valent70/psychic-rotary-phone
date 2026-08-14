@@ -171,14 +171,17 @@
       ],
       "input_schema": "pkg/execution.Input",
       "output_schema": "pkg/execution.Node",
-      "determinism": "not applicable -- this stage is unconditionally skipped in the current wiring, see always_skipped_in_current_wiring",
-      "replay_support": false,
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
       "evidence_support": true,
       "trust_support": false,
       "telemetry_support": false,
       "status": [
         "IMPLEMENTED",
-        "TESTED"
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
       ]
     },
     {
