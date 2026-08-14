@@ -2,6 +2,7 @@ package execution
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"veriqo/pkg/canonical"
@@ -174,6 +175,134 @@ func TestSkippedStagesAreDeclaredNotFabricated(t *testing.T) {
 	}
 	if res.Economic.Hash != "" {
 		t.Fatal("a skipped economic stage must not fabricate a consequence")
+	}
+}
+
+// identityFixture builds a Resolver with one registered authority --
+// the minimum needed for EntityIDAt to have real ledger state to
+// re-derive from, mirroring pkg/lifecycle's own identityAuthoritySourceID
+// pattern.
+func identityFixture(t *testing.T) *identity.Resolver {
+	t.Helper()
+	r := identity.NewResolver()
+	if err := r.RegisterAuthority(identity.Authority{SourceID: "test-authority", Weight: 1}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	return r
+}
+
+// TestIdentityResolutionIndependentlyReResolvesAndConfirmsMatch is the
+// P0-4 positive property: when a real Identifier is supplied, the
+// IDENTITY_RESOLUTION stage does not merely trust Case.Entity, it calls
+// Identity.EntityIDAt itself and only succeeds because the independent
+// call agrees.
+func TestIdentityResolutionIndependentlyReResolvesAndConfirmsMatch(t *testing.T) {
+	r := identityFixture(t)
+	q := identity.Identifier{Kind: identity.KindIMO, Value: "9998887"}
+	resolved, err := r.EntityIDAt(q, 42)
+	if err != nil {
+		t.Fatalf("EntityIDAt: %v", err)
+	}
+
+	c := caseInput()
+	c.Entity = digitaltwin.EntityID(resolved)
+	c.Subject = resolved
+
+	e := NewEngine(nil)
+	e.Identity = r
+	res, err := e.Run(Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+		IdentityAliases: []identity.Identifier{q}})
+	if err != nil {
+		t.Fatalf("expected a matching independent re-resolution to succeed, got: %v", err)
+	}
+	var idNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageIdentityResolution {
+			idNode = n
+		}
+	}
+	if idNode.Status != StatusOK {
+		t.Fatalf("expected IDENTITY_RESOLUTION to succeed, got %s: %s", idNode.Status, idNode.Error)
+	}
+	if !strings.Contains(idNode.Detail, "independently re-resolved") {
+		t.Fatalf("expected the node detail to record the independent re-resolution, got %q", idNode.Detail)
+	}
+}
+
+// TestIdentityResolutionFailsWhenReResolutionDisagrees is the P0-4
+// adversarial property: a caller-claimed Case.Entity that the identity
+// ledger would NOT independently produce must fail the stage (and the
+// whole execution), not silently pass through. This is what makes the
+// re-resolution call real rather than decorative -- a decorative call
+// whose result is ignored could never fail.
+func TestIdentityResolutionFailsWhenReResolutionDisagrees(t *testing.T) {
+	r := identityFixture(t)
+	q := identity.Identifier{Kind: identity.KindIMO, Value: "9998887"}
+
+	c := caseInput()
+	c.Entity = digitaltwin.EntityID("ENT:this-does-not-match-what-the-ledger-would-derive")
+
+	e := NewEngine(nil)
+	e.Identity = r
+	res, err := e.Run(Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+		IdentityAliases: []identity.Identifier{q}})
+	// Run()'s top-level error wraps ErrStageFailed (Node.Error is a
+	// plain string, for JSON serialisation, so the chain does not carry
+	// ErrIdentityMismatch through errors.Is at this level) -- the
+	// specific cause is asserted below via the node's own recorded
+	// error text instead.
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("expected ErrStageFailed, got %v", err)
+	}
+	if !strings.Contains(err.Error(), string(StageIdentityResolution)) {
+		t.Fatalf("expected the error to name IDENTITY_RESOLUTION, got %v", err)
+	}
+	var idNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageIdentityResolution {
+			idNode = n
+		}
+	}
+	if idNode.Status != StatusFailed {
+		t.Fatalf("expected IDENTITY_RESOLUTION to FAIL on disagreement, got %s", idNode.Status)
+	}
+	if !strings.Contains(idNode.Error, ErrIdentityMismatch.Error()) {
+		t.Fatalf("expected the node's own error to name the identity mismatch, got %q", idNode.Error)
+	}
+	// Every downstream stage must also fail closed (dependency not
+	// satisfied), never fabricate a decision over a failed identity
+	// check.
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageDecision && n.Status == StatusOK {
+			t.Fatal("DECISION must not succeed when IDENTITY_RESOLUTION failed")
+		}
+	}
+}
+
+// TestIdentityResolutionWithoutAliasesPreservesPriorBindingOnlyBehavior
+// proves nil-safety: omitting IdentityAliases (every existing
+// production/test call site before this round) must not change
+// behavior -- still OK, still bound to the ledger head, never attempts
+// re-resolution.
+func TestIdentityResolutionWithoutAliasesPreservesPriorBindingOnlyBehavior(t *testing.T) {
+	r := identityFixture(t)
+	e := NewEngine(nil)
+	e.Identity = r
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	var idNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageIdentityResolution {
+			idNode = n
+		}
+	}
+	if idNode.Status != StatusOK {
+		t.Fatalf("expected IDENTITY_RESOLUTION to stay OK without aliases, got %s", idNode.Status)
+	}
+	if strings.Contains(idNode.Detail, "independently re-resolved") {
+		t.Fatal("must not claim independent re-resolution when no alias was supplied")
 	}
 }
 

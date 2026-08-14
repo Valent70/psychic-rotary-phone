@@ -1,9 +1,11 @@
 package lifecycle
 
 import (
+	"strings"
 	"testing"
 
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/execution"
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
@@ -233,5 +235,67 @@ func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
 	}
 	if got, ok := o.Entities.Resolve(entity.Alias{Kind: "LEI", Value: "LEI-CORP-1"}); !ok || got != res.EntityID {
 		t.Fatalf("expected the legacy union-find to have actually resolved this call, got ok=%v id=%s want=%s", ok, got, res.EntityID)
+	}
+}
+
+// TestRunUnifiedThreadsARealIdentityKeyIntoTheExecutionDAG is P0-4's
+// end-to-end proof: when entity resolution goes through Identity (not
+// the union-find fallback), RunUnified's execution.Input carries the
+// SAME primary Identifier into pkg/execution, whose IDENTITY_RESOLUTION
+// stage independently re-resolves it and only succeeds because the two
+// computations genuinely agree -- not because one trusts the other.
+func TestRunUnifiedThreadsARealIdentityKeyIntoTheExecutionDAG(t *testing.T) {
+	o := NewOrchestrator(nil)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Execution == nil {
+		t.Fatal("expected RunUnified to populate the full pkg/execution DAG result")
+	}
+	var idNode execution.Node
+	found := false
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageIdentityResolution {
+			idNode, found = n, true
+		}
+	}
+	if !found {
+		t.Fatal("expected an IDENTITY_RESOLUTION node")
+	}
+	if idNode.Status != execution.StatusOK {
+		t.Fatalf("expected IDENTITY_RESOLUTION to succeed, got %s: %s", idNode.Status, idNode.Error)
+	}
+	if !strings.Contains(idNode.Detail, "independently re-resolved") {
+		t.Fatalf("expected proof of the real P0-4 re-resolution call in the node detail, got %q", idNode.Detail)
+	}
+}
+
+// TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback proves
+// the fallback path (unmodeled alias Kind) correctly leaves
+// IdentityAliases empty -- attempting to re-resolve a Kind identity.Kind
+// does not model would be a guaranteed, misleading mismatch, not a
+// real check.
+func TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback(t *testing.T) {
+	o := NewOrchestrator(nil)
+	in := testIntent()
+	in.EntityAliases = []entity.Alias{{Kind: "LEI", Value: "LEI-CORP-2"}}
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatalf("expected the fallback path to still succeed: %v", err)
+	}
+	var idNode execution.Node
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageIdentityResolution {
+			idNode = n
+		}
+	}
+	if strings.Contains(idNode.Detail, "independently re-resolved") {
+		t.Fatal("must not claim independent re-resolution when entity resolution used the union-find fallback")
 	}
 }

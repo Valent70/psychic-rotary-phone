@@ -73,6 +73,14 @@ var (
 	// ErrBindingMismatch is raised when the governance binding at replay
 	// time differs from the one the execution committed to.
 	ErrBindingMismatch = errors.New("execution: governance binding mismatch")
+	// ErrIdentityMismatch is raised (P0-4) when Input.IdentityAliases is
+	// supplied and Engine.Identity independently re-resolves it to a
+	// DIFFERENT canonical entity than the caller-supplied
+	// Case.Entity -- proof the IDENTITY_RESOLUTION stage performs a
+	// real, independent second computation against the identity
+	// ledger, in the same spirit as pkg/lifecycle's own
+	// replayFusionArbitration, rather than trusting the caller's claim.
+	ErrIdentityMismatch = errors.New("execution: identity resolution: independently re-resolved entity does not match the supplied case entity")
 )
 
 // StageID names a node of the graph.
@@ -239,6 +247,20 @@ type Input struct {
 	Currency  string
 	// TrustSubject, when set, drives the trust-state stage.
 	TrustSubject string
+	// IdentityAliases, when set together with Engine.Identity, makes
+	// IDENTITY_RESOLUTION (P0-4) perform a REAL independent resolution
+	// call -- Engine.Identity.EntityIDAt(IdentityAliases[0], ctx.Tick)
+	// -- and compare the result against Case.Entity, rather than only
+	// hashing the ledger head. A mismatch fails the stage
+	// (ErrIdentityMismatch): the DAG does not trust the caller's claim
+	// that Case.Entity is correct, it re-derives it from the same
+	// ledger pkg/lifecycle's own entity resolution used and requires
+	// agreement. Nil-safe: leave nil (the default) to preserve the
+	// exact prior ledger-head-only behavior byte-for-byte -- callers
+	// that do not have a raw identifier available (e.g. cold replay,
+	// which only ever sees the already-resolved Case.Entity) are
+	// unaffected.
+	IdentityAliases []identity.Identifier
 }
 
 // Engine executes the graph. All sub-engines are injected so an
@@ -254,15 +276,21 @@ type Engine struct {
 	// execution time -- real, independently-verifiable evidence that this
 	// stage's result is anchored to a specific identity-ledger state,
 	// rather than only hashing the caller-supplied entity string as the
-	// stage did unconditionally before. This does NOT re-derive entity
-	// resolution from raw aliases (canonical.CaseInput carries only an
-	// already-resolved Entity string, not the alias set that produced
-	// it -- see pkg/lifecycle's own resolveCanonicalEntity, which is
-	// where alias-level resolution actually happens, upstream of this
-	// Engine); it verifiably COMMITS to the resolver's current state
-	// instead of ignoring it. Nil-safe: leave nil (the default; every
-	// existing production/test construction site does this today) to
-	// preserve the exact prior stub behavior byte-for-byte.
+	// stage did unconditionally before. It verifiably COMMITS to the
+	// resolver's current state instead of ignoring it.
+	//
+	// P0-4 extends this: when Input.IdentityAliases also carries the
+	// raw identifier that drove entity resolution upstream (canonical.
+	// CaseInput itself still only carries an already-resolved Entity
+	// string, not the alias set -- see pkg/lifecycle's own
+	// resolveCanonicalEntity, where alias-level resolution actually
+	// happens, upstream of this Engine), the stage goes further than
+	// binding: it independently CALLS Identity.EntityIDAt and requires
+	// the result to match Case.Entity, failing the stage
+	// (ErrIdentityMismatch) if it does not. Nil-safe either way: leave
+	// Identity nil, or leave Input.IdentityAliases empty with Identity
+	// set, to preserve the exact prior stub/binding-only behavior
+	// byte-for-byte.
 	Identity *identity.Resolver
 	// Version is the engine's own version string, folded into every node
 	// hash: an execution replayed by a different engine build is not the
@@ -534,6 +562,30 @@ func (e *Engine) Run(in Input) (*Result, error) {
 				ledgerHead := e.Identity.Head()
 				summary += " (bound to identity ledger head " + shortHash(ledgerHead) + ")"
 				hashInput += "|identity_ledger_head=" + ledgerHead
+
+				// P0-4: when a raw identifier is available, independently
+				// RE-RESOLVE it against the same ledger rather than only
+				// binding to the ledger's summary hash -- a genuine
+				// second computation, not a decorative one.
+				if len(in.IdentityAliases) > 0 {
+					q := in.IdentityAliases[0]
+					reResolved, err := e.Identity.EntityIDAt(q, ctx.Tick)
+					if err != nil {
+						record(id, []string{q.Key()}, nil, StatusFailed,
+							"identity re-resolution failed", "", err)
+						continue
+					}
+					if reResolved != string(in.Case.Entity) {
+						record(id, []string{q.Key()}, []string{reResolved}, StatusFailed,
+							"independently re-resolved entity "+reResolved+
+								" does not match supplied case entity "+string(in.Case.Entity),
+							"", fmt.Errorf("%w: query=%s resolved=%s supplied=%s",
+								ErrIdentityMismatch, q.Key(), reResolved, in.Case.Entity))
+						continue
+					}
+					summary += "; independently re-resolved " + q.Key() + " and confirmed match"
+					hashInput += "|reresolved=" + reResolved
+				}
 			}
 			record(id, []string{string(in.Case.Entity)}, []string{in.Case.Subject}, StatusOK,
 				summary, hashInput, nil)

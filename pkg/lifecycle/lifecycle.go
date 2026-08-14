@@ -309,26 +309,31 @@ func NewOrchestrator(pipeline *canonical.Pipeline) *Orchestrator {
 // force a fabricated Kind mapping (see pkg/governance/entityconsistency's
 // package comment on why inventing a translation layer would itself be
 // the fabrication this package refuses to do).
-func (o *Orchestrator) resolveCanonicalEntity(actorID string, aliases []entity.Alias, tick uint64) (entity.CanonicalID, bool) {
+// The third return value is the primary Identifier resolution actually
+// keyed off (aliases[0]), meaningful only when ok is true -- callers
+// use it to let pkg/execution's IDENTITY_RESOLUTION stage (P0-4)
+// independently re-derive the SAME entity ID from the SAME ledger,
+// rather than only trusting this function's own answer.
+func (o *Orchestrator) resolveCanonicalEntity(actorID string, aliases []entity.Alias, tick uint64) (entity.CanonicalID, identity.Identifier, bool) {
 	ids := make([]identity.Identifier, len(aliases))
 	for i, a := range aliases {
 		ids[i] = identity.Identifier{Kind: identity.Kind(a.Kind), Value: a.Value}
 		if err := ids[i].Validate(); err != nil {
-			return "", false
+			return "", identity.Identifier{}, false
 		}
 	}
 	first := ids[0]
 	for _, other := range ids[1:] {
 		if _, err := o.Identity.Merge(actorID, identityAuthoritySourceID, first, other, tick,
 			"lifecycle.RunUnified: aliases co-occur on one Intent"); err != nil {
-			return "", false
+			return "", identity.Identifier{}, false
 		}
 	}
 	resolved, err := o.Identity.EntityIDAt(first, tick)
 	if err != nil {
-		return "", false
+		return "", identity.Identifier{}, false
 	}
-	return entity.CanonicalID(resolved), true
+	return entity.CanonicalID(resolved), first, true
 }
 
 // RunUnified is the audit's required central chain: Intent -> Plan ->
@@ -356,9 +361,17 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 	// union-find) is used ONLY as a fallback for alias Kinds identity
 	// does not model. See resolveCanonicalEntity's doc comment.
 	var canonEntity entity.CanonicalID
+	// identityKey, when identityKeySet, is the primary Identifier this
+	// resolution was keyed off THROUGH pkg/identity (not the union-find
+	// fallback) -- threaded into execution.Input.IdentityAliases below
+	// so pkg/execution's IDENTITY_RESOLUTION stage (P0-4) can
+	// independently re-derive the same canonical entity from the same
+	// ledger, instead of only trusting caseIn.Entity as given.
+	var identityKey identity.Identifier
+	var identityKeySet bool
 	if len(in.EntityAliases) > 0 {
-		if resolved, ok := o.resolveCanonicalEntity(in.ActorID, in.EntityAliases, in.Tick); ok {
-			canonEntity = resolved
+		if resolved, key, ok := o.resolveCanonicalEntity(in.ActorID, in.EntityAliases, in.Tick); ok {
+			canonEntity, identityKey, identityKeySet = resolved, key, true
 		} else {
 			first := in.EntityAliases[0]
 			var err error
@@ -399,7 +412,11 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 		LedgerPosition: uint64(len(o.Identity.Ledger())), Tick: in.Tick,
 		ReplayMetadata: "lifecycle.RunUnified",
 	}
-	execRes, err := o.Execution.Run(execution.Input{Context: execCtx, Case: caseIn})
+	execIn := execution.Input{Context: execCtx, Case: caseIn}
+	if identityKeySet {
+		execIn.IdentityAliases = []identity.Identifier{identityKey}
+	}
+	execRes, err := o.Execution.Run(execIn)
 	if err != nil {
 		return nil, fmt.Errorf("lifecycle: execution run: %w", err)
 	}
