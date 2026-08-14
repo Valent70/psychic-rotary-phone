@@ -22,6 +22,31 @@
 // takes ontology.Evidence, not a (source, value) pair, so typing,
 // bitemporality, epistemic class and signature checking happen once,
 // at the boundary, for every caller.
+//
+// P0-A consolidation, final accounting: a whole-repo inventory found
+// exactly four distinct "Evidence"-shaped Go types. Three are real,
+// independent, load-bearing evidence-ingestion paths, and all three are
+// now Facade-native: ontology.Evidence (Submit/Validate/EvidenceFor),
+// contradiction.RawObservation (ObserveRaw/ArbitrateClaim/
+// RawObservations/VerifyRawTruthLedger/RankHypotheses), and
+// fusion.Evidence (FusionSubmit/FusionArbitrate/FusionEvidenceFor/
+// FusionVerifyChain, all reaching the SAME f.pipeline.Fusion instance
+// Submit/Arbitrate already drive). The fourth,
+// pkg/moat/intelligence/evidence.IntelligenceEvidence, was RETIRED
+// (deleted) rather than wired in: it was a v7.9-round design (bare-
+// float wrapping, score-vs-probability separation, data-quality
+// flagging) that every later round independently and more rigorously
+// rebuilt directly inside the packages that actually needed it --
+// pkg/moat/intelligence/risk's own Result.Score/Breakdown,
+// pkg/moat/intelligence/pricing's own DataQuality type, and
+// pkg/governance/calibration's stricter Evidence -> Probabilistic
+// Observation Contract -- all of which are real, tested, and already
+// wired through canonical.Pipeline into this Facade. It had zero
+// production or test importers anywhere in the repo at the time of
+// removal. Wiring it in instead of retiring it would have created a
+// SECOND, redundant "canonical" shape for concepts this codebase
+// already solved elsewhere -- directly contradicting the one thing
+// this package exists to guarantee.
 package api
 
 import (
