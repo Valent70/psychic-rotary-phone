@@ -79,15 +79,40 @@ var (
 type StageID string
 
 const (
-	StageEvidenceIngestion       StageID = "EVIDENCE_INGESTION"
-	StageIdentityResolution      StageID = "IDENTITY_RESOLUTION"
-	StageDependencyEvaluation    StageID = "DEPENDENCY_EVALUATION"
-	StageTruthArbitration        StageID = "TRUTH_ARBITRATION"
-	StageContradiction           StageID = "CONTRADICTION_ARBITRATION"
-	StageFusion                  StageID = "CORRELATION_FUSION"
-	StageTemporal                StageID = "TEMPORAL_BAYESIAN"
-	StageCausal                  StageID = "CAUSAL_REASONING"
-	StageRisk                    StageID = "RISK"
+	// StageIntent is the DAG's root node (P0-2): it commits to WHICH
+	// investigative intent this execution serves -- CaseID, Tenant,
+	// Actor and PolicyVersion, the four Context fields
+	// Context.validate() already makes mandatory for every execution,
+	// so this stage always has real data to attribute, never a stub.
+	// pkg/lifecycle.Orchestrator.RunUnified binds ctx.CaseID to a real
+	// Intent's own content-addressed ID (see lifecycle.go's
+	// executionID/Intent.ID), so for every production call through
+	// that path this node's artifact genuinely traces back to one
+	// specific Intent, closing the audit's "Intent -> Evidence
+	// Planning -> ... " ordering requirement at the DAG level, not
+	// only at the lifecycle-orchestration level above it.
+	StageIntent               StageID = "INTENT"
+	StageEvidenceIngestion    StageID = "EVIDENCE_INGESTION"
+	StageIdentityResolution   StageID = "IDENTITY_RESOLUTION"
+	StageDependencyEvaluation StageID = "DEPENDENCY_EVALUATION"
+	StageTruthArbitration     StageID = "TRUTH_ARBITRATION"
+	StageContradiction        StageID = "CONTRADICTION_ARBITRATION"
+	StageFusion               StageID = "CORRELATION_FUSION"
+	StageTemporal             StageID = "TEMPORAL_BAYESIAN"
+	StageCausal               StageID = "CAUSAL_REASONING"
+	StageRisk                 StageID = "RISK"
+	// StagePolicy is a real DAG node (P0-3), not decorative: it
+	// attributes the specific policy version and named policy that
+	// governed the decision made two nodes later, as its own
+	// independently-hashed, independently-localisable artifact --
+	// separated out of StageDecision's hash exactly the way
+	// StageContradiction and StageFusion were already separated out of
+	// the same underlying arbitration artifact for the same reason
+	// (see this file's own package doc on stage attribution). It sits
+	// between Risk and Decision, matching pkg/explanation's own chain
+	// ordering (explanation.StagePolicy's link already precedes
+	// explanation.StageDecision's link in buildExplanation below).
+	StagePolicy                  StageID = "POLICY"
 	StageDecision                StageID = "DECISION"
 	StageTrust                   StageID = "TRUST_STATE"
 	StageDigitalTwin             StageID = "DIGITAL_TWIN"
@@ -260,7 +285,8 @@ var graph = []struct {
 	id   StageID
 	deps []StageID
 }{
-	{StageEvidenceIngestion, nil},
+	{StageIntent, nil},
+	{StageEvidenceIngestion, []StageID{StageIntent}},
 	{StageIdentityResolution, []StageID{StageEvidenceIngestion}},
 	{StageDependencyEvaluation, []StageID{StageIdentityResolution}},
 	{StageTruthArbitration, []StageID{StageDependencyEvaluation}},
@@ -269,7 +295,8 @@ var graph = []struct {
 	{StageTemporal, []StageID{StageFusion}},
 	{StageCausal, []StageID{StageFusion, StageTemporal}},
 	{StageRisk, []StageID{StageCausal, StageContradiction}},
-	{StageDecision, []StageID{StageRisk}},
+	{StagePolicy, []StageID{StageRisk}},
+	{StageDecision, []StageID{StagePolicy}},
 	{StageTrust, []StageID{StageDecision}},
 	{StageDigitalTwin, []StageID{StageDecision, StageCausal}},
 	{StageEconomic, []StageID{StageDigitalTwin}},
@@ -287,6 +314,8 @@ var graph = []struct {
 // package. Kept as data (not inferred by parsing this file) so it can
 // be read and diffed like the graph above.
 var stagePackage = map[StageID]string{
+	StageIntent:                  "veriqo/pkg/lifecycle",
+	StagePolicy:                  "veriqo/pkg/moat/decision",
 	StageEvidenceIngestion:       "veriqo/pkg/canonical",
 	StageIdentityResolution:      "veriqo/pkg/canonical",
 	StageDependencyEvaluation:    "veriqo/pkg/canonical",
@@ -487,6 +516,11 @@ func (e *Engine) Run(in Input) (*Result, error) {
 		}
 
 		switch id {
+		case StageIntent:
+			record(id, []string{ctx.Tenant, ctx.Actor}, []string{ctx.CaseID}, StatusOK,
+				"intent "+ctx.CaseID+" raised by "+ctx.Actor+" under tenant "+ctx.Tenant,
+				ctx.CaseID+"|"+ctx.Tenant+"|"+ctx.Actor+"|"+ctx.PolicyVersion, nil)
+
 		case StageEvidenceIngestion:
 			ids := canonical.SortedSourceIDs(in.Case.Submissions)
 			record(id, ids, []string{ctx.EvidencePackageID},
@@ -556,10 +590,17 @@ func (e *Engine) Run(in Input) (*Result, error) {
 				"risk "+fnum(r.Score)+" labelled "+string(r.Label),
 				fnum(r.Score)+"|"+string(r.Label), nil)
 
+		case StagePolicy:
+			d := canon.Decision
+			record(id, []string{"tbml_composite_risk_score"}, []string{ctx.PolicyVersion}, StatusOK,
+				"policy "+d.PolicyName+" under version "+ctx.PolicyVersion+
+					" (flag "+fnum(d.RiskScore)+")",
+				d.PolicyName+"|"+ctx.PolicyVersion, nil)
+
 		case StageDecision:
 			d := canon.Decision
 			res.Decision = string(d.Action)
-			record(id, []string{"tbml_composite_risk_score"}, []string{string(d.Action)}, StatusOK,
+			record(id, []string{ctx.PolicyVersion}, []string{string(d.Action)}, StatusOK,
 				"policy "+d.PolicyName+" produced "+string(d.Action)+" at risk "+fnum(d.RiskScore),
 				string(d.Action)+"|"+d.PolicyName+"|"+fnum(d.RiskScore), nil)
 
