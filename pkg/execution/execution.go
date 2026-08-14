@@ -52,6 +52,7 @@ import (
 	"veriqo/pkg/governance/lifecycle"
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/economic"
+	"veriqo/pkg/moat/hbayes"
 	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/replay"
 	"veriqo/pkg/trust/state"
@@ -261,6 +262,18 @@ type Input struct {
 	// which only ever sees the already-resolved Case.Entity) are
 	// unaffected.
 	IdentityAliases []identity.Identifier
+	// TemporalModel and TemporalObservations, when BOTH supplied,
+	// drive TEMPORAL_BAYESIAN (P0-5) with a real call to
+	// pkg/moat/hbayes's Model.Infer, exactly the way TrustSubject
+	// drives TRUST_STATE and Scenarios drives ECONOMIC_CONSEQUENCE.
+	// TemporalInterventions is optional (nil is a valid, empty
+	// intervention set). Nil-safe: omitting TemporalModel/
+	// TemporalObservations preserves the stage's SKIPPED behavior
+	// exactly as before this field existed -- no fabricated inference
+	// over an invented series.
+	TemporalModel         *hbayes.Model
+	TemporalObservations  []hbayes.TickObservations
+	TemporalInterventions []hbayes.Intervention
 }
 
 // Engine executes the graph. All sub-engines are injected so an
@@ -364,17 +377,23 @@ var stagePackage = map[StageID]string{
 
 // stageAlwaysSkipped names stages whose Run() case unconditionally
 // records StatusSkipped today, regardless of input -- an honest gap,
-// not a hidden one. StageTemporal is the one real instance: the switch
-// case above always returns "no temporal observation series supplied",
-// because nothing in this codebase currently populates one; pkg/moat/hbayes
-// itself has real forward inference, backward smoothing, decay and
-// contradiction handling with its own passing tests, but Run() never
-// calls it. StageTrust and StageEconomic are also conditionally
-// skipped (when TrustSubject/Scenarios are omitted), but real callers
-// (e.g. test/soak) do supply them, so they are not listed here.
-var stageAlwaysSkipped = map[StageID]bool{
-	StageTemporal: true,
-}
+// not a hidden one. It is empty as of P0-5: StageTemporal used to be
+// the one real instance (the switch case unconditionally returned "no
+// temporal observation series supplied", because nothing in this
+// codebase populated one), but Run() now genuinely calls
+// pkg/moat/hbayes's Model.Infer when Input.TemporalModel and
+// Input.TemporalObservations are both supplied -- conditionally
+// skipped exactly like StageTrust and StageEconomic already were (when
+// TrustSubject/Scenarios/the temporal inputs are omitted), not
+// unconditionally. No production caller populates the temporal inputs
+// yet (canonical.CaseInput's Submissions all share one Tick, not a
+// per-tick observation series -- see hbayes's own package comment on
+// what a real series requires), so this stage is honestly still
+// SKIPPED on every existing call site; the difference is that the
+// computation itself is now real and reachable, the same honest state
+// StageTrust/StageEconomic were in before their first real callers
+// existed.
+var stageAlwaysSkipped = map[StageID]bool{}
 
 // EngineEntry is one row of the audit's required engine_registry.json
 // (P0-05): which stage, which package implements it, its declared DAG
@@ -623,11 +642,27 @@ func (e *Engine) Run(in Input) (*Result, error) {
 
 		case StageTemporal:
 			// Temporal Bayesian reasoning applies only when the case
-			// carries a time series. Marking it SKIPPED is honest; a
+			// carries a real model and observation series (P0-5: a
+			// genuine call to pkg/moat/hbayes.Model.Infer, not a stub).
+			// Marking it SKIPPED when neither is supplied is honest; a
 			// fabricated posterior would not be.
-			record(id, []string{"observation_series"}, nil, StatusSkipped,
-				"no temporal observation series supplied for this case", "temporal:skipped", nil)
-			produced[id] = true // a skipped-but-evaluated stage satisfies dependants
+			if in.TemporalModel == nil || len(in.TemporalObservations) == 0 {
+				record(id, []string{"observation_series"}, nil, StatusSkipped,
+					"no temporal observation series supplied for this case", "temporal:skipped", nil)
+				produced[id] = true // a skipped-but-evaluated stage satisfies dependants
+				break
+			}
+			trace, err := in.TemporalModel.Infer(in.TemporalObservations, in.TemporalInterventions)
+			if err != nil {
+				record(id, []string{strconv.Itoa(len(in.TemporalObservations)) + " observation ticks"},
+					nil, StatusFailed, "temporal inference failed", "", err)
+				continue
+			}
+			record(id, []string{strconv.Itoa(len(in.TemporalObservations)) + " observation ticks"},
+				[]string{"filtered_posterior"}, StatusOK,
+				"temporal inference over "+strconv.Itoa(len(trace.Steps))+" ticks, log-likelihood "+
+					fnum(trace.LogLikelihood),
+				trace.TraceHash, nil)
 
 		case StageCausal:
 			record(id, []string{strconv.Itoa(len(in.Case.CausalLinks)) + " links"},

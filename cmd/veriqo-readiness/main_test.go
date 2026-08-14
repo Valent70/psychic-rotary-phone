@@ -113,6 +113,16 @@ func TestBinaryIdentityProducesRealHashAndBuildID(t *testing.T) {
 // TestBuildEngineRegistryReflectsRealGateResults confirms the audit's
 // central P0-05 requirement: no engine may claim VERIFIED unless the
 // gates that would prove it actually passed on THIS run.
+//
+// StageTemporal no longer gets special treatment here (P0-5): before
+// that round it was the one entry in stageAlwaysSkipped, so this test
+// specifically asserted it could never claim INTEGRATED/VERIFIED. Now
+// that pkg/execution's TEMPORAL_BAYESIAN stage genuinely calls
+// pkg/moat/hbayes.Model.Infer when real inputs are supplied (still
+// conditionally, not unconditionally, skipped -- exactly the same
+// category StageTrust/StageEconomic were already in, which this test
+// never specially exempted), stageAlwaysSkipped is empty and every
+// stage is treated uniformly.
 func TestBuildEngineRegistryReflectsRealGateResults(t *testing.T) {
 	allPassed := map[string]bool{"execution_graph": true, "replay_determinism_100x": true}
 	reg := buildEngineRegistry(allPassed)
@@ -120,25 +130,23 @@ func TestBuildEngineRegistryReflectsRealGateResults(t *testing.T) {
 		t.Fatal("expected at least one engine entry derived from execution.Registry()")
 	}
 
-	sawVerified, sawSkippedTemporal := false, false
+	sawVerified, sawTemporal := false, false
 	for _, row := range reg.Engines {
 		if row.EngineID == string(execution.StageTemporal) {
-			sawSkippedTemporal = true
-			if contains(row.Status, "VERIFIED") || contains(row.Status, "INTEGRATED") {
-				t.Errorf("StageTemporal is unconditionally skipped in the current wiring and must never claim INTEGRATED/VERIFIED, got %v", row.Status)
+			sawTemporal = true
+			if !contains(row.Status, "VERIFIED") {
+				t.Errorf("StageTemporal is no longer unconditionally skipped (P0-5) and both backing gates passed, expected VERIFIED, got %v", row.Status)
 			}
-			if !contains(row.Status, "IMPLEMENTED") {
-				t.Error("StageTemporal is implemented (pkg/moat/hbayes exists) even though it isn't wired in -- must still say IMPLEMENTED")
-			}
-		} else if contains(row.Status, "VERIFIED") {
+		}
+		if contains(row.Status, "VERIFIED") {
 			sawVerified = true
 		}
 	}
-	if !sawSkippedTemporal {
+	if !sawTemporal {
 		t.Fatal("expected StageTemporal to be present in the registry")
 	}
 	if !sawVerified {
-		t.Fatal("expected at least one non-skipped stage to reach VERIFIED when both backing gates passed")
+		t.Fatal("expected at least one stage to reach VERIFIED when both backing gates passed")
 	}
 }
 

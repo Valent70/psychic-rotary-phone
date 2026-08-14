@@ -15,6 +15,7 @@ import (
 	"veriqo/pkg/moat/economic"
 	"veriqo/pkg/moat/evidencegraph"
 	"veriqo/pkg/moat/fusion"
+	"veriqo/pkg/moat/hbayes"
 	"veriqo/pkg/moat/intelligence/risk"
 )
 
@@ -303,6 +304,131 @@ func TestIdentityResolutionWithoutAliasesPreservesPriorBindingOnlyBehavior(t *te
 	}
 	if strings.Contains(idNode.Detail, "independently re-resolved") {
 		t.Fatal("must not claim independent re-resolution when no alias was supplied")
+	}
+}
+
+// temporalFixture builds a minimal, valid two-state hbayes.Model --
+// the same shape hbayes's own tests use -- for P0-5's execution-level
+// wiring tests.
+func temporalFixture(t *testing.T) *hbayes.Model {
+	t.Helper()
+	tr := hbayes.Transition{
+		States: []hbayes.State{"DARK", "NORMAL"},
+		P: map[hbayes.State]map[hbayes.State]float64{
+			"DARK":   {"DARK": 0.85, "NORMAL": 0.15},
+			"NORMAL": {"DARK": 0.05, "NORMAL": 0.95},
+		},
+	}
+	m, err := hbayes.NewTemporalModel([]hbayes.State{"DARK", "NORMAL"}, tr,
+		map[hbayes.State]float64{"DARK": 0.1, "NORMAL": 0.9}, nil, 0)
+	if err != nil {
+		t.Fatalf("NewTemporalModel: %v", err)
+	}
+	return m
+}
+
+// TestTemporalStageCallsRealInferenceWhenSupplied is P0-5's positive
+// property: TEMPORAL_BAYESIAN is no longer unconditionally SKIPPED --
+// when a real model and observation series are supplied it performs a
+// genuine pkg/moat/hbayes.Model.Infer call and records the real result.
+func TestTemporalStageCallsRealInferenceWhenSupplied(t *testing.T) {
+	e := NewEngine(nil)
+	seq := []hbayes.TickObservations{
+		{Tick: 1, Observations: []hbayes.Observation{
+			{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}},
+		{Tick: 2, Observations: []hbayes.Observation{
+			{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}},
+	}
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
+		TemporalModel: temporalFixture(t), TemporalObservations: seq})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	var temporal Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageTemporal {
+			temporal = n
+		}
+	}
+	if temporal.Status != StatusOK {
+		t.Fatalf("expected TEMPORAL_BAYESIAN to succeed, got %s: %s", temporal.Status, temporal.Error)
+	}
+	if temporal.Hash == "" {
+		t.Fatal("expected a real inference trace hash")
+	}
+	if !strings.Contains(temporal.Detail, "log-likelihood") {
+		t.Fatalf("expected the detail to report the real inference outcome, got %q", temporal.Detail)
+	}
+}
+
+// TestTemporalStageFailsClosedOnInvalidSeries proves the call is real,
+// not decorative: a genuinely invalid observation sequence (ticks out
+// of order) must fail the stage via hbayes's own validation, not be
+// silently swallowed.
+func TestTemporalStageFailsClosedOnInvalidSeries(t *testing.T) {
+	e := NewEngine(nil)
+	badSeq := []hbayes.TickObservations{
+		{Tick: 2, Observations: []hbayes.Observation{
+			{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}},
+		{Tick: 1, Observations: []hbayes.Observation{ // out of order
+			{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}},
+	}
+	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
+		TemporalModel: temporalFixture(t), TemporalObservations: badSeq})
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("expected ErrStageFailed, got %v", err)
+	}
+	var temporal Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageTemporal {
+			temporal = n
+		}
+	}
+	if temporal.Status != StatusFailed {
+		t.Fatalf("expected TEMPORAL_BAYESIAN to FAIL on an invalid series, got %s", temporal.Status)
+	}
+	if !strings.Contains(temporal.Error, hbayes.ErrNonMonotonicTicks.Error()) {
+		t.Fatalf("expected the stage's own error to name the real hbayes validation failure, got %q", temporal.Error)
+	}
+}
+
+// TestTemporalStageStillSkipsWithoutBothInputs proves nil-safety: every
+// pre-existing call site (which never sets TemporalModel/
+// TemporalObservations) keeps the exact prior SKIPPED behavior. Also
+// checks the partial case (model without observations, and vice versa)
+// to prove the stage requires BOTH rather than fabricating from one.
+func TestTemporalStageStillSkipsWithoutBothInputs(t *testing.T) {
+	cases := []struct {
+		name  string
+		model *hbayes.Model
+		obs   []hbayes.TickObservations
+	}{
+		{"neither", nil, nil},
+		{"model only", temporalFixture(t), nil},
+		{"observations only", nil, []hbayes.TickObservations{
+			{Tick: 1, Observations: []hbayes.Observation{
+				{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}}}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := NewEngine(nil)
+			res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
+				TemporalModel: c.model, TemporalObservations: c.obs})
+			if err != nil {
+				t.Fatalf("run failed: %v", err)
+			}
+			var temporal Node
+			for _, n := range res.Trace.Nodes {
+				if n.StageID == StageTemporal {
+					temporal = n
+				}
+			}
+			if temporal.Status != StatusSkipped ||
+				temporal.Detail != "no temporal observation series supplied for this case" {
+				t.Fatalf("expected TEMPORAL_BAYESIAN to stay SKIPPED for %s, got status=%s detail=%q",
+					c.name, temporal.Status, temporal.Detail)
+			}
+		})
 	}
 }
 
