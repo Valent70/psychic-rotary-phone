@@ -1,5 +1,5 @@
 {
-  "total_domain_packages": 57,
+  "total_domain_packages": 56,
   "instrumented_packages": [
     "pkg/authz",
     "pkg/consensus/raftlite",
@@ -13,5 +13,5 @@
     "pkg/transport/rafttcp",
     "veriqo/core/intelligence"
   ],
-  "coverage": 0.19298245614035087
+  "coverage": 0.19642857142857142
 }
