@@ -7,27 +7,31 @@
 // P0-F itself is explicitly gated on P0-D ("Baru setelah execution path
 // canonical" -- "only once the execution path is canonical"): a
 // correlation record can only be as honest as the identifiers it
-// correlates, and a prior round's own investigation of P0-D found that
-// two of the audit's seven -- intent and a genuinely independent
-// decision identifier -- do not exist as real, per-execution values in
-// pkg/execution's wired DAG today (pkg/kernel/intent is never imported
-// by pkg/execution, and DecisionID is currently set to ExecutionID
-// itself, not a distinct identifier -- see execution.go's own Explain
-// construction). Fabricating either here would be exactly the kind of
-// invented correlation this project's reports have consistently
-// refused to produce.
+// correlates. A prior round's own investigation of P0-D found that
+// intent and a genuinely independent decision identifier did not exist
+// as real, per-execution values in pkg/execution's wired DAG.
 //
-// What Key DOES provide, honestly: the five identifiers that ARE real
+// P0-7 closed the DecisionID half: pkg/execution.Engine.Run now derives
+// DecisionID as a content-addressed hash over the ExecutionID plus the
+// decision's own real content (subject, policy, action, risk score),
+// not an alias of ExecutionID -- see execution.go's own decisionID
+// function. IntentID remains the one gap: pkg/kernel/intent is still
+// never imported by pkg/execution, so fabricating it here would be
+// exactly the kind of invented correlation this project's reports have
+// consistently refused to produce.
+//
+// What Key DOES provide, honestly: the six identifiers that ARE real
 // and already produced by a single execution.Result today --
 // ExecutionID, EvidencePackageID, EntityID (when produced through
 // pkg/lifecycle after P0-B, this is pkg/identity's own canonical
 // resolution, not a bare caller-supplied string -- see Key's own field
-// comment), the replay identity, and the independent verification
-// identity -- packaged as one struct any log line, telemetry span, or
-// audit record can attach to join those five together. IntentID stays
-// present as a field (matching the audit's named vocabulary exactly)
-// but is deliberately left empty with FromExecutionResult, since no
-// real value exists to put there yet.
+// comment), the now-independently-derived DecisionID, the replay
+// identity, and the independent verification identity -- packaged as
+// one struct any log line, telemetry span, or audit record can attach
+// to join those six together. IntentID stays present as a field
+// (matching the audit's named vocabulary exactly) but is deliberately
+// left empty with FromExecutionResult, since no real value exists to
+// put there yet.
 //
 // A later round gave pkg/execution.Engine an optional real identity-
 // ledger binding (Engine.Identity, see execution.go's own doc comment):
@@ -68,11 +72,11 @@ type Key struct {
 	// cannot) distinguish the two cases -- it reports the value, not a
 	// provenance claim about it.
 	EntityID string
-	// DecisionID is explanation.DecisionExplanation's own field.
-	// Currently always equal to ExecutionID (pkg/execution's Explain
-	// construction sets DecisionID = ctx.ExecutionID, not an
-	// independently-derived value) -- reported as-is, not disguised as
-	// a distinct identifier it is not yet.
+	// DecisionID is explanation.DecisionExplanation's own field. As of
+	// P0-7 it is a genuinely independent, content-addressed identifier
+	// (execution.go's decisionID function: a hash over ExecutionID plus
+	// the decision's own subject/policy/action/risk-score), not an
+	// alias of ExecutionID.
 	DecisionID string
 	// VerificationCertificateID is replay.VerificationCertificate's own
 	// field -- the real, independent-replay-produced identity IVF

@@ -15,6 +15,7 @@
 package acceptance
 
 import (
+	"context"
 	"testing"
 
 	"veriqo/pkg/canonical"
@@ -54,7 +55,7 @@ func standardPlan(in lifecycle.Intent) lifecycle.EvidencePlan {
 
 func mustRun(t *testing.T, o *lifecycle.Orchestrator, in lifecycle.Intent, plan lifecycle.EvidencePlan, cs canonical.CaseInput) *lifecycle.Result {
 	t.Helper()
-	res, err := o.RunUnified(in, plan, cs)
+	res, err := o.RunUnified(context.Background(), in, plan, cs)
 	if err != nil {
 		t.Fatalf("RunUnified: %v", err)
 	}

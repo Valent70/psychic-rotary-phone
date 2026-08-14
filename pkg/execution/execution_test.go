@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -62,7 +63,7 @@ func scenarios() []economic.Scenario {
 func run(t *testing.T) (*Engine, *Result) {
 	t.Helper()
 	e := NewEngine(nil)
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
@@ -138,7 +139,7 @@ func TestIncompleteContextIsRefused(t *testing.T) {
 	} {
 		c := ctx()
 		mutate(&c)
-		if _, err := e.Run(Input{Context: c, Case: caseInput()}); !errors.Is(err, ErrContextIncomplete) {
+		if _, err := e.Run(context.Background(), Input{Context: c, Case: caseInput()}); !errors.Is(err, ErrContextIncomplete) {
 			t.Fatalf("an incomplete execution context must be refused, got %v", err)
 		}
 	}
@@ -161,7 +162,7 @@ func TestEveryNodeCarriesTheRequiredShape(t *testing.T) {
 
 func TestSkippedStagesAreDeclaredNotFabricated(t *testing.T) {
 	e := NewEngine(nil)
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput()}) // no scenarios
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput()}) // no scenarios
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +212,7 @@ func TestIdentityResolutionIndependentlyReResolvesAndConfirmsMatch(t *testing.T)
 
 	e := NewEngine(nil)
 	e.Identity = r
-	res, err := e.Run(Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
 		IdentityAliases: []identity.Identifier{q}})
 	if err != nil {
 		t.Fatalf("expected a matching independent re-resolution to succeed, got: %v", err)
@@ -245,7 +246,7 @@ func TestIdentityResolutionFailsWhenReResolutionDisagrees(t *testing.T) {
 
 	e := NewEngine(nil)
 	e.Identity = r
-	res, err := e.Run(Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
 		IdentityAliases: []identity.Identifier{q}})
 	// Run()'s top-level error wraps ErrStageFailed (Node.Error is a
 	// plain string, for JSON serialisation, so the chain does not carry
@@ -289,7 +290,7 @@ func TestIdentityResolutionWithoutAliasesPreservesPriorBindingOnlyBehavior(t *te
 	r := identityFixture(t)
 	e := NewEngine(nil)
 	e.Identity = r
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
@@ -339,7 +340,7 @@ func TestTemporalStageCallsRealInferenceWhenSupplied(t *testing.T) {
 		{Tick: 2, Observations: []hbayes.Observation{
 			{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}},
 	}
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
 		TemporalModel: temporalFixture(t), TemporalObservations: seq})
 	if err != nil {
 		t.Fatalf("run failed: %v", err)
@@ -373,7 +374,7 @@ func TestTemporalStageFailsClosedOnInvalidSeries(t *testing.T) {
 		{Tick: 1, Observations: []hbayes.Observation{ // out of order
 			{SourceID: "sar", Likelihood: map[hbayes.State]float64{"DARK": 0.9, "NORMAL": 0.1}}}},
 	}
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
 		TemporalModel: temporalFixture(t), TemporalObservations: badSeq})
 	if !errors.Is(err, ErrStageFailed) {
 		t.Fatalf("expected ErrStageFailed, got %v", err)
@@ -412,7 +413,7 @@ func TestTemporalStageStillSkipsWithoutBothInputs(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			e := NewEngine(nil)
-			res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
+			res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD",
 				TemporalModel: c.model, TemporalObservations: c.obs})
 			if err != nil {
 				t.Fatalf("run failed: %v", err)
@@ -494,12 +495,12 @@ func TestSharedProviderIsVisibleInTheDependencyExplanation(t *testing.T) {
 
 func TestIdenticalInputProducesIdenticalRootHash(t *testing.T) {
 	a := NewEngine(nil)
-	ra, err := a.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	ra, err := a.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	b := NewEngine(nil)
-	rb, err := b.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	rb, err := b.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,7 +523,7 @@ func TestContextChangeChangesTheRootHash(t *testing.T) {
 		c := ctx()
 		mutate(&c)
 		e := NewEngine(nil)
-		got, err := e.Run(Input{Context: c, Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+		got, err := e.Run(context.Background(), Input{Context: c, Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -556,11 +557,11 @@ func TestIdentityResolutionUnaffectedWhenIdentityNil(t *testing.T) {
 	if e.Identity != nil {
 		t.Fatal("expected Identity to default to nil")
 	}
-	res1, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res1, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	res2, err := NewEngine(nil).Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res2, err := NewEngine(nil).Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -582,7 +583,7 @@ func TestIdentityResolutionUnaffectedWhenIdentityNil(t *testing.T) {
 // whose ledger has since diverged is detectably not the same execution.
 func TestIdentityResolutionBindsToIdentityLedgerHeadWhenSet(t *testing.T) {
 	baseline := NewEngine(nil)
-	baseRes, err := baseline.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	baseRes, err := baseline.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,7 +592,7 @@ func TestIdentityResolutionBindsToIdentityLedgerHeadWhenSet(t *testing.T) {
 	emptyResolver := identity.NewResolver()
 	e1 := NewEngine(nil)
 	e1.Identity = emptyResolver
-	res1, err := e1.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res1, err := e1.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -611,7 +612,7 @@ func TestIdentityResolutionBindsToIdentityLedgerHeadWhenSet(t *testing.T) {
 	}
 	e2 := NewEngine(nil)
 	e2.Identity = populatedResolver
-	res2, err := e2.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res2, err := e2.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -645,13 +646,13 @@ func TestIdentityResolutionBindingIsDeterministic(t *testing.T) {
 
 	e1 := NewEngine(nil)
 	e1.Identity = newResolverWithSameState(t)
-	res1, err := e1.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res1, err := e1.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	e2 := NewEngine(nil)
 	e2.Identity = newResolverWithSameState(t)
-	res2, err := e2.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res2, err := e2.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,7 +669,7 @@ func TestReplayRebuildsTheWholeDAGAndMatches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v, err := ReplayDAG(data, NewEngine(nil))
+	v, err := ReplayDAG(context.Background(), data, NewEngine(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -700,7 +701,7 @@ func TestReplayLocalisesTheFirstDivergentStage(t *testing.T) {
 	req := ReplayRequest{Context: ctx(), Case: caseInput(), Scenarios: scenarios(),
 		Currency: "USD", Committed: tampered}
 	data, _ := req.Marshal()
-	v, err := ReplayDAG(data, NewEngine(nil))
+	v, err := ReplayDAG(context.Background(), data, NewEngine(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -722,7 +723,7 @@ func TestChangedEvidenceIsDetectedByReplay(t *testing.T) {
 	req := ReplayRequest{Context: ctx(), Case: altered, Scenarios: scenarios(),
 		Currency: "USD", Committed: res.Trace}
 	data, _ := req.Marshal()
-	v, err := ReplayDAG(data, NewEngine(nil))
+	v, err := ReplayDAG(context.Background(), data, NewEngine(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -739,7 +740,7 @@ func TestGovernanceBindingIsCommittedAndEnforcedAtReplay(t *testing.T) {
 	mustActivateModel(t, reg, "risk", "1", 1)
 	e := NewEngine(nil)
 	e.Lifecycle = reg
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -759,7 +760,7 @@ func TestGovernanceBindingIsCommittedAndEnforcedAtReplay(t *testing.T) {
 	req := ReplayRequest{Context: res.Trace.Context, Case: caseInput(), Scenarios: scenarios(),
 		Currency: "USD", Committed: res.Trace}
 	data, _ := req.Marshal()
-	if _, err := ReplayDAG(data, oe); !errors.Is(err, ErrBindingMismatch) {
+	if _, err := ReplayDAG(context.Background(), data, oe); !errors.Is(err, ErrBindingMismatch) {
 		t.Fatalf("replay under a different model version must be refused, got %v", err)
 	}
 }
@@ -778,7 +779,7 @@ func TestKnowledgeRootIsCommitted(t *testing.T) {
 
 	e := NewEngine(nil)
 	e.Knowledge = k
-	res, err := e.Run(Input{Context: ctx(), Case: caseInput()})
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -794,7 +795,7 @@ func TestFailedCoreFailsEveryStageAndEmitsNoCertificate(t *testing.T) {
 	e := NewEngine(nil)
 	empty := caseInput()
 	empty.Submissions = nil
-	res, err := e.Run(Input{Context: ctx(), Case: empty})
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: empty})
 	if err == nil {
 		t.Fatal("an empty case must fail")
 	}
@@ -821,6 +822,35 @@ func TestDecisionMatchesTheCanonicalDecision(t *testing.T) {
 		res.Decision != string(decision.ActionFlag) &&
 		res.Decision != string(decision.ActionEscalate) {
 		t.Fatalf("unexpected decision action %q", res.Decision)
+	}
+}
+
+// TestDecisionIDIsIndependentlyDerivedNotAliasedFromExecutionID is
+// P0-7's foundational property, checked here at the execution layer
+// directly (pkg/platform/correlation checks the same thing one layer
+// up, over the packaged Key). DecisionID must be non-empty, must NOT
+// equal ExecutionID, and must be a real function of the decision's own
+// content: a case that produces a genuinely different decision gets a
+// genuinely different DecisionID under an identical ExecutionID.
+func TestDecisionIDIsIndependentlyDerivedNotAliasedFromExecutionID(t *testing.T) {
+	_, res := run(t)
+	if res.Explanation.DecisionID == "" {
+		t.Fatal("expected a non-empty DecisionID")
+	}
+	if res.Explanation.DecisionID == res.Trace.Context.ExecutionID {
+		t.Fatalf("expected DecisionID to be independently derived, got it equal to ExecutionID %q",
+			res.Trace.Context.ExecutionID)
+	}
+
+	e := NewEngine(nil)
+	c := caseInput()
+	c.PatternScore = 0.99 // same ExecutionID, deliberately different risk-driving content
+	res2, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res2.Explanation.DecisionID == res.Explanation.DecisionID {
+		t.Fatal("expected a genuinely different case under the SAME ExecutionID to change DecisionID")
 	}
 }
 

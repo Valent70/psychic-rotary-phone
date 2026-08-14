@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestUnifiedIntentTrustDecisionLifecycle(t *testing.T) {
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
-	res, err := o.RunUnified(in, plan, testCaseInput("placeholder-overwritten-by-entity-resolution"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("placeholder-overwritten-by-entity-resolution"))
 	if err != nil {
 		t.Fatalf("RunUnified: %v", err)
 	}
@@ -98,7 +99,7 @@ func TestRunUnifiedRejectsMismatchedPlan(t *testing.T) {
 	otherIntent.ActorID = "someone-else"
 	plan := PlanEvidence(otherIntent, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 1}})
 
-	_, err := o.RunUnified(in, plan, testCaseInput("x"))
+	_, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err == nil {
 		t.Fatalf("expected an error using a plan built for a different intent")
 	}
@@ -112,7 +113,7 @@ func TestRunUnifiedEnforcesRequiredEvidence(t *testing.T) {
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 10}})
 
-	_, err := o.RunUnified(in, plan, testCaseInput("x"))
+	_, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err == nil {
 		t.Fatalf("expected ErrPlanUnsatisfied when MinSources is not met")
 	}
@@ -129,7 +130,7 @@ func TestRunUnifiedPreservesOptionalUnmetAsUncertainty(t *testing.T) {
 		{Kind: "AIS_STATUS", Required: true, MinSources: 2},
 		{Kind: "SANCTIONS_HIT", Required: false, MinSources: 1}, // no submissions supply this
 	})
-	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatalf("expected optional unmet requirement not to block: %v", err)
 	}
@@ -144,7 +145,7 @@ func TestRecordOutcomeFeedsCalibration(t *testing.T) {
 	o := NewOrchestrator(nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
-	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,12 +169,12 @@ func TestLifecycleCertificateDeterministic(t *testing.T) {
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
 	o1 := NewOrchestrator(nil)
-	res1, err := o1.RunUnified(in, plan, testCaseInput("x"))
+	res1, err := o1.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	o2 := NewOrchestrator(nil)
-	res2, err := o2.RunUnified(in, plan, testCaseInput("x"))
+	res2, err := o2.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +196,7 @@ func TestRunUnifiedResolvesEntityThroughIdentityNotUnionFind(t *testing.T) {
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
-	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +230,7 @@ func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
 	}
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
-	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatalf("expected an unmodeled alias Kind to fall back, not fail: %v", err)
 	}
@@ -249,7 +250,7 @@ func TestRunUnifiedThreadsARealIdentityKeyIntoTheExecutionDAG(t *testing.T) {
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
-	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +286,7 @@ func TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback(t *testing.T) {
 	in.EntityAliases = []entity.Alias{{Kind: "LEI", Value: "LEI-CORP-2"}}
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
-	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatalf("expected the fallback path to still succeed: %v", err)
 	}

@@ -14,6 +14,7 @@
 package integration
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,7 +78,7 @@ func TestColdReplay_CrossProcess_MatchesOriginal(t *testing.T) {
 	bin := buildVeriqoColdReplay(t)
 
 	e := execution.NewEngine(nil)
-	res, err := e.Run(execution.Input{Context: coldReplayExecContext(), Case: coldReplayCaseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: coldReplayExecContext(), Case: coldReplayCaseInput()})
 	if err != nil {
 		t.Fatalf("original execution: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestColdReplay_CrossProcess_TamperedExportFails(t *testing.T) {
 	bin := buildVeriqoColdReplay(t)
 
 	e := execution.NewEngine(nil)
-	res, err := e.Run(execution.Input{Context: coldReplayExecContext(), Case: coldReplayCaseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: coldReplayExecContext(), Case: coldReplayCaseInput()})
 	if err != nil {
 		t.Fatalf("original execution: %v", err)
 	}

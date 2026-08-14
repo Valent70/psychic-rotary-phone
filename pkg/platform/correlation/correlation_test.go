@@ -1,6 +1,7 @@
 package correlation
 
 import (
+	"context"
 	"testing"
 
 	"veriqo/pkg/canonical"
@@ -35,7 +36,7 @@ func testContext() execution.Context {
 func realExecutionResult(t *testing.T) execution.Result {
 	t.Helper()
 	e := execution.NewEngine(nil)
-	res, err := e.Run(execution.Input{Context: testContext(), Case: testCaseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: testContext(), Case: testCaseInput()})
 	if err != nil {
 		t.Fatalf("execution.Run: %v", err)
 	}
@@ -80,20 +81,56 @@ func TestFromExecutionResultLeavesIntentIDEmpty(t *testing.T) {
 	}
 }
 
-// TestDecisionIDCurrentlyAliasesExecutionID documents, via a real
-// assertion rather than only a comment, the exact honesty caveat this
-// package's doc comment makes: DecisionID is not yet an independently
-// derived identifier. If pkg/execution ever changes this, this test
-// will fail and force the doc comment to be corrected rather than
-// silently going stale.
-func TestDecisionIDCurrentlyAliasesExecutionID(t *testing.T) {
+// TestDecisionIDIsIndependentOfExecutionID is P0-7's positive property,
+// replacing the pre-P0-7 canary (TestDecisionIDCurrentlyAliasesExecutionID)
+// that this test's own doc comment predicted would need updating the
+// day pkg/execution grew a real independent DecisionID: it now does
+// (execution.go's decisionID function), so DecisionID must differ from
+// ExecutionID and must be a genuine hash, not a copy.
+func TestDecisionIDIsIndependentOfExecutionID(t *testing.T) {
 	res := realExecutionResult(t)
 	key := FromExecutionResult(res)
-	if key.DecisionID != key.ExecutionID {
-		t.Fatalf("expected DecisionID to currently alias ExecutionID (got DecisionID=%q ExecutionID=%q) -- "+
-			"if this now differs, pkg/execution has grown a real independent DecisionID and this package's "+
-			"doc comment (and P0-D/P0-F's honest-gap tracking) should be updated to say so",
-			key.DecisionID, key.ExecutionID)
+	if key.DecisionID == "" {
+		t.Fatal("expected a non-empty DecisionID")
+	}
+	if key.DecisionID == key.ExecutionID {
+		t.Fatalf("expected DecisionID to be independently derived, got it equal to ExecutionID %q", key.ExecutionID)
+	}
+}
+
+// TestDecisionIDIsDeterministicAndContentAddressed proves the
+// independence claim is real, not merely "different by coincidence":
+// two runs with byte-identical inputs produce the SAME DecisionID
+// (deterministic), and a run whose decision content genuinely differs
+// (a different risk-driving PatternScore, which changes canon.Decision.
+// RiskScore and can change canon.Decision.Action) produces a DIFFERENT
+// one.
+func TestDecisionIDIsDeterministicAndContentAddressed(t *testing.T) {
+	e1 := execution.NewEngine(nil)
+	res1, err := e1.Run(context.Background(), execution.Input{Context: testContext(), Case: testCaseInput()})
+	if err != nil {
+		t.Fatalf("run 1: %v", err)
+	}
+	e2 := execution.NewEngine(nil)
+	res2, err := e2.Run(context.Background(), execution.Input{Context: testContext(), Case: testCaseInput()})
+	if err != nil {
+		t.Fatalf("run 2: %v", err)
+	}
+	k1, k2 := FromExecutionResult(*res1), FromExecutionResult(*res2)
+	if k1.DecisionID != k2.DecisionID {
+		t.Fatalf("expected identical inputs to produce the same DecisionID, got %q vs %q", k1.DecisionID, k2.DecisionID)
+	}
+
+	perturbedCase := testCaseInput()
+	perturbedCase.PatternScore = 0.99
+	e3 := execution.NewEngine(nil)
+	res3, err := e3.Run(context.Background(), execution.Input{Context: testContext(), Case: perturbedCase})
+	if err != nil {
+		t.Fatalf("run 3: %v", err)
+	}
+	k3 := FromExecutionResult(*res3)
+	if k3.DecisionID == k1.DecisionID {
+		t.Fatal("expected a genuinely different case (different risk-driving PatternScore) to change DecisionID")
 	}
 }
 
@@ -122,7 +159,7 @@ func TestWithIdentityLedgerHeadCarriesTheSameValueBoundIntoTheDAGStage(t *testin
 
 	e := execution.NewEngine(nil)
 	e.Identity = resolver
-	res, err := e.Run(execution.Input{Context: testContext(), Case: testCaseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: testContext(), Case: testCaseInput()})
 	if err != nil {
 		t.Fatalf("execution.Run: %v", err)
 	}
@@ -153,7 +190,7 @@ func TestWithIdentityLedgerHeadCarriesTheSameValueBoundIntoTheDAGStage(t *testin
 	}
 	e2 := execution.NewEngine(nil)
 	e2.Identity = otherResolver
-	res2, err := e2.Run(execution.Input{Context: testContext(), Case: testCaseInput()})
+	res2, err := e2.Run(context.Background(), execution.Input{Context: testContext(), Case: testCaseInput()})
 	if err != nil {
 		t.Fatalf("execution.Run (2nd): %v", err)
 	}
@@ -192,11 +229,11 @@ func TestDifferentExecutionsProduceDifferentExecutionIDs(t *testing.T) {
 	// tick) evidence twice, so two distinct runs of otherwise-identical
 	// input need distinct engine instances -- the same reasoning
 	// pkg/execution's own determinism tests use two engines for.
-	res1, err := execution.NewEngine(nil).Run(execution.Input{Context: ctx1, Case: testCaseInput()})
+	res1, err := execution.NewEngine(nil).Run(context.Background(), execution.Input{Context: ctx1, Case: testCaseInput()})
 	if err != nil {
 		t.Fatalf("run 1: %v", err)
 	}
-	res2, err := execution.NewEngine(nil).Run(execution.Input{Context: ctx2, Case: testCaseInput()})
+	res2, err := execution.NewEngine(nil).Run(context.Background(), execution.Input{Context: ctx2, Case: testCaseInput()})
 	if err != nil {
 		t.Fatalf("run 2: %v", err)
 	}

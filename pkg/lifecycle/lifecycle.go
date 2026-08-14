@@ -31,6 +31,7 @@
 package lifecycle
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -342,7 +343,18 @@ func (o *Orchestrator) resolveCanonicalEntity(actorID string, aliases []entity.A
 // -> LifecycleCertificate. Outcome/Calibration is a separate call
 // (RecordOutcome below) since ground truth, by definition, is not yet
 // known at case-run time.
-func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical.CaseInput) (*Result, error) {
+// ctx is the real caller-supplied context (P0-6): the Intent
+// entrypoint's own request/operation context, threaded through to
+// pkg/execution.Engine.Run rather than fabricated internally via
+// context.Background(). No production HTTP/gateway caller invokes
+// RunUnified yet (veriqo/gateway does not import pkg/lifecycle at all
+// -- an honestly separate, larger gap this round does not claim to
+// close), so every current call site is a test harness genuinely
+// passing context.Background() because that is what it has; the fix
+// here is the CONTRACT -- ctx is no longer silently regenerated one
+// layer down where a real caller's cancellation/deadline would
+// otherwise be discarded.
+func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidencePlan, caseIn canonical.CaseInput) (*Result, error) {
 	// Entities and Verifier accumulate state across calls (see the
 	// Orchestrator doc comment); mu serializes RunUnified and
 	// RecordOutcome so two concurrent callers cannot race on that
@@ -416,7 +428,7 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 	if identityKeySet {
 		execIn.IdentityAliases = []identity.Identifier{identityKey}
 	}
-	execRes, err := o.Execution.Run(execIn)
+	execRes, err := o.Execution.Run(ctx, execIn)
 	if err != nil {
 		return nil, fmt.Errorf("lifecycle: execution run: %w", err)
 	}

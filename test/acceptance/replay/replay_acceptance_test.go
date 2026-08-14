@@ -16,6 +16,7 @@
 package replayacceptance
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -74,7 +75,7 @@ type fingerprint struct {
 func fingerprintOf(t *testing.T) fingerprint {
 	t.Helper()
 	e := execution.NewEngine(nil)
-	res, err := e.Run(execution.Input{Context: execContext(), Case: caseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: execContext(), Case: caseInput()})
 	if err != nil {
 		t.Fatalf("execution failed: %v", err)
 	}
@@ -185,7 +186,7 @@ func TestOneHundredReplaysAgreeOnEveryMaterialField(t *testing.T) {
 		ctx := execContext()
 		p.apply(&in, &ctx)
 		e := execution.NewEngine(nil)
-		res, err := e.Run(execution.Input{Context: ctx, Case: in})
+		res, err := e.Run(context.Background(), execution.Input{Context: ctx, Case: in})
 		if err != nil {
 			t.Fatalf("perturbation %q failed to execute: %v", p.name, err)
 		}
@@ -208,7 +209,7 @@ func TestOneHundredReplaysAgreeOnEveryMaterialField(t *testing.T) {
 // comparing, which is a weaker claim.
 func TestDAGReplayMatchesOneHundredTimes(t *testing.T) {
 	e := execution.NewEngine(nil)
-	res, err := e.Run(execution.Input{Context: execContext(), Case: caseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: execContext(), Case: caseInput()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func TestDAGReplayMatchesOneHundredTimes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < iterations; i++ {
-		v, err := execution.ReplayDAG(data, execution.NewEngine(nil))
+		v, err := execution.ReplayDAG(context.Background(), data, execution.NewEngine(nil))
 		if err != nil {
 			t.Fatalf("iteration %d: %v", i, err)
 		}
@@ -237,7 +238,7 @@ func TestDAGReplayMatchesOneHundredTimes(t *testing.T) {
 // produced it.
 func TestCertificateVerificationIsIndependentlyCheckable(t *testing.T) {
 	e := execution.NewEngine(nil)
-	res, err := e.Run(execution.Input{Context: execContext(), Case: caseInput()})
+	res, err := e.Run(context.Background(), execution.Input{Context: execContext(), Case: caseInput()})
 	if err != nil {
 		t.Fatal(err)
 	}

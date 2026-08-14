@@ -466,9 +466,17 @@ func topoOrder() ([]StageID, error) {
 	return out, nil
 }
 
-// Run executes the graph.
-func (e *Engine) Run(in Input) (*Result, error) {
-	_, span := telemetry.StartSpan(context.Background(), "execution.Run",
+// Run executes the graph. goCtx is the caller's real request/operation
+// context (P0-6: threaded from the Intent entrypoint, e.g.
+// pkg/lifecycle.Orchestrator.RunUnified, rather than fabricated here
+// via context.Background()) -- it governs this run's telemetry span and
+// is available for cancellation/deadline propagation to any future
+// stage that needs it. It is UNRELATED to Input.Context (this
+// package's own Context type, carrying ExecutionID/Tenant/Actor/etc
+// -- an unfortunate but pre-existing name collision this change does
+// not attempt to rename).
+func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
+	_, span := telemetry.StartSpan(goCtx, "execution.Run",
 		telemetry.Attribute{Key: "execution_id", Value: in.Context.ExecutionID})
 	defer span.End()
 
@@ -540,6 +548,17 @@ func (e *Engine) Run(in Input) (*Result, error) {
 		return res, fmt.Errorf("%w: %s: %v", ErrStageFailed, StageFusion, canonErr)
 	}
 	res.Canonical = canon
+
+	// decID is the DECISION's own independent identifier (P0-7): a
+	// content-addressed hash over the ExecutionID PLUS the decision's
+	// own real content (subject, policy, action, risk score) -- not an
+	// alias of ExecutionID. Computed here, once, up front (canon is
+	// already fully resolved at this point -- RunCanonical ran the
+	// entire canonical chain, decision included, before this line),
+	// so both stages that need a DecisionID (ECONOMIC_CONSEQUENCE and
+	// EXPLANATION) commit to the SAME independently-derived value.
+	decID := decisionID(ctx.ExecutionID, canon.Decision.Subject, canon.Decision.PolicyName,
+		string(canon.Decision.Action), canon.Decision.RiskScore)
 
 	var (
 		explBuilt explanation.DecisionExplanation
@@ -719,7 +738,7 @@ func (e *Engine) Run(in Input) (*Result, error) {
 				break
 			}
 			c, err := economic.Evaluate(economic.Input{
-				DecisionID: ctx.ExecutionID, Subject: in.Case.Subject, Currency: in.Currency,
+				DecisionID: decID, Subject: in.Case.Subject, Currency: in.Currency,
 				Tick: ctx.Tick, Scenarios: in.Scenarios})
 			if err != nil {
 				record(id, nil, nil, StatusFailed, "economic evaluation failed", "", err)
@@ -733,7 +752,7 @@ func (e *Engine) Run(in Input) (*Result, error) {
 				c.Hash, nil)
 
 		case StageExplanation:
-			ex, err := e.buildExplanation(ctx, in, canon, econ, trustLine, nodes)
+			ex, err := e.buildExplanation(ctx, in, canon, econ, trustLine, nodes, decID)
 			if err != nil {
 				record(id, nil, nil, StatusFailed, "explanation could not be consolidated", "", err)
 				continue
@@ -805,7 +824,7 @@ func (e *Engine) Run(in Input) (*Result, error) {
 }
 
 func (e *Engine) buildExplanation(ctx Context, in Input, canon *canonical.CanonicalResult,
-	econ economic.Consequence, trustLine string, nodes []Node) (explanation.DecisionExplanation, error) {
+	econ economic.Consequence, trustLine string, nodes []Node, decID string) (explanation.DecisionExplanation, error) {
 
 	dep := canon.Dependency
 	var depLines []string
@@ -877,7 +896,7 @@ func (e *Engine) buildExplanation(ctx Context, in Input, canon *canonical.Canoni
 	}
 
 	return explanation.Build(explanation.Input{
-		DecisionID: ctx.ExecutionID, Subject: in.Case.Subject, Intent: ctx.CaseID,
+		DecisionID: decID, Subject: in.Case.Subject, Intent: ctx.CaseID,
 		Action: string(canon.Decision.Action), Confidence: canon.Arbitration.WinnerConfidence,
 		Tick: ctx.Tick,
 		EvidenceLines: []string{strconv.Itoa(canon.Arbitration.EvidenceCount) +
@@ -1021,7 +1040,7 @@ type ReplayVerdict struct {
 // It takes []byte rather than a struct for the same reason pkg/replay
 // does: consuming a shared object would let a replay accidentally read
 // live engine state and report a false match.
-func ReplayDAG(data []byte, freshEngine *Engine) (ReplayVerdict, error) {
+func ReplayDAG(goCtx context.Context, data []byte, freshEngine *Engine) (ReplayVerdict, error) {
 	var req ReplayRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		return ReplayVerdict{}, err
@@ -1033,7 +1052,7 @@ func ReplayDAG(data []byte, freshEngine *Engine) (ReplayVerdict, error) {
 			return ReplayVerdict{}, fmt.Errorf("%w: %v", ErrBindingMismatch, err)
 		}
 	}
-	out, err := freshEngine.Run(Input{Context: req.Context, Case: req.Case,
+	out, err := freshEngine.Run(goCtx, Input{Context: req.Context, Case: req.Case,
 		Scenarios: req.Scenarios, Currency: req.Currency})
 	if out == nil {
 		return ReplayVerdict{}, err
@@ -1087,6 +1106,22 @@ func sortedCopy(in []string) []string {
 }
 
 func fnum(v float64) string { return strconv.FormatFloat(v, 'g', 17, 64) }
+
+// decisionID is DECISION's own independent identifier (P0-7): a
+// content-addressed hash over the execution it belongs to PLUS the
+// decision's own real content -- subject, the policy that governed it,
+// the chosen action, and the risk score that drove it. It is genuinely
+// derived, not an alias: two DIFFERENT decisions under the same
+// ExecutionID (impossible in the current 1:1 wiring, but not something
+// this function assumes) would get different DecisionIDs, and the same
+// decision replayed identically always gets the same one -- the same
+// no-time.Now()/no-UUID discipline as Intent.ID and EvidencePlan.Hash.
+func decisionID(executionID, subject, policyName, action string, riskScore float64) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "execution_decision/v1|exec=%s|subject=%s|policy=%s|action=%s|risk=%s|",
+		executionID, subject, policyName, action, fnum(riskScore))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 // shortHash renders a display-truncated form of a full hash for a
 // human-readable summary string -- the FULL value is always what

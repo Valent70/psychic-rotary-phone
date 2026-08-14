@@ -1,6 +1,7 @@
 package acceptance
 
 import (
+	"context"
 	"testing"
 
 	"veriqo/pkg/canonical"
@@ -15,7 +16,7 @@ func TestAcceptance11_EmptySubmissionsRejected(t *testing.T) {
 	in := baseIntent("adv-1")
 	cs := baseCase("x")
 	cs.Submissions = nil
-	if _, err := o.RunUnified(in, standardPlan(in), cs); err == nil {
+	if _, err := o.RunUnified(context.Background(), in, standardPlan(in), cs); err == nil {
 		t.Fatalf("expected an error for empty submissions")
 	}
 }
@@ -54,7 +55,7 @@ func TestAcceptance14_ExactDuplicateEvidenceRejected(t *testing.T) {
 	// deriveEvidenceID-based dedup must reject the second one rather
 	// than silently double-counting identical evidence.
 	cs.Submissions = append(cs.Submissions, cs.Submissions[0])
-	_, err := o.RunUnified(in, standardPlan(in), cs)
+	_, err := o.RunUnified(context.Background(), in, standardPlan(in), cs)
 	if err == nil {
 		t.Fatalf("expected an error submitting byte-identical duplicate evidence")
 	}
@@ -76,7 +77,7 @@ func TestAcceptance15_ZeroReliabilitySourceStillProcessed(t *testing.T) {
 func TestAcceptance16_MalformedAliasRejected(t *testing.T) {
 	o := lifecycle.NewOrchestrator(nil)
 	in := baseIntent("adv-6", entity.Alias{Kind: "", Value: "bad"})
-	_, err := o.RunUnified(in, standardPlan(in), baseCase("x"))
+	_, err := o.RunUnified(context.Background(), in, standardPlan(in), baseCase("x"))
 	if err == nil {
 		t.Fatalf("expected an error resolving a malformed (empty-Kind) alias")
 	}
@@ -86,7 +87,7 @@ func TestAcceptance17_UnsatisfiableRequiredEvidenceBlocked(t *testing.T) {
 	o := lifecycle.NewOrchestrator(nil)
 	in := baseIntent("adv-7")
 	plan := lifecycle.PlanEvidence(in, []lifecycle.EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 999}})
-	if _, err := o.RunUnified(in, plan, baseCase("x")); err == nil {
+	if _, err := o.RunUnified(context.Background(), in, plan, baseCase("x")); err == nil {
 		t.Fatalf("expected ErrPlanUnsatisfied for an impossible MinSources requirement")
 	}
 }

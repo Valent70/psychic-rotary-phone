@@ -1,6 +1,7 @@
 package acceptance
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -23,7 +24,7 @@ func TestAcceptance41_ConcurrentRunUnifiedOnSharedOrchestrator(t *testing.T) {
 			defer wg.Done()
 			in := baseIntent(fmt.Sprintf("conc-1-%d", i), entity.Alias{Kind: "IMO", Value: fmt.Sprintf("9%06d", i)})
 			cs := baseCase(fmt.Sprintf("subject-%d", i))
-			if _, err := o.RunUnified(in, standardPlan(in), cs); err != nil {
+			if _, err := o.RunUnified(context.Background(), in, standardPlan(in), cs); err != nil {
 				errs <- err
 			}
 		}(i)
@@ -61,7 +62,7 @@ func TestAcceptance43_ConcurrentCalibrationOutcomeRecording(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			in := baseIntent(fmt.Sprintf("conc-3-%d", i), entity.Alias{Kind: "IMO", Value: fmt.Sprintf("9%06d", 900000+i)})
-			res, err := o.RunUnified(in, standardPlan(in), baseCase(fmt.Sprintf("subj-%d", i)))
+			res, err := o.RunUnified(context.Background(), in, standardPlan(in), baseCase(fmt.Sprintf("subj-%d", i)))
 			if err != nil {
 				t.Errorf("RunUnified: %v", err)
 				return
@@ -156,7 +157,7 @@ func TestAcceptance48_HighConcurrencyStressNoPanicNoDeadlock(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			in := baseIntent(fmt.Sprintf("conc-8-%d", i), entity.Alias{Kind: "IMO", Value: fmt.Sprintf("9%06d", 800000+i)})
-			_, _ = o.RunUnified(in, standardPlan(in), baseCase(fmt.Sprintf("s-%d", i)))
+			_, _ = o.RunUnified(context.Background(), in, standardPlan(in), baseCase(fmt.Sprintf("s-%d", i)))
 		}(i)
 	}
 	wg.Wait()
@@ -202,7 +203,7 @@ func TestAcceptance50_ChainIntegrityHoldsAfterConcurrentNoiseThenSequentialCase(
 		go func(i int) {
 			defer wg.Done()
 			in := baseIntent(fmt.Sprintf("conc-10-noise-%d", i), entity.Alias{Kind: "IMO", Value: fmt.Sprintf("9%06d", 700000+i)})
-			_, _ = o1.RunUnified(in, standardPlan(in), baseCase(fmt.Sprintf("noise-%d", i)))
+			_, _ = o1.RunUnified(context.Background(), in, standardPlan(in), baseCase(fmt.Sprintf("noise-%d", i)))
 		}(i)
 	}
 	wg.Wait()

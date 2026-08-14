@@ -20,6 +20,7 @@
 package stress
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -190,7 +191,7 @@ func TestOneHundredTransfersProduceOneHundredEvidenceArtifacts(t *testing.T) {
 	for i := 0; i < n; i++ {
 		e := execution.NewEngine(nil)
 		opStart := time.Now()
-		res, err := e.Run(execution.Input{Context: execContext(i, uint64(i+1)),
+		res, err := e.Run(context.Background(), execution.Input{Context: execContext(i, uint64(i+1)),
 			Case: caseInput(i, uint64(i+1))})
 		latencies = append(latencies, float64(time.Since(opStart).Microseconds())/1000.0)
 		if err != nil {
@@ -267,7 +268,7 @@ func TestSustainedThroughputMeetsSLO(t *testing.T) {
 	start := time.Now()
 	for i := 0; i < n; i++ {
 		opStart := time.Now()
-		if _, err := e.Run(execution.Input{Context: execContext(i, uint64(i+1)),
+		if _, err := e.Run(context.Background(), execution.Input{Context: execContext(i, uint64(i+1)),
 			Case: caseInput(i, uint64(i+1))}); err != nil {
 			errs++
 		}

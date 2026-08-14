@@ -35,6 +35,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -65,7 +66,11 @@ func run(args []string, stdout, stderr *os.File) int {
 
 	// A brand-new Engine backed by a nil pipeline, in a brand-new
 	// process: zero shared state with whatever process produced data.
-	verdict, err := execution.ReplayDAG(data, execution.NewEngine(nil))
+	// context.Background() is genuinely correct here (P0-6): this is a
+	// standalone CLI batch job with no inbound request to inherit a
+	// context from, unlike pkg/lifecycle.Orchestrator.RunUnified's real
+	// Intent entrypoint.
+	verdict, err := execution.ReplayDAG(context.Background(), data, execution.NewEngine(nil))
 	if err != nil {
 		fmt.Fprintf(stderr, "veriqo-cold-replay: REPLAY ERROR: %v\n", err)
 		return 1

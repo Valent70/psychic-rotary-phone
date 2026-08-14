@@ -18,6 +18,7 @@
 package soak
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -98,7 +99,7 @@ func TestSoak(t *testing.T) {
 	baselineGoroutines := runtime.NumGoroutine()
 
 	engine := execution.NewEngine(nil)
-	first, err := engine.Run(execution.Input{Context: ctxFor(0), Case: caseFor(0), Scenarios: scenariosFor(), Currency: "USD"})
+	first, err := engine.Run(context.Background(), execution.Input{Context: ctxFor(0), Case: caseFor(0), Scenarios: scenariosFor(), Currency: "USD"})
 	if err != nil {
 		t.Fatalf("soak: initial run failed: %v", err)
 	}
@@ -112,7 +113,7 @@ func TestSoak(t *testing.T) {
 	var last execution.Result
 
 	for time.Now().Before(deadline) {
-		res, err := engine.Run(execution.Input{
+		res, err := engine.Run(context.Background(), execution.Input{
 			Context: ctxFor(iterations + 1), Case: caseFor(iterations + 1),
 			Scenarios: scenariosFor(), Currency: "USD",
 		})
