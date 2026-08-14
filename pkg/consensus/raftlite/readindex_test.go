@@ -7,7 +7,18 @@ import (
 )
 
 func TestReadIndex_ConfirmsWithHealthyQuorumAndWaitAppliedSucceeds(t *testing.T) {
-	_, nodes, cancel := newCheckQuorumCluster(t, 150*time.Millisecond)
+	// CheckQuorum itself should NOT fire during this test (same reasoning
+	// as TestReadIndex_RejectsRatherThanReturningStaleIndexWhenQuorumUnreachable
+	// below) -- this test asserts ReadIndex succeeds on a healthy quorum,
+	// not that CheckQuorum fires on a particular schedule. A real CI
+	// failure (not reproduced locally) showed the previous 150ms budget
+	// was tight enough that a busy shared runner's goroutine scheduling
+	// jitter could push the leader's CheckQuorum acks past deadline,
+	// spuriously stepping it down between Propose/WaitApplied and
+	// ReadIndex and making the leader genuinely, correctly return
+	// ErrNotLeader -- a real timing bug in the TEST's own budget, not in
+	// ReadIndex or CheckQuorum's logic.
+	_, nodes, cancel := newCheckQuorumCluster(t, 5*time.Second)
 	defer cancel()
 	leader := waitForLeaderMap(t, nodes, 2*time.Second)
 
@@ -62,7 +73,11 @@ func TestReadIndex_RejectsRatherThanReturningStaleIndexWhenQuorumUnreachable(t *
 }
 
 func TestReadIndex_NonLeaderRejectsImmediately(t *testing.T) {
-	_, nodes, cancel := newCheckQuorumCluster(t, 150*time.Millisecond)
+	// Same CI-timing reasoning as the two tests above: this test does not
+	// exercise CheckQuorum's own timing, so give it slack rather than a
+	// budget tight enough for scheduling jitter to spuriously step the
+	// leader down mid-test.
+	_, nodes, cancel := newCheckQuorumCluster(t, 5*time.Second)
 	defer cancel()
 	leader := waitForLeaderMap(t, nodes, 2*time.Second)
 

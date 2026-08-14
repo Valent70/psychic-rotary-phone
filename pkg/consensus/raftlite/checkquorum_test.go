@@ -8,7 +8,25 @@ import (
 
 func newCheckQuorumCluster(t *testing.T, timeout time.Duration) (*MemTransport, map[string]*Node, context.CancelFunc) {
 	t.Helper()
-	return newCheckQuorumClusterWithTimeouts(t, timeout, 40*time.Millisecond, 80*time.Millisecond, 10*time.Millisecond)
+	// Election/heartbeat timing matches leadertransfer_stress_test.go's
+	// own proven-under-load values (200ms/400ms/20ms), not this file's
+	// original 40ms/80ms/10ms: a real GitHub Actions run of this branch
+	// (go test ./... on a shared runner, many packages' goroutines
+	// competing for CPU) hit "raftlite: not leader" from
+	// TestReadIndex_ConfirmsWithHealthyQuorumAndWaitAppliedSucceeds, and
+	// `go test -count=3` reproduced a second, different flake
+	// (TestTransferLeadership_HandsOffToCaughtUpTarget) locally under the
+	// same root cause: a 40ms election timeout leaves too little slack
+	// for a leader that `waitForLeaderMap` just confirmed to survive
+	// ordinary scheduling jitter before the test's next RPC. Widening to
+	// the values leadertransfer_stress_test.go already relies on for
+	// exactly this reason removes the flake without touching any
+	// production default (Config's real defaults live in raft.go, not
+	// here) or any test whose OWN assertion is about CheckQuorumTimeout's
+	// relationship to these values (checkquorum_test.go's two tests below
+	// pass their own explicit windows sized against these, and are
+	// re-verified after this change).
+	return newCheckQuorumClusterWithTimeouts(t, timeout, 200*time.Millisecond, 400*time.Millisecond, 20*time.Millisecond)
 }
 
 func newCheckQuorumClusterWithTimeouts(t *testing.T, checkQuorumTimeout, electionMin, electionMax, heartbeat time.Duration) (*MemTransport, map[string]*Node, context.CancelFunc) {
