@@ -29,7 +29,7 @@ func baseIntent(actor string, aliases ...entity.Alias) lifecycle.Intent {
 		aliases = []entity.Alias{{Kind: "IMO", Value: "9000001"}}
 	}
 	return lifecycle.Intent{
-		ActorID: actor, Objective: "assess dark-vessel risk", EntityAliases: aliases,
+		ActorID: actor, Tenant: "acme", Objective: "assess dark-vessel risk", EntityAliases: aliases,
 		RequiredConfidence: 0.6, TemporalScope: "last-7-days", Tick: 1,
 	}
 }

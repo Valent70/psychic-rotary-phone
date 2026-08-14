@@ -92,11 +92,11 @@ func TestAcceptance36_EntityMergeOrderInvariantThroughLifecycle(t *testing.T) {
 	name := entity.Alias{Kind: "NAME", Value: "MV ORDER TEST"}
 
 	o1 := lifecycle.NewOrchestrator(nil)
-	in1 := lifecycle.Intent{ActorID: "id-6a", Objective: "x", EntityAliases: []entity.Alias{imo, callsign, name}, Tick: 1}
+	in1 := lifecycle.Intent{ActorID: "id-6a", Tenant: "acme", Objective: "x", EntityAliases: []entity.Alias{imo, callsign, name}, Tick: 1}
 	res1 := mustRun(t, o1, in1, standardPlan(in1), baseCase("x"))
 
 	o2 := lifecycle.NewOrchestrator(nil)
-	in2 := lifecycle.Intent{ActorID: "id-6b", Objective: "x", EntityAliases: []entity.Alias{name, callsign, imo}, Tick: 1}
+	in2 := lifecycle.Intent{ActorID: "id-6b", Tenant: "acme", Objective: "x", EntityAliases: []entity.Alias{name, callsign, imo}, Tick: 1}
 	res2 := mustRun(t, o2, in2, standardPlan(in2), baseCase("x"))
 
 	if res1.EntityID != res2.EntityID {
@@ -108,7 +108,7 @@ func TestAcceptance36_EntityMergeOrderInvariantThroughLifecycle(t *testing.T) {
 func TestAcceptance37_RepeatedAliasMergeIsIdempotentEntityID(t *testing.T) {
 	alias := entity.Alias{Kind: "IMO", Value: "9333333"}
 	o := lifecycle.NewOrchestrator(nil)
-	in := lifecycle.Intent{ActorID: "id-7", Objective: "x", EntityAliases: []entity.Alias{alias, alias}, Tick: 1}
+	in := lifecycle.Intent{ActorID: "id-7", Tenant: "acme", Objective: "x", EntityAliases: []entity.Alias{alias, alias}, Tick: 1}
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if res.EntityID == "" {
 		t.Fatalf("expected a valid entity ID even with a repeated alias")

@@ -12,7 +12,7 @@ import (
 
 func testIntent() Intent {
 	return Intent{
-		ActorID: "analyst-1", Objective: "assess dark-vessel risk",
+		ActorID: "analyst-1", Tenant: "acme", Objective: "assess dark-vessel risk",
 		EntityAliases: []entity.Alias{
 			{Kind: "IMO", Value: "9998887"},
 			{Kind: "CALLSIGN", Value: "ABCD1"},

@@ -37,9 +37,12 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"sync"
 
+	"veriqo/internal/version"
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/execution"
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/calibration"
 	"veriqo/pkg/moat/digitaltwin"
@@ -62,8 +65,16 @@ const identityAuthoritySourceID = "lifecycle"
 // inputs — consistent with this repo's no-UUID, no-time.Now()
 // discipline.
 type Intent struct {
-	ActorID            string
-	Objective          string // e.g. "assess dark-vessel risk"
+	ActorID   string
+	Objective string // e.g. "assess dark-vessel risk"
+	// Tenant identifies which tenant this Intent was raised under. It is
+	// a real, required field (P0-1: pkg/execution.Context.Tenant is
+	// mandatory and this repository has never modeled a fabricated
+	// default) -- the caller that knows which tenant an investigation
+	// belongs to must say so explicitly, the same way it must supply
+	// ActorID; RunUnified refuses (via execution.Context.validate) to
+	// silently run under an invented tenant.
+	Tenant             string
 	EntityAliases      []entity.Alias
 	RequiredConfidence float64
 	TemporalScope      string
@@ -74,8 +85,8 @@ type Intent struct {
 // ID is Intent's content-addressed identifier.
 func (in Intent) ID() string {
 	h := sha256.New()
-	fmt.Fprintf(h, "actor=%s|obj=%s|conf=%.4f|scope=%s|tick=%d|",
-		in.ActorID, in.Objective, in.RequiredConfidence, in.TemporalScope, in.Tick)
+	fmt.Fprintf(h, "actor=%s|tenant=%s|obj=%s|conf=%.4f|scope=%s|tick=%d|",
+		in.ActorID, in.Tenant, in.Objective, in.RequiredConfidence, in.TemporalScope, in.Tick)
 	aliases := make([]string, len(in.EntityAliases))
 	for i, a := range in.EntityAliases {
 		aliases[i] = a.Kind + "|" + a.Value
@@ -170,25 +181,41 @@ type LifecycleCertificate struct {
 	IVFVerified        bool
 	IVFCertificateHash string
 	ReplayID           string // = Canonical.Hash, named explicitly per the audit's contract
-	Hash               string
+	// ExecutionRootHash binds this certificate to the exact
+	// pkg/execution DAG run that produced it (P0-1: pkg/execution is
+	// now the real production execution path RunUnified runs through,
+	// not a parallel engine only tests could reach) -- tampering with
+	// any DAG node after the fact changes ExecutionRootHash and is
+	// therefore detectable at this certificate's own layer, the same
+	// way ReplayID already ties this certificate to the canonical
+	// certificate one layer down.
+	ExecutionRootHash string
+	Hash              string
 }
 
 // Result is everything one RunUnified call produces.
 type Result struct {
-	Intent      Intent
-	Plan        EvidencePlan
-	EntityID    entity.CanonicalID
-	SourceIDs   []string // captured from the case's own submissions, for RecordOutcome
-	Canonical   *canonical.CanonicalResult
+	Intent    Intent
+	Plan      EvidencePlan
+	EntityID  entity.CanonicalID
+	SourceIDs []string // captured from the case's own submissions, for RecordOutcome
+	Canonical *canonical.CanonicalResult
+	// Execution is the full pkg/execution DAG result RunUnified's
+	// canonical chain now runs through end to end (P0-1). It carries
+	// the ExecutionTrace, ExecutionRootHash, ReplayPackage and
+	// VerificationCertificate that were previously reachable only from
+	// pkg/execution's own tests and cmd/veriqo-cold-replay, never from
+	// the real production entrypoint.
+	Execution   *execution.Result
 	IVFResult   verification.VerificationResult
 	Certificate LifecycleCertificate
 }
 
 func hashLifecycleCert(c LifecycleCertificate) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "intent=%s|entity=%s|plan=%s|unmet=%d|canonical=%s|ivf=%v|ivfcert=%s|replay=%s|",
+	fmt.Fprintf(h, "intent=%s|entity=%s|plan=%s|unmet=%d|canonical=%s|ivf=%v|ivfcert=%s|replay=%s|execroot=%s|",
 		c.IntentID, c.EntityID, c.EvidencePlanHash, len(c.UnmetRequirements),
-		c.Canonical.Hash, c.IVFVerified, c.IVFCertificateHash, c.ReplayID)
+		c.Canonical.Hash, c.IVFVerified, c.IVFCertificateHash, c.ReplayID, c.ExecutionRootHash)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -227,8 +254,19 @@ type Orchestrator struct {
 	// Entities is the pre-P0-B union-find, kept as the fallback
 	// authority ONLY (see Identity's doc comment above) and as the
 	// live comparison target for pkg/governance/entityconsistency.
-	Entities    *entity.Registry
-	Verifier    *verification.Verifier
+	Entities *entity.Registry
+	Verifier *verification.Verifier
+	// Execution is the real production execution engine (P0-1 / audit's
+	// "Biggest new finding": pkg/execution.Engine existed as a complete,
+	// tested 16-stage DAG executor but was never constructed by any real
+	// production entrypoint -- only by tests and cmd/veriqo-cold-replay's
+	// replay-only path). RunUnified now runs the canonical MOAT chain
+	// THROUGH this engine rather than calling
+	// canonical.Pipeline.RunCanonical directly, so the DAG trace,
+	// ExecutionRootHash, ReplayPackage and VerificationCertificate this
+	// engine produces are genuinely load-bearing artifacts of every real
+	// lifecycle run, not a capability that only unit tests exercise.
+	Execution   *execution.Engine
 	Calibration *calibration.Engine
 }
 
@@ -248,9 +286,17 @@ func NewOrchestrator(pipeline *canonical.Pipeline) *Orchestrator {
 	// every alias RunUnified is handed is trusted equally, since it
 	// arrives already vetted by the caller's own Intent construction.
 	_ = id.RegisterAuthority(identity.Authority{SourceID: identityAuthoritySourceID, Weight: 1})
+	// The execution engine shares this SAME pipeline pointer, not a
+	// second one -- RunUnified must call RunCanonical exactly once per
+	// case (through the engine, see RunUnified below), so a second,
+	// independently-stateful pipeline here would silently double-run
+	// arbitration against the fusion ledger and diverge from it.
+	exec := execution.NewEngine(pipeline)
+	exec.Identity = id
 	o := &Orchestrator{
 		Pipeline: pipeline, Identity: id, Entities: entity.NewRegistry(),
-		Verifier: verification.NewVerifier(), Calibration: calibration.NewEngineWithCalculus(pipeline.Trust),
+		Verifier: verification.NewVerifier(), Execution: exec,
+		Calibration: calibration.NewEngineWithCalculus(pipeline.Trust),
 	}
 	o.Verifier.RegisterReplayFunc("lifecycle.fusion_arbitration", replayFusionArbitration)
 	return o
@@ -337,11 +383,27 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 		return nil, err
 	}
 
-	// --- Canonical MOAT chain (Evidence -> ... -> Certificate) ---------
-	canonRes, err := o.Pipeline.RunCanonical(in.ActorID, caseIn)
-	if err != nil {
-		return nil, fmt.Errorf("lifecycle: canonical run: %w", err)
+	// --- Canonical MOAT chain (Evidence -> ... -> Certificate), run
+	// THROUGH pkg/execution's real DAG engine (P0-1) rather than calling
+	// canonical.Pipeline.RunCanonical directly -- see Orchestrator's
+	// Execution field doc comment for why this is the fix, not a
+	// cosmetic wrapper: it is the same Pipeline pointer, so RunCanonical
+	// still runs exactly once per case, but the run is now genuinely
+	// attributed to and traced by every DAG stage (identity binding,
+	// trust state, explanation, replay package, verification
+	// certificate) instead of only the canonical certificate. -----------
+	execCtx := execution.Context{
+		ExecutionID: executionID(in, plan, caseIn), CaseID: in.ID(),
+		Tenant: in.Tenant, Actor: in.ActorID, PolicyVersion: caseIn.Policy.Name,
+		EvidencePackageID: plan.Hash, IdentityResolutionVersion: "identity/" + version.Current,
+		LedgerPosition: uint64(len(o.Identity.Ledger())), Tick: in.Tick,
+		ReplayMetadata: "lifecycle.RunUnified",
 	}
+	execRes, err := o.Execution.Run(execution.Input{Context: execCtx, Case: caseIn})
+	if err != nil {
+		return nil, fmt.Errorf("lifecycle: execution run: %w", err)
+	}
+	canonRes := execRes.Canonical
 
 	// --- IVF: build a REAL bundle from the fusion records that backed
 	// this exact arbitration, and independently verify it. -------------
@@ -357,8 +419,9 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 	cert := LifecycleCertificate{
 		IntentID: in.ID(), EntityID: string(canonEntity), EvidencePlanHash: plan.Hash,
 		UnmetRequirements: unmet, Canonical: canonRes.Certificate,
-		IVFVerified: ivfResult.ManifestValid && ivfResult.ReplayValid,
-		ReplayID:    canonRes.Certificate.Hash,
+		IVFVerified:       ivfResult.ManifestValid && ivfResult.ReplayValid,
+		ReplayID:          canonRes.Certificate.Hash,
+		ExecutionRootHash: execRes.ExecutionRootHash,
 	}
 	if ivfResult.Certificate != nil {
 		cert.IVFCertificateHash = ivfResult.Certificate.CertificateHash
@@ -367,8 +430,33 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 
 	return &Result{
 		Intent: in, Plan: plan, EntityID: canonEntity, SourceIDs: canonical.SortedSourceIDs(caseIn.Submissions),
-		Canonical: canonRes, IVFResult: ivfResult, Certificate: cert,
+		Canonical: canonRes, Execution: execRes, IVFResult: ivfResult, Certificate: cert,
 	}, nil
+}
+
+// executionID is pkg/execution.Context's mandatory ExecutionID, derived
+// deterministically (no time.Now, no UUID -- this repository's
+// established discipline, see Intent.ID/EvidencePlan.Hash) from exactly
+// the inputs that make one RunUnified call distinct from another: which
+// Intent, under which EvidencePlan, over which case content. Two calls
+// with byte-identical in/plan/caseIn therefore get the same
+// ExecutionID, which is correct: pkg/execution's own determinism tests
+// already rely on being able to reproduce a run's identity from its
+// inputs alone.
+func executionID(in Intent, plan EvidencePlan, caseIn canonical.CaseInput) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "intent=%s|plan=%s|entity=%s|subject=%s|predicate=%s|tick=%d|",
+		in.ID(), plan.Hash, caseIn.Entity, caseIn.Subject, caseIn.Predicate, caseIn.Tick)
+	ids := canonical.SortedSourceIDs(caseIn.Submissions)
+	bySource := make(map[string]canonical.SourceSubmission, len(caseIn.Submissions))
+	for _, s := range caseIn.Submissions {
+		bySource[string(s.SourceID)] = s
+	}
+	for _, id := range ids {
+		s := bySource[id]
+		fmt.Fprintf(h, "sub=%s|val=%s|rel=%s|", id, s.Value, strconv.FormatFloat(s.BaseReliability, 'g', 17, 64))
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // canonicalEntityAsTwinID intentionally removed — digitaltwin.EntityID
