@@ -33,6 +33,7 @@ import (
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/evidence/ontology"
 	"veriqo/pkg/identity"
+	"veriqo/pkg/moat/contradiction"
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/evidencegraph"
@@ -76,6 +77,24 @@ type Facade struct {
 	replayer *replay.Engine
 	cfg      Config
 
+	// arbitration is the real 9-stage Truth Arbitration engine (audit
+	// item P0-A / R1): pkg/engine/adapters.go, pkg/kernel/intentgraph
+	// and veriqo/core/intelligence each construct and call their OWN
+	// contradiction.ArbitrationEngine directly today, bypassing this
+	// facade entirely, because the facade never wrapped it -- Submit/
+	// Arbitrate below use the SEPARATE, ingest-only contradiction.Engine
+	// via pipeline instead. This field and the ObserveRaw/ArbitrateClaim/
+	// RawObservations/VerifyRawTruthLedger/RankHypotheses methods below
+	// are the additive, zero-risk first phase of closing that gap: they
+	// give the facade real capability equivalent to what those three
+	// callers use today, so a caller COULD be migrated onto the facade
+	// without behavior change. They do NOT themselves reroute any
+	// existing caller -- that is a separate, larger change requiring
+	// byte-for-byte regression proof for each of the three call sites,
+	// not attempted here. Submit/Arbitrate/EvidenceFor above are
+	// completely unchanged by this field's addition.
+	arbitration *contradiction.ArbitrationEngine
+
 	// store holds accepted evidence per claim key, in submission order.
 	store map[string][]ontology.Evidence
 	// executions holds the replay record of each arbitration, keyed by
@@ -94,8 +113,60 @@ func New(p *canonical.Pipeline, ids *identity.Resolver, cfg Config) *Facade {
 	}
 	return &Facade{
 		pipeline: p, identity: ids, replayer: replay.NewEngine(), cfg: cfg,
-		store: map[string][]ontology.Evidence{}, executions: map[string]replay.ExecutionRecord{},
+		arbitration: contradiction.NewArbitrationEngine(),
+		store:       map[string][]ontology.Evidence{}, executions: map[string]replay.ExecutionRecord{},
 	}
+}
+
+// ObserveRaw records a raw observation against the facade's real Truth
+// Arbitration engine -- the SAME engine type (and the same computation)
+// pkg/engine/adapters.go, pkg/kernel/intentgraph and veriqo/core/
+// intelligence construct directly today. A caller migrating from direct
+// ArbitrationEngine access calls this instead of engine.Observe(o).
+func (f *Facade) ObserveRaw(o contradiction.RawObservation) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.arbitration.Observe(o)
+}
+
+// ArbitrateClaim runs the real nine-stage arbitration pipeline over
+// every raw observation pending for claimKey, producing a hash-chained
+// TruthVersion -- the facade-mediated equivalent of calling
+// ArbitrationEngine.ArbitrateClaim directly.
+func (f *Facade) ArbitrateClaim(claimKey string, arbitrationTick, halfLifeTicks uint64) (contradiction.TruthVersion, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.arbitration.ArbitrateClaim(claimKey, arbitrationTick, halfLifeTicks)
+}
+
+// RawObservations returns the raw (pre-arbitration) observations
+// pending for claimKey -- the facade-mediated equivalent of
+// pkg/engine/adapters.go's direct use of ArbitrationEngine.Observations
+// for IVF replay-bundle construction, so a real evidence bundle can be
+// built from what the facade holds rather than reaching past it.
+func (f *Facade) RawObservations(claimKey string) []contradiction.RawObservation {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.arbitration.Observations(claimKey)
+}
+
+// VerifyRawTruthLedger checks claimKey's TruthVersion hash chain for
+// tampering -- the facade-mediated equivalent of
+// ArbitrationEngine.VerifyTruthLedger.
+func (f *Facade) VerifyRawTruthLedger(claimKey string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.arbitration.VerifyTruthLedger(claimKey)
+}
+
+// RankHypotheses returns every candidate value for claimKey in ranked
+// order with its full supporting evidence -- the facade-mediated
+// equivalent of veriqo/core/intelligence's direct use of
+// ArbitrationEngine.RankHypotheses.
+func (f *Facade) RankHypotheses(claimKey string, arbitrationTick, halfLifeTicks uint64) ([]contradiction.TruthCandidate, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.arbitration.RankHypotheses(claimKey, arbitrationTick, halfLifeTicks)
 }
 
 // Validate checks one evidence record against the ontology and the
