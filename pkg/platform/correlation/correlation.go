@@ -28,6 +28,14 @@
 // present as a field (matching the audit's named vocabulary exactly)
 // but is deliberately left empty with FromExecutionResult, since no
 // real value exists to put there yet.
+//
+// A later round gave pkg/execution.Engine an optional real identity-
+// ledger binding (Engine.Identity, see execution.go's own doc comment):
+// when set, IDENTITY_RESOLUTION's node hash commits to the resolver's
+// own Head(). WithIdentityLedgerHead lets a caller that also holds that
+// same *identity.Resolver attach the identical value here too -- one
+// more real correlation identifier, still traceable to something the
+// caller actually holds, not fabricated.
 package correlation
 
 import "veriqo/pkg/execution"
@@ -72,6 +80,28 @@ type Key struct {
 	VerificationCertificateID string
 	// ReplayPackageID is replay.ReplayPackage's own field.
 	ReplayPackageID string
+	// EntityIdentityLedgerHead is empty unless the execution.Engine that
+	// produced this Key's data had a non-nil Identity resolver bound
+	// (see pkg/execution.Engine.Identity, added alongside P0-D's
+	// IDENTITY_RESOLUTION binding). When set via WithIdentityLedgerHead,
+	// it is the SAME real, verifiable *identity.Resolver.Head() value
+	// pkg/execution's own IDENTITY_RESOLUTION stage already committed
+	// into its node hash -- not a separate, disconnected commitment.
+	EntityIdentityLedgerHead string
+}
+
+// WithIdentityLedgerHead returns a copy of k with
+// EntityIdentityLedgerHead set. FromExecutionResult cannot populate
+// this field itself -- execution.Result does not expose the identity
+// resolver it was built with, only the DAG stage's already-hashed
+// commitment to it -- so a caller that also holds the *identity.Resolver
+// it bound into the Engine (via Engine.Identity) attaches it explicitly.
+// This keeps Key's core invariant intact: every non-empty field still
+// traces back to something real the caller actually holds, never a
+// guessed or default value.
+func (k Key) WithIdentityLedgerHead(head string) Key {
+	k.EntityIdentityLedgerHead = head
+	return k
 }
 
 // FromExecutionResult builds a Key from every identifier a single real

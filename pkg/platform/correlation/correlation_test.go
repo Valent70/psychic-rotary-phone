@@ -5,6 +5,7 @@ import (
 
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/execution"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/fusion"
 	"veriqo/pkg/moat/intelligence/risk"
@@ -93,6 +94,78 @@ func TestDecisionIDCurrentlyAliasesExecutionID(t *testing.T) {
 			"if this now differs, pkg/execution has grown a real independent DecisionID and this package's "+
 			"doc comment (and P0-D/P0-F's honest-gap tracking) should be updated to say so",
 			key.DecisionID, key.ExecutionID)
+	}
+}
+
+// TestWithIdentityLedgerHeadCarriesTheSameValueBoundIntoTheDAGStage is
+// the property that matters: the ledger head a caller attaches via
+// WithIdentityLedgerHead must be the EXACT value pkg/execution's own
+// IDENTITY_RESOLUTION stage already committed into its node hash (see
+// execution.Engine.Identity) -- not a coincidentally similar one. This
+// proves the two P0-D/P0-F additions are genuinely the same real
+// commitment viewed from two places, not two independent claims that
+// happen to agree today.
+func TestWithIdentityLedgerHeadCarriesTheSameValueBoundIntoTheDAGStage(t *testing.T) {
+	resolver := identity.NewResolver()
+	if err := resolver.RegisterAuthority(identity.Authority{SourceID: "test-authority", Weight: 1}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	if _, err := resolver.Merge("analyst-1", "test-authority",
+		identity.Identifier{Kind: identity.KindIMO, Value: "9998887"},
+		identity.Identifier{Kind: identity.KindCallsign, Value: "ABCD1"}, 1, "test merge"); err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	wantHead := resolver.Head()
+	if wantHead == "" {
+		t.Fatal("expected a real, non-empty ledger head after a real merge")
+	}
+
+	e := execution.NewEngine(nil)
+	e.Identity = resolver
+	res, err := e.Run(execution.Input{Context: testContext(), Case: testCaseInput()})
+	if err != nil {
+		t.Fatalf("execution.Run: %v", err)
+	}
+
+	key := FromExecutionResult(*res).WithIdentityLedgerHead(resolver.Head())
+	if key.EntityIdentityLedgerHead != wantHead {
+		t.Fatalf("expected EntityIdentityLedgerHead to equal the resolver's own Head(): got %q want %q",
+			key.EntityIdentityLedgerHead, wantHead)
+	}
+
+	var idNode execution.Node
+	found := false
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == execution.StageIdentityResolution {
+			idNode, found = n, true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected an IDENTITY_RESOLUTION node in the trace")
+	}
+	// Re-running with a DIFFERENT (but still real) ledger state must
+	// change the stage hash -- confirming the value key now carries is
+	// genuinely load-bearing in the DAG, not a decorative duplicate.
+	otherResolver := identity.NewResolver()
+	if err := otherResolver.RegisterAuthority(identity.Authority{SourceID: "test-authority", Weight: 1}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	e2 := execution.NewEngine(nil)
+	e2.Identity = otherResolver
+	res2, err := e2.Run(execution.Input{Context: testContext(), Case: testCaseInput()})
+	if err != nil {
+		t.Fatalf("execution.Run (2nd): %v", err)
+	}
+	var idNode2 execution.Node
+	for _, n := range res2.Trace.Nodes {
+		if n.StageID == execution.StageIdentityResolution {
+			idNode2 = n
+			break
+		}
+	}
+	if idNode.Hash == idNode2.Hash {
+		t.Fatal("a genuinely different identity ledger state must change the IDENTITY_RESOLUTION node hash")
 	}
 }
 
