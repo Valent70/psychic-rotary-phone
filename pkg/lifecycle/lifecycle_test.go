@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
 	"veriqo/pkg/moat/intelligence/risk"
@@ -177,5 +178,60 @@ func TestLifecycleCertificateDeterministic(t *testing.T) {
 	if res1.Certificate.Hash != res2.Certificate.Hash {
 		t.Fatalf("expected identical LifecycleCertificate hashes from identical input, got %s vs %s",
 			res1.Certificate.Hash, res2.Certificate.Hash)
+	}
+}
+
+// TestRunUnifiedResolvesEntityThroughIdentityNotUnionFind is the P0-B
+// property that matters: for an alias set identity.Kind models (IMO +
+// CALLSIGN, the exact vocabulary this repo's own dark-vessel scenarios
+// use), RunUnified's canonical entity ID must come from o.Identity, and
+// o.Entities (the legacy union-find, now a fallback-only authority)
+// must NEVER be written to for this case -- proving identity, not
+// pkg/moat/entity, is what actually decided the entity for this call.
+func TestRunUnifiedResolvesEntityThroughIdentityNotUnionFind(t *testing.T) {
+	o := NewOrchestrator(nil)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := o.Entities.Resolve(entity.Alias{Kind: "IMO", Value: "9998887"}); ok {
+		t.Fatal("expected the legacy union-find to be untouched for an identity-modeled alias set")
+	}
+
+	want, err := o.Identity.EntityIDAt(identity.Identifier{Kind: identity.KindIMO, Value: "9998887"}, in.Tick)
+	if err != nil {
+		t.Fatalf("EntityIDAt: %v", err)
+	}
+	if string(res.EntityID) != want {
+		t.Fatalf("expected RunUnified's EntityID to equal Identity's own resolution: got %s want %s", res.EntityID, want)
+	}
+}
+
+// TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind proves the
+// fail-safe: an alias Kind identity.Kind does not model ("LEI" -- named
+// in pkg/moat/entity.Alias's own doc comment as an example, but never
+// added to identity.Kind's fixed vocabulary) must NOT be forced through
+// identity via a fabricated Kind mapping. RunUnified must still
+// succeed, using the legacy union-find for this one call, exactly as it
+// did before P0-B's change.
+func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
+	o := NewOrchestrator(nil)
+	in := testIntent()
+	in.EntityAliases = []entity.Alias{
+		{Kind: "LEI", Value: "LEI-CORP-1"},
+		{Kind: "NAME", Value: "SHELLCORP HOLDINGS"},
+	}
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatalf("expected an unmodeled alias Kind to fall back, not fail: %v", err)
+	}
+	if got, ok := o.Entities.Resolve(entity.Alias{Kind: "LEI", Value: "LEI-CORP-1"}); !ok || got != res.EntityID {
+		t.Fatalf("expected the legacy union-find to have actually resolved this call, got ok=%v id=%s want=%s", ok, got, res.EntityID)
 	}
 }

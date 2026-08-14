@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"veriqo/pkg/evidence/api"
 	"veriqo/pkg/moat/contradiction"
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/fusion"
@@ -23,7 +24,11 @@ import (
 // input, exactly as a real orchestrator's LoadContext stage typically
 // resolves references rather than embedding entire payloads).
 type ContradictionArbitrationEngine struct {
-	inner        *contradiction.ArbitrationEngine
+	// inner is reached through pkg/evidence/api.Facade, the ONE
+	// canonical Truth Arbitration path (audit item P0-A / R1: "Tidak
+	// boleh ada bypass") — this adapter used to construct its own
+	// private contradiction.ArbitrationEngine directly.
+	inner        *api.Facade
 	halfLifeTick uint64
 
 	claimKey string
@@ -33,7 +38,7 @@ type ContradictionArbitrationEngine struct {
 
 func NewContradictionArbitrationEngine(halfLifeTicks uint64) *ContradictionArbitrationEngine {
 	return &ContradictionArbitrationEngine{
-		inner: contradiction.NewArbitrationEngine(), halfLifeTick: halfLifeTicks,
+		inner: api.New(nil, nil, api.Config{}), halfLifeTick: halfLifeTicks,
 	}
 }
 
@@ -41,7 +46,7 @@ func NewContradictionArbitrationEngine(halfLifeTicks uint64) *ContradictionArbit
 // engine — called by the caller BEFORE Run, since Context alone cannot
 // carry contradiction's multi-source string-valued observations.
 func (e *ContradictionArbitrationEngine) Observe(o contradiction.RawObservation) error {
-	return e.inner.Observe(o)
+	return e.inner.ObserveRaw(o)
 }
 
 func (e *ContradictionArbitrationEngine) Name() string { return "contradiction" }
@@ -86,7 +91,7 @@ func (e *ContradictionArbitrationEngine) Replayable() bool {
 	if e.lastTV == nil {
 		return false
 	}
-	return e.inner.VerifyTruthLedger(e.claimKey) == nil
+	return e.inner.VerifyRawTruthLedger(e.claimKey) == nil
 }
 
 // --- ContradictionArbitrationEngine: IVFCapable -----------------------
@@ -107,7 +112,7 @@ type contradictionArbitrationParams struct {
 // ArbitrateClaim — not tv (the computed result) — so an independent
 // verifier replays from evidence, never from the answer.
 func (e *ContradictionArbitrationEngine) RawEvidence() ([]verification.EvidenceRecord, error) {
-	obs := e.inner.Observations(e.claimKey)
+	obs := e.inner.RawObservations(e.claimKey)
 	if len(obs) == 0 {
 		return nil, fmt.Errorf("engine: no observations pending for claim %q", e.claimKey)
 	}

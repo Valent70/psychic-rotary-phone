@@ -17,6 +17,7 @@ package kernel
 import (
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/core/trustcalc"
+	"veriqo/pkg/evidence/api"
 	"veriqo/pkg/kernel/intent"
 	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/moat/calibration"
@@ -69,6 +70,14 @@ type Kernel struct {
 	// Canonical (see pkg/lifecycle's package comment for why this is
 	// composition, not a second orchestration framework).
 	Lifecycle *lifecycle.Orchestrator
+	// UnifiedEvidence is the audit's P0-A "Unified Evidence" canonical
+	// contract: pkg/evidence/api.Facade wraps the SAME Truth Arbitration
+	// engine Intelligence uses (see below) over Canonical's own
+	// pipeline, so Kernel now owns exactly one Facade instance rather
+	// than each caller building its own private ArbitrationEngine. See
+	// pkg/evidence/api.Facade's own doc comment on the "no bypass"
+	// structural guarantee.
+	UnifiedEvidence *api.Facade
 }
 
 // New boots a complete Kernel: builds a registry.Registry (the seven
@@ -110,18 +119,27 @@ func New(regOpts ...registry.Option) (*Kernel, error) {
 
 	canonPipeline := canonical.NewPipeline(calc)
 
+	// UnifiedEvidence is built here, once, and handed to Intelligence
+	// below (audit item P0-A / R1: "ALL production evidence -> ONE
+	// canonical evidence contract -> ONE arbitration path"). Sharing
+	// canonPipeline keeps Submit/Arbitrate's trust namespace consistent
+	// with every other engine on this Kernel, exactly like Lifecycle's
+	// own pipeline sharing above.
+	unifiedEvidence := api.New(canonPipeline, nil, api.Config{})
+
 	return &Kernel{
-		Registry:      reg,
-		Runtime:       mgr,
-		Execution:     execution.New(mgr),
-		Evidence:      evidence.New(nsEvidenceTrust, 0),
-		Intelligence:  intelligence.New(calc),
-		Intent:        intentVerifier,
-		Calibration:   calibration.NewEngineWithCalculus(calc),
-		TrustCalculus: calc,
-		TrustLedger:   ledger,
-		Canonical:     canonPipeline,
-		Lifecycle:     lifecycle.NewOrchestrator(canonPipeline),
+		Registry:        reg,
+		Runtime:         mgr,
+		Execution:       execution.New(mgr),
+		Evidence:        evidence.New(nsEvidenceTrust, 0),
+		Intelligence:    intelligence.New(calc, unifiedEvidence),
+		Intent:          intentVerifier,
+		Calibration:     calibration.NewEngineWithCalculus(calc),
+		TrustCalculus:   calc,
+		TrustLedger:     ledger,
+		Canonical:       canonPipeline,
+		Lifecycle:       lifecycle.NewOrchestrator(canonPipeline),
+		UnifiedEvidence: unifiedEvidence,
 	}, nil
 }
 

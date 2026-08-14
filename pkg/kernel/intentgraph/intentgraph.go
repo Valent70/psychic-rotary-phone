@@ -46,6 +46,7 @@ import (
 	"fmt"
 	"strings"
 
+	"veriqo/pkg/evidence/api"
 	"veriqo/pkg/kernel/reasoning"
 	"veriqo/pkg/moat/contradiction"
 	"veriqo/pkg/platform/observability"
@@ -82,8 +83,12 @@ type PredictionResult struct {
 // Graph is the Intent Graph: a KB for prediction, an ArbitrationEngine
 // for conflict resolution, and the raw intents registered so far.
 type Graph struct {
-	kb      *reasoning.KB
-	arb     *contradiction.ArbitrationEngine
+	kb *reasoning.KB
+	// arb is reached through pkg/evidence/api.Facade, the ONE canonical
+	// Truth Arbitration path (audit item P0-A / R1: "Tidak boleh ada
+	// bypass") — this package used to construct its own private
+	// contradiction.ArbitrationEngine directly.
+	arb     *api.Facade
 	metrics *observability.MOATMetrics // optional; nil-safe throughout
 
 	intents map[string]PendingIntent // by IntentID
@@ -96,7 +101,7 @@ type Graph struct {
 func NewGraph(metrics *observability.MOATMetrics) *Graph {
 	g := &Graph{
 		kb:      reasoning.NewKB(),
-		arb:     contradiction.NewArbitrationEngine(),
+		arb:     api.New(nil, nil, api.Config{}),
 		metrics: metrics,
 		intents: make(map[string]PendingIntent),
 	}
@@ -150,7 +155,7 @@ func (g *Graph) Register(pi PendingIntent) error {
 	g.kb.Assert(reasoning.Triple{Subject: pi.ActorID, Predicate: "reliability_tier", Object: tier})
 	g.kb.Assert(reasoning.Triple{Subject: pi.ActorID, Predicate: "proposes", Object: proposalKey(pi.Subject, pi.ProposedAction)})
 
-	if err := g.arb.Observe(contradiction.RawObservation{
+	if err := g.arb.ObserveRaw(contradiction.RawObservation{
 		ClaimKey:          pi.Subject,
 		SourceID:          pi.ActorID,
 		Value:             pi.ProposedAction,

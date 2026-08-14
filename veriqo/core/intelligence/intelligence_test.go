@@ -8,7 +8,7 @@ import (
 )
 
 func TestResolveProducesStructuredExplanation(t *testing.T) {
-	l := New(nil)
+	l := New(nil, nil)
 	obs := []contradiction.RawObservation{
 		{ClaimKey: "vessel/IMO1", SourceID: "radar", Value: "at-sea", SourceReliability: 0.9, Tick: 1},
 		{ClaimKey: "vessel/IMO1", SourceID: "sat", Value: "at-sea", SourceReliability: 0.8, Tick: 1},
@@ -57,7 +57,7 @@ func TestResolveProducesStructuredExplanation(t *testing.T) {
 
 func TestLearningUsesSharedBayesianCalculus(t *testing.T) {
 	calc := trustcalc.New(1, 1)
-	l := New(calc)
+	l := New(calc, nil)
 	_ = l.Observe(contradiction.RawObservation{ClaimKey: "c1", SourceID: "good", Value: "v1", SourceReliability: 0.9, Tick: 1})
 	_ = l.Observe(contradiction.RawObservation{ClaimKey: "c1", SourceID: "bad", Value: "v2", SourceReliability: 0.9, Tick: 1})
 	if _, err := l.Resolve("c1", 1, 0); err != nil {
@@ -79,14 +79,14 @@ func TestLearningUsesSharedBayesianCalculus(t *testing.T) {
 }
 
 func TestResolveNoObservationsErrors(t *testing.T) {
-	l := New(nil)
+	l := New(nil, nil)
 	if _, err := l.Resolve("missing", 0, 0); err == nil {
 		t.Fatal("expected error for claim with no observations")
 	}
 }
 
 func TestPredictionIsProbabilisticNotLinearDelta(t *testing.T) {
-	l := New(nil)
+	l := New(nil, nil)
 	_ = l.Observe(contradiction.RawObservation{ClaimKey: "c1", SourceID: "s1", Value: "v1", SourceReliability: 0.9, Tick: 1})
 	_ = l.Observe(contradiction.RawObservation{ClaimKey: "c1", SourceID: "s2", Value: "v1", SourceReliability: 0.9, Tick: 1})
 	exp1, err := l.Resolve("c1", 1, 0)
@@ -113,7 +113,7 @@ func TestPredictionIsProbabilisticNotLinearDelta(t *testing.T) {
 }
 
 func TestKnowledgeConfidenceUsesNoisyAndPropagation(t *testing.T) {
-	l := New(nil)
+	l := New(nil, nil)
 	// A single weak source "winning" uncontested should NOT produce a
 	// confidently-asserted fact — propagated confidence must reflect
 	// that source's own low reliability.

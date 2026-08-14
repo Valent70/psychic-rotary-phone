@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"veriqo/internal/assurance"
+	"veriqo/internal/nobypass"
 	"veriqo/internal/sbom"
 	"veriqo/internal/sourcehash"
 	"veriqo/internal/telemetrycoverage"
@@ -269,6 +270,53 @@ func main() {
 			"telemetry_production_coverage", "internal:telemetrycoverage.Measure", code, ev.ArtifactID, covReport.Coverage*100)
 	}
 
+	// truth_arbitration_no_bypass (audit V7.12.7 item P0-A / R1: "Tidak
+	// boleh ada bypass"): a real, mandatory, in-process gate proving no
+	// production source file constructs contradiction.ArbitrationEngine
+	// directly, outside the two audited exemptions (the facade itself
+	// and IVF's independent replay function) -- see internal/nobypass's
+	// own doc comment. Failing this gate means a future caller has
+	// quietly reopened the exact fragmentation P0-A closed.
+	{
+		byp, bypErr := nobypass.Check(".")
+		bypOut, _ := json.MarshalIndent(byp, "", "  ")
+		code := 0
+		if bypErr != nil {
+			code = 1
+			bypOut = []byte(bypErr.Error())
+		} else if len(byp.Violations) > 0 {
+			code = 1
+		}
+		if err := reg.Register(assurance.Gate{
+			ID: "truth_arbitration_no_bypass",
+			Description: "no source file outside pkg/evidence/api/api.go and pkg/engine/replay.go constructs " +
+				"contradiction.ArbitrationEngine directly -- every production caller reaches Truth Arbitration " +
+				"through the ONE canonical facade path",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./internal/nobypass",
+			ExitCriteria: "zero unauthorized direct constructions found by a real whole-tree source scan",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("truth_arbitration_no_bypass", "internal:nobypass.Check", string(bypOut), code, now)
+		writeArtifact(*evidenceDir, "truth_arbitration_no_bypass", "internal:nobypass.Check", code, string(bypOut))
+		_ = os.WriteFile("evidence/truth_arbitration_no_bypass.json", bypOut, 0o600)
+		gateHashes["truth_arbitration_no_bypass"] = ev.Hash
+		gatePassed["truth_arbitration_no_bypass"] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("truth_arbitration_no_bypass", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d violations=%d)\n",
+			"truth_arbitration_no_bypass", "internal:nobypass.Check", code, ev.ArtifactID, byp.ScannedFiles, len(byp.Violations))
+	}
+
 	// Regenerate SBOM.json from THIS release's actual identity, and
 	// compute the source-tree hash, before anything downstream (release
 	// binding checks, the certificate itself) needs either. A prior
@@ -410,7 +458,7 @@ func main() {
 			"unit", "acceptance", "dependency_integration", "identity", "api_semantics",
 			"storage_recovery", "model_lifecycle", "knowledge_evolution", "data_governance",
 			"hitl", "calibration", "economic_consequence", "decision_precedence",
-			"observability", "telemetry_production_coverage", "data_quality", "bounded_test_execution", "traceability_matrix",
+			"observability", "telemetry_production_coverage", "truth_arbitration_no_bypass", "data_quality", "bounded_test_execution", "traceability_matrix",
 			"soak_harness_smoke", "execution_graph", "decision_explanation", "fuzz_smoke",
 			"zero_dependency", "assurance_self", "race", "determinism_boundary"),
 		SecurityManifestHash: categoryHash(gateHashes,

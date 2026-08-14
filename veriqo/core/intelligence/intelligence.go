@@ -45,6 +45,7 @@ import (
 	"sync"
 
 	"veriqo/pkg/core/trustcalc"
+	"veriqo/pkg/evidence/api"
 	"veriqo/pkg/kernel/reasoning"
 	"veriqo/pkg/moat/causal"
 	"veriqo/pkg/moat/contradiction"
@@ -81,14 +82,29 @@ type Counterfactual struct {
 var ErrNoObservations = fmt.Errorf("intelligence: no observations for claim")
 
 // Loop is the Intelligence module: Hypothesis + Contradiction
-// Resolution (ArbitrationEngine), Knowledge Update
-// (knowledge.Store), Causal Inference + Counterfactual (causal.Graph),
-// and Learning + Prediction (both driven by a SHARED trustcalc.Calculus
-// — the same object veriqo/core/evidence can be given, so learning here
-// changes fusion weighting there).
+// Resolution (ArbitrationEngine, reached ONLY through the Unified
+// Evidence facade -- see evidence's doc comment below; audit item
+// P0-A / R1), Knowledge Update (knowledge.Store), Causal Inference +
+// Counterfactual (causal.Graph), and Learning + Prediction (both
+// driven by a SHARED trustcalc.Calculus — the same object
+// veriqo/core/evidence can be given, so learning here changes fusion
+// weighting there).
 type Loop struct {
-	mu             sync.Mutex
-	arbitration    *contradiction.ArbitrationEngine
+	mu sync.Mutex
+	// evidence is the ONE canonical path to Truth Arbitration (audit
+	// item "P0-A — Unified Evidence": "ALL production evidence -> ONE
+	// canonical evidence contract -> ONE arbitration path... Tidak
+	// boleh ada bypass"). This package used to construct its own
+	// private contradiction.ArbitrationEngine directly; it now goes
+	// through pkg/evidence/api.Facade's ObserveRaw/ArbitrateClaim/
+	// RankHypotheses exactly like every other production caller of
+	// Truth Arbitration must (see test/architecture's no-bypass fitness
+	// test, which fails the build if any package other than
+	// pkg/evidence/api constructs contradiction.ArbitrationEngine
+	// directly). The computation itself is unchanged -- Facade's
+	// methods are proven byte-identical pass-throughs to the same
+	// engine type (pkg/evidence/api/arbitration_test.go).
+	evidence       *api.Facade
 	knowledge      *knowledge.Store
 	causal         *causal.Graph
 	sourceTrust    *trustcalc.Calculus // shared with evidence.Engine when wired via veriqo/kernel
@@ -100,12 +116,20 @@ type Loop struct {
 // *trustcalc.Calculus instance handed to veriqo/core/evidence.New for
 // the cross-system wiring to actually connect; pass nil to have Loop
 // own a private one (still internally consistent, just not shared).
-func New(sharedTrust *trustcalc.Calculus) *Loop {
+// evidence should be veriqo/kernel.Kernel's own shared *api.Facade, so
+// this Loop's arbitration flows through the SAME canonical evidence
+// path as the rest of the OS; pass nil to have Loop own a private
+// Facade (still internally consistent, just not shared) -- this keeps
+// every existing standalone caller/test working unmodified.
+func New(sharedTrust *trustcalc.Calculus, evidence *api.Facade) *Loop {
 	if sharedTrust == nil {
 		sharedTrust = trustcalc.New(1, 1)
 	}
+	if evidence == nil {
+		evidence = api.New(nil, nil, api.Config{})
+	}
 	return &Loop{
-		arbitration:    contradiction.NewArbitrationEngine(),
+		evidence:       evidence,
 		knowledge:      knowledge.NewStore(),
 		causal:         causal.NewGraph(),
 		sourceTrust:    sharedTrust,
@@ -114,7 +138,7 @@ func New(sharedTrust *trustcalc.Calculus) *Loop {
 	}
 }
 
-func (l *Loop) Observe(o contradiction.RawObservation) error { return l.arbitration.Observe(o) }
+func (l *Loop) Observe(o contradiction.RawObservation) error { return l.evidence.ObserveRaw(o) }
 
 // trustKey scopes a raw evidence-source ID under
 // trustcalc.NamespaceEvidenceSource before it ever reaches the shared
@@ -241,11 +265,11 @@ func (l *Loop) Resolve(claimKey string, arbitrationTick uint64, halfLifeTicks ui
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	tv, err := l.arbitration.ArbitrateClaim(claimKey, arbitrationTick, halfLifeTicks)
+	tv, err := l.evidence.ArbitrateClaim(claimKey, arbitrationTick, halfLifeTicks)
 	if err != nil {
 		return Explanation{}, fmt.Errorf("%w: %v", ErrNoObservations, err)
 	}
-	candidates, err := l.arbitration.RankHypotheses(claimKey, arbitrationTick, halfLifeTicks)
+	candidates, err := l.evidence.RankHypotheses(claimKey, arbitrationTick, halfLifeTicks)
 	if err != nil {
 		return Explanation{}, err
 	}
@@ -314,7 +338,11 @@ func sortByReputationDesc(sources []string, score func(string) float64) {
 	}
 }
 
-func (l *Loop) Knowledge() *knowledge.Store                   { return l.knowledge }
-func (l *Loop) Arbitration() *contradiction.ArbitrationEngine { return l.arbitration }
-func (l *Loop) Causal() *causal.Graph                         { return l.causal }
-func (l *Loop) TrustCalculus() *trustcalc.Calculus            { return l.sourceTrust }
+// Arbitration was removed (audit item P0-A / R1: "Tidak boleh ada
+// bypass"): it returned the raw *contradiction.ArbitrationEngine,
+// which is exactly the direct-access bypass this package's evidence
+// field now closes. It had zero callers in the repo (confirmed by
+// grep before removal), so removing it changes no behavior.
+func (l *Loop) Knowledge() *knowledge.Store        { return l.knowledge }
+func (l *Loop) Causal() *causal.Graph              { return l.causal }
+func (l *Loop) TrustCalculus() *trustcalc.Calculus { return l.sourceTrust }

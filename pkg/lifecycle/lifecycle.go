@@ -40,12 +40,20 @@ import (
 	"sync"
 
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/calibration"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
 	"veriqo/pkg/verification"
 )
+
+// identityAuthoritySourceID is the source ID RunUnified registers its
+// own identity-resolver merges under (see NewOrchestrator). It is a
+// real, greppable source name, not a placeholder -- the ledger records
+// every merge as originating from "lifecycle", the caller that
+// actually decided the two aliases denote one entity.
+const identityAuthoritySourceID = "lifecycle"
 
 // Intent is the OS-level top-level canonical input the audit requires:
 // an investigative objective, not yet evidence. It is content-
@@ -204,8 +212,21 @@ func VerifyCertificate(c LifecycleCertificate) error {
 // IVF domain registration accumulate correctly); Pipeline is
 // pkg/canonical's own (already stateful).
 type Orchestrator struct {
-	mu          sync.Mutex
-	Pipeline    *canonical.Pipeline
+	mu       sync.Mutex
+	Pipeline *canonical.Pipeline
+	// Identity is the CANONICAL entity-resolution authority (audit item
+	// P0-B / R4): RunUnified resolves every EntityAlias set through
+	// Identity.Merge/EntityIDAt first. Entities (below) is consulted
+	// only as a fail-safe fallback for alias Kinds identity.Kind does
+	// not model (see resolveCanonicalEntity) -- for the alias vocabulary
+	// this OS actually uses in production (IMO, CALLSIGN, MMSI, NAME,
+	// OWNER, ...; the full set is identity.Kind's own const block),
+	// Entities is never written to by this path at all, so it can no
+	// longer silently diverge from Identity's opinion for those cases.
+	Identity *identity.Resolver
+	// Entities is the pre-P0-B union-find, kept as the fallback
+	// authority ONLY (see Identity's doc comment above) and as the
+	// live comparison target for pkg/governance/entityconsistency.
 	Entities    *entity.Registry
 	Verifier    *verification.Verifier
 	Calibration *calibration.Engine
@@ -219,12 +240,49 @@ func NewOrchestrator(pipeline *canonical.Pipeline) *Orchestrator {
 	if pipeline == nil {
 		pipeline = canonical.NewPipeline(nil)
 	}
+	id := identity.NewResolver()
+	// A single, maximally-weighted authority for RunUnified's own
+	// merges. Weight=1 and an empty AuthoritativeFor (full weight for
+	// every kind) matches exactly what the pre-existing
+	// pkg/moat/entity.Registry union-find already assumed implicitly:
+	// every alias RunUnified is handed is trusted equally, since it
+	// arrives already vetted by the caller's own Intent construction.
+	_ = id.RegisterAuthority(identity.Authority{SourceID: identityAuthoritySourceID, Weight: 1})
 	o := &Orchestrator{
-		Pipeline: pipeline, Entities: entity.NewRegistry(),
+		Pipeline: pipeline, Identity: id, Entities: entity.NewRegistry(),
 		Verifier: verification.NewVerifier(), Calibration: calibration.NewEngineWithCalculus(pipeline.Trust),
 	}
 	o.Verifier.RegisterReplayFunc("lifecycle.fusion_arbitration", replayFusionArbitration)
 	return o
+}
+
+// resolveCanonicalEntity resolves in.EntityAliases through Identity,
+// the canonical authority, returning ok=false ONLY when an alias Kind
+// is outside identity.Kind's fixed, audited vocabulary -- in which
+// case RunUnified falls back to the legacy union-find rather than
+// force a fabricated Kind mapping (see pkg/governance/entityconsistency's
+// package comment on why inventing a translation layer would itself be
+// the fabrication this package refuses to do).
+func (o *Orchestrator) resolveCanonicalEntity(actorID string, aliases []entity.Alias, tick uint64) (entity.CanonicalID, bool) {
+	ids := make([]identity.Identifier, len(aliases))
+	for i, a := range aliases {
+		ids[i] = identity.Identifier{Kind: identity.Kind(a.Kind), Value: a.Value}
+		if err := ids[i].Validate(); err != nil {
+			return "", false
+		}
+	}
+	first := ids[0]
+	for _, other := range ids[1:] {
+		if _, err := o.Identity.Merge(actorID, identityAuthoritySourceID, first, other, tick,
+			"lifecycle.RunUnified: aliases co-occur on one Intent"); err != nil {
+			return "", false
+		}
+	}
+	resolved, err := o.Identity.EntityIDAt(first, tick)
+	if err != nil {
+		return "", false
+	}
+	return entity.CanonicalID(resolved), true
 }
 
 // RunUnified is the audit's required central chain: Intent -> Plan ->
@@ -247,18 +305,26 @@ func (o *Orchestrator) RunUnified(in Intent, plan EvidencePlan, caseIn canonical
 	}
 
 	// --- Entity Resolution ---------------------------------------------
+	// Identity (pkg/identity) is the canonical authority (P0-B / R4):
+	// resolveCanonicalEntity is tried first, and Entities (the legacy
+	// union-find) is used ONLY as a fallback for alias Kinds identity
+	// does not model. See resolveCanonicalEntity's doc comment.
 	var canonEntity entity.CanonicalID
 	if len(in.EntityAliases) > 0 {
-		first := in.EntityAliases[0]
-		var err error
-		canonEntity, err = o.Entities.Register(in.ActorID, first, in.Tick)
-		if err != nil {
-			return nil, fmt.Errorf("lifecycle: entity resolution: %w", err)
-		}
-		for _, alias := range in.EntityAliases[1:] {
-			canonEntity, err = o.Entities.Merge(in.ActorID, first, alias, in.Tick)
+		if resolved, ok := o.resolveCanonicalEntity(in.ActorID, in.EntityAliases, in.Tick); ok {
+			canonEntity = resolved
+		} else {
+			first := in.EntityAliases[0]
+			var err error
+			canonEntity, err = o.Entities.Register(in.ActorID, first, in.Tick)
 			if err != nil {
 				return nil, fmt.Errorf("lifecycle: entity resolution: %w", err)
+			}
+			for _, alias := range in.EntityAliases[1:] {
+				canonEntity, err = o.Entities.Merge(in.ActorID, first, alias, in.Tick)
+				if err != nil {
+					return nil, fmt.Errorf("lifecycle: entity resolution: %w", err)
+				}
 			}
 		}
 		caseIn.Entity = digitaltwin.EntityID(canonEntity)

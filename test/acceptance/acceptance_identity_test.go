@@ -3,12 +3,20 @@ package acceptance
 import (
 	"testing"
 
+	"veriqo/pkg/identity"
 	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/moat/entity"
 )
 
 // ===== Category 4/5 — IDENTITY / TEMPORAL (10) ==============================
 
+// TestAcceptance31_ThreeAliasesResolveToOneEntity asserts against
+// o.Identity, not o.Entities: since P0-B, pkg/identity is the canonical
+// entity authority for every alias Kind it models (IMO, CALLSIGN, NAME
+// all are), and o.Entities (the legacy union-find) is no longer written
+// to for this case at all -- see pkg/lifecycle's
+// resolveCanonicalEntity doc comment. Checking the old union-find here
+// would be asserting a fact that P0-B deliberately made false.
 func TestAcceptance31_ThreeAliasesResolveToOneEntity(t *testing.T) {
 	o := lifecycle.NewOrchestrator(nil)
 	in := baseIntent("id-1",
@@ -17,12 +25,28 @@ func TestAcceptance31_ThreeAliasesResolveToOneEntity(t *testing.T) {
 		entity.Alias{Kind: "NAME", Value: "MV ACCEPTANCE"},
 	)
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
-	aliases := o.Entities.AliasesFor(entity.Alias{Kind: "IMO", Value: "9111111"})
-	if len(aliases) != 3 {
-		t.Fatalf("expected all 3 aliases resolved to one entity, got %d", len(aliases))
-	}
 	if string(res.EntityID) == "" {
 		t.Fatalf("expected a resolved canonical entity ID on the result")
+	}
+
+	imoID, err := o.Identity.EntityIDAt(identity.Identifier{Kind: identity.KindIMO, Value: "9111111"}, in.Tick)
+	if err != nil {
+		t.Fatalf("EntityIDAt(IMO): %v", err)
+	}
+	callsignID, err := o.Identity.EntityIDAt(identity.Identifier{Kind: identity.KindCallsign, Value: "ZZZZ1"}, in.Tick)
+	if err != nil {
+		t.Fatalf("EntityIDAt(CALLSIGN): %v", err)
+	}
+	nameID, err := o.Identity.EntityIDAt(identity.Identifier{Kind: identity.KindName, Value: "MV ACCEPTANCE"}, in.Tick)
+	if err != nil {
+		t.Fatalf("EntityIDAt(NAME): %v", err)
+	}
+	if imoID != callsignID || imoID != nameID {
+		t.Fatalf("expected all 3 aliases resolved to one entity by the canonical identity authority, got IMO=%s CALLSIGN=%s NAME=%s",
+			imoID, callsignID, nameID)
+	}
+	if imoID != string(res.EntityID) {
+		t.Fatalf("expected RunUnified's EntityID to equal Identity's own resolution: got %s want %s", res.EntityID, imoID)
 	}
 }
 
