@@ -9,9 +9,9 @@ import (
 // TestArbitrationEngineIsOnlyConstructedThroughTheFacade is the audit's
 // own acceptance criterion made mechanical: "Tidak boleh ada bypass."
 // This is the property that matters -- it fails the build the moment
-// ANY future caller (not just the three named by the audit) constructs
-// contradiction.ArbitrationEngine directly instead of going through
-// pkg/evidence/api.Facade.
+// ANY future caller (not just the ones named by the audit) constructs
+// contradiction.ArbitrationEngine OR fusion.Engine directly instead of
+// going through pkg/evidence/api.Facade.
 func TestArbitrationEngineIsOnlyConstructedThroughTheFacade(t *testing.T) {
 	root := repoRoot(t)
 	rep, err := Check(root)
@@ -19,8 +19,8 @@ func TestArbitrationEngineIsOnlyConstructedThroughTheFacade(t *testing.T) {
 		t.Fatalf("Check: %v", err)
 	}
 	if len(rep.Violations) != 0 {
-		t.Fatalf("found %d unauthorized direct construction(s) of contradiction.ArbitrationEngine "+
-			"(bypassing pkg/evidence/api.Facade), violating audit item P0-A's \"Tidak boleh ada bypass\": %v",
+		t.Fatalf("found %d unauthorized direct engine construction(s) (bypassing pkg/evidence/api.Facade), "+
+			"violating audit item P0-A's \"Tidak boleh ada bypass\": %v",
 			len(rep.Violations), rep.Violations)
 	}
 	if rep.ScannedFiles < 100 {
@@ -31,7 +31,7 @@ func TestArbitrationEngineIsOnlyConstructedThroughTheFacade(t *testing.T) {
 // TestCheckDetectsARealViolation is the adversarial proof this checker
 // actually works, not just a grep that happens to find nothing today:
 // a synthetic tree with an unauthorized construction site must be
-// caught.
+// caught, for each of the two guarded constructors.
 func TestCheckDetectsARealViolation(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "pkg", "sneaky", "bypass.go"), `package sneaky
@@ -42,36 +42,54 @@ func New() *contradiction.ArbitrationEngine {
 	return contradiction.NewArbitrationEngine()
 }
 `)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "sneaky2", "bypass.go"), `package sneaky2
+
+import "veriqo/pkg/moat/fusion"
+
+func New() *fusion.Engine {
+	return fusion.NewEngine(nil)
+}
+`)
 	rep, err := Check(dir)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
-	if len(rep.Violations) != 1 || rep.Violations[0] != "pkg/sneaky/bypass.go" {
-		t.Fatalf("expected exactly one detected violation at pkg/sneaky/bypass.go, got %v", rep.Violations)
+	want := []string{"pkg/sneaky/bypass.go: contradiction.ArbitrationEngine", "pkg/sneaky2/bypass.go: fusion.Engine"}
+	if len(rep.Violations) != 2 || rep.Violations[0] != want[0] || rep.Violations[1] != want[1] {
+		t.Fatalf("expected exactly %v, got %v", want, rep.Violations)
 	}
 }
 
-// TestCheckAllowsTheTwoAuditedExemptions proves the two deliberate
-// exemptions (the facade itself, and IVF's independent replay) do NOT
-// trip the checker -- the negative-space proof that AllowedFiles is
-// doing real filtering, not accidentally matching everything.
-func TestCheckAllowsTheTwoAuditedExemptions(t *testing.T) {
+// TestCheckAllowsTheAuditedExemptions proves the deliberate exemptions
+// for each guarded constructor (the facade itself, IVF's independent
+// replay, and fusion's demo-binary exemption) do NOT trip the checker --
+// the negative-space proof that allowedFiles is doing real filtering,
+// not accidentally matching everything.
+func TestCheckAllowsTheAuditedExemptions(t *testing.T) {
 	dir := t.TempDir()
-	body := `package p
+	arbBody := `package p
 
 import "veriqo/pkg/moat/contradiction"
 
 func f() *contradiction.ArbitrationEngine { return contradiction.NewArbitrationEngine() }
 `
-	mustWriteFile(t, filepath.Join(dir, "pkg", "evidence", "api", "api.go"), body)
-	mustWriteFile(t, filepath.Join(dir, "pkg", "engine", "replay.go"), body)
+	fusionBody := `package p
+
+import "veriqo/pkg/moat/fusion"
+
+func f() *fusion.Engine { return fusion.NewEngine(nil) }
+`
+	mustWriteFile(t, filepath.Join(dir, "pkg", "evidence", "api", "api.go"), arbBody)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "engine", "replay.go"), arbBody+fusionBody)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "canonical", "canonical.go"), fusionBody)
+	mustWriteFile(t, filepath.Join(dir, "cmd", "veriqo-demo", "main.go"), fusionBody)
 
 	rep, err := Check(dir)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
 	if len(rep.Violations) != 0 {
-		t.Fatalf("expected the two audited exemptions to be allowed, got violations: %v", rep.Violations)
+		t.Fatalf("expected the audited exemptions to be allowed, got violations: %v", rep.Violations)
 	}
 }
 
@@ -83,7 +101,8 @@ func TestCheckIgnoresCommentedMentions(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "pkg", "docs", "notes.go"), `package docs
 
-// Historically this called contradiction.NewArbitrationEngine() directly.
+// Historically this called contradiction.NewArbitrationEngine() and
+// fusion.NewEngine() directly.
 func f() {}
 `)
 	rep, err := Check(dir)

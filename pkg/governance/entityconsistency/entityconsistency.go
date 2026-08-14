@@ -31,6 +31,27 @@
 // something a real test (or a future readiness gate) can assert on,
 // rather than something nobody notices until two subsystems quietly
 // diverge in production.
+//
+// Status update (a later round wired pkg/lifecycle.Orchestrator.
+// RunUnified -- the one production entity-resolution choke point every
+// downstream consumer reads from -- to resolve through pkg/identity
+// FIRST, falling back to pkg/moat/entity's union-find only for alias
+// Kinds identity.Kind does not model). One honest, direct consequence:
+// for every alias Kind this repo's own scenarios actually use (IMO,
+// CALLSIGN, NAME, ...), pkg/moat/entity.Registry.Merge/Register are no
+// longer called by ANY production code path at all -- confirmed by
+// repo-wide grep, zero remaining production writers. Check here still
+// works exactly as designed and remains load-bearing for the fallback
+// path (an out-of-vocabulary Kind still writes to pkg/moat/entity, and
+// Check would still catch a real divergence there) and as a safety net
+// against any FUTURE caller reintroducing an independent pkg/moat/entity
+// writer -- but for the common case Check now correctly reports
+// EntityKnown=false (pkg/moat/entity has nothing new to compare against)
+// rather than a false "these agree." That is the intended, successful
+// outcome of closing the fragmentation risk at its source, not a defect
+// in this detector -- recorded here explicitly so it reads as a known,
+// understood fact rather than an unexplained drop in what this package
+// detects.
 package entityconsistency
 
 import (

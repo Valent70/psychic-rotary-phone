@@ -169,6 +169,50 @@ func (f *Facade) RankHypotheses(claimKey string, arbitrationTick, halfLifeTicks 
 	return f.arbitration.RankHypotheses(claimKey, arbitrationTick, halfLifeTicks)
 }
 
+// FusionRegisterSource, FusionSubmit, FusionArbitrate and
+// FusionEvidenceFor are the facade-mediated equivalents of
+// pkg/engine/adapters.go's FusionEngineAdapter constructing its own
+// private fusion.Engine directly (audit item P0-A / R1: "Tidak boleh
+// ada bypass", same fragmentation risk closed for Truth Arbitration
+// above, now closed for Fusion). They reach the SAME *fusion.Engine
+// instance every other Facade method already goes through
+// (f.pipeline.Fusion, the one canonical.Pipeline uses for Submit/
+// Arbitrate above) -- not a second, parallel fusion engine.
+
+func (f *Facade) FusionRegisterSource(p fusion.SourceProfile) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.pipeline.Fusion.RegisterSource(p)
+}
+
+func (f *Facade) FusionSubmit(src fusion.SourceID, claim fusion.Claim, value string, tick uint64) (fusion.Evidence, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.pipeline.Fusion.Submit(src, claim, value, tick)
+}
+
+func (f *Facade) FusionArbitrate(actorID string, claim fusion.Claim, tick uint64) (fusion.ArbitrationResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.pipeline.Fusion.Arbitrate(actorID, claim, tick)
+}
+
+func (f *Facade) FusionEvidenceFor(claim fusion.Claim) []fusion.Evidence {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.pipeline.Fusion.EvidenceFor(claim)
+}
+
+// FusionVerifyChain checks only the fusion ledger's own hash chain --
+// the single-engine equivalent of the fusion clause inside Verify()
+// above, for a caller (like FusionEngineAdapter.Replayable) that needs
+// just this one engine's answer.
+func (f *Facade) FusionVerifyChain() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.pipeline.Fusion.VerifyChain()
+}
+
 // Validate checks one evidence record against the ontology and the
 // facade's trust boundaries WITHOUT storing it — the "can I send this"
 // pre-flight every API client needs.

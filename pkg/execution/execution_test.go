@@ -8,6 +8,7 @@ import (
 	"veriqo/pkg/explanation"
 	"veriqo/pkg/governance/knowledge"
 	"veriqo/pkg/governance/lifecycle"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/economic"
@@ -273,6 +274,134 @@ func TestContextChangeChangesTheRootHash(t *testing.T) {
 		if got.ExecutionRootHash == base.ExecutionRootHash {
 			t.Fatalf("changing %s must change the execution root hash", name)
 		}
+	}
+}
+
+func nodeFor(t *testing.T, res *Result, id StageID) Node {
+	t.Helper()
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == id {
+			return n
+		}
+	}
+	t.Fatalf("no node found for stage %s", id)
+	return Node{}
+}
+
+// TestIdentityResolutionUnaffectedWhenIdentityNil proves the P0-D
+// additive change's core promise: the default (Identity left nil, what
+// every existing production/test construction site does today,
+// including this file's own dozens of NewEngine(nil) calls) is
+// deterministic and requires no changed expectations anywhere --
+// TestColdReplay_CrossProcess_MatchesOriginal independently proves the
+// SAME nil-Identity path reproduces the exact fixed evidence root it
+// always has, at the whole-DAG, cross-process level.
+func TestIdentityResolutionUnaffectedWhenIdentityNil(t *testing.T) {
+	e := NewEngine(nil)
+	if e.Identity != nil {
+		t.Fatal("expected Identity to default to nil")
+	}
+	res1, err := e.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res2, err := NewEngine(nil).Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res1.ExecutionRootHash != res2.ExecutionRootHash {
+		t.Fatal("two nil-Identity engines given identical input must produce identical execution root hashes")
+	}
+	n := nodeFor(t, res1, StageIdentityResolution)
+	if n.Detail != "identity resolution version "+ctx().IdentityResolutionVersion {
+		t.Fatalf("nil Identity must produce the exact pre-P0-D detail string with no ledger-head suffix, got %q", n.Detail)
+	}
+}
+
+// TestIdentityResolutionBindsToIdentityLedgerHeadWhenSet is the property
+// that makes this a REAL commitment, not cosmetic: setting Identity
+// changes the stage's hash (proving the ledger head genuinely enters the
+// computation), and a DIFFERENT ledger state (even an empty resolver
+// with a still-fresh internal state vs one with real ledger entries)
+// produces a DIFFERENT hash -- an execution replayed against a resolver
+// whose ledger has since diverged is detectably not the same execution.
+func TestIdentityResolutionBindsToIdentityLedgerHeadWhenSet(t *testing.T) {
+	baseline := NewEngine(nil)
+	baseRes, err := baseline.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseNode := nodeFor(t, baseRes, StageIdentityResolution)
+
+	emptyResolver := identity.NewResolver()
+	e1 := NewEngine(nil)
+	e1.Identity = emptyResolver
+	res1, err := e1.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	node1 := nodeFor(t, res1, StageIdentityResolution)
+	if node1.Hash == baseNode.Hash {
+		t.Fatal("setting Identity (even with an empty ledger) must change the IDENTITY_RESOLUTION hash versus nil Identity")
+	}
+
+	populatedResolver := identity.NewResolver()
+	if err := populatedResolver.RegisterAuthority(identity.Authority{SourceID: "test-authority", Weight: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := populatedResolver.Merge("analyst-1", "test-authority",
+		identity.Identifier{Kind: identity.KindIMO, Value: "9998887"},
+		identity.Identifier{Kind: identity.KindCallsign, Value: "ABCD1"}, 1, "test merge"); err != nil {
+		t.Fatal(err)
+	}
+	e2 := NewEngine(nil)
+	e2.Identity = populatedResolver
+	res2, err := e2.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	node2 := nodeFor(t, res2, StageIdentityResolution)
+	if node2.Hash == node1.Hash {
+		t.Fatal("a resolver with real ledger entries must produce a different IDENTITY_RESOLUTION hash than an empty one")
+	}
+	if res2.ExecutionRootHash == baseRes.ExecutionRootHash {
+		t.Fatal("binding to a real identity ledger state must change the whole-execution root hash too")
+	}
+}
+
+// TestIdentityResolutionBindingIsDeterministic proves two independently
+// built engines sharing the SAME identity ledger state (not the same
+// resolver instance) produce identical hashes -- the binding is a pure
+// function of ledger content, not incidental object identity.
+func TestIdentityResolutionBindingIsDeterministic(t *testing.T) {
+	newResolverWithSameState := func(t *testing.T) *identity.Resolver {
+		t.Helper()
+		r := identity.NewResolver()
+		if err := r.RegisterAuthority(identity.Authority{SourceID: "test-authority", Weight: 1}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := r.Merge("analyst-1", "test-authority",
+			identity.Identifier{Kind: identity.KindIMO, Value: "9998887"},
+			identity.Identifier{Kind: identity.KindCallsign, Value: "ABCD1"}, 1, "test merge"); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+
+	e1 := NewEngine(nil)
+	e1.Identity = newResolverWithSameState(t)
+	res1, err := e1.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e2 := NewEngine(nil)
+	e2.Identity = newResolverWithSameState(t)
+	res2, err := e2.Run(Input{Context: ctx(), Case: caseInput(), Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res1.ExecutionRootHash != res2.ExecutionRootHash {
+		t.Fatal("two independently built resolvers with identical ledger content must produce identical execution root hashes")
 	}
 }
 

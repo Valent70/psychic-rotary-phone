@@ -10,15 +10,19 @@
 // capability (ObserveRaw/ArbitrateClaim/RawObservations/
 // VerifyRawTruthLedger/RankHypotheses) and rerouted the three
 // production callers the audit named (pkg/engine/adapters.go,
-// pkg/kernel/intentgraph, veriqo/core/intelligence) onto it. That
-// closes today's known bypasses, but a convention ("please go through
-// the facade") is not the audit's own bar -- nothing stopped a FUTURE
-// caller from constructing its own contradiction.ArbitrationEngine
+// pkg/kernel/intentgraph, veriqo/core/intelligence) onto it. A later
+// round gave the Facade the equivalent real Fusion capability
+// (FusionRegisterSource/FusionSubmit/FusionArbitrate/FusionEvidenceFor/
+// FusionVerifyChain) and rerouted pkg/engine/adapters.go's
+// FusionEngineAdapter the same way. That closes today's known
+// bypasses, but a convention ("please go through the facade") is not
+// the audit's own bar -- nothing stopped a FUTURE caller from
+// constructing its own contradiction.ArbitrationEngine or fusion.Engine
 // directly and quietly reopening exactly the fragmentation the audit
 // named. Check makes that structurally impossible to do silently: it
-// scans the real source tree for contradiction.NewArbitrationEngine(
-// call sites and fails if any exist outside the two audited,
-// deliberately-exempt locations (see AllowedFiles).
+// scans the real source tree for either constructor's call sites and
+// fails if any exist outside their own audited, deliberately-exempt
+// locations.
 package nobypass
 
 import (
@@ -29,35 +33,74 @@ import (
 	"strings"
 )
 
-// callMarker is the exact construction call this check forbids outside
-// AllowedFiles.
-const callMarker = "contradiction.NewArbitrationEngine("
+// constructor is one bypass-checkable direct-construction call: Marker
+// is the literal source text Check searches for, AllowedFiles are the
+// only repo-relative paths permitted to contain it.
+type constructor struct {
+	name         string
+	marker       string
+	allowedFiles []string
+}
 
-// AllowedFiles are the only source files permitted to contain
-// callMarker, both audited and justified individually:
-//
-//   - pkg/evidence/api/api.go is the facade itself -- the ONE
-//     canonical path every other caller must reach the engine through.
-//   - pkg/engine/replay.go's ReplayContradiction is an IVF replay
-//     function: it deliberately constructs a brand-new, isolated engine
-//     with ZERO shared state, precisely so an independent verifier's
-//     recomputation cannot be influenced by (or influence) the live
-//     production engine reached through the facade. Routing IVF replay
-//     through the facade would defeat replay's entire purpose, the same
-//     reasoning cmd/veriqo-cold-replay's fresh execution.NewEngine(nil)
-//     already relies on for the whole-DAG case (see its own doc
-//     comment).
-//   - internal/nobypass/nobypass.go is THIS file: callMarker below is
-//     the literal string this checker searches for, which necessarily
-//     contains the text it is looking for without that being a real
-//     construction call. hasRealCall's own line-by-line scan cannot
-//     distinguish "this line calls the constructor" from "this line is
-//     a string literal naming the constructor" without a real Go
-//     parser, so the exemption is listed explicitly here instead.
-var AllowedFiles = []string{
-	filepath.FromSlash("pkg/evidence/api/api.go"),
-	filepath.FromSlash("pkg/engine/replay.go"),
-	filepath.FromSlash("internal/nobypass/nobypass.go"),
+// checkedConstructors are every direct-engine-construction call this
+// package currently guards. Each entry's AllowedFiles list is audited
+// and justified individually in its own comment.
+var checkedConstructors = []constructor{
+	{
+		name:   "contradiction.ArbitrationEngine",
+		marker: "contradiction.NewArbitrationEngine(",
+		// - pkg/evidence/api/api.go is the facade itself -- the ONE
+		//   canonical path every other caller must reach the engine
+		//   through.
+		// - pkg/engine/replay.go's ReplayContradiction is an IVF replay
+		//   function: it deliberately constructs a brand-new, isolated
+		//   engine with ZERO shared state, precisely so an independent
+		//   verifier's recomputation cannot be influenced by (or
+		//   influence) the live production engine reached through the
+		//   facade. Routing IVF replay through the facade would defeat
+		//   replay's entire purpose, the same reasoning
+		//   cmd/veriqo-cold-replay's fresh execution.NewEngine(nil)
+		//   already relies on for the whole-DAG case (see its own doc
+		//   comment).
+		// - internal/nobypass/nobypass.go is THIS file: marker below is
+		//   the literal string this checker searches for, which
+		//   necessarily contains the text it is looking for without
+		//   that being a real construction call. hasRealCall's own
+		//   line-by-line scan cannot distinguish "this line calls the
+		//   constructor" from "this line is a string literal naming the
+		//   constructor" without a real Go parser, so the exemption is
+		//   listed explicitly here instead.
+		allowedFiles: []string{
+			filepath.FromSlash("pkg/evidence/api/api.go"),
+			filepath.FromSlash("pkg/engine/replay.go"),
+			filepath.FromSlash("internal/nobypass/nobypass.go"),
+		},
+	},
+	{
+		name:   "fusion.Engine",
+		marker: "fusion.NewEngine(",
+		// - pkg/canonical/canonical.go is the ONE production
+		//   constructor: canonical.Pipeline's own Fusion field, the
+		//   exact engine instance every Facade method (Submit/Arbitrate
+		//   above, FusionRegisterSource/FusionSubmit/FusionArbitrate/
+		//   FusionEvidenceFor/FusionVerifyChain) already reaches through
+		//   f.pipeline.Fusion.
+		// - pkg/engine/replay.go's ReplayFusion is the fusion half of
+		//   the same deliberately-isolated IVF replay reasoning as
+		//   ReplayContradiction above.
+		// - cmd/veriqo-demo/main.go is a demo binary, not a production
+		//   entrypoint -- confirmed by grep: nothing in cmd/veriqo-node,
+		//   veriqo/kernel, or any other production composition root
+		//   imports cmd/veriqo-demo.
+		// - internal/nobypass/nobypass.go: same string-literal reason as
+		//   above.
+		allowedFiles: []string{
+			filepath.FromSlash("pkg/canonical/canonical.go"),
+			filepath.FromSlash("pkg/engine/replay.go"),
+			filepath.FromSlash("cmd/veriqo-demo/main.go"),
+			filepath.FromSlash("internal/nobypass/nobypass.go"),
+		},
+	},
 }
 
 // skipDirs are never descended into: VCS metadata and generated
@@ -68,18 +111,24 @@ var skipDirs = []string{".git", "evidence"}
 // Report is Check's result.
 type Report struct {
 	ScannedFiles int      `json:"scanned_files"`
-	Violations   []string `json:"violations"` // repo-relative paths containing an unauthorized construction
+	Violations   []string `json:"violations"` // "path: ConstructorName" for each unauthorized construction found
 }
 
 // Check walks every .go file under repoRoot (excluding _test.go files,
-// vendor-style skipDirs, and AllowedFiles) for callMarker.
-// TestArbitrationEngineIsOnlyConstructedThroughTheFacade converts a
-// non-empty Report.Violations into a build-breaking failure.
+// vendor-style skipDirs) for each checkedConstructors marker outside its
+// own AllowedFiles.
+// TestArbitrationEngineIsOnlyConstructedThroughTheFacade and
+// TestFusionEngineIsOnlyConstructedThroughTheFacade convert a non-empty
+// Report.Violations into a build-breaking failure.
 func Check(repoRoot string) (Report, error) {
 	rep := Report{}
-	allowed := map[string]bool{}
-	for _, f := range AllowedFiles {
-		allowed[f] = true
+	allowedByMarker := make([]map[string]bool, len(checkedConstructors))
+	for i, c := range checkedConstructors {
+		m := map[string]bool{}
+		for _, f := range c.allowedFiles {
+			m[f] = true
+		}
+		allowedByMarker[i] = m
 	}
 
 	err := filepath.Walk(repoRoot, func(path string, info os.FileInfo, err error) error {
@@ -109,8 +158,11 @@ func Check(repoRoot string) (Report, error) {
 			return err
 		}
 		rep.ScannedFiles++
-		if hasRealCall(string(raw)) && !allowed[rel] {
-			rep.Violations = append(rep.Violations, filepath.ToSlash(rel))
+		content := string(raw)
+		for i, c := range checkedConstructors {
+			if hasRealCall(content, c.marker) && !allowedByMarker[i][rel] {
+				rep.Violations = append(rep.Violations, filepath.ToSlash(rel)+": "+c.name)
+			}
 		}
 		return nil
 	})
@@ -121,15 +173,15 @@ func Check(repoRoot string) (Report, error) {
 	return rep, nil
 }
 
-// hasRealCall reports whether raw contains callMarker outside a //
-// line comment -- same narrow-but-sufficient technique as
+// hasRealCall reports whether raw contains marker outside a // line
+// comment -- same narrow-but-sufficient technique as
 // internal/telemetrycoverage.hasRealCall.
-func hasRealCall(raw string) bool {
+func hasRealCall(raw, marker string) bool {
 	for _, line := range strings.Split(raw, "\n") {
 		if idx := strings.Index(line, "//"); idx >= 0 {
 			line = line[:idx]
 		}
-		if strings.Contains(line, callMarker) {
+		if strings.Contains(line, marker) {
 			return true
 		}
 	}

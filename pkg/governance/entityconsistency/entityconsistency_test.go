@@ -97,6 +97,47 @@ func TestCheckReportsEntityUnknownWhenNeitherAliasWasEverRegistered(t *testing.T
 	}
 }
 
+// TestCheckReportsEntityUnknownForTheLifecycleProductionPath is the
+// documented consequence of a later round's P0-B fix, made a real
+// assertion rather than only a package-comment claim: after
+// pkg/lifecycle.Orchestrator.RunUnified (the one production entity-
+// resolution choke point) resolves a common-vocabulary alias pair
+// through pkg/identity ONLY (never writing pkg/moat/entity for a Kind
+// identity.Kind models), Check correctly reports EntityKnown=false --
+// not a false "these agree" -- because pkg/moat/entity genuinely has
+// nothing to compare. This models exactly what lifecycle.go's
+// resolveCanonicalEntity does for the identity-resolved case, without
+// pulling in the full lifecycle/canonical/policy machinery just to
+// prove this one property.
+func TestCheckReportsEntityUnknownForTheLifecycleProductionPath(t *testing.T) {
+	idR := mustIdentityResolver(t)
+	entR := entity.NewRegistry() // never written -- models the post-fix production path exactly
+
+	imo := Alias{Kind: "IMO", Value: "5551234"}
+	cs := Alias{Kind: "CALLSIGN", Value: "ZZ-5551234"}
+	if _, err := idR.Merge("lifecycle", "port-monitor",
+		identity.Identifier{Kind: identity.KindIMO, Value: imo.Value},
+		identity.Identifier{Kind: identity.KindCallsign, Value: cs.Value}, 1,
+		"lifecycle.RunUnified: aliases co-occur on one Intent"); err != nil {
+		t.Fatalf("identity Merge: %v", err)
+	}
+
+	f, err := Check(idR, entR, imo, cs, 10)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if !f.IdentitySame {
+		t.Fatal("expected identity (the canonical authority) to consider the pair the same entity")
+	}
+	if f.EntityKnown {
+		t.Fatal("expected EntityKnown=false: pkg/moat/entity was never written for this alias pair, " +
+			"per the P0-B fix's own documented consequence -- reporting EntityKnown=true here would be fabricated agreement")
+	}
+	if f.Diverges() {
+		t.Fatal("a system with no opinion (unknown) must never be reported as diverging, even post-P0-B")
+	}
+}
+
 // TestCheckIsDeterministicAcrossRepeatedCalls proves Check has no
 // hidden mutable state that would make a governance report
 // non-reproducible.

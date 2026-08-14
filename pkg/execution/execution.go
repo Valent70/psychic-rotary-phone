@@ -50,6 +50,7 @@ import (
 	"veriqo/pkg/explanation"
 	"veriqo/pkg/governance/knowledge"
 	"veriqo/pkg/governance/lifecycle"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/economic"
 	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/replay"
@@ -223,6 +224,21 @@ type Engine struct {
 	Lifecycle *lifecycle.Registry
 	Knowledge *knowledge.Engine
 	Trust     *state.Engine
+	// Identity, when set, makes the IDENTITY_RESOLUTION stage (audit item
+	// P0-D) bind its node hash to pkg/identity's own ledger head at
+	// execution time -- real, independently-verifiable evidence that this
+	// stage's result is anchored to a specific identity-ledger state,
+	// rather than only hashing the caller-supplied entity string as the
+	// stage did unconditionally before. This does NOT re-derive entity
+	// resolution from raw aliases (canonical.CaseInput carries only an
+	// already-resolved Entity string, not the alias set that produced
+	// it -- see pkg/lifecycle's own resolveCanonicalEntity, which is
+	// where alias-level resolution actually happens, upstream of this
+	// Engine); it verifiably COMMITS to the resolver's current state
+	// instead of ignoring it. Nil-safe: leave nil (the default; every
+	// existing production/test construction site does this today) to
+	// preserve the exact prior stub behavior byte-for-byte.
+	Identity *identity.Resolver
 	// Version is the engine's own version string, folded into every node
 	// hash: an execution replayed by a different engine build is not the
 	// same execution and must not silently claim to match.
@@ -478,9 +494,15 @@ func (e *Engine) Run(in Input) (*Result, error) {
 				strings.Join(ids, ";"), nil)
 
 		case StageIdentityResolution:
+			summary := "identity resolution version " + ctx.IdentityResolutionVersion
+			hashInput := string(in.Case.Entity) + "|" + ctx.IdentityResolutionVersion
+			if e.Identity != nil {
+				ledgerHead := e.Identity.Head()
+				summary += " (bound to identity ledger head " + shortHash(ledgerHead) + ")"
+				hashInput += "|identity_ledger_head=" + ledgerHead
+			}
 			record(id, []string{string(in.Case.Entity)}, []string{in.Case.Subject}, StatusOK,
-				"identity resolution version "+ctx.IdentityResolutionVersion,
-				string(in.Case.Entity)+"|"+ctx.IdentityResolutionVersion, nil)
+				summary, hashInput, nil)
 
 		case StageDependencyEvaluation:
 			d := canon.Dependency
@@ -937,3 +959,14 @@ func sortedCopy(in []string) []string {
 }
 
 func fnum(v float64) string { return strconv.FormatFloat(v, 'g', 17, 64) }
+
+// shortHash renders a display-truncated form of a full hash for a
+// human-readable summary string -- the FULL value is always what
+// actually goes into hashInput/the node hash itself, so truncation here
+// affects only what an operator reads, never what gets committed.
+func shortHash(h string) string {
+	if len(h) <= 12 {
+		return h
+	}
+	return h[:12] + "..."
+}

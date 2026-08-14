@@ -8,7 +8,6 @@ import (
 	"veriqo/pkg/moat/contradiction"
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/fusion"
-	"veriqo/pkg/moat/kg"
 	"veriqo/pkg/verification"
 )
 
@@ -258,14 +257,15 @@ func (e *DecisionPolicyEngine) IVFReplayFunc() verification.ReplayFunc {
 
 // --- FusionEngineAdapter ----------------------------------------------
 
-// FusionEngineAdapter wraps a real fusion.Engine as a standardized
-// Engine — the third adapter, closing the "fusion has no adapter yet"
-// open item named in this package's doc comment. Like the contradiction
-// adapter, fusion's multi-source Submit shape doesn't fit the generic
-// Context, so sources/evidence are pre-loaded via Submit before Run;
-// LoadContext only carries which Claim+actorID+tick to arbitrate.
+// FusionEngineAdapter wraps a real fusion.Engine, reached through
+// pkg/evidence/api.Facade's FusionRegisterSource/FusionSubmit/
+// FusionArbitrate/FusionEvidenceFor/FusionVerifyChain (audit item P0-A /
+// R1: "Tidak boleh ada bypass") rather than constructing its own private
+// fusion.Engine directly, exactly the same discipline
+// ContradictionArbitrationEngine above already follows for Truth
+// Arbitration.
 type FusionEngineAdapter struct {
-	inner   *fusion.Engine
+	inner   *api.Facade
 	actorID string
 
 	claim  fusion.Claim
@@ -273,21 +273,22 @@ type FusionEngineAdapter struct {
 	lastAR *fusion.ArbitrationResult
 }
 
-// NewFusionEngineAdapter constructs a fusion.Engine backed by its own
-// fresh knowledge graph (fusion.Engine writes arbitration outcomes into
-// a kg.Graph as part of its own audit trail — see fusion.go writeToGraph).
+// NewFusionEngineAdapter constructs a fresh, isolated Facade (and
+// therefore a fresh, isolated fusion.Engine, matching the prior
+// behavior's per-adapter isolation exactly) reached through the
+// canonical path instead of fusion.NewEngine(kg.NewGraph()) directly.
 func NewFusionEngineAdapter(actorID string) *FusionEngineAdapter {
-	return &FusionEngineAdapter{inner: fusion.NewEngine(kg.NewGraph()), actorID: actorID}
+	return &FusionEngineAdapter{inner: api.New(nil, nil, api.Config{}), actorID: actorID}
 }
 
 // RegisterSource and Submit pre-load fusion's multi-source evidence,
 // mirroring ContradictionArbitrationEngine.Observe's pattern.
 func (e *FusionEngineAdapter) RegisterSource(p fusion.SourceProfile) error {
-	return e.inner.RegisterSource(p)
+	return e.inner.FusionRegisterSource(p)
 }
 
 func (e *FusionEngineAdapter) Submit(src fusion.SourceID, claim fusion.Claim, value string, tick uint64) (fusion.Evidence, error) {
-	return e.inner.Submit(src, claim, value, tick)
+	return e.inner.FusionSubmit(src, claim, value, tick)
 }
 
 func (e *FusionEngineAdapter) Name() string { return "fusion" }
@@ -317,7 +318,7 @@ func splitClaimKey(s string) (subject, predicate string, ok bool) {
 }
 
 func (e *FusionEngineAdapter) Evaluate() (Result, error) {
-	ar, err := e.inner.Arbitrate(e.actorID, e.claim, e.tick)
+	ar, err := e.inner.FusionArbitrate(e.actorID, e.claim, e.tick)
 	if err != nil {
 		return Result{}, err
 	}
@@ -343,7 +344,7 @@ func (e *FusionEngineAdapter) Replayable() bool {
 	if e.lastAR == nil {
 		return false
 	}
-	return e.inner.VerifyChain() == nil
+	return e.inner.FusionVerifyChain() == nil
 }
 
 // --- FusionEngineAdapter: IVFCapable -----------------------------------
@@ -362,7 +363,7 @@ type fusionArbitrationParams struct {
 // claim (source, value, reliability, provider, tick — the true inputs),
 // not ArbitrationResult (the computed winner).
 func (e *FusionEngineAdapter) RawEvidence() ([]verification.EvidenceRecord, error) {
-	ev := e.inner.EvidenceFor(e.claim)
+	ev := e.inner.FusionEvidenceFor(e.claim)
 	if len(ev) == 0 {
 		return nil, fmt.Errorf("engine: no evidence submitted for claim %q", e.claim.Key())
 	}
