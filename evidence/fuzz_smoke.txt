@@ -27,6 +27,7 @@ ok  	veriqo/pkg/evidence/graph	(cached) [no tests to run]
 ok  	veriqo/pkg/evidence/ontology	(cached)
 ok  	veriqo/pkg/execution	(cached) [no tests to run]
 ok  	veriqo/pkg/explanation	(cached) [no tests to run]
+ok  	veriqo/pkg/governance/calibration	0.003s [no tests to run]
 ok  	veriqo/pkg/governance/data	(cached) [no tests to run]
 ok  	veriqo/pkg/governance/hitl	(cached) [no tests to run]
 ok  	veriqo/pkg/governance/knowledge	(cached) [no tests to run]

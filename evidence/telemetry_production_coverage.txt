@@ -3,7 +3,7 @@ command: internal:telemetrycoverage.Measure
 exit: 1
 ---
 {
-  "total_domain_packages": 55,
+  "total_domain_packages": 56,
   "instrumented_packages": [],
   "coverage": 0
 }

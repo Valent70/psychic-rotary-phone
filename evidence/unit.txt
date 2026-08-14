@@ -2,6 +2,7 @@ gate: unit
 command: go test ./...
 exit: 0
 ---
+?   	veriqo/cmd/veriqo-cold-replay	[no test files]
 ok  	veriqo/cmd/veriqo-demo	(cached)
 ?   	veriqo/cmd/veriqo-gateway	[no test files]
 ?   	veriqo/cmd/veriqo-kernel-demo	[no test files]
@@ -28,11 +29,11 @@ ok  	veriqo/pkg/blockers/dr	(cached)
 ok  	veriqo/pkg/blockers/hsmkms	(cached)
 ok  	veriqo/pkg/blockers/livedata	(cached)
 ?   	veriqo/pkg/blockers/orchestrator	[no test files]
-ok  	veriqo/pkg/blockers/pentest	1.158s
+ok  	veriqo/pkg/blockers/pentest	3.544s
 ok  	veriqo/pkg/blockers/scale	(cached)
 ok  	veriqo/pkg/blockers/soak	(cached)
 ok  	veriqo/pkg/blockers/spiffe	(cached)
-ok  	veriqo/pkg/blockers/supplychain	0.013s
+ok  	veriqo/pkg/blockers/supplychain	0.021s
 ok  	veriqo/pkg/canonical	(cached)
 ok  	veriqo/pkg/chaos	(cached)
 ok  	veriqo/pkg/connector	(cached)
@@ -46,6 +47,7 @@ ok  	veriqo/pkg/evidence/graph	(cached)
 ok  	veriqo/pkg/evidence/ontology	(cached)
 ok  	veriqo/pkg/execution	(cached)
 ok  	veriqo/pkg/explanation	(cached)
+ok  	veriqo/pkg/governance/calibration	(cached)
 ok  	veriqo/pkg/governance/data	(cached)
 ok  	veriqo/pkg/governance/hitl	(cached)
 ok  	veriqo/pkg/governance/knowledge	(cached)
@@ -105,12 +107,12 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	0.205s
+ok  	veriqo/test/acceptance/replay	0.314s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/e2e/eight_blockers	18.472s
-ok  	veriqo/test/integration	2.047s
-ok  	veriqo/test/soak	30.037s
-ok  	veriqo/test/stress	5.085s
+ok  	veriqo/test/e2e/eight_blockers	19.390s
+ok  	veriqo/test/integration	3.096s
+ok  	veriqo/test/soak	30.039s
+ok  	veriqo/test/stress	8.106s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -118,7 +120,7 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	(cached)
+ok  	veriqo/veriqo/gateway/rest	0.878s
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
 ok  	veriqo/veriqo/kernel	(cached)
