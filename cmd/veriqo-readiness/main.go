@@ -39,6 +39,7 @@ import (
 	"veriqo/internal/assurance"
 	"veriqo/internal/sbom"
 	"veriqo/internal/sourcehash"
+	"veriqo/internal/telemetrycoverage"
 	"veriqo/internal/timestamp"
 	"veriqo/internal/version"
 	"veriqo/pkg/execution"
@@ -131,7 +132,16 @@ func main() {
 		{"api_semantics", "idempotency, rate limiting, OIDC and transport parity hold", true, assurance.StatusVerified, "./pkg/api", "409 on conflict, 429 on limit, RS256-only verification", []string{"go", "test", "./pkg/api/"}, false},
 		{"storage_recovery", "WAL recovery classifies and fails closed on mid-log corruption", true, assurance.StatusVerified, "./pkg/storage/wal", "torn tail truncates; corrupt middle refuses to serve", []string{"go", "test", "./pkg/storage/wal/", "./pkg/storage/"}, false},
 		{"sandbox", "plugin sandbox fails closed and never falls back to unrestricted", true, assurance.StatusVerified, "./pkg/kernel/sandbox", "PLUGIN_EXECUTION_DENIED on any unenforceable policy", []string{"go", "test", "./pkg/kernel/sandbox/"}, false},
-		{"observability", "the telemetry schema covers every VERIQO domain and metric", true, assurance.StatusVerified, "./pkg/platform/telemetry", "no missing domains or business metrics", []string{"go", "test", "./pkg/platform/telemetry/"}, false},
+		// Scoped narrowly and renamed in intent (audit V7.12.1.6 item #5:
+		// "FALSE-GREEN RISK" -- this gate's old description, "the telemetry
+		// schema covers every VERIQO domain and metric", claimed org-wide
+		// coverage from a package-scoped unit test, contradicting
+		// engine_registry.json's own honest telemetry_support=false on
+		// every engine in the SAME run). This gate now claims only what it
+		// actually tests: pkg/platform/telemetry's own correctness.
+		// Whether any production domain engine actually calls it is a
+		// SEPARATE, real, mandatory gate below (telemetry_production_coverage).
+		{"observability", "the telemetry package itself (Span/Tracer/Correlation) is correct -- NOT a claim that production engines use it, see telemetry_production_coverage", true, assurance.StatusVerified, "./pkg/platform/telemetry", "pkg/platform/telemetry's own unit tests pass", []string{"go", "test", "./pkg/platform/telemetry/"}, false},
 		{"data_quality", "source reliability is learned with bounded, replayable updates", true, assurance.StatusVerified, "./pkg/dataquality", "step caps, floors and ledger replay hold", []string{"go", "test", "./pkg/dataquality/"}, false},
 		{"economic_consequence", "expected value, VaR and CVaR are computed from declared scenarios", true, assurance.StatusVerified, "./pkg/moat/economic", "CVaR >= VaR; unnamed scenarios are refused", []string{"go", "test", "./pkg/moat/economic/"}, false},
 		{"decision_precedence", "one authoritative DENY>BLOCK>ESCALATE>REVIEW>ALLOW lattice combines every subsystem signal", true, assurance.StatusVerified, "./pkg/governance/precedence", "cross-package composition of real authz/hitl signals resolves deterministically", []string{"go", "test", "./pkg/governance/precedence/"}, false},
@@ -203,6 +213,60 @@ func main() {
 			os.Exit(3)
 		}
 		fmt.Printf("   -> exit=%d artifact=%s\n", code, ev.ArtifactID)
+	}
+
+	// telemetry_production_coverage (audit V7.12.1.6 item #5): a real,
+	// separate, mandatory gate measuring what "observability" above
+	// deliberately no longer claims -- how many production domain
+	// packages actually call telemetry.StartSpan, not whether
+	// pkg/platform/telemetry's own unit tests pass. Computed in-process
+	// (internal/telemetrycoverage.Measure), not shelled out, because it
+	// is a real filesystem scan, not a go test invocation; still folded
+	// into the SAME evidence/registry machinery as every exec'd gate via
+	// reg.Register/reg.Attach, so it is bound into gateHashes,
+	// TestManifestHash and the signed certificate exactly like the rest.
+	{
+		covReport, covErr := telemetrycoverage.Measure(".", telemetrycoverage.DomainPackageRoots)
+		covOut, _ := json.MarshalIndent(covReport, "", "  ")
+		code := 0
+		if covErr != nil {
+			code = 1
+			covOut = []byte(covErr.Error())
+		} else if len(covReport.InstrumentedPackages) == 0 {
+			// The honest current state: zero of this run's real domain
+			// packages instrument themselves. This gate reports that as a
+			// real failure, not a blocked/external one -- it is fully
+			// within this codebase's own power to fix, just not yet done.
+			code = 1
+		}
+		if err := reg.Register(assurance.Gate{
+			ID: "telemetry_production_coverage",
+			Description: "production domain engines (pkg/moat, pkg/kernel, pkg/engine, pkg/consensus, pkg/execution, " +
+				"pkg/governance, pkg/authz, pkg/identity, pkg/transport, pkg/storage, veriqo/core) actually call " +
+				"telemetry.StartSpan -- not merely that the telemetry package's own tests pass",
+			Mandatory: true, RequiredStatus: assurance.StatusIntegrated,
+			OwnerPackage: "./internal/telemetrycoverage",
+			ExitCriteria: "at least one real call site exists in each domain root; today's honest answer is zero",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("telemetry_production_coverage", "internal:telemetrycoverage.Measure", string(covOut), code, now)
+		writeArtifact(*evidenceDir, "telemetry_production_coverage", "internal:telemetrycoverage.Measure", code, string(covOut))
+		_ = os.WriteFile("evidence/telemetry_coverage.json", covOut, 0o600)
+		gateHashes["telemetry_production_coverage"] = ev.Hash
+		gatePassed["telemetry_production_coverage"] = code == 0
+		status := assurance.StatusIntegrated
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("telemetry_production_coverage", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (coverage=%.0f%%)\n",
+			"telemetry_production_coverage", "internal:telemetrycoverage.Measure", code, ev.ArtifactID, covReport.Coverage*100)
 	}
 
 	// Regenerate SBOM.json from THIS release's actual identity, and
@@ -346,7 +410,7 @@ func main() {
 			"unit", "acceptance", "dependency_integration", "identity", "api_semantics",
 			"storage_recovery", "model_lifecycle", "knowledge_evolution", "data_governance",
 			"hitl", "calibration", "economic_consequence", "decision_precedence",
-			"observability", "data_quality", "bounded_test_execution", "traceability_matrix",
+			"observability", "telemetry_production_coverage", "data_quality", "bounded_test_execution", "traceability_matrix",
 			"soak_harness_smoke", "execution_graph", "decision_explanation", "fuzz_smoke",
 			"zero_dependency", "assurance_self", "race", "determinism_boundary"),
 		SecurityManifestHash: categoryHash(gateHashes,
