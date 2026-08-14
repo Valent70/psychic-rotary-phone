@@ -86,7 +86,22 @@ func buildSumCluster(t *testing.T, n int) (*MemTransport, []*Node, []*sumFSM, co
 		}
 		fsm := newSumFSM()
 		fsms[i] = fsm
-		node := NewNode(Config{ID: id, Peers: peers, Transport: trans, FSM: fsm})
+		// Election/heartbeat timing matches leadertransfer_stress_test.go
+		// and newCheckQuorumCluster's own proven-under-load values
+		// (200ms/400ms/20ms), not raft.go's plain defaults (150ms/300ms/
+		// 50ms): a real GitHub Actions run of this branch (go test ./...
+		// on a shared runner, right after a 63s chaos-package run left
+		// the scheduler under load) hit TestPreVote_IsolatedMinorityNeverPoisonsTerm
+		// failing with "majority term changed from 1 to 3 while minority
+		// was isolated" -- the MAJORITY side's own leader/follower pair
+		// suffered a spurious election under scheduling jitter, not a
+		// PreVote defect. Widening removes that slack the same way it
+		// already did for checkquorum_test.go's own documented flake,
+		// without touching any production default (Config's real
+		// defaults live in raft.go, not here).
+		node := NewNode(Config{ID: id, Peers: peers, Transport: trans, FSM: fsm,
+			ElectionTimeoutMin: 200 * time.Millisecond, ElectionTimeoutMax: 400 * time.Millisecond,
+			HeartbeatInterval: 20 * time.Millisecond})
 		node.SetSnapshotter(fsm)
 		nodes[i] = node
 		trans.Register(node)
