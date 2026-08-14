@@ -34,10 +34,12 @@
 package entityconsistency
 
 import (
+	"context"
 	"fmt"
 
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/entity"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Alias names one (kind, value) identifier pair, in the shape both
@@ -77,6 +79,9 @@ func (f Finding) Diverges() bool {
 // Neither aliasA nor aliasB needs to already be known to either system;
 // Finding's Known fields report exactly what was and wasn't found.
 func Check(idResolver *identity.Resolver, entReg *entity.Registry, aliasA, aliasB Alias, asOfTick uint64) (Finding, error) {
+	_, span := telemetry.StartSpan(context.Background(), "entityconsistency.Check")
+	defer span.End()
+
 	f := Finding{AliasA: aliasA, AliasB: aliasB}
 
 	idA, err := idResolver.EntityIDAt(identity.Identifier{Kind: identity.Kind(aliasA.Kind), Value: aliasA.Value}, asOfTick)

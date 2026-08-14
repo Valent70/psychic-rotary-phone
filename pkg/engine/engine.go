@@ -24,12 +24,14 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
 
 	"veriqo/pkg/platform/observability"
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -202,6 +204,10 @@ func (k *Kernel) sortedNamesLocked() []string {
 // called automatically on first use of an engine if InitializeAll was
 // not called explicitly.
 func (k *Kernel) Run(engineName string, ctx Context) (RunRecord, error) {
+	_, telSpan := telemetry.StartSpan(context.Background(), "engine.Run",
+		telemetry.Attribute{Key: "engine_name", Value: engineName})
+	defer telSpan.End()
+
 	k.mu.Lock()
 	e, ok := k.engines[engineName]
 	if !ok {

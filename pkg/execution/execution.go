@@ -35,6 +35,7 @@
 package execution
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -50,6 +51,7 @@ import (
 	"veriqo/pkg/governance/knowledge"
 	"veriqo/pkg/governance/lifecycle"
 	"veriqo/pkg/moat/economic"
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/replay"
 	"veriqo/pkg/trust/state"
 )
@@ -374,6 +376,10 @@ func topoOrder() ([]StageID, error) {
 
 // Run executes the graph.
 func (e *Engine) Run(in Input) (*Result, error) {
+	_, span := telemetry.StartSpan(context.Background(), "execution.Run",
+		telemetry.Attribute{Key: "execution_id", Value: in.Context.ExecutionID})
+	defer span.End()
+
 	ctx := in.Context
 	if err := ctx.validate(); err != nil {
 		return nil, err

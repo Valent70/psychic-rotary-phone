@@ -24,6 +24,7 @@
 package wal
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -36,6 +37,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -258,6 +261,9 @@ func (l *Log) openSegmentForAppend() error {
 
 // Append writes one record.
 func (l *Log) Append(tick uint64, payload []byte) (Record, error) {
+	_, span := telemetry.StartSpan(context.Background(), "wal.Append")
+	defer span.End()
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.closed {

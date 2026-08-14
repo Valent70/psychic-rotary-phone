@@ -30,6 +30,7 @@
 package fusion
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -39,6 +40,7 @@ import (
 	"sync"
 
 	"veriqo/pkg/moat/kg"
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -271,6 +273,10 @@ func fuseGroup(group []Evidence) float64 {
 // by earliest supporting tick — both pure functions of stored data, so
 // the outcome never depends on wall-clock or goroutine scheduling.
 func (e *Engine) Arbitrate(actorID string, claim Claim, tick uint64) (ArbitrationResult, error) {
+	_, span := telemetry.StartSpan(context.Background(), "fusion.Arbitrate",
+		telemetry.Attribute{Key: "claim_key", Value: claim.Key()})
+	defer span.End()
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

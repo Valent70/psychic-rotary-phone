@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"veriqo/pkg/consensus/raftlite"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // ---- Certificate authority (stands in for a real SPIRE Server) ----
@@ -242,6 +243,9 @@ func (v *PeerVerifier) SetRevocationList(crl *RevocationList) {
 // meaningful DNS names in this deployment shape) and returns the peer's
 // node ID extracted from its SPIFFE SAN.
 func (v *PeerVerifier) Verify(cert *x509.Certificate) (string, error) {
+	_, span := telemetry.StartSpan(context.Background(), "rafttcp.PeerVerifier.Verify")
+	defer span.End()
+
 	opts := x509.VerifyOptions{Roots: v.ca.Pool(), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}
 	if _, err := cert.Verify(opts); err != nil {
 		return "", fmt.Errorf("rafttcp: chain verification failed: %w", err)

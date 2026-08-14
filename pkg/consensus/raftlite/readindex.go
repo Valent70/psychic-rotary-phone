@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var ErrLeadershipNotConfirmed = errors.New("raftlite: could not confirm leadership with a quorum; refusing to answer a linearizable read")
@@ -49,6 +51,9 @@ var ErrLeadershipNotConfirmed = errors.New("raftlite: could not confirm leadersh
 // obligation, not a strict improvement, and are intentionally not
 // claimed here.
 func (n *Node) ReadIndex(ctx context.Context) (uint64, error) {
+	ctx, span := telemetry.StartSpan(ctx, "raftlite.ReadIndex", telemetry.Attribute{Key: "node_id", Value: n.id})
+	defer span.End()
+
 	n.mu.Lock()
 	if n.role != Leader {
 		n.mu.Unlock()

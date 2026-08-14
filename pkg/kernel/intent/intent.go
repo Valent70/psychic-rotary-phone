@@ -17,10 +17,12 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 
 	"veriqo/pkg/core/trustcalc"
 	"veriqo/pkg/moat/decision"
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/trust"
 )
 
@@ -152,6 +154,10 @@ func (v *Verifier) SharedCalculus() *trustcalc.Calculus { return v.calc }
 // observation dominate the trust score, which is not the property an
 // investor-facing trust number should have).
 func (v *Verifier) Verify(stmt Statement, obs Observation) (Verdict, error) {
+	_, span := telemetry.StartSpan(context.Background(), "intent.Verify",
+		telemetry.Attribute{Key: "intent_id", Value: stmt.ID})
+	defer span.End()
+
 	matched := stmt.ExpectedAction == obs.ObservedAction
 	rawDev := obs.ObservedRisk - stmt.ExpectedRisk
 	absDev := rawDev

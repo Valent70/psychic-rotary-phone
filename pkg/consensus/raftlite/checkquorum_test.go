@@ -62,7 +62,27 @@ func waitForLeaderMap(t *testing.T, nodes map[string]*Node, within time.Duration
 	for time.Now().Before(deadline) {
 		for _, n := range nodes {
 			if n.IsLeader() {
-				return n
+				// Confirm STABLE leadership before returning. Under heavy
+				// concurrent load (this whole package running alongside
+				// every other package's tests under a plain `go test
+				// ./...`), a node can report IsLeader() true for one
+				// instant and step down moments later -- before the
+				// caller's very next RPC -- purely from ordinary
+				// goroutine-scheduling delay, not a raft correctness bug
+				// (already proven separately by the CheckQuorum/election
+				// tests). This produced a real "raftlite: not leader"
+				// failure both on GitHub Actions CI and locally under
+				// `go test ./...`, even after newCheckQuorumCluster's
+				// timing was widened for the same reason. Re-checking
+				// after a short settle window turns a one-instant
+				// snapshot into a much stronger signal, at the cost of at
+				// most one extra 15ms wait per test (paid once a
+				// candidate is found, not per poll iteration).
+				time.Sleep(15 * time.Millisecond)
+				if n.IsLeader() {
+					return n
+				}
+				break // this candidate destabilized; re-scan from the top
 			}
 		}
 		time.Sleep(5 * time.Millisecond)

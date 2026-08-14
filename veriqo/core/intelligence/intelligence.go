@@ -41,6 +41,7 @@
 package intelligence
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -49,6 +50,7 @@ import (
 	"veriqo/pkg/kernel/reasoning"
 	"veriqo/pkg/moat/causal"
 	"veriqo/pkg/moat/contradiction"
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/veriqo/core/knowledge"
 )
 
@@ -262,6 +264,10 @@ func (l *Loop) buildCausalChain(tv contradiction.TruthVersion, predictedConfiden
 // (Bayesian trust update), and Prediction (log-odds combination of two
 // Bayesian beliefs) — returning a fully structured Explanation.
 func (l *Loop) Resolve(claimKey string, arbitrationTick uint64, halfLifeTicks uint64) (Explanation, error) {
+	_, span := telemetry.StartSpan(context.Background(), "intelligence.Resolve",
+		telemetry.Attribute{Key: "claim_key", Value: claimKey})
+	defer span.End()
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
 

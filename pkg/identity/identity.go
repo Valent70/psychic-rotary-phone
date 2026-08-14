@@ -33,6 +33,7 @@
 package identity
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -40,6 +41,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Kind is the type of an identifier. The set is fixed by the audit.
@@ -334,6 +337,10 @@ func (r *Resolver) Resolve(q Identifier, asOfTick, _ uint64) (Resolution, error)
 
 // ResolveWithThreshold is Resolve with an explicit confidence floor.
 func (r *Resolver) ResolveWithThreshold(q Identifier, asOfTick uint64, minConfidence float64) (Resolution, error) {
+	_, span := telemetry.StartSpan(context.Background(), "identity.ResolveWithThreshold",
+		telemetry.Attribute{Key: "query_key", Value: q.Key()})
+	defer span.End()
+
 	cands, err := r.Candidates(q, asOfTick)
 	if err != nil {
 		return Resolution{}, err

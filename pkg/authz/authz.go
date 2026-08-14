@@ -35,6 +35,7 @@
 package authz
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
@@ -44,6 +45,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Effect is a rule outcome.
@@ -256,6 +259,9 @@ func NewEngine() *Engine {
 // It does NOT activate it — activation is a separate, approvable act
 // (hot reload with a dry-run window).
 func (e *Engine) Publish(d Document) (Document, error) {
+	_, span := telemetry.StartSpan(context.Background(), "authz.Publish")
+	defer span.End()
+
 	if err := d.Validate(); err != nil {
 		return Document{}, err
 	}
