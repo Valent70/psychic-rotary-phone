@@ -2,4 +2,4 @@ gate: soak_harness_smoke
 command: go test ./test/soak/ -timeout 90s
 exit: 0
 ---
-ok  	veriqo/test/soak	30.065s
+ok  	veriqo/test/soak	30.037s
