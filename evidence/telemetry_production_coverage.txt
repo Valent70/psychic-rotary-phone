@@ -1,9 +1,21 @@
 gate: telemetry_production_coverage
 command: internal:telemetrycoverage.Measure
-exit: 1
+exit: 0
 ---
 {
   "total_domain_packages": 57,
-  "instrumented_packages": [],
-  "coverage": 0
+  "instrumented_packages": [
+    "pkg/authz",
+    "pkg/consensus/raftlite",
+    "pkg/engine",
+    "pkg/execution",
+    "pkg/governance/entityconsistency",
+    "pkg/identity",
+    "pkg/kernel/intent",
+    "pkg/moat/fusion",
+    "pkg/storage/wal",
+    "pkg/transport/rafttcp",
+    "veriqo/core/intelligence"
+  ],
+  "coverage": 0.19298245614035087
 }
