@@ -119,3 +119,69 @@ func TestLifecycleRunUnifiedRouteAbsentWhenOrchestratorNil(t *testing.T) {
 		t.Fatalf("expected 404 when no orchestrator is configured, got %d", resp.StatusCode)
 	}
 }
+
+// TestLifecycleRunUnifiedRouteEnforcesAPIKeyAuth is the enterprise-
+// readiness proof this route needs beyond "it works": that it is not
+// a security bypass. lifecycleRoutes' handlers are merged into the
+// SAME mux NewServer wraps with the full Audit -> JWT -> RBAC -> APIKey
+// stack (see server.go) -- this confirms that composition actually
+// protects the new route end to end, not just the pre-existing
+// generated ones, by driving a real request through the real
+// http.Server.Handler with API-key auth enabled.
+func TestLifecycleRunUnifiedRouteEnforcesAPIKeyAuth(t *testing.T) {
+	reg, err := registry.New()
+	if err != nil {
+		t.Fatalf("registry.New: %v", err)
+	}
+	orch := lifecycle.NewOrchestrator(nil)
+	srv := NewServer("127.0.0.1:0", reg, orch, ServerOptions{APIKeys: map[string]bool{"secret-key": true}})
+	ts := httptest.NewServer(srv.Handler)
+	defer ts.Close()
+
+	body, _ := json.Marshal(map[string]any{
+		"actor_id": "analyst-auth-1", "tenant": "acme", "objective": "assess dark-vessel risk",
+		"entity_aliases":      []map[string]string{{"kind": "IMO", "value": "9998811"}},
+		"required_confidence": 0.6, "temporal_scope": "last-7-days", "tick": 1,
+		"requirements": []map[string]any{{"kind": "AIS_STATUS", "required": true, "min_sources": 2}},
+		"subject":      "x", "predicate": "AIS_STATUS",
+		"submissions": []map[string]any{
+			{"source_id": "ais-vendor-a", "value": "OFF", "base_reliability": 0.8},
+			{"source_id": "ais-vendor-b", "value": "OFF", "base_reliability": 0.8},
+			{"source_id": "port-authority", "value": "ON", "base_reliability": 0.95},
+		},
+	})
+
+	// No X-API-Key: must be rejected before ever reaching RunUnified.
+	unauth, err := http.Post(ts.URL+"/lifecycle/run_unified", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST (unauthenticated): %v", err)
+	}
+	defer unauth.Body.Close()
+	if unauth.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without an API key, got %d", unauth.StatusCode)
+	}
+
+	// With the correct X-API-Key: reaches the real handler and runs the
+	// real DAG.
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/lifecycle/run_unified", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "secret-key")
+	authed, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST (authenticated): %v", err)
+	}
+	defer authed.Body.Close()
+	if authed.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 with a valid API key, got %d", authed.StatusCode)
+	}
+	var got respRunUnified
+	if err := json.NewDecoder(authed.Body).Decode(&got); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if got.Decision == "" || got.ExecutionRootHash == "" {
+		t.Fatal("expected a real decision from the authenticated request")
+	}
+}
