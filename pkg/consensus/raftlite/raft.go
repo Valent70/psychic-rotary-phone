@@ -43,6 +43,13 @@ var (
 	ErrNotLeader = errors.New("raftlite: not leader")
 	ErrShutdown  = errors.New("raftlite: node shut down")
 	ErrStaleTerm = errors.New("raftlite: stale term")
+
+	// ErrEntryOverwritten is WaitAppliedTerm's signal that the log
+	// entry originally proposed at an index was overwritten by a
+	// different leader's entry (same index, different term) before
+	// this node's copy of it was ever applied -- see WaitAppliedTerm's
+	// doc comment for why WaitApplied alone cannot detect this.
+	ErrEntryOverwritten = errors.New("raftlite: entry at this index was overwritten by a different leader before it applied")
 )
 
 // noOpCommand marks a leader-election no-op entry (see becomeLeader) —
@@ -167,6 +174,18 @@ type Node struct {
 	shutdown   bool
 
 	appliedNotify chan struct{}
+
+	// applyMu serializes applyCommitted's entire compute-apply-commit
+	// sequence across its two call sites (the leader's post-replication
+	// path and the follower's AppendEntries handler): without it, two
+	// concurrent invocations could both read the same starting
+	// lastApplied, build overlapping toApply batches, and double-apply
+	// entries to the FSM. It also fixes a real WaitApplied race found
+	// via a genuine CI failure (TestKGAdapter_EndToEndCommit: WaitApplied
+	// returned nil but g.GetNode("n1") was still absent) -- see
+	// applyCommitted's comment for why lastApplied must not be visible
+	// to waiters until fsm.Apply has actually run for that entry.
+	applyMu sync.Mutex
 
 	// --- snapshot / log compaction state (offset-aware log) ---
 	// logBase is the raft Index of n.state.log[0] (the sentinel). Before
@@ -814,15 +833,37 @@ func (n *Node) advanceCommitIndex() {
 	}
 }
 
+// applyCommitted drains commitIndex into the FSM. n.lastApplied is
+// deliberately NOT bumped until every entry in this batch has actually
+// been handed to fsm.Apply (or its conf-change/joint/no-op equivalent)
+// below -- WaitApplied's whole contract is "the entry has been applied
+// to the FSM", and a caller polling n.lastApplied must never observe it
+// advance before that is true. An earlier version bumped lastApplied
+// while still holding n.mu, before the (necessarily lock-free, since
+// FSM.Apply can be arbitrarily slow) apply loop below had run -- real
+// CI caught the resulting race: TestKGAdapter_EndToEndCommit's
+// WaitApplied returned nil while g.GetNode("n1") was still absent,
+// because the waiter woke up between the counter bump and the actual
+// KG mutation. applyMu (held for this whole function) additionally
+// prevents two concurrent calls to applyCommitted -- possible via this
+// function's two call sites, the leader's post-replication path and
+// the follower's AppendEntries handler -- from computing overlapping
+// toApply batches and double-applying entries to the FSM.
 func (n *Node) applyCommitted() {
+	n.applyMu.Lock()
+	defer n.applyMu.Unlock()
+
 	n.mu.Lock()
 	toApply := []LogEntry{}
-	for n.lastApplied < n.commitIndex {
-		n.lastApplied++
-		toApply = append(toApply, n.state.log[n.pos(n.lastApplied)])
+	newApplied := n.lastApplied
+	for newApplied < n.commitIndex {
+		newApplied++
+		toApply = append(toApply, n.state.log[n.pos(newApplied)])
 	}
-	compactable := n.lastApplied
 	n.mu.Unlock()
+	if len(toApply) == 0 {
+		return
+	}
 	for _, e := range toApply {
 		// Conf-change entries are routed to atomic membership application
 		// instead of the FSM — the FSM must never see the internal
@@ -860,13 +901,14 @@ func (n *Node) applyCommitted() {
 			_ = n.fsm.Apply(e)
 		}
 	}
-	if len(toApply) > 0 {
-		select {
-		case n.appliedNotify <- struct{}{}:
-		default:
-		}
-		n.MaybeCompact(compactable)
+	n.mu.Lock()
+	n.lastApplied = newApplied
+	n.mu.Unlock()
+	select {
+	case n.appliedNotify <- struct{}{}:
+	default:
 	}
+	n.MaybeCompact(newApplied)
 }
 
 // Propose appends a new command to the leader's log. Returns ErrNotLeader
@@ -889,7 +931,18 @@ func (n *Node) Propose(cmd []byte) (index uint64, term uint64, err error) {
 	return index, term, nil
 }
 
-// WaitApplied blocks until CommitIndex() >= index or ctx is done.
+// WaitApplied blocks until LastApplied() >= index or ctx is done.
+//
+// Caveat sharp enough to repeat here, not just on WaitAppliedTerm: raft
+// commit indices are positions in a log, not identities of the entries
+// that once occupied them. If the entry Propose() returned this index
+// for was on a leader that lost leadership before replicating it to a
+// majority, a LATER leader can legitimately commit a completely
+// different entry at the exact same index. WaitApplied(ctx, index)
+// returning nil only proves "something is now applied at this index";
+// it does NOT prove that something is the caller's own entry. Prefer
+// WaitAppliedTerm when the term Propose() returned is available (it
+// always is) and the caller actually cares which entry landed.
 func (n *Node) WaitApplied(ctx context.Context, index uint64) error {
 	for {
 		n.mu.Lock()
@@ -905,6 +958,42 @@ func (n *Node) WaitApplied(ctx context.Context, index uint64) error {
 		case <-time.After(10 * time.Millisecond):
 		}
 	}
+}
+
+// WaitAppliedTerm is WaitApplied strengthened to also confirm the
+// entry that actually applied at index is the SAME entry the caller
+// proposed, by checking it still carries the term Propose() returned
+// alongside index. Found necessary via a real, reproducible failure:
+// TestKGAdapter_EndToEndCommit occasionally observed WaitApplied
+// return nil for an entry that was never actually applied, because a
+// real leadership change (the leader that accepted the Propose call
+// stepped down before replicating to a majority) let a later leader's
+// unrelated entry commit at that same numeric index first. Plain
+// WaitApplied cannot distinguish "my entry applied" from "some entry
+// now occupies that slot" -- this can.
+//
+// Returns ErrEntryOverwritten if the entry at index has a different
+// term than expected (the caller's entry was genuinely discarded, not
+// applied -- Propose() succeeding never guaranteed eventual commit,
+// same as upstream Raft's client contract). Returns nil, with no
+// distinction from "confirmed", if index has already been compacted
+// out of the log by the time this returns: compaction only occurs
+// well after application, past DefaultCompactionThreshold, so this is
+// a graceful-degradation case rather than one this method is meant to
+// protect against.
+func (n *Node) WaitAppliedTerm(ctx context.Context, index, term uint64) error {
+	if err := n.WaitApplied(ctx, index); err != nil {
+		return err
+	}
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if index < n.logBase || index >= n.logBase+uint64(len(n.state.log)) {
+		return nil
+	}
+	if n.state.log[n.pos(index)].Term != term {
+		return ErrEntryOverwritten
+	}
+	return nil
 }
 
 func (n *Node) CommitIndex() uint64 {

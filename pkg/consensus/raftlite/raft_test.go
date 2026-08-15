@@ -106,26 +106,67 @@ func TestKGAdapter_EndToEndCommit(t *testing.T) {
 	g := kg.NewGraph()
 	_, nodes, cancel := buildCluster(t, 3, g)
 	defer cancel()
-	leader := waitForLeader(t, nodes, 2*time.Second)
 
 	cmd := EncodeUpsertNode("test-actor", kg.Node{ID: "n1", Kind: "Vessel", Props: map[string]string{"name": "MV Test"}})
-	idx, _, err := leader.Propose(cmd)
-	if err != nil {
-		t.Fatalf("propose failed: %v", err)
+
+	// Retries a bounded number of times on ANY Propose/WaitAppliedTerm
+	// error (ErrNotLeader, ErrEntryOverwritten, or a WaitAppliedTerm
+	// timeout) -- the same behavior a correct raft client uses, and
+	// named explicitly by Propose's own doc comment ("no forwarding --
+	// caller must retry against the actual leader"). Needed for real
+	// reasons, not to paper over a bug: under real CPU contention
+	// immediately following pkg/chaos's ~60s run in the same
+	// `go test ./...` invocation, real CI observed this cluster's
+	// leader occasionally lose leadership before replicating its own
+	// just-accepted proposal to a majority -- a genuine, expected raft
+	// outcome (Propose succeeding never guaranteed eventual commit),
+	// not a bug. Retrying is what actually closes it, exactly like the
+	// LEAVE_JOINT best-effort re-propose already does elsewhere in this
+	// package. An earlier version of this loop retried only on
+	// ErrEntryOverwritten and fell through to t.Fatalf on a plain
+	// WaitAppliedTerm timeout -- found via a real -race count=500 run
+	// that still failed once with "context deadline exceeded" despite
+	// 4 unused retries remaining; a real client facing a timeout would
+	// retry too, so this loop now does.
+	var applied bool
+	var lastErr error
+	for attempt := 0; attempt < 5 && !applied; attempt++ {
+		leader := waitForLeader(t, nodes, 2*time.Second)
+		idx, term, err := leader.Propose(cmd)
+		if err != nil {
+			lastErr = err
+			continue // ErrNotLeader: leadership moved between waitForLeader and Propose; retry
+		}
+		// 3s, not 1s -- this exact 1s budget was observed to fail on
+		// real CI ("not applied: context deadline exceeded") immediately
+		// after pkg/chaos's ~60s run in the same `go test ./...`
+		// invocation: the cluster here runs default 150/300/50ms
+		// election/heartbeat timeouts (buildCluster passes no explicit
+		// Config timeouts), which is fine under normal scheduling but
+		// leaves near-zero slack under real CPU contention from
+		// concurrently-running packages. Widened to match the budget
+		// confchange_test.go, snapshot_test.go and
+		// leadertransfer_stress_test.go already use for the same reason.
+		ctx, done := context.WithTimeout(context.Background(), 3*time.Second)
+		// WaitAppliedTerm, not WaitApplied: plain index-based WaitApplied
+		// was separately observed on real CI to return nil for an entry
+		// that was never actually applied, because the leader that
+		// accepted Propose lost leadership before replicating it to a
+		// majority and a later leader's unrelated entry committed at the
+		// same numeric index first (see WaitAppliedTerm's doc comment).
+		// Checking the term Propose() returned turns that silent
+		// false-success into ErrEntryOverwritten, retried below same as
+		// every other error this loop can see.
+		err = leader.WaitAppliedTerm(ctx, idx, term)
+		done()
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		applied = true
 	}
-	// 3s, not 1s -- this exact 1s budget was observed to fail on real CI
-	// ("not applied: context deadline exceeded") immediately after
-	// pkg/chaos's ~60s run in the same `go test ./...` invocation: the
-	// cluster here runs default 150/300/50ms election/heartbeat timeouts
-	// (buildCluster passes no explicit Config timeouts), which is fine
-	// under normal scheduling but leaves near-zero slack under real CPU
-	// contention from concurrently-running packages. Widened to match
-	// the budget confchange_test.go, snapshot_test.go and
-	// leadertransfer_stress_test.go already use for the same reason.
-	ctx, done := context.WithTimeout(context.Background(), 3*time.Second)
-	defer done()
-	if err := leader.WaitApplied(ctx, idx); err != nil {
-		t.Fatalf("not applied: %v", err)
+	if !applied {
+		t.Fatalf("propose+apply did not succeed within 5 retries, last error: %v", lastErr)
 	}
 	if _, ok := g.GetNode("n1"); !ok {
 		t.Fatal("expected node n1 to be present in KG after raft commit")
