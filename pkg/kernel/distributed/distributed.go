@@ -13,11 +13,18 @@
 //
 // Honest scope: this package is wired and tested standalone (a real
 // FSM implementation, real deterministic replay, real failover logic)
-// but is NOT, in this session, connected to a live multi-process
-// raftlite.Node cluster — that wiring is mechanical (same shape as
-// kg.Adapter) and is listed as an explicit open item, since standing
-// up and testing a real multi-node raft cluster around it is a
-// separate, larger piece of work than the placement logic itself.
+// AND is connected to a live multi-process raftlite.Node cluster —
+// test/integration/live_cluster_test.go drives this exact FSM (via
+// DistributedAdapter, cmd/veriqo-node -fsm distributed) across three
+// real OS processes over the network, proving JOIN/PLACE commands
+// replicate correctly cross-process. A separate, more adversarial
+// round went further still: three genuinely independent Docker
+// containers on a real bridge network, a real `docker network
+// disconnect` partition of the leader, and a real heal-and-reconverge
+// — see evidence/multi_region_dr-multi-container-drill.txt. What
+// remains open is real cross-datacenter infrastructure (WAN
+// characteristics, real cloud regions), not this in-process-to-live-
+// cluster wiring, which was the gap this comment used to describe.
 package distributed
 
 import (
