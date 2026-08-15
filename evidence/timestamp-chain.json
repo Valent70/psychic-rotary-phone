@@ -232,5 +232,14 @@
     "hash": "de788766dc2711898f408f268d8bfb7f3c87adbdfe8e81de25cb449a8741c492",
     "key_id": "3ec67aaa053d59f9",
     "signature": "720a9e3100f03c1f5ebec52734bf27388ca35a71c7c16374ed26e0aa7243831e8cc1c7b84af85532bfb2ffd0c15aa6249e02ffd5ce6a929bdaeba518dc01d504"
+  },
+  {
+    "seq": 27,
+    "subject": "5e89c3f0a3b5fb371babba10c520bf957d820da58b95d341fd3fcc9828df8f24",
+    "timestamp": 1786768742,
+    "prev_hash": "de788766dc2711898f408f268d8bfb7f3c87adbdfe8e81de25cb449a8741c492",
+    "hash": "036cc3cd6a8e31ee73c37b1118a9d0301fd12af7c87c9ef27044ed492f5fc75e",
+    "key_id": "3ec67aaa053d59f9",
+    "signature": "2f1806b50058c642f659d9c8ab4727f43404917149b705c3535b0939de79b322c70c6a259ad95909d7debe74c724672d41afdfb1784a2c7c190bf22ccb2df107"
   }
 ]
