@@ -7,6 +7,17 @@
 # Docker daemon / no registry pull access here). Treat this as a
 # reviewed blueprint, not a proven artifact — build and smoke-test it in
 # your own CI before relying on it.
+#
+# The `-trimpath -ldflags="-s -w"` flags below are the same ones
+# internal/reproducibility.TestBinaryEqualityAcrossIndependentBuilds
+# proves produce a byte-identical binary across two genuinely
+# independent `go build` invocations (separate GOCACHE each) -- so a
+# container image built from this Dockerfile inherits that same
+# binary-level reproducibility property, even though the CONTAINER
+# image itself (digest, base-image SBOM, OS package inventory) is not
+# yet independently verified here; see docs/production-readiness.md
+# §1 for the precise, current boundary between what is proven and what
+# still requires a real Docker daemon and registry.
 
 # --- build stage -------------------------------------------------------
 FROM golang:1.22-alpine AS build

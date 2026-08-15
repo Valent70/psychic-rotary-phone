@@ -9,10 +9,13 @@ This file is a gate, not a press release: every PASS row names the exact test/fi
 | Item | Status | Evidence |
 |---|---|---|
 | Reproducible build (stdlib-only, no external deps) | PASS | `go build ./...` succeeds with `GOPROXY=off` — zero third-party modules in `go.mod` |
+| Binary equality across independent builds | PASS | `internal/reproducibility.TestBinaryEqualityAcrossIndependentBuilds` — `cmd/veriqo-verify` built twice, each build using its own throwaway `GOCACHE` (genuinely independent compiler invocations, not a build-cache hit), asserts byte-identical SHA-256 output with `-trimpath -ldflags="-s -w"` |
+| Independent builder (second, organizationally-separate build environment) | OPEN | Genuinely requires a second real machine/CI identity outside this sandbox to build the same commit and compare — see the same category of external-infrastructure gap `pkg/blockers` already documents for HSM/KMS, multi-region DR, etc. Binary-equality above proves the toolchain/flags are reproducible; it does not by itself prove two organizationally-independent parties reach the same hash, which is what "independent builder" actually asks for. |
+| Container digest / base-image SBOM / OS package inventory | OPEN | Requires a Docker daemon and registry access this sandbox does not have. `Dockerfile` is a reviewed blueprint (not yet executed with a real `docker build` here) — see its own header comment. |
 | `go vet` clean | PASS | `go vet ./...` — zero findings |
 | `gofmt` clean | PASS | `gofmt -l .` — zero files |
 | SBOM / dependency provenance | WAIVED | No third-party dependencies exist to enumerate (stdlib-only). An SBOM becomes meaningful the moment a non-stdlib dependency is added — add `cyclonedx-gomod` at that point, not before. |
-| Build hash / release attestation (signed release artifact) | OPEN | No release pipeline exists yet (no CI config in this repo). Requires a CI system (GitHub Actions or similar) this sandbox cannot provision — network egress here does not include a CI runner. |
+| Build hash / release attestation (signed release artifact) | PASS | This claim predates a since-added real CI system and readiness gate: `.github/workflows/{verify,security,chaos,performance,release}.yml` run on every push against real GitHub Actions; `cmd/veriqo-readiness` produces a signed `READINESS_MANIFEST.json` (Ed25519, `pkg/governance/qualification` / `internal/assurance.ReleaseCertificate`) independently re-verifiable via `cmd/veriqo-verify-release` (signature) and `cmd/veriqo-verify-release-identity` (source-hash and commit-lineage reconciliation, closing audit item P1-RLS). A formal SLSA/in-toto-style third-party attestation scheme remains OPEN — that specifically requires production KMS-backed signing identity, the same external-infrastructure category `pkg/blockers/hsmkms` already documents as blocked. |
 
 ## 2. Security & Identity
 
