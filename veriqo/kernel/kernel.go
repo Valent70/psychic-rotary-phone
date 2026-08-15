@@ -12,12 +12,19 @@
 // sistem" — without this shared instance, Evidence and Intelligence
 // would each learn an independent, disconnected notion of source
 // trust, exactly the failure mode the critique warned about.
+//
+// The same sharing discipline now applies to entity identity (audit
+// item P0-B / R4, "One Canonical Entity Authority"): New constructs
+// exactly ONE *identity.Resolver and hands it to both UnifiedEvidence
+// and Lifecycle, closing a real, live fragmentation this session's own
+// external audit found -- see the Identity field's doc comment below.
 package kernel
 
 import (
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/core/trustcalc"
 	"veriqo/pkg/evidence/api"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/kernel/intent"
 	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/moat/calibration"
@@ -78,6 +85,21 @@ type Kernel struct {
 	// pkg/evidence/api.Facade's own doc comment on the "no bypass"
 	// structural guarantee.
 	UnifiedEvidence *api.Facade
+	// Identity is the audit's P0-B/R4 gap-closure ("One Canonical
+	// Entity Authority"): the SAME *identity.Resolver instance handed
+	// to both UnifiedEvidence and Lifecycle below, so an alias resolved
+	// or merged through one is visible to the other. Before this field
+	// existed, New built two separate, disconnected identity.Resolver
+	// instances (one inside api.New's nil-fallback, one inside
+	// lifecycle.NewOrchestrator's own construction) inside this SAME
+	// composition root -- a live, reproducible identity-fragmentation
+	// bug, not just a labeling inconsistency: an alias
+	// UnifiedEvidence.ResolveWithThreshold saw would never be visible
+	// to Lifecycle.RunUnified's resolution, and vice versa. See
+	// pkg/governance/entityconsistency's package comment for the full
+	// three-systems background this closes the two Kernel-reachable,
+	// live-production instances of.
+	Identity *identity.Resolver
 }
 
 // New boots a complete Kernel: builds a registry.Registry (the seven
@@ -119,13 +141,22 @@ func New(regOpts ...registry.Option) (*Kernel, error) {
 
 	canonPipeline := canonical.NewPipeline(calc)
 
+	// sharedIdentity is built here, once, and handed to BOTH
+	// UnifiedEvidence and Lifecycle below (audit item P0-B / R4, "One
+	// Canonical Entity Authority") -- the same sharing discipline this
+	// function already applies to calc/canonPipeline. Before this, each
+	// got its own private identity.Resolver, meaning an entity alias
+	// resolved through one was invisible to the other despite both
+	// living on the SAME Kernel.
+	sharedIdentity := identity.NewResolver()
+
 	// UnifiedEvidence is built here, once, and handed to Intelligence
 	// below (audit item P0-A / R1: "ALL production evidence -> ONE
 	// canonical evidence contract -> ONE arbitration path"). Sharing
 	// canonPipeline keeps Submit/Arbitrate's trust namespace consistent
 	// with every other engine on this Kernel, exactly like Lifecycle's
 	// own pipeline sharing above.
-	unifiedEvidence := api.New(canonPipeline, nil, api.Config{})
+	unifiedEvidence := api.New(canonPipeline, sharedIdentity, api.Config{})
 
 	return &Kernel{
 		Registry:        reg,
@@ -138,8 +169,9 @@ func New(regOpts ...registry.Option) (*Kernel, error) {
 		TrustCalculus:   calc,
 		TrustLedger:     ledger,
 		Canonical:       canonPipeline,
-		Lifecycle:       lifecycle.NewOrchestrator(canonPipeline),
+		Lifecycle:       lifecycle.NewOrchestrator(canonPipeline, sharedIdentity),
 		UnifiedEvidence: unifiedEvidence,
+		Identity:        sharedIdentity,
 	}, nil
 }
 

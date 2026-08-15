@@ -12,7 +12,7 @@ import (
 // ===== Category 2/5 — ADVERSARIAL (10) ======================================
 
 func TestAcceptance11_EmptySubmissionsRejected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-1")
 	cs := baseCase("x")
 	cs.Submissions = nil
@@ -22,7 +22,7 @@ func TestAcceptance11_EmptySubmissionsRejected(t *testing.T) {
 }
 
 func TestAcceptance12_CorrelatedSourcesShareProvider(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-2")
 	cs := baseCase("x", []canonical.SourceSubmission{
 		{SourceID: "sat-a", Value: "OFF", BaseReliability: 0.9, Provider: "shared-upstream"},
@@ -35,7 +35,7 @@ func TestAcceptance12_CorrelatedSourcesShareProvider(t *testing.T) {
 }
 
 func TestAcceptance13_ContradictorySourcesDetected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-3")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x")) // baseCase has 2 OFF vs 1 ON
 	if !res.Canonical.Arbitration.Contradiction {
@@ -44,7 +44,7 @@ func TestAcceptance13_ContradictorySourcesDetected(t *testing.T) {
 }
 
 func TestAcceptance14_ExactDuplicateEvidenceRejected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-4")
 	cs := baseCase("x", []canonical.SourceSubmission{
 		{SourceID: "dup", Value: "OFF", BaseReliability: 0.8},
@@ -62,7 +62,7 @@ func TestAcceptance14_ExactDuplicateEvidenceRejected(t *testing.T) {
 }
 
 func TestAcceptance15_ZeroReliabilitySourceStillProcessed(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-5")
 	cs := baseCase("x", []canonical.SourceSubmission{
 		{SourceID: "weak", Value: "OFF", BaseReliability: 0.01},
@@ -75,7 +75,7 @@ func TestAcceptance15_ZeroReliabilitySourceStillProcessed(t *testing.T) {
 }
 
 func TestAcceptance16_MalformedAliasRejected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-6", entity.Alias{Kind: "", Value: "bad"})
 	_, err := o.RunUnified(context.Background(), in, standardPlan(in), baseCase("x"))
 	if err == nil {
@@ -84,7 +84,7 @@ func TestAcceptance16_MalformedAliasRejected(t *testing.T) {
 }
 
 func TestAcceptance17_UnsatisfiableRequiredEvidenceBlocked(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-7")
 	plan := lifecycle.PlanEvidence(in, []lifecycle.EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 999}})
 	if _, err := o.RunUnified(context.Background(), in, plan, baseCase("x")); err == nil {
@@ -93,7 +93,7 @@ func TestAcceptance17_UnsatisfiableRequiredEvidenceBlocked(t *testing.T) {
 }
 
 func TestAcceptance18_GroundTruthFromArbitrationInputRejected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-8")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	// "ais-vendor-a" was one of the case's own arbitration inputs —
@@ -106,7 +106,7 @@ func TestAcceptance18_GroundTruthFromArbitrationInputRejected(t *testing.T) {
 }
 
 func TestAcceptance19_MismatchedOutcomeStillRecordsPoorCalibration(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-9")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	wrong := "ON"
@@ -126,7 +126,7 @@ func TestAcceptance19_MismatchedOutcomeStillRecordsPoorCalibration(t *testing.T)
 }
 
 func TestAcceptance20_HighPatternScoreEscalatesDecision(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("adv-10")
 	cs := baseCase("x")
 	cs.PatternScore = 1.0

@@ -65,7 +65,7 @@ func mustRun(t *testing.T, o *lifecycle.Orchestrator, in lifecycle.Intent, plan 
 // ===== Category 1/5 — NORMAL (10) ==========================================
 
 func TestAcceptance01_HappyPathFullChain(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-1")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if !res.Certificate.IVFVerified {
@@ -74,7 +74,7 @@ func TestAcceptance01_HappyPathFullChain(t *testing.T) {
 }
 
 func TestAcceptance02_UnanimousEvidenceNoContradiction(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-2")
 	cs := baseCase("x", []canonical.SourceSubmission{
 		{SourceID: "a", Value: "OFF", BaseReliability: 0.9},
@@ -87,7 +87,7 @@ func TestAcceptance02_UnanimousEvidenceNoContradiction(t *testing.T) {
 }
 
 func TestAcceptance03_MultiplePoliciesIndependent(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-3")
 	res1 := mustRun(t, o, in, standardPlan(in), baseCase("subject-a"))
 	in2 := baseIntent("analyst-3", entity.Alias{Kind: "IMO", Value: "9000002"})
@@ -98,7 +98,7 @@ func TestAcceptance03_MultiplePoliciesIndependent(t *testing.T) {
 }
 
 func TestAcceptance04_EconomicImpactComputedWhenChannelsSupplied(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-4")
 	cs := baseCase("x")
 	cs.EconomicChannels = map[string]float64{"commodity_flow_usd": 500000}
@@ -109,7 +109,7 @@ func TestAcceptance04_EconomicImpactComputedWhenChannelsSupplied(t *testing.T) {
 }
 
 func TestAcceptance05_CausalLinkRaisesTwinProjection(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-5")
 	cs := baseCase("x")
 	res := mustRun(t, o, in, standardPlan(in), cs)
@@ -119,7 +119,7 @@ func TestAcceptance05_CausalLinkRaisesTwinProjection(t *testing.T) {
 }
 
 func TestAcceptance06_DecisionRespectsPolicyThresholds(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-6")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if res.Canonical.Decision.PolicyName != risk.DefaultPolicy().Name {
@@ -128,7 +128,7 @@ func TestAcceptance06_DecisionRespectsPolicyThresholds(t *testing.T) {
 }
 
 func TestAcceptance07_LowRiskCaseYieldsAllowOrNoEscalation(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-7")
 	cs := baseCase("x", []canonical.SourceSubmission{
 		{SourceID: "a", Value: "ON", BaseReliability: 0.95},
@@ -142,7 +142,7 @@ func TestAcceptance07_LowRiskCaseYieldsAllowOrNoEscalation(t *testing.T) {
 }
 
 func TestAcceptance08_ReplayIDStableAcrossFields(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-8")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if res.Certificate.ReplayID != res.Canonical.Certificate.Hash {
@@ -151,7 +151,7 @@ func TestAcceptance08_ReplayIDStableAcrossFields(t *testing.T) {
 }
 
 func TestAcceptance09_OutcomeRecordingSucceedsForNormalCase(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("analyst-9")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if _, err := o.RecordOutcome(res, res.Canonical.Arbitration.Winner, "inspector-9", 2); err != nil {
@@ -160,7 +160,7 @@ func TestAcceptance09_OutcomeRecordingSucceedsForNormalCase(t *testing.T) {
 }
 
 func TestAcceptance10_MultipleSequentialCasesShareTrustNamespace(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in1 := baseIntent("analyst-10")
 	res1 := mustRun(t, o, in1, standardPlan(in1), baseCase("x"))
 	in2 := baseIntent("analyst-10", entity.Alias{Kind: "IMO", Value: "9000099"})

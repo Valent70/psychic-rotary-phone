@@ -24,7 +24,7 @@ func TestLifecycleRunUnifiedRoute(t *testing.T) {
 	if err != nil {
 		t.Fatalf("registry.New: %v", err)
 	}
-	orch := lifecycle.NewOrchestrator(nil)
+	orch := lifecycle.NewOrchestrator(nil, nil)
 	srv := NewServer("127.0.0.1:0", reg, orch, ServerOptions{})
 
 	ts := httptest.NewServer(srv.Handler)
@@ -82,7 +82,7 @@ func TestLifecycleRunUnifiedRouteRejectsBadJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("registry.New: %v", err)
 	}
-	orch := lifecycle.NewOrchestrator(nil)
+	orch := lifecycle.NewOrchestrator(nil, nil)
 	srv := NewServer("127.0.0.1:0", reg, orch, ServerOptions{})
 	ts := httptest.NewServer(srv.Handler)
 	defer ts.Close()
@@ -133,7 +133,7 @@ func TestLifecycleRunUnifiedRouteEnforcesAPIKeyAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("registry.New: %v", err)
 	}
-	orch := lifecycle.NewOrchestrator(nil)
+	orch := lifecycle.NewOrchestrator(nil, nil)
 	srv := NewServer("127.0.0.1:0", reg, orch, ServerOptions{APIKeys: map[string]bool{"secret-key": true}})
 	ts := httptest.NewServer(srv.Handler)
 	defer ts.Close()

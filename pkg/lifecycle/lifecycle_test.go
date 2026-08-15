@@ -41,7 +41,7 @@ func testCaseInput(subject string) canonical.CaseInput {
 // directly), and finishes with Decision, Digital Twin consequence,
 // IVF proof, and replay identity.
 func TestUnifiedIntentTrustDecisionLifecycle(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
@@ -93,7 +93,7 @@ func TestUnifiedIntentTrustDecisionLifecycle(t *testing.T) {
 // TestRunUnifiedRejectsMismatchedPlan proves a plan built for a
 // different Intent cannot silently be reused.
 func TestRunUnifiedRejectsMismatchedPlan(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	otherIntent := testIntent()
 	otherIntent.ActorID = "someone-else"
@@ -109,7 +109,7 @@ func TestRunUnifiedRejectsMismatchedPlan(t *testing.T) {
 // EvidenceRequirement that isn't met blocks the run rather than
 // silently proceeding.
 func TestRunUnifiedEnforcesRequiredEvidence(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 10}})
 
@@ -124,7 +124,7 @@ func TestRunUnifiedEnforcesRequiredEvidence(t *testing.T) {
 // it is recorded as uncertainty, per the audit's explicit instruction
 // not to silently drop missing-evidence information.
 func TestRunUnifiedPreservesOptionalUnmetAsUncertainty(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{
 		{Kind: "AIS_STATUS", Required: true, MinSources: 2},
@@ -142,7 +142,7 @@ func TestRunUnifiedPreservesOptionalUnmetAsUncertainty(t *testing.T) {
 // TestRecordOutcomeFeedsCalibration closes the audit's Outcome ->
 // Calibration -> Trust Reassessment loop end to end.
 func TestRecordOutcomeFeedsCalibration(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
@@ -168,12 +168,12 @@ func TestLifecycleCertificateDeterministic(t *testing.T) {
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
-	o1 := NewOrchestrator(nil)
+	o1 := NewOrchestrator(nil, nil)
 	res1, err := o1.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	o2 := NewOrchestrator(nil)
+	o2 := NewOrchestrator(nil, nil)
 	res2, err := o2.RunUnified(context.Background(), in, plan, testCaseInput("x"))
 	if err != nil {
 		t.Fatal(err)
@@ -192,7 +192,7 @@ func TestLifecycleCertificateDeterministic(t *testing.T) {
 // must NEVER be written to for this case -- proving identity, not
 // pkg/moat/entity, is what actually decided the entity for this call.
 func TestRunUnifiedResolvesEntityThroughIdentityNotUnionFind(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
@@ -222,7 +222,7 @@ func TestRunUnifiedResolvesEntityThroughIdentityNotUnionFind(t *testing.T) {
 // succeed, using the legacy union-find for this one call, exactly as it
 // did before P0-B's change.
 func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	in.EntityAliases = []entity.Alias{
 		{Kind: "LEI", Value: "LEI-CORP-1"},
@@ -246,7 +246,7 @@ func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
 // stage independently re-resolves it and only succeeds because the two
 // computations genuinely agree -- not because one trusts the other.
 func TestRunUnifiedThreadsARealIdentityKeyIntoTheExecutionDAG(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
@@ -281,7 +281,7 @@ func TestRunUnifiedThreadsARealIdentityKeyIntoTheExecutionDAG(t *testing.T) {
 // does not model would be a guaranteed, misleading mismatch, not a
 // real check.
 func TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback(t *testing.T) {
-	o := NewOrchestrator(nil)
+	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	in.EntityAliases = []entity.Alias{{Kind: "LEI", Value: "LEI-CORP-2"}}
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})

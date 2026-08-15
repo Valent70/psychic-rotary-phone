@@ -11,7 +11,7 @@ import (
 // ===== Category 3/5 — REPLAY / TAMPER (10) ==================================
 
 func TestAcceptance21_LifecycleCertificateTamperDetected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-1")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := lifecycle.VerifyCertificate(res.Certificate); err != nil {
@@ -25,7 +25,7 @@ func TestAcceptance21_LifecycleCertificateTamperDetected(t *testing.T) {
 }
 
 func TestAcceptance22_CanonicalCertificateTamperDetected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-2")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	cert := res.Canonical.Certificate
@@ -36,7 +36,7 @@ func TestAcceptance22_CanonicalCertificateTamperDetected(t *testing.T) {
 }
 
 func TestAcceptance23_IVFEmptyBundleRejected(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-3")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if !res.Certificate.IVFVerified {
@@ -52,7 +52,7 @@ func TestAcceptance23_IVFEmptyBundleRejected(t *testing.T) {
 }
 
 func TestAcceptance24_FusionLedgerVerifies(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-4")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := o.Pipeline.Fusion.VerifyChain(); err != nil {
@@ -61,7 +61,7 @@ func TestAcceptance24_FusionLedgerVerifies(t *testing.T) {
 }
 
 func TestAcceptance25_ContradictionLedgerVerifies(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-5")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := o.Pipeline.Contradiction.VerifyChain(); err != nil {
@@ -70,7 +70,7 @@ func TestAcceptance25_ContradictionLedgerVerifies(t *testing.T) {
 }
 
 func TestAcceptance26_DecisionLedgerVerifies(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-6")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := o.Pipeline.Decision.VerifyChain(); err != nil {
@@ -79,7 +79,7 @@ func TestAcceptance26_DecisionLedgerVerifies(t *testing.T) {
 }
 
 func TestAcceptance27_TwinLedgerVerifies(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-7")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := o.Pipeline.Twin.VerifyChain(); err != nil {
@@ -88,7 +88,7 @@ func TestAcceptance27_TwinLedgerVerifies(t *testing.T) {
 }
 
 func TestAcceptance28_EntityLedgerVerifies(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-8")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := o.Entities.VerifyChain(); err != nil {
@@ -97,7 +97,7 @@ func TestAcceptance28_EntityLedgerVerifies(t *testing.T) {
 }
 
 func TestAcceptance29_CalibrationLedgerVerifiesAfterOutcome(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-9")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if _, err := o.RecordOutcome(res, res.Canonical.Arbitration.Winner, "inspector-rep-9", 2); err != nil {
@@ -109,7 +109,7 @@ func TestAcceptance29_CalibrationLedgerVerifiesAfterOutcome(t *testing.T) {
 }
 
 func TestAcceptance30_ReplayIDMatchesIndependentRecompute(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("rep-10")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if err := canonical.VerifyCertificate(res.Canonical.Certificate); err != nil {

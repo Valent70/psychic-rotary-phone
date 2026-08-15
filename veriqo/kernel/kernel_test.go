@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"veriqo/pkg/core/trustcalc"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/kernel/intent"
 	"veriqo/pkg/moat/calibration"
 	"veriqo/pkg/moat/contradiction"
@@ -90,6 +91,62 @@ func TestSharedTrustCalculusConnectsEvidenceAndIntelligence(t *testing.T) {
 	// distinct, not just conventionally different strings.
 	if raw := k.TrustCalculus.Score("reliable-src"); raw == fromCalculus {
 		t.Fatalf("raw key unexpectedly aliased the namespaced belief: both read %v", raw)
+	}
+}
+
+// TestSharedIdentityConnectsUnifiedEvidenceAndLifecycle is the direct
+// regression proof for audit item P0-B/R4 ("One Canonical Entity
+// Authority"): before kernel.go threaded ONE *identity.Resolver into
+// both UnifiedEvidence and Lifecycle, New built two separate,
+// disconnected resolvers here -- a live production fragmentation bug,
+// not a documentation one. An alias equivalence asserted through one
+// consumer's identity handle must be visible through the other's.
+func TestSharedIdentityConnectsUnifiedEvidenceAndLifecycle(t *testing.T) {
+	k, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer k.Shutdown()
+
+	if k.Identity == nil {
+		t.Fatal("expected Kernel.Identity to be populated")
+	}
+	if k.UnifiedEvidence.Identity() != k.Identity {
+		t.Fatal("expected UnifiedEvidence to hold the SAME *identity.Resolver instance as Kernel.Identity, not a private one")
+	}
+	if k.Lifecycle.Identity != k.Identity {
+		t.Fatal("expected Lifecycle to hold the SAME *identity.Resolver instance as Kernel.Identity, not a private one")
+	}
+
+	imo := identity.Identifier{Kind: identity.KindIMO, Value: "9998877"}
+	callsign := identity.Identifier{Kind: identity.KindCallsign, Value: "V7XK9"}
+
+	if err := k.Identity.RegisterAuthority(identity.Authority{SourceID: "test-authority", Weight: 1}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	// Merge the equivalence through the Kernel's own identity handle --
+	// deliberately NOT through UnifiedEvidence.Identity() or
+	// Lifecycle.Identity specifically, to prove this is genuinely one
+	// shared resolver rather than a test that only exercises whichever
+	// handle happens to be merged through.
+	if _, err := k.Identity.Merge("test-actor", "test-authority", imo, callsign, 1, "same vessel, two identifiers"); err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+
+	idFromEvidence, err := k.UnifiedEvidence.Identity().EntityIDAt(imo, 1)
+	if err != nil {
+		t.Fatalf("UnifiedEvidence.Identity().EntityIDAt: %v", err)
+	}
+	idFromLifecycle, err := k.Lifecycle.Identity.EntityIDAt(callsign, 1)
+	if err != nil {
+		t.Fatalf("Lifecycle.Identity.EntityIDAt: %v", err)
+	}
+	if idFromEvidence == "" || idFromLifecycle == "" {
+		t.Fatal("expected non-empty entity IDs from both consumers")
+	}
+	if idFromEvidence != idFromLifecycle {
+		t.Fatalf("an alias equivalence asserted once must be visible to BOTH consumers of the shared identity authority: UnifiedEvidence resolved IMO to %q, Lifecycle resolved the asserted-equivalent CALLSIGN to a different entity %q",
+			idFromEvidence, idFromLifecycle)
 	}
 }
 

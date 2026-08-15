@@ -15,7 +15,7 @@ import (
 // are meaningful specifically under the race detector.
 
 func TestAcceptance41_ConcurrentRunUnifiedOnSharedOrchestrator(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	var wg sync.WaitGroup
 	errs := make(chan error, 20)
 	for i := 0; i < 20; i++ {
@@ -37,7 +37,7 @@ func TestAcceptance41_ConcurrentRunUnifiedOnSharedOrchestrator(t *testing.T) {
 }
 
 func TestAcceptance42_ConcurrentEntityMergesOnSameAlias(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	alias := entity.Alias{Kind: "IMO", Value: "9700000"}
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
@@ -55,7 +55,7 @@ func TestAcceptance42_ConcurrentEntityMergesOnSameAlias(t *testing.T) {
 }
 
 func TestAcceptance43_ConcurrentCalibrationOutcomeRecording(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -79,7 +79,7 @@ func TestAcceptance43_ConcurrentCalibrationOutcomeRecording(t *testing.T) {
 }
 
 func TestAcceptance44_ConcurrentReadsOfSameTwin(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("conc-4", entity.Alias{Kind: "IMO", Value: "9800000"})
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	var wg sync.WaitGroup
@@ -94,8 +94,8 @@ func TestAcceptance44_ConcurrentReadsOfSameTwin(t *testing.T) {
 }
 
 func TestAcceptance45_ConcurrentDistinctPipelinesAreIsolated(t *testing.T) {
-	o1 := lifecycle.NewOrchestrator(nil)
-	o2 := lifecycle.NewOrchestrator(nil)
+	o1 := lifecycle.NewOrchestrator(nil, nil)
+	o2 := lifecycle.NewOrchestrator(nil, nil)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	var res1, res2 *lifecycle.Result
@@ -122,7 +122,7 @@ func TestAcceptance45_ConcurrentDistinctPipelinesAreIsolated(t *testing.T) {
 }
 
 func TestAcceptance46_ConcurrentEvidenceGraphReads(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("conc-6")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	var wg sync.WaitGroup
@@ -137,7 +137,7 @@ func TestAcceptance46_ConcurrentEvidenceGraphReads(t *testing.T) {
 }
 
 func TestAcceptance47_ConcurrentTrustCalculusObserveIsRaceSafe(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	var wg sync.WaitGroup
 	for i := 0; i < 30; i++ {
 		wg.Add(1)
@@ -150,7 +150,7 @@ func TestAcceptance47_ConcurrentTrustCalculusObserveIsRaceSafe(t *testing.T) {
 }
 
 func TestAcceptance48_HighConcurrencyStressNoPanicNoDeadlock(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	var wg sync.WaitGroup
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
@@ -164,7 +164,7 @@ func TestAcceptance48_HighConcurrencyStressNoPanicNoDeadlock(t *testing.T) {
 }
 
 func TestAcceptance49_ConcurrentVerifyChainCallsAreReadSafe(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("conc-9")
 	mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	var wg sync.WaitGroup
@@ -196,7 +196,7 @@ func TestAcceptance50_ChainIntegrityHoldsAfterConcurrentNoiseThenSequentialCase(
 	// every ledger internally consistent and independently
 	// verifiable — no corruption, no lost update, no race-induced
 	// chain break.
-	o1 := lifecycle.NewOrchestrator(nil)
+	o1 := lifecycle.NewOrchestrator(nil, nil)
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)

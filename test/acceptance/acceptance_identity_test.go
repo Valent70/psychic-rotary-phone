@@ -18,7 +18,7 @@ import (
 // resolveCanonicalEntity doc comment. Checking the old union-find here
 // would be asserting a fact that P0-B deliberately made false.
 func TestAcceptance31_ThreeAliasesResolveToOneEntity(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("id-1",
 		entity.Alias{Kind: "IMO", Value: "9111111"},
 		entity.Alias{Kind: "CALLSIGN", Value: "ZZZZ1"},
@@ -91,11 +91,11 @@ func TestAcceptance36_EntityMergeOrderInvariantThroughLifecycle(t *testing.T) {
 	callsign := entity.Alias{Kind: "CALLSIGN", Value: "YYYY1"}
 	name := entity.Alias{Kind: "NAME", Value: "MV ORDER TEST"}
 
-	o1 := lifecycle.NewOrchestrator(nil)
+	o1 := lifecycle.NewOrchestrator(nil, nil)
 	in1 := lifecycle.Intent{ActorID: "id-6a", Tenant: "acme", Objective: "x", EntityAliases: []entity.Alias{imo, callsign, name}, Tick: 1}
 	res1 := mustRun(t, o1, in1, standardPlan(in1), baseCase("x"))
 
-	o2 := lifecycle.NewOrchestrator(nil)
+	o2 := lifecycle.NewOrchestrator(nil, nil)
 	in2 := lifecycle.Intent{ActorID: "id-6b", Tenant: "acme", Objective: "x", EntityAliases: []entity.Alias{name, callsign, imo}, Tick: 1}
 	res2 := mustRun(t, o2, in2, standardPlan(in2), baseCase("x"))
 
@@ -107,7 +107,7 @@ func TestAcceptance36_EntityMergeOrderInvariantThroughLifecycle(t *testing.T) {
 
 func TestAcceptance37_RepeatedAliasMergeIsIdempotentEntityID(t *testing.T) {
 	alias := entity.Alias{Kind: "IMO", Value: "9333333"}
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := lifecycle.Intent{ActorID: "id-7", Tenant: "acme", Objective: "x", EntityAliases: []entity.Alias{alias, alias}, Tick: 1}
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	if res.EntityID == "" {
@@ -116,7 +116,7 @@ func TestAcceptance37_RepeatedAliasMergeIsIdempotentEntityID(t *testing.T) {
 }
 
 func TestAcceptance38_TwoUnrelatedIntentsGetDifferentEntities(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in1 := baseIntent("id-8", entity.Alias{Kind: "IMO", Value: "9444444"})
 	res1 := mustRun(t, o, in1, standardPlan(in1), baseCase("x"))
 	in2 := baseIntent("id-8", entity.Alias{Kind: "IMO", Value: "9555555"})
@@ -127,7 +127,7 @@ func TestAcceptance38_TwoUnrelatedIntentsGetDifferentEntities(t *testing.T) {
 }
 
 func TestAcceptance39_LifecycleCertificateCarriesFullIDChain(t *testing.T) {
-	o := lifecycle.NewOrchestrator(nil)
+	o := lifecycle.NewOrchestrator(nil, nil)
 	in := baseIntent("id-9")
 	res := mustRun(t, o, in, standardPlan(in), baseCase("x"))
 	c := res.Certificate

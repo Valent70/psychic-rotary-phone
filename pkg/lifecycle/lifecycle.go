@@ -274,12 +274,32 @@ type Orchestrator struct {
 // NewOrchestrator builds a lifecycle Orchestrator over an existing
 // canonical.Pipeline (typically veriqo/kernel.Kernel.Canonical, so the
 // TrustCalculus stays shared OS-wide — see pkg/canonical's own
-// package comment on why that sharing matters).
-func NewOrchestrator(pipeline *canonical.Pipeline) *Orchestrator {
+// package comment on why that sharing matters) and an existing
+// *identity.Resolver.
+//
+// sharedIdentity closes a real production entity-resolution
+// fragmentation an external audit named (P0-B / R4, "One Canonical
+// Entity Authority"): before this parameter existed, NewOrchestrator
+// always built its own private identity.Resolver, and
+// veriqo/kernel.New's OWN pkg/evidence/api.Facade (unifiedEvidence)
+// separately built a second, disconnected one -- two live production
+// identity authorities inside the SAME composition root, silently
+// unable to see each other's alias resolutions, exactly the
+// fragmentation risk pkg/governance/entityconsistency's package
+// comment already documents in the abstract. veriqo/kernel.New now
+// constructs exactly ONE *identity.Resolver and hands it to both. Pass
+// nil to have this Orchestrator own a private resolver instead (every
+// existing standalone caller/test keeps working unmodified, mirroring
+// the same nil-safe-default pattern this codebase already uses for
+// trustcalc.Calculus and *api.Facade sharing).
+func NewOrchestrator(pipeline *canonical.Pipeline, sharedIdentity *identity.Resolver) *Orchestrator {
 	if pipeline == nil {
 		pipeline = canonical.NewPipeline(nil)
 	}
-	id := identity.NewResolver()
+	id := sharedIdentity
+	if id == nil {
+		id = identity.NewResolver()
+	}
 	// A single, maximally-weighted authority for RunUnified's own
 	// merges. Weight=1 and an empty AuthoritativeFor (full weight for
 	// every kind) matches exactly what the pre-existing
