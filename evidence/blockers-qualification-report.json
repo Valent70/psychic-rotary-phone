@@ -5,11 +5,11 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
-        "elapsed": "3.102393ms",
+        "elapsed": "2.52894ms",
         "node_count": "8",
         "records_processed": "2000",
         "records_submitted": "2000",
-        "throughput_per_s": "644663.65"
+        "throughput_per_s": "790845.18"
       }
     },
     {
@@ -17,12 +17,12 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
-        "failed_region": "region-1",
+        "failed_region": "region-0",
         "healed_convergence": "true",
         "recovered_leader": "region-2",
         "region_count": "3",
         "rpo_lost_writes": "0",
-        "rto": "52.774298ms"
+        "rto": "51.8185ms"
       }
     },
     {
@@ -55,12 +55,12 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
-        "actual_duration": "3.002213495s",
+        "actual_duration": "3.001458116s",
         "chain_verified": "true",
         "checkpoints": "11",
         "drift_detected": "false",
         "is_full_72h": "false",
-        "iterations": "28612424",
+        "iterations": "24501866",
         "leak_detected": "false"
       }
     },
@@ -96,15 +96,15 @@
       "pass": true,
       "measurements": {
         "clean_tree": "true",
-        "commit": "a47ca5f0b36346795f4b0789f65be7774ee67186",
+        "commit": "7ababc4d6573ba008d89115cb7b41f6e18010904",
         "critical_findings": "0",
         "high_findings": "0",
         "low_findings": "0",
         "medium_findings": "0",
-        "probes_ran_at": "2026-08-15T01:18:33Z",
+        "probes_ran_at": "2026-08-15T03:24:32Z",
         "probes_run": "4",
         "retest_status": "PASS",
-        "source_hash": "9f9d13f68b9e2c76559936413bdfcbfe6124e2ad63d857851091f23cef2d49a3"
+        "source_hash": "69968703d41be109b49fe9e0c99312c4f431a5b44312b627db782ecac926b518"
       }
     }
   ],
