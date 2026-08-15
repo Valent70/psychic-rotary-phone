@@ -103,6 +103,18 @@ type respRunUnified struct {
 	DecisionID        string  `json:"decision_id"`
 	CertificateHash   string  `json:"certificate_hash"`
 	IVFVerified       bool    `json:"ivf_verified"`
+	// EvidencePackageID, VerificationCertificateID and ReplayPackageID
+	// close the remaining links in the audit's P0-D named chain
+	// (Evidence -> ... -> Certificate -> Ledger -> Replay) over the
+	// real external HTTP API, not just internally: an external caller
+	// of this route previously had no way to obtain these three real
+	// identifiers at all, even though pkg/lifecycle already produced
+	// them -- sourced from Result.Correlation (see P1-07's
+	// correlation.Key), the same joined ID set this route's own
+	// production RunUnified call now populates.
+	EvidencePackageID         string `json:"evidence_package_id"`
+	VerificationCertificateID string `json:"verification_certificate_id"`
+	ReplayPackageID           string `json:"replay_package_id"`
 }
 
 // lifecycleRoutes returns the one hand-written route this file adds. A
@@ -193,6 +205,9 @@ func handleLifecycleRunUnified(o *lifecycle.Orchestrator) http.HandlerFunc {
 			Decision: string(res.Canonical.Decision.Action), RiskScore: res.Canonical.Decision.RiskScore,
 			ExecutionRootHash: res.Certificate.ExecutionRootHash,
 			CertificateHash:   res.Certificate.Hash, IVFVerified: res.Certificate.IVFVerified,
+			EvidencePackageID:         res.Correlation.EvidencePackageID,
+			VerificationCertificateID: res.Correlation.VerificationCertificateID,
+			ReplayPackageID:           res.Correlation.ReplayPackageID,
 		}
 		if res.Execution != nil {
 			resp.ExecutionID = res.Execution.Trace.Context.ExecutionID

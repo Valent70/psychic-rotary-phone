@@ -110,17 +110,55 @@ func TestGatewayIntegration(t *testing.T) {
 	if resp3.StatusCode != http.StatusOK {
 		t.Fatalf("POST /lifecycle/run_unified: status %d", resp3.StatusCode)
 	}
+	// Decoded into the FULL response shape (audit item P0-D: "External
+	// Intent -> real context -> Lifecycle -> Execution DAG -> Identity
+	// -> Evidence -> ... -> Certificate -> Ledger -> Replay dalam satu
+	// production acceptance scenario") -- not just the four fields a
+	// prior round checked, so this one real, separate-OS-process HTTP
+	// call is the system's actual proof that every named link in that
+	// chain produces a real, non-empty identifier reachable from the
+	// EXTERNAL API, not only from in-process Go calls (every other
+	// acceptance test in test/acceptance/ calls RunUnified directly,
+	// never through a real HTTP request).
 	var runResult struct {
-		Decision          string `json:"decision"`
-		EntityID          string `json:"entity_id"`
-		ExecutionRootHash string `json:"execution_root_hash"`
-		DecisionID        string `json:"decision_id"`
+		IntentID                  string `json:"intent_id"`
+		Decision                  string `json:"decision"`
+		EntityID                  string `json:"entity_id"`
+		ExecutionID               string `json:"execution_id"`
+		ExecutionRootHash         string `json:"execution_root_hash"`
+		DecisionID                string `json:"decision_id"`
+		CertificateHash           string `json:"certificate_hash"`
+		IVFVerified               bool   `json:"ivf_verified"`
+		EvidencePackageID         string `json:"evidence_package_id"`
+		VerificationCertificateID string `json:"verification_certificate_id"`
+		ReplayPackageID           string `json:"replay_package_id"`
 	}
 	if err := json.NewDecoder(resp3.Body).Decode(&runResult); err != nil {
 		t.Fatalf("decoding lifecycle.run_unified response: %v", err)
 	}
-	if runResult.Decision == "" || runResult.EntityID == "" || runResult.ExecutionRootHash == "" || runResult.DecisionID == "" {
-		t.Fatalf("expected a real, fully-populated response from the actual gateway process, got %+v", runResult)
+	missing := map[string]string{
+		"intent_id": runResult.IntentID, "decision": runResult.Decision,
+		"entity_id": runResult.EntityID, "execution_id": runResult.ExecutionID,
+		"execution_root_hash": runResult.ExecutionRootHash, "decision_id": runResult.DecisionID,
+		"certificate_hash":            runResult.CertificateHash,
+		"evidence_package_id":         runResult.EvidencePackageID,
+		"verification_certificate_id": runResult.VerificationCertificateID,
+		"replay_package_id":           runResult.ReplayPackageID,
+	}
+	for field, val := range missing {
+		if val == "" {
+			t.Fatalf("expected a real, non-empty %q over the real HTTP round trip against the actual gateway process, got %+v", field, runResult)
+		}
+	}
+	if !runResult.IVFVerified {
+		t.Fatalf("expected IVF to independently verify this case's arbitration over the real HTTP round trip, got %+v", runResult)
+	}
+	// The DecisionID must be independently derived, not an alias of
+	// ExecutionID (P0-7) -- checked here too since this is the one test
+	// proving that property holds over the real external API, not just
+	// internally.
+	if runResult.DecisionID == runResult.ExecutionID {
+		t.Fatalf("expected DecisionID to be independently derived from ExecutionID, got both equal to %s", runResult.DecisionID)
 	}
 
 	// Shut down cleanly (SIGTERM triggers the gateway's own
