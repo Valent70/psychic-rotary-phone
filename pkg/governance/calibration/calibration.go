@@ -29,6 +29,27 @@
 // (mirroring test/integration/dark_vessel_test.go's own "synthetic,
 // clearly labeled" convention) to prove the contract's machinery is
 // real; they do not claim that fixture is production-calibrated data.
+//
+// A second, DISTINCT gap an external audit's own words named precisely
+// ("Bayesian mechanism sudah ada. Tetapi production calibration corpus
+// dan temporal observation stream belum tersedia."): even with a real
+// LikelihoodTable registered, no production caller of
+// pkg/lifecycle.Orchestrator.RunUnified currently wires evidence
+// submissions THROUGH BuildObservation into pkg/execution's
+// TemporalModel/TemporalObservations inputs -- confirmed by
+// pkg/lifecycle's own TestRunUnifiedTemporalBayesianStageIsHonestly-
+// SkippedInProduction, which asserts the real production path's
+// TEMPORAL_BAYESIAN stage records SKIPPED today, not a fabricated
+// result. That wiring is real, closable code work (map
+// canonical.CaseInput.Submissions to BuildObservation calls, assemble
+// a temporal Model, thread both into execution.Input), deliberately
+// NOT attempted in this package: doing it without a real caller's
+// actual observation cadence and state-space requirements to design
+// against would risk inventing exactly the kind of plausible-looking
+// placeholder this package's whole contract exists to make impossible.
+// Keep the two gaps distinct when reporting status: the CORPUS is
+// externally blocked (data acquisition); the WIRING is not blocked on
+// anything but engineering time once a real caller's shape is known.
 package calibration
 
 import (

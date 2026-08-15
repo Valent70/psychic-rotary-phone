@@ -300,3 +300,50 @@ func TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback(t *testing.T) {
 		t.Fatal("must not claim independent re-resolution when entity resolution used the union-find fallback")
 	}
 }
+
+// TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction is
+// the explicit, enforced statement of a real gap an external audit
+// named (P0/P1, "Real production calibration/data path"): pkg/moat/
+// hbayes.Model.Infer is real and tested, and pkg/governance/
+// calibration.Registry.BuildObservation is a real, fail-closed bridge
+// from one evidence assertion to an hbayes.Observation -- but NO
+// production caller of RunUnified wires evidence submissions through
+// that bridge into execution.Input's TemporalModel/TemporalObservations
+// fields (confirmed by grepping the whole repo for production writers
+// of either field: zero, only this package's and pkg/execution's own
+// tests populate them). That is two distinct honest gaps, not one:
+// the WIRING (a real, closable code task, not attempted here to avoid
+// inventing a temporal Model's state space and observation cadence
+// without a real caller's actual requirements to design it against)
+// and the CALIBRATION CORPUS itself (real historical data + a real
+// fitting process -- external data-acquisition work in the same
+// category as the eight blockers in pkg/blockers, structurally unable
+// to be closed by writing more code). This test makes the CURRENT,
+// honest consequence of that gap a checked fact instead of an
+// implicit side effect nobody asserts on: RunUnified's real production
+// path (no test-only TemporalModel injection) must record
+// StageTemporal as SKIPPED, never a fabricated OK.
+func TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var temporalNode execution.Node
+	found := false
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageTemporal {
+			temporalNode = n
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected a TEMPORAL_BAYESIAN node in the execution trace")
+	}
+	if temporalNode.Status != execution.StatusSkipped {
+		t.Fatalf("RunUnified's real production path supplies no TemporalModel/TemporalObservations today -- StageTemporal must be SKIPPED, not %s; a non-skipped status here without a real production caller populating those fields would mean a fabricated result slipped through", temporalNode.Status)
+	}
+}
