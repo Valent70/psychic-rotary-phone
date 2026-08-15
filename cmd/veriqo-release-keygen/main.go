@@ -53,7 +53,15 @@ func main() {
 
 	trust := map[string]string{}
 	if raw, err := os.ReadFile(*trustFile); err == nil {
-		_ = json.Unmarshal(raw, &trust)
+		// A silently-swallowed parse error here would overwrite an
+		// existing, non-empty trust file with just the one new key
+		// below, permanently discarding every previously-registered
+		// trusted key with no warning -- real data loss for a release-
+		// signing key management tool, not a cosmetic gap.
+		if err := json.Unmarshal(raw, &trust); err != nil {
+			fmt.Fprintln(os.Stderr, "veriqo-release-keygen: parse existing trust file:", err)
+			os.Exit(1)
+		}
 	}
 	trust[keyID] = hex.EncodeToString(pub)
 	out, err := json.MarshalIndent(trust, "", "  ")

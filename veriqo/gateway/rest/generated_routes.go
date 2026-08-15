@@ -66,12 +66,21 @@ func handleEvidenceAddNode(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -102,12 +111,21 @@ func handleEvidenceAddEdge(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -136,12 +154,21 @@ func handleEvidenceLineage(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -170,12 +197,21 @@ func handleEvidenceInfluenced(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -203,12 +239,21 @@ func handleEvidenceStats(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -243,12 +288,21 @@ func handleIntentVerify(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -283,12 +337,21 @@ func handleIntentCertify(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -316,12 +379,21 @@ func handleIntentLedger(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -354,12 +426,21 @@ func handlePolicyEvaluate(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -387,12 +468,21 @@ func handlePolicyLedger(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -420,12 +510,21 @@ func handlePolicyVerifyChain(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -456,12 +555,21 @@ func handleReasoningAssert(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -489,12 +597,21 @@ func handleReasoningInfer(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -525,12 +642,21 @@ func handleReasoningQuery(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -561,12 +687,21 @@ func handleReasoningExplain(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -596,12 +731,21 @@ func handleReplayContradiction(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -631,12 +775,21 @@ func handleReplayFusion(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -668,12 +821,21 @@ func handleTrustEvaluate(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -705,12 +867,21 @@ func handleTrustCertify(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -738,12 +909,21 @@ func handleTrustLedger(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -771,12 +951,21 @@ func handleTrustVerifyLedger(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -808,12 +997,21 @@ func handleVerificationVerify(reg *registry.Registry) http.HandlerFunc {
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 
@@ -842,11 +1040,20 @@ func handleVerificationVerifyCertificate(reg *registry.Registry) http.HandlerFun
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }

@@ -341,7 +341,7 @@ func NewOrchestrator(pipeline *canonical.Pipeline, sharedIdentity *identity.Reso
 	// pkg/moat/entity.Registry union-find already assumed implicitly:
 	// every alias RunUnified is handed is trusted equally, since it
 	// arrives already vetted by the caller's own Intent construction.
-	_ = id.RegisterAuthority(identity.Authority{SourceID: identityAuthoritySourceID, Weight: 1})
+	_ = id.RegisterAuthority(identity.Authority{SourceID: identityAuthoritySourceID, Weight: 1}) // RegisterAuthority only errors on an empty SourceID or a Weight outside (0,1]; both are fixed, hardcoded-safe literals here, so this can never fail
 	// The execution engine shares this SAME pipeline pointer, not a
 	// second one -- RunUnified must call RunCanonical exactly once per
 	// case (through the engine, see RunUnified below), so a second,

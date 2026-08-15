@@ -156,7 +156,7 @@ func RunAll(ctx context.Context, root string, registry *blockers.Registry, ov Ov
 	for _, id := range registry.IDs() {
 		c := registry.Get(id)
 		if c != nil && c.Status == blockers.StatusQualificationTested {
-			_ = c.PromoteToReadyForRealQualification()
+			_ = c.PromoteToReadyForRealQualification() // only errors when c.Status ranks below StatusQualificationTested; the guard above already establishes equality, so this can never fail here
 		}
 	}
 	for i := range outcomes {

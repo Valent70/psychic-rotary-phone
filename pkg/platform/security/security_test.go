@@ -1,8 +1,10 @@
 package security
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,37 +58,93 @@ func TestJWTRejectsExpiredToken(t *testing.T) {
 func TestJWTRejectsTamperedSignature(t *testing.T) {
 	secret := []byte("s")
 	tok, _ := SignHS256(Claims{Subject: "u", Exp: time.Now().Add(time.Hour).Unix()}, secret)
-	tampered := flipLastChar(t, tok)
+	tampered := tamperJWTSignature(t, tok)
 	if _, err := VerifyHS256(tampered, secret); err == nil {
 		t.Fatal("expected error for tampered signature")
 	}
 }
 
-// flipLastChar returns s with its final character replaced by a
-// character guaranteed to differ from the original -- unlike
-// overwriting the last N characters with a fixed literal (this test's
-// own prior approach: `tok[:len(tok)-2] + "xx"`), which is a no-op
-// whenever the real base64url-encoded signature already happens to end
-// in that exact literal (1-in-4096 for two base64url characters),
-// silently turning an intended tamper-detection test into "verify an
-// untampered token and expect an error." That is the same class of
-// latent test bug pkg/platform/security/keys's own
-// TestEnvelopeEncryptDecryptAndAADBinding was found to have via this
-// exact flakiness reproducing live in this session -- found by
-// grepping for the same fixed-literal-overwrite pattern elsewhere in
-// the repo once the first instance was diagnosed, fixed here
-// preemptively before it could flake on its own.
-func flipLastChar(t *testing.T, s string) string {
+// TestTamperJWTSignatureGuaranteesADifferentDecodedSignature is the
+// direct, structural proof behind tamperJWTSignature's own claim: the
+// decoded signature bytes must differ, unconditionally, not merely
+// with high probability. Run across many distinct real tokens (each
+// signed with its own wall-clock-dependent Exp claim, so each exercises
+// a different real signature value) to demonstrate this holds
+// regardless of what the original signature's trailing byte happened
+// to be -- the exact property flipLastChar's character-level approach
+// could not guarantee.
+func TestTamperJWTSignatureGuaranteesADifferentDecodedSignature(t *testing.T) {
+	secret := []byte("s")
+	for i := 0; i < 200; i++ {
+		tok, err := SignHS256(Claims{Subject: "u", Exp: time.Now().Add(time.Duration(i) * time.Second).Unix()}, secret)
+		if err != nil {
+			t.Fatalf("SignHS256: %v", err)
+		}
+		tampered := tamperJWTSignature(t, tok)
+
+		origParts := strings.Split(tok, ".")
+		tampParts := strings.Split(tampered, ".")
+		if origParts[0] != tampParts[0] || origParts[1] != tampParts[1] {
+			t.Fatal("tamperJWTSignature must leave header and payload untouched")
+		}
+		origSig, err := base64.RawURLEncoding.DecodeString(origParts[2])
+		if err != nil {
+			t.Fatalf("decode original signature: %v", err)
+		}
+		tampSig, err := base64.RawURLEncoding.DecodeString(tampParts[2])
+		if err != nil {
+			t.Fatalf("decode tampered signature: %v", err)
+		}
+		if len(origSig) != len(tampSig) {
+			t.Fatalf("iteration %d: signature length changed: %d -> %d", i, len(origSig), len(tampSig))
+		}
+		if origSig[len(origSig)-1] == tampSig[len(tampSig)-1] {
+			t.Fatalf("iteration %d: tampered decoded signature's last byte equals the original's -- the exact collision class this fix exists to eliminate", i)
+		}
+	}
+}
+
+// tamperJWTSignature decodes the JWT's own signature segment to raw
+// bytes, XORs the last one with 0xFF, and re-encodes -- guaranteeing
+// the DECODED signature differs, not merely the encoded character.
+//
+// This is a real, second-generation fix: this test's own prior
+// approach, flipLastChar, replaced only the token's last ENCODED
+// character with a fixed literal ('x' or 'y') -- closing the earlier-
+// diagnosed "same literal as the original" flake class, but
+// reintroducing a subtler instance of the identical root problem.
+// base64 (RawURLEncoding, no padding) over a 32-byte HMAC-SHA256
+// signature produces 43 characters, and the LAST character encodes
+// only 4 real bits of signature data plus 2 always-zero padding bits
+// Go's decoder does not verify are actually zero -- so 4 of the 64
+// base64 alphabet characters (confirmed empirically: exactly 3 others
+// besides the original) decode to the IDENTICAL raw signature bytes
+// despite being different glyphs. flipLastChar's fixed replacement
+// had roughly a 3-in-63 chance, for any given real (wall-clock-
+// dependent, hence different every run) signature, of landing in that
+// collision set -- reproducing live on real GitHub Actions CI
+// ("expected error for tampered signature") despite dozens of clean
+// local runs, exactly the kind of run-dependent flake this discipline
+// exists to catch rather than dismiss as noise. Operating on the
+// DECODED bytes, the same technique pkg/platform/security/keys's own
+// flipLastHexByte already uses, has no such collision class: XOR 0xFF
+// changes the actual signature value unconditionally.
+func tamperJWTSignature(t *testing.T, tok string) string {
 	t.Helper()
-	if s == "" {
-		t.Fatal("cannot tamper an empty string")
+	parts := strings.Split(tok, ".")
+	if len(parts) != 3 {
+		t.Fatalf("expected a 3-part JWT (header.payload.signature), got %d parts", len(parts))
 	}
-	last := s[len(s)-1]
-	repl := byte('x')
-	if last == repl {
-		repl = 'y'
+	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		t.Fatalf("decode signature: %v", err)
 	}
-	return s[:len(s)-1] + string(repl)
+	if len(sig) == 0 {
+		t.Fatal("cannot tamper an empty signature")
+	}
+	sig[len(sig)-1] ^= 0xFF
+	parts[2] = base64.RawURLEncoding.EncodeToString(sig)
+	return strings.Join(parts, ".")
 }
 
 func TestJWTRejectsWrongSecret(t *testing.T) {

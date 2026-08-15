@@ -44,9 +44,21 @@ func main() {
 	}
 
 	fmt.Println("\n== Intelligence Loop: Bayesian learning + causal explanation + counterfactuals ==")
-	_ = k.Intelligence.Observe(contradiction.RawObservation{ClaimKey: "vessel/IMO9999999|position", SourceID: "radar-7", Value: "at-sea", SourceReliability: 0.92, Tick: 1})
-	_ = k.Intelligence.Observe(contradiction.RawObservation{ClaimKey: "vessel/IMO9999999|position", SourceID: "satellite-3", Value: "at-sea", SourceReliability: 0.88, Tick: 1})
-	_ = k.Intelligence.Observe(contradiction.RawObservation{ClaimKey: "vessel/IMO9999999|position", SourceID: "anonymous-tip", Value: "in-port", SourceReliability: 0.25, Tick: 1})
+	// Matches every other call in this demo (kernel.New, Execution.Execute,
+	// Intelligence.Resolve below): panic on error rather than silently
+	// continue with a demo trace that no longer reflects what it claims
+	// to. A dropped Observe error here would let the later Resolve call
+	// run against silently-incomplete evidence without any signal.
+	observations := []contradiction.RawObservation{
+		{ClaimKey: "vessel/IMO9999999|position", SourceID: "radar-7", Value: "at-sea", SourceReliability: 0.92, Tick: 1},
+		{ClaimKey: "vessel/IMO9999999|position", SourceID: "satellite-3", Value: "at-sea", SourceReliability: 0.88, Tick: 1},
+		{ClaimKey: "vessel/IMO9999999|position", SourceID: "anonymous-tip", Value: "in-port", SourceReliability: 0.25, Tick: 1},
+	}
+	for _, o := range observations {
+		if err := k.Intelligence.Observe(o); err != nil {
+			panic(err)
+		}
+	}
 	exp, err := k.Intelligence.Resolve("vessel/IMO9999999|position", 1, 0)
 	if err != nil {
 		panic(err)

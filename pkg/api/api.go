@@ -654,6 +654,21 @@ func (g *Gateway) Handle(req Request, handler func(Request, Claims) (Status, []b
 		g.Idempotency.Abandon(req.IdempotencyKey)
 		return responseFrom(st, body, herr, claims, dec, false)
 	}
+	// Complete can genuinely fail here (not a provably-impossible path):
+	// IdempotencyStore is shared across concurrent requests, and Begin
+	// (line above, called moments ago on this same key) sweeps TTL-
+	// expired entries using whatever tick THAT call carried -- so a
+	// different, concurrently-running request's own Begin call, with a
+	// later tick, can expire and delete this key while THIS handler is
+	// still executing, if handler() runs slower than the store's TTL
+	// window. The accepted degradation when that happens: this
+	// request's own response is still returned correctly below: it is
+	// only a FUTURE retry with the same idempotency key that loses the
+	// replay guarantee and re-executes the handler, rather than
+	// receiving this call's cached response. That is a narrowing of the
+	// idempotency guarantee under a real TTL race, not a correctness
+	// bug in the current request/response cycle, so it is not treated
+	// as a request-failing error.
 	_ = g.Idempotency.Complete(req.IdempotencyKey, st, body, req.Tick)
 	return responseFrom(st, body, nil, claims, dec, false)
 }

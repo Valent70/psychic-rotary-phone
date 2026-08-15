@@ -155,12 +155,21 @@ func handle{{ GoEngineName $c.Engine }}{{ GoMethodName $m.Name }}(reg *registry.
 			return
 		}
 		if reg.HasPersistence() {
-			_ = reg.SaveState()
+			// A silently-dropped SaveState failure would return 200 OK
+			// with a correct in-memory result while the state change
+			// itself was never durably persisted -- invisible data loss
+			// on the next restart. Surfaced as 500 so the caller knows
+			// this specific write is not safely durable, rather than a
+			// false-green 200.
+			if err := reg.SaveState(); err != nil {
+				http.Error(w, "state persistence failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(result)
+		_ = enc.Encode(result) // response body write failure (e.g. client disconnected mid-write) cannot be meaningfully surfaced: headers are already sent by this point
 	}
 }
 {{ end }}
