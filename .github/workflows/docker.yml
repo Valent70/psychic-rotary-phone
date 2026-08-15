@@ -29,7 +29,7 @@ jobs:
         run: |
           timeout 5 docker run --rm veriqo-node:ci -id A -peers "A=127.0.0.1:9001" -listen "127.0.0.1:9001" || test $? -eq 124
 
-      - name: confirm zero OS packages in shipped images (FROM scratch: no shell, no package manager)
+      - name: "confirm zero OS packages in shipped images (FROM scratch: no shell, no package manager)"
         run: |
           ! docker run --rm --entrypoint /bin/sh veriqo-demo:ci -c 'echo should-not-run' 2>&1
           ! docker run --rm --entrypoint /bin/sh veriqo-node:ci  -c 'echo should-not-run' 2>&1
