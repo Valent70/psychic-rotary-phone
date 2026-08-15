@@ -68,6 +68,39 @@ var DefaultExclusions = []string{
 	"veriqo-node", "veriqo-readiness", "veriqo-requirements", "veriqo-testrunner", "veriqo-verify",
 }
 
+// gitMode collapses a filesystem file mode down to the only two modes
+// git itself ever records for a blob: 0644 (normal) or 0755
+// (executable). Compute previously hashed the raw fs.FileMode.Perm()
+// bits, which meant a file that happened to be chmod 0600 on whatever
+// machine wrote it (any os.WriteFile(..., 0o600) caller in this repo)
+// produced a DIFFERENT source hash than the exact same git blob
+// checked out fresh anywhere else -- git's own object model has no way
+// to represent 0600 (or any permission bits other than the executable
+// flag), so the fine-grained bits Compute was hashing are an artifact
+// of one local checkout's history, not part of the tree git actually
+// commits to. That made the release certificate's SourceHash
+// unreproducible from a fresh clone or an extracted release archive of
+// the SAME commit -- found by cmd/veriqo-verify-release-identity
+// disagreeing between a working tree and its own delivered zip despite
+// both being byte-identical in every git-trackable respect. Hashing
+// only what git tracks makes the source hash a true, reproducible
+// function of the git tree object.
+func gitMode(m fs.FileMode) uint32 {
+	if m.Perm()&0o111 != 0 {
+		return 0o755
+	}
+	return 0o644
+}
+
+// Excluded reports whether relPath matches one of exclusions, using
+// the same directory-prefix-vs-exact-file matching Compute itself
+// walks by. Exported so callers that need to reason about exclusions
+// without re-walking a tree -- e.g. a release-identity reconciliation
+// tool checking which paths a git diff touched -- share the single
+// real definition of "self-referential/generated" instead of a second,
+// potentially drifting copy of the same rule.
+func Excluded(relPath string, exclusions []string) bool { return excluded(relPath, exclusions) }
+
 func excluded(relPath string, exclusions []string) bool {
 	for _, ex := range exclusions {
 		if strings.HasSuffix(ex, "/") {
@@ -120,12 +153,13 @@ func Compute(root string, extraExclusions ...string) (Result, error) {
 		if err != nil {
 			return err
 		}
+		mode := gitMode(info.Mode())
 		h := sha256.New()
 		fmt.Fprintf(h, "veriqo.sourcehash.file/v1|path=%s|mode=%o|size=%d|",
-			rel, uint32(info.Mode().Perm()), info.Size())
+			rel, mode, info.Size())
 		h.Write(content)
 		files = append(files, FileEntry{
-			Path: rel, Mode: uint32(info.Mode().Perm()), Size: info.Size(),
+			Path: rel, Mode: mode, Size: info.Size(),
 			Hash: hex.EncodeToString(h.Sum(nil)),
 		})
 		return nil
