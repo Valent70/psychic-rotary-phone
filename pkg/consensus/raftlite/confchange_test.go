@@ -92,7 +92,12 @@ func TestProposeJointConfChange_RejectsInvalidBatchBeforeProposing(t *testing.T)
 	_, nodes, cancel := buildCluster(t, 3, nil)
 	defer cancel()
 	leader := waitForLeader(t, nodes, 2*time.Second)
-	beforeIndex := leader.CommitIndex()
+	// Not leader.CommitIndex() directly: the leader's own post-election
+	// no-op entry may still be in flight (see waitForCommitIndexToStabilize's
+	// doc comment) -- capturing the "before" snapshot before it settles
+	// risks blaming its own later, unrelated commit on this test's
+	// intentionally-rejected proposal.
+	beforeIndex := waitForCommitIndexToStabilize(t, leader, 2*time.Second)
 
 	_, _, err := leader.ProposeJointConfChange([]ConfChange{{Type: ConfChangeRemoveVoter, NodeID: "NONEXISTENT"}})
 	if err == nil {

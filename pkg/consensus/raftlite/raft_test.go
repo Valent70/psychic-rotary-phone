@@ -58,6 +58,38 @@ func waitForLeader(t *testing.T, nodes []*Node, timeout time.Duration) *Node {
 	return nil
 }
 
+// waitForCommitIndexToStabilize polls n.CommitIndex() until it stops
+// changing for a short quiet window, or until timeout, and returns the
+// settled value. becomeLeader appends a no-op entry immediately on
+// election (see raft.go's becomeLeader doc comment) which then still
+// needs one real network round-trip to actually commit -- waitForLeader
+// only proves IsLeader() is true, not that this initial commit has
+// already landed. A test that captures a "before" CommitIndex()
+// snapshot right after waitForLeader can otherwise observe it advance
+// later purely because of that in-flight no-op, for reasons having
+// nothing to do with whatever the test itself proposes next. Found via
+// a real, reproduced CI failure in
+// TestProposeJointConfChange_RejectsInvalidBatchBeforeProposing.
+func waitForCommitIndexToStabilize(t *testing.T, n *Node, timeout time.Duration) uint64 {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	last := n.CommitIndex()
+	stableSince := time.Now()
+	for time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+		cur := n.CommitIndex()
+		if cur != last {
+			last = cur
+			stableSince = time.Now()
+			continue
+		}
+		if time.Since(stableSince) >= 50*time.Millisecond {
+			return last
+		}
+	}
+	return last
+}
+
 func TestElection_SingleLeaderElected(t *testing.T) {
 	_, nodes, cancel := buildCluster(t, 3, nil)
 	defer cancel()
