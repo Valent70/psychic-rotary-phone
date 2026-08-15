@@ -36,6 +36,7 @@ import (
 	"strconv"
 	"time"
 
+	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/platform/security"
 	"veriqo/veriqo/registry"
@@ -55,10 +56,18 @@ type ServerOptions struct {
 // under addr, plus a health check at GET /healthz that reports whether
 // this Registry has persistence enabled. opts layers Audit -> JWT ->
 // RBAC -> APIKey around the routes, in that order, skipping any layer
-// left at its zero value.
-func NewServer(addr string, reg *registry.Registry, opts ServerOptions) *http.Server {
+// left at its zero value. orch, when non-nil, additionally serves
+// POST /lifecycle/run_unified over the real pkg/lifecycle.Orchestrator
+// (see lifecycle_route.go) -- the real production Intent entrypoint,
+// not the older registry.Registry surface every other route here
+// still uses. A nil orch (every pre-existing caller of this function
+// before this parameter existed) simply omits that one route.
+func NewServer(addr string, reg *registry.Registry, orch *lifecycle.Orchestrator, opts ServerOptions) *http.Server {
 	mux := http.NewServeMux()
 	for path, handler := range Routes(reg) {
+		mux.HandleFunc(path, handler)
+	}
+	for path, handler := range lifecycleRoutes(orch) {
 		mux.HandleFunc(path, handler)
 	}
 	mux.HandleFunc("/healthz", healthHandler(reg))

@@ -6,6 +6,10 @@
 // generated route (see veriqo/gateway/rest) over it, with the full
 // security stack (API Key, JWT, RBAC, Audit, TLS/mTLS) from
 // pkg/platform/security composed via veriqo/gateway/rest.ServerOptions.
+// It also serves POST /lifecycle/run_unified over k.Lifecycle -- the
+// real pkg/lifecycle.Orchestrator, and (per this session's P0-1 round)
+// the real caller of pkg/execution's full production DAG. Before this,
+// no HTTP-facing entrypoint reached RunUnified at all.
 package main
 
 import (
@@ -96,7 +100,7 @@ func main() {
 	if *enableAudit {
 		srvOpts.Audit = audit.NewAuditStore()
 	}
-	srv := rest.NewServer(*addr, reg, srvOpts)
+	srv := rest.NewServer(*addr, reg, k.Lifecycle, srvOpts)
 
 	if (*tlsCert == "") != (*tlsKey == "") {
 		fmt.Fprintln(os.Stderr, "veriqo-gateway: --tls-cert and --tls-key must be set together")

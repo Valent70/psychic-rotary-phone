@@ -81,6 +81,48 @@ func TestGatewayIntegration(t *testing.T) {
 		t.Fatalf("POST /evidence/add_node: status %d", resp2.StatusCode)
 	}
 
+	// Real call #3: lifecycle.run_unified, over the network, against
+	// the ACTUAL compiled veriqo-gateway binary -- proof this session's
+	// P0-8 gap-closure (a real HTTP entrypoint into pkg/lifecycle.
+	// Orchestrator.RunUnified, previously reachable only from tests and
+	// cmd/veriqo-cold-replay's replay-only path) is not just an
+	// in-process httptest claim (see lifecycle_route_test.go for that
+	// finer-grained coverage) but genuinely serves from the same
+	// separate-OS-process binary this test already proves for the
+	// registry-based routes.
+	body3, _ := json.Marshal(map[string]any{
+		"actor_id": "analyst-gw-1", "tenant": "acme", "objective": "assess dark-vessel risk",
+		"entity_aliases":      []map[string]string{{"kind": "IMO", "value": "9223344"}},
+		"required_confidence": 0.6, "temporal_scope": "last-7-days", "tick": 1,
+		"requirements": []map[string]any{{"kind": "AIS_STATUS", "required": true, "min_sources": 2}},
+		"subject":      "x", "predicate": "AIS_STATUS",
+		"submissions": []map[string]any{
+			{"source_id": "ais-vendor-a", "value": "OFF", "base_reliability": 0.8},
+			{"source_id": "ais-vendor-b", "value": "OFF", "base_reliability": 0.8},
+			{"source_id": "port-authority", "value": "ON", "base_reliability": 0.95},
+		},
+	})
+	resp3, err := client.Post(baseURL+"/lifecycle/run_unified", "application/json", bytes.NewReader(body3))
+	if err != nil {
+		t.Fatalf("POST /lifecycle/run_unified: %v", err)
+	}
+	defer resp3.Body.Close()
+	if resp3.StatusCode != http.StatusOK {
+		t.Fatalf("POST /lifecycle/run_unified: status %d", resp3.StatusCode)
+	}
+	var runResult struct {
+		Decision          string `json:"decision"`
+		EntityID          string `json:"entity_id"`
+		ExecutionRootHash string `json:"execution_root_hash"`
+		DecisionID        string `json:"decision_id"`
+	}
+	if err := json.NewDecoder(resp3.Body).Decode(&runResult); err != nil {
+		t.Fatalf("decoding lifecycle.run_unified response: %v", err)
+	}
+	if runResult.Decision == "" || runResult.EntityID == "" || runResult.ExecutionRootHash == "" || runResult.DecisionID == "" {
+		t.Fatalf("expected a real, fully-populated response from the actual gateway process, got %+v", runResult)
+	}
+
 	// Shut down cleanly (SIGTERM triggers the gateway's own
 	// persistence-on-shutdown path) and confirm it actually persisted:
 	// the trust certificate issued over the network above must be on
