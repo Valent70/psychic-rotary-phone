@@ -271,12 +271,17 @@ func main() {
 	}
 
 	// truth_arbitration_no_bypass (audit V7.12.7 item P0-A / R1: "Tidak
-	// boleh ada bypass"): a real, mandatory, in-process gate proving no
-	// production source file constructs contradiction.ArbitrationEngine
-	// directly, outside the two audited exemptions (the facade itself
-	// and IVF's independent replay function) -- see internal/nobypass's
-	// own doc comment. Failing this gate means a future caller has
-	// quietly reopened the exact fragmentation P0-A closed.
+	// boleh ada bypass"; also satisfies the master implementation
+	// directive's "unified_evidence_production_coverage" requirement --
+	// same gate, kept under its established name for continuity with
+	// every prior round's evidence and documentation): a real,
+	// mandatory, in-process gate proving no production source file
+	// constructs contradiction.ArbitrationEngine, fusion.Engine, OR
+	// canonical.Pipeline directly outside each constructor's own
+	// individually-audited exemption list -- see internal/nobypass's
+	// own doc comment for exactly which 5+3+2 sites are exempt and why.
+	// Failing this gate means a future caller has quietly reopened the
+	// exact evidence-authority fragmentation P0-A closed.
 	{
 		byp, bypErr := nobypass.Check(".")
 		bypOut, _ := json.MarshalIndent(byp, "", "  ")
@@ -289,9 +294,11 @@ func main() {
 		}
 		if err := reg.Register(assurance.Gate{
 			ID: "truth_arbitration_no_bypass",
-			Description: "no source file outside pkg/evidence/api/api.go and pkg/engine/replay.go constructs " +
-				"contradiction.ArbitrationEngine directly -- every production caller reaches Truth Arbitration " +
-				"through the ONE canonical facade path",
+			Description: "no production source file constructs contradiction.ArbitrationEngine, fusion.Engine, " +
+				"or canonical.Pipeline directly outside each constructor's own audited exemption list -- every " +
+				"production evidence ingress path terminates at the ONE canonical facade/pipeline, not a " +
+				"silently-reopened parallel authority (this gate is the directive's " +
+				"unified_evidence_production_coverage requirement)",
 			Mandatory: true, RequiredStatus: assurance.StatusVerified,
 			OwnerPackage: "./internal/nobypass",
 			ExitCriteria: "zero unauthorized direct constructions found by a real whole-tree source scan",

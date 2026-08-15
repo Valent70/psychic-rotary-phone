@@ -50,12 +50,24 @@ func New() *fusion.Engine {
 	return fusion.NewEngine(nil)
 }
 `)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "sneaky3", "bypass.go"), `package sneaky3
+
+import "veriqo/pkg/canonical"
+
+func New() *canonical.Pipeline {
+	return canonical.NewPipeline(nil)
+}
+`)
 	rep, err := Check(dir)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
-	want := []string{"pkg/sneaky/bypass.go: contradiction.ArbitrationEngine", "pkg/sneaky2/bypass.go: fusion.Engine"}
-	if len(rep.Violations) != 2 || rep.Violations[0] != want[0] || rep.Violations[1] != want[1] {
+	want := []string{
+		"pkg/sneaky/bypass.go: contradiction.ArbitrationEngine",
+		"pkg/sneaky2/bypass.go: fusion.Engine",
+		"pkg/sneaky3/bypass.go: canonical.Pipeline",
+	}
+	if len(rep.Violations) != 3 || rep.Violations[0] != want[0] || rep.Violations[1] != want[1] || rep.Violations[2] != want[2] {
 		t.Fatalf("expected exactly %v, got %v", want, rep.Violations)
 	}
 }
@@ -79,10 +91,20 @@ import "veriqo/pkg/moat/fusion"
 
 func f() *fusion.Engine { return fusion.NewEngine(nil) }
 `
-	mustWriteFile(t, filepath.Join(dir, "pkg", "evidence", "api", "api.go"), arbBody)
+	pipelineBody := `package p
+
+import "veriqo/pkg/canonical"
+
+func f() *canonical.Pipeline { return canonical.NewPipeline(nil) }
+`
+	mustWriteFile(t, filepath.Join(dir, "pkg", "evidence", "api", "api.go"), arbBody+pipelineBody)
 	mustWriteFile(t, filepath.Join(dir, "pkg", "engine", "replay.go"), arbBody+fusionBody)
 	mustWriteFile(t, filepath.Join(dir, "pkg", "canonical", "canonical.go"), fusionBody)
 	mustWriteFile(t, filepath.Join(dir, "cmd", "veriqo-demo", "main.go"), fusionBody)
+	mustWriteFile(t, filepath.Join(dir, "veriqo", "kernel", "kernel.go"), pipelineBody)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "replay", "replay.go"), pipelineBody)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "lifecycle", "lifecycle.go"), pipelineBody)
+	mustWriteFile(t, filepath.Join(dir, "pkg", "execution", "execution.go"), pipelineBody)
 
 	rep, err := Check(dir)
 	if err != nil {

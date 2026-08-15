@@ -23,6 +23,23 @@
 // scans the real source tree for either constructor's call sites and
 // fails if any exist outside their own audited, deliberately-exempt
 // locations.
+//
+// A later round's own re-read of the master implementation directive
+// found a THIRD, real construction site this package had not yet
+// covered: pkg/canonical.NewPipeline itself. Five production files
+// each independently construct a canonical.Pipeline (veriqo/kernel's
+// composition root, pkg/replay's isolated re-execution, pkg/evidence/
+// api's own facade default, pkg/lifecycle's nil-safe default, pkg/
+// execution's nil-safe default) -- every one of them individually
+// justified (see checkedConstructors below), but, exactly like the
+// other two constructors before this round, nothing PROVED that set
+// was exhaustive or would stay that way. Check now scans for this
+// constructor too, closing what the master directive names
+// "unified_evidence_production_coverage": a real, whole-tree scan
+// proving every production evidence ingress path -- not just the
+// three Facade-reachable call sites the P0-A doc comment above
+// enumerates -- terminates at an audited, exhaustively-listed
+// construction site, not a silently-reopened parallel authority.
 package nobypass
 
 import (
@@ -98,6 +115,45 @@ var checkedConstructors = []constructor{
 			filepath.FromSlash("pkg/canonical/canonical.go"),
 			filepath.FromSlash("pkg/engine/replay.go"),
 			filepath.FromSlash("cmd/veriqo-demo/main.go"),
+			filepath.FromSlash("internal/nobypass/nobypass.go"),
+		},
+	},
+	{
+		name:   "canonical.Pipeline",
+		marker: "canonical.NewPipeline(",
+		// Five audited production sites, each independently justified
+		// (not a blanket exemption):
+		// - veriqo/kernel/kernel.go: the ONE true composition root.
+		//   Constructs exactly one Pipeline and shares that SAME pointer
+		//   with everything downstream (lifecycle.NewOrchestrator, api.
+		//   New) by injection -- see kernel.go's own doc comment on why
+		//   a second, independently-stateful Pipeline anywhere else
+		//   would silently double-run arbitration and diverge from this
+		//   one.
+		// - pkg/replay/replay.go: "Fresh engines. No access to the
+		//   originals." -- the same deliberately-isolated independent-
+		//   verification reasoning as ReplayContradiction/ReplayFusion
+		//   above; an independent verifier's recomputation must not
+		//   share state with the live production pipeline it is
+		//   checking.
+		// - pkg/evidence/api/api.go: the facade's own nil-safe default,
+		//   used ONLY when no pipeline is injected -- the facade IS the
+		//   canonical path, so its own fallback construction is not a
+		//   bypass of itself.
+		// - pkg/lifecycle/lifecycle.go (NewOrchestrator) and pkg/
+		//   execution/execution.go (NewEngine): both nil-safe defaults
+		//   for standalone/test construction, mirroring the exact same
+		//   pattern; every real production caller (veriqo/kernel.New)
+		//   always passes the shared pipeline explicitly, so this
+		//   branch is never taken outside tests and standalone tooling.
+		// - internal/nobypass/nobypass.go: same string-literal reason
+		//   as the other two constructors' exemptions.
+		allowedFiles: []string{
+			filepath.FromSlash("veriqo/kernel/kernel.go"),
+			filepath.FromSlash("pkg/replay/replay.go"),
+			filepath.FromSlash("pkg/evidence/api/api.go"),
+			filepath.FromSlash("pkg/lifecycle/lifecycle.go"),
+			filepath.FromSlash("pkg/execution/execution.go"),
 			filepath.FromSlash("internal/nobypass/nobypass.go"),
 		},
 	},
