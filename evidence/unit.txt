@@ -17,10 +17,10 @@ ok  	veriqo/cmd/veriqo-requirements	(cached)
 ?   	veriqo/cmd/veriqo-verify-release	[no test files]
 ok  	veriqo/internal/assurance	(cached)
 ok  	veriqo/internal/determinism	(cached)
-ok  	veriqo/internal/nobypass	0.041s
+ok  	veriqo/internal/nobypass	0.028s
 ok  	veriqo/internal/sbom	(cached)
 ok  	veriqo/internal/sourcehash	(cached)
-ok  	veriqo/internal/telemetrycoverage	0.018s
+ok  	veriqo/internal/telemetrycoverage	(cached)
 ok  	veriqo/internal/timestamp	(cached)
 ok  	veriqo/internal/version	(cached)
 ok  	veriqo/pkg/api	(cached)
@@ -30,15 +30,15 @@ ok  	veriqo/pkg/blockers/dr	(cached)
 ok  	veriqo/pkg/blockers/hsmkms	(cached)
 ok  	veriqo/pkg/blockers/livedata	(cached)
 ?   	veriqo/pkg/blockers/orchestrator	[no test files]
-ok  	veriqo/pkg/blockers/pentest	2.093s
+ok  	veriqo/pkg/blockers/pentest	1.518s
 ok  	veriqo/pkg/blockers/scale	(cached)
 ok  	veriqo/pkg/blockers/soak	(cached)
 ok  	veriqo/pkg/blockers/spiffe	(cached)
-ok  	veriqo/pkg/blockers/supplychain	0.016s
+ok  	veriqo/pkg/blockers/supplychain	0.020s
 ok  	veriqo/pkg/canonical	(cached)
 ok  	veriqo/pkg/chaos	(cached)
 ok  	veriqo/pkg/connector	(cached)
-ok  	veriqo/pkg/consensus/raftlite	8.498s
+ok  	veriqo/pkg/consensus/raftlite	(cached)
 ok  	veriqo/pkg/core/trustcalc	(cached)
 ok  	veriqo/pkg/dataplatform/ingest	(cached)
 ok  	veriqo/pkg/dataquality	(cached)
@@ -109,12 +109,12 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	0.452s
+ok  	veriqo/test/acceptance/replay	0.317s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/e2e/eight_blockers	21.103s
-ok  	veriqo/test/integration	4.816s
-ok  	veriqo/test/soak	30.037s
-ok  	veriqo/test/stress	11.378s
+ok  	veriqo/test/e2e/eight_blockers	20.259s
+ok  	veriqo/test/integration	3.480s
+ok  	veriqo/test/soak	30.090s
+ok  	veriqo/test/stress	8.450s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -122,7 +122,7 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	(cached)
+ok  	veriqo/veriqo/gateway/rest	0.827s
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
 ok  	veriqo/veriqo/kernel	(cached)
