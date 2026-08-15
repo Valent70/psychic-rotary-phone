@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"veriqo/internal/assurance"
+	"veriqo/internal/environment"
 	"veriqo/internal/nobypass"
 	"veriqo/internal/sbom"
 	"veriqo/internal/sourcehash"
@@ -532,6 +533,26 @@ func main() {
 		ChaosManifestHash:     categoryHash(gateHashes, "chaos"),
 		ReplayManifestHash:    categoryHash(gateHashes, "replay", "replay_determinism_100x"),
 	}
+
+	// P1-B (master implementation directive, "Qualification Environment
+	// Identity"): a real, structured record of the environment that
+	// produced this exact release, replacing what would otherwise be an
+	// unrecorded fact -- see internal/environment's own package comment
+	// for the honest scope (this sandbox's own OS/toolchain/hostname/
+	// kernel/container-heuristic/config-hash; real cloud/orchestration
+	// fields left empty, never fabricated). The full Identity is
+	// persisted as its own evidence artifact; only its content hash
+	// enters the certificate (see EnvironmentHash's own doc comment for
+	// why it is attached, not signature-covered, in this round).
+	envIdentity := environment.Current()
+	envIdentity.TimeReferenceUnix = now
+	if envRaw, err := json.MarshalIndent(envIdentity, "", "  "); err == nil {
+		_ = os.WriteFile("evidence/environment_identity.json", envRaw, 0o600)
+	}
+	if envHash, err := envIdentity.Hash(); err == nil {
+		cert = cert.WithEnvironmentIdentity(envHash)
+	}
+
 	manifest := assurance.BuildReadinessManifest(reg, acc, cert)
 	if *signingKey != "" {
 		priv, keyID, err := loadSigningKey(*signingKey)

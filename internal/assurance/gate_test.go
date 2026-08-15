@@ -191,6 +191,42 @@ func TestReleaseCertificateSignatureAndTamperDetection(t *testing.T) {
 	}
 }
 
+// TestWithEnvironmentIdentityDoesNotAffectSignatureOrHash is the real
+// proof behind EnvironmentHash's own doc comment claim: attaching a
+// real environment-identity hash after Sign must change neither
+// CertificateHash nor signature validity, exactly like the pre-
+// existing WithTimestampAttestation fields -- otherwise every
+// historically-signed manifest would fail re-verification the moment
+// this field started being populated, a real regression Rule 0.4
+// forbids.
+func TestWithEnvironmentIdentityDoesNotAffectSignatureOrHash(t *testing.T) {
+	r := regWithOneMandatory(t)
+	if err := r.Attach("unit", StatusVerified, passingEvidence("unit")); err != nil {
+		t.Fatalf("Attach: %v", err)
+	}
+	_, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("keygen: %v", err)
+	}
+	signed := ReleaseCertificate{Version: "v7.12.1", GitCommit: "abc", GoVersion: "go1.24.7"}.
+		Finalize(r.Assess()).Sign(priv, "release-key-1")
+	beforeHash, beforeSig := signed.CertificateHash, signed.Signature
+
+	withEnv := signed.WithEnvironmentIdentity("deadbeef00000000000000000000000000000000000000000000000000000000")
+	if withEnv.CertificateHash != beforeHash {
+		t.Fatalf("WithEnvironmentIdentity changed CertificateHash: %q -> %q", beforeHash, withEnv.CertificateHash)
+	}
+	if withEnv.Signature != beforeSig {
+		t.Fatal("WithEnvironmentIdentity changed the signature")
+	}
+	if err := withEnv.Verify(); err != nil {
+		t.Fatalf("certificate with an attached environment hash must still verify: %v", err)
+	}
+	if withEnv.EnvironmentHash == "" {
+		t.Fatal("expected EnvironmentHash to actually be set")
+	}
+}
+
 func TestVerifyTrustedRejectsAForgedKeypairEvenWhenSelfConsistent(t *testing.T) {
 	r := regWithOneMandatory(t)
 	if err := r.Attach("unit", StatusVerified, passingEvidence("unit")); err != nil {

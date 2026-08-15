@@ -152,6 +152,30 @@ type ReleaseCertificate struct {
 	TimestampEntryHash          string `json:"timestamp_entry_hash,omitempty"`
 	TimestampAuthorityKeyID     string `json:"timestamp_authority_key_id,omitempty"`
 	TimestampAuthoritySignature string `json:"timestamp_authority_signature,omitempty"`
+
+	// EnvironmentHash (master implementation directive, P1-B
+	// "Qualification Environment Identity"): a content hash over the
+	// real internal/environment.Identity that produced this exact
+	// release -- OS/arch/compiler/Go toolchain, hostname, kernel
+	// version, container-runtime heuristic, and a real build-
+	// configuration hash (see internal/environment's own package
+	// comment for which fields this sandbox can and cannot honestly
+	// answer). Like the timestamp-attestation fields above, this is
+	// attached AFTER Finalize/Sign and deliberately excluded from
+	// canonical(): folding a NEW field into the signed hash would
+	// change canonical()'s byte format for every certificate, making
+	// every historically-signed manifest fail re-verification against
+	// this same codebase -- a real regression Rule 0.4 forbids, not a
+	// hypothetical one. A future certificate SCHEMA VERSION bump (an
+	// explicit, larger migration, not attempted here) is the correct
+	// vehicle for making environment identity itself signature-
+	// covered; this round makes it real, populated, and independently
+	// re-derivable evidence, consistent with the wiring-vs-corpus
+	// scoping discipline this codebase already applies elsewhere. The
+	// full Identity JSON this hash commits to is persisted separately
+	// (evidence/environment_identity.json), the same hash-then-embed
+	// pattern already used for SBOMHash/EvidenceRootHash.
+	EnvironmentHash string `json:"environment_hash,omitempty"`
 }
 
 // WithTimestampAttestation attaches a self-hosted timestamp-authority
@@ -165,6 +189,14 @@ func (c ReleaseCertificate) WithTimestampAttestation(seq uint64, entryHash, auth
 	c.TimestampEntryHash = entryHash
 	c.TimestampAuthorityKeyID = authorityKeyID
 	c.TimestampAuthoritySignature = authoritySignature
+	return c
+}
+
+// WithEnvironmentIdentity attaches a real internal/environment.Identity
+// content hash to the certificate -- see EnvironmentHash's own doc
+// comment for exactly what this does and does not cover.
+func (c ReleaseCertificate) WithEnvironmentIdentity(hash string) ReleaseCertificate {
+	c.EnvironmentHash = hash
 	return c
 }
 
