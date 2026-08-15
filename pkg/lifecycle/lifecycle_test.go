@@ -7,12 +7,49 @@ import (
 
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/execution"
+	bayescalibration "veriqo/pkg/governance/calibration"
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
+	"veriqo/pkg/moat/hbayes"
 	"veriqo/pkg/moat/intelligence/risk"
 	"veriqo/pkg/platform/telemetry"
 )
+
+// fixtureTemporalCalibration registers the SAME clearly-labelled,
+// synthetic AIS_STATUS calibration pkg/governance/calibration's own
+// tests use (mirroring test/integration/dark_vessel_test.go's "clearly
+// labeled synthetic" convention) -- proving the wiring is real without
+// ever claiming this is production-calibrated data.
+func fixtureTemporalCalibration(t *testing.T) *bayescalibration.Registry {
+	t.Helper()
+	reg := bayescalibration.NewRegistry()
+	table := bayescalibration.LikelihoodTable{
+		Predicate: "AIS_STATUS",
+		Record: bayescalibration.CalibrationRecord{
+			CalibrationSource: "fixture:synthetic-dark-vessel-dataset-v1 (NOT real production calibration)",
+			ModelVersion:      "temporal-v1",
+			Prior:             map[hbayes.State]float64{"DARK": 0.2, "NORMAL": 0.8},
+			EffectiveTick:     0,
+			DatasetProvenance: "fixture:sha256:0000000000000000000000000000000000000000000000000000000000000",
+		},
+		Likelihood: map[string]map[hbayes.State]float64{
+			"OFF": {"DARK": 0.9, "NORMAL": 0.1},
+			"ON":  {"DARK": 0.05, "NORMAL": 0.95},
+		},
+	}
+	if err := reg.Register(table); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	tr := hbayes.Transition{States: []hbayes.State{"DARK", "NORMAL"}, P: map[hbayes.State]map[hbayes.State]float64{
+		"DARK":   {"DARK": 0.7, "NORMAL": 0.3},
+		"NORMAL": {"DARK": 0.1, "NORMAL": 0.9},
+	}}
+	if err := reg.RegisterTemporalModel("AIS_STATUS", tr, nil, 0); err != nil {
+		t.Fatalf("RegisterTemporalModel: %v", err)
+	}
+	return reg
+}
 
 func testIntent() Intent {
 	return Intent{
@@ -303,27 +340,21 @@ func TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback(t *testing.T) {
 }
 
 // TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction is
-// the explicit, enforced statement of a real gap an external audit
-// named (P0/P1, "Real production calibration/data path"): pkg/moat/
-// hbayes.Model.Infer is real and tested, and pkg/governance/
-// calibration.Registry.BuildObservation is a real, fail-closed bridge
-// from one evidence assertion to an hbayes.Observation -- but NO
-// production caller of RunUnified wires evidence submissions through
-// that bridge into execution.Input's TemporalModel/TemporalObservations
-// fields (confirmed by grepping the whole repo for production writers
-// of either field: zero, only this package's and pkg/execution's own
-// tests populate them). That is two distinct honest gaps, not one:
-// the WIRING (a real, closable code task, not attempted here to avoid
-// inventing a temporal Model's state space and observation cadence
-// without a real caller's actual requirements to design it against)
-// and the CALIBRATION CORPUS itself (real historical data + a real
-// fitting process -- external data-acquisition work in the same
-// category as the eight blockers in pkg/blockers, structurally unable
-// to be closed by writing more code). This test makes the CURRENT,
-// honest consequence of that gap a checked fact instead of an
-// implicit side effect nobody asserts on: RunUnified's real production
-// path (no test-only TemporalModel injection) must record
-// StageTemporal as SKIPPED, never a fabricated OK.
+// the explicit, enforced statement of the DEFAULT, unmodified
+// production behavior: an Orchestrator whose TemporalCalibration is
+// left nil (as every production Orchestrator this repository
+// constructs today does -- veriqo/kernel.New included) must record
+// StageTemporal as SKIPPED, never a fabricated OK, because no
+// calibrated bridge has been wired in. TestRunUnifiedTemporalBayesian-
+// StageExecutesWhenCalibrationRegistered below proves the OTHER half:
+// when an operator DOES register real calibration through
+// Orchestrator.TemporalCalibration, the exact same code path executes
+// hbayes.Model.Infer for real. Together the two tests pin down the
+// honest, current, unambiguous truth: the WIRING is real and tested,
+// production deployments simply have not opted into it because no real
+// calibration corpus exists to opt in with (see pkg/governance/
+// calibration's own package comment for the WIRING-vs-CORPUS
+// distinction this pair of tests exists to keep visible).
 func TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction(t *testing.T) {
 	o := NewOrchestrator(nil, nil)
 	in := testIntent()
@@ -346,6 +377,110 @@ func TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction(t *testing
 	}
 	if temporalNode.Status != execution.StatusSkipped {
 		t.Fatalf("RunUnified's real production path supplies no TemporalModel/TemporalObservations today -- StageTemporal must be SKIPPED, not %s; a non-skipped status here without a real production caller populating those fields would mean a fabricated result slipped through", temporalNode.Status)
+	}
+}
+
+// TestRunUnifiedTemporalBayesianStageExecutesWhenCalibrationRegistered
+// is the real closure of the WIRING half of audit item P0-C: with a
+// real (if fixture-labelled) LikelihoodTable + temporal Model
+// registered on Orchestrator.TemporalCalibration, RunUnified must map
+// every caseIn.Submission through BuildObservation, call
+// hbayes.Model.Infer for real, and record StageTemporal as OK with a
+// genuine, non-empty trace hash -- proving the bridge this round added
+// is not merely present in the source tree but actually load-bearing
+// on the real RunUnified path.
+func TestRunUnifiedTemporalBayesianStageExecutesWhenCalibrationRegistered(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	o.TemporalCalibration = fixtureTemporalCalibration(t)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var temporalNode execution.Node
+	found := false
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageTemporal {
+			temporalNode = n
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected a TEMPORAL_BAYESIAN node in the execution trace")
+	}
+	if temporalNode.Status != execution.StatusOK {
+		t.Fatalf("with real calibration registered, StageTemporal must execute (OK), got %s: %s", temporalNode.Status, temporalNode.Detail)
+	}
+	if !strings.Contains(temporalNode.Detail, "temporal inference over") {
+		t.Fatalf("expected a genuine inference detail describing the real hbayes run, got %q", temporalNode.Detail)
+	}
+	if temporalNode.Hash == "" {
+		t.Fatal("expected a non-empty node hash")
+	}
+}
+
+// TestRunUnifiedTemporalBayesianIsReplayDeterministic is the
+// adversarial companion: two RunUnified calls over byte-identical
+// input and the SAME calibration registry must produce an identical
+// TEMPORAL_BAYESIAN trace hash -- hbayes.Model.Infer's own purity
+// (documented on the package itself) must survive being called through
+// this new production bridge, not just in isolation.
+func TestRunUnifiedTemporalBayesianIsReplayDeterministic(t *testing.T) {
+	reg := fixtureTemporalCalibration(t)
+	run := func() string {
+		o := NewOrchestrator(nil, nil)
+		o.TemporalCalibration = reg
+		in := testIntent()
+		plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+		res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, n := range res.Execution.Trace.Nodes {
+			if n.StageID == execution.StageTemporal {
+				return n.Hash
+			}
+		}
+		t.Fatal("expected a TEMPORAL_BAYESIAN node")
+		return ""
+	}
+	h1, h2 := run(), run()
+	if h1 == "" || h1 != h2 {
+		t.Fatalf("expected identical, non-empty temporal trace hashes across two runs, got %q vs %q", h1, h2)
+	}
+}
+
+// TestRunUnifiedTemporalBayesianExcludesUncalibratedValuesHonestly is
+// the fail-closed-per-submission adversarial case: a submission whose
+// Value has no entry in the registered LikelihoodTable must be
+// honestly excluded from the observation set, not cause the whole
+// case to error out or silently fabricate a likelihood for it. The
+// stage must still execute over the submissions that DO have real
+// calibration.
+func TestRunUnifiedTemporalBayesianExcludesUncalibratedValuesHonestly(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	o.TemporalCalibration = fixtureTemporalCalibration(t)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+	caseIn := testCaseInput("x")
+	caseIn.Submissions = append(caseIn.Submissions, canonical.SourceSubmission{
+		SourceID: fusion.SourceID("uncalibrated-source"), Value: "UNKNOWN_VALUE", BaseReliability: 0.5,
+	})
+
+	res, err := o.RunUnified(context.Background(), in, plan, caseIn)
+	if err != nil {
+		t.Fatalf("an uncalibrated submission value must not fail the whole case: %v", err)
+	}
+	var temporalNode execution.Node
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageTemporal {
+			temporalNode = n
+		}
+	}
+	if temporalNode.Status != execution.StatusOK {
+		t.Fatalf("the calibrated submissions must still drive real inference despite one uncalibrated submission, got %s", temporalNode.Status)
 	}
 }
 

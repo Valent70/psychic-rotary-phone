@@ -44,11 +44,13 @@ import (
 	"veriqo/internal/version"
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/execution"
+	bayescalibration "veriqo/pkg/governance/calibration"
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/calibration"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
+	"veriqo/pkg/moat/hbayes"
 	"veriqo/pkg/platform/correlation"
 	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/verification"
@@ -285,6 +287,23 @@ type Orchestrator struct {
 	// lifecycle run, not a capability that only unit tests exercise.
 	Execution   *execution.Engine
 	Calibration *calibration.Engine
+	// TemporalCalibration, when set, is the real Evidence -> Observation
+	// bridge (audit item P0-C, pkg/governance/calibration) RunUnified
+	// consults to drive pkg/execution's TEMPORAL_BAYESIAN stage for
+	// real, instead of leaving it unconditionally SKIPPED. Nil by
+	// default and left unset by every production Orchestrator this
+	// repository constructs today (see NewOrchestrator) -- an operator
+	// opts in by assigning a *bayescalibration.Registry populated with
+	// real, provenanced LikelihoodTable/temporal-Model registrations for
+	// the predicates it wants to actually reason over. Do not confuse
+	// with Calibration above (pkg/moat/calibration.Engine): that is the
+	// UNRELATED Class-A/B/C ground-truth trust-calibration feedback
+	// loop; this is the evidence-to-hidden-state-likelihood bridge for
+	// hbayes's temporal model. Two packages both named "calibration"
+	// solving two different problems -- imported here as
+	// bayescalibration to keep the two unmistakably separate at every
+	// call site.
+	TemporalCalibration *bayescalibration.Registry
 }
 
 // NewOrchestrator builds a lifecycle Orchestrator over an existing
@@ -491,6 +510,40 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	if identityKeySet {
 		execIn.IdentityAliases = []identity.Identifier{identityKey}
 	}
+
+	// --- Temporal Bayesian bridge (P0-C WIRING half) --------------------
+	// Real, but strictly additive: TemporalCalibration is nil by default
+	// (see its own doc comment), so this block is a no-op for every
+	// production Orchestrator this repository constructs today and
+	// TEMPORAL_BAYESIAN keeps recording SKIPPED exactly as before. When
+	// an operator DOES register a real LikelihoodTable + temporal Model
+	// for caseIn.Predicate, every submission is mapped through
+	// BuildObservation -- fail-closed per-submission, not per-request:
+	// a submission whose specific Value has no calibrated likelihood
+	// entry simply contributes no observation rather than aborting the
+	// whole case, since a calibration gap on one source must never turn
+	// into a production outage. Only a submission that fails for a
+	// reason OTHER than "no calibration for this predicate/value" (i.e.
+	// tick precedes the table's effective tick) is treated the same
+	// way -- honestly excluded, not fabricated around.
+	if o.TemporalCalibration != nil && o.TemporalCalibration.Calibrated(caseIn.Predicate) &&
+		o.TemporalCalibration.TemporalModelRegistered(caseIn.Predicate) {
+		var obs []hbayes.Observation
+		for _, sub := range caseIn.Submissions {
+			built, buildErr := o.TemporalCalibration.BuildObservation(string(sub.SourceID), caseIn.Predicate, sub.Value, in.Tick, 0)
+			if buildErr != nil {
+				continue // honestly excluded: no calibrated likelihood for this value
+			}
+			obs = append(obs, built)
+		}
+		if len(obs) > 0 {
+			if model, err := o.TemporalCalibration.BuildTemporalModel(caseIn.Predicate); err == nil {
+				execIn.TemporalModel = model
+				execIn.TemporalObservations = []hbayes.TickObservations{{Tick: in.Tick, Observations: obs}}
+			}
+		}
+	}
+
 	span.SetAttribute(telemetry.Attribute{Key: "execution_id", Value: execCtx.ExecutionID})
 	execRes, err := o.Execution.Run(ctx, execIn)
 	if err != nil {

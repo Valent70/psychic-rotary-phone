@@ -32,24 +32,33 @@
 //
 // A second, DISTINCT gap an external audit's own words named precisely
 // ("Bayesian mechanism sudah ada. Tetapi production calibration corpus
-// dan temporal observation stream belum tersedia."): even with a real
-// LikelihoodTable registered, no production caller of
-// pkg/lifecycle.Orchestrator.RunUnified currently wires evidence
-// submissions THROUGH BuildObservation into pkg/execution's
-// TemporalModel/TemporalObservations inputs -- confirmed by
-// pkg/lifecycle's own TestRunUnifiedTemporalBayesianStageIsHonestly-
-// SkippedInProduction, which asserts the real production path's
-// TEMPORAL_BAYESIAN stage records SKIPPED today, not a fabricated
-// result. That wiring is real, closable code work (map
-// canonical.CaseInput.Submissions to BuildObservation calls, assemble
-// a temporal Model, thread both into execution.Input), deliberately
-// NOT attempted in this package: doing it without a real caller's
-// actual observation cadence and state-space requirements to design
-// against would risk inventing exactly the kind of plausible-looking
-// placeholder this package's whole contract exists to make impossible.
-// Keep the two gaps distinct when reporting status: the CORPUS is
-// externally blocked (data acquisition); the WIRING is not blocked on
-// anything but engineering time once a real caller's shape is known.
+// dan temporal observation stream belum tersedia."): the WIRING half of
+// that sentence is now closed. pkg/lifecycle.Orchestrator gained an
+// optional TemporalCalibration *Registry field (nil-safe: unset by
+// every existing caller, preserving the exact prior SKIPPED behavior
+// byte-for-byte); when set AND predicate has both a LikelihoodTable
+// (Register) and a temporal Model (RegisterTemporalModel), RunUnified
+// maps every canonical.CaseInput.Submission through BuildObservation,
+// assembles a real hbayes.TickObservations at the case's own Tick, and
+// threads both the Model and the observations into execution.Input --
+// a genuine call to pkg/moat/hbayes.Model.Infer over real, provenanced
+// evidence, not a stub. See
+// TestRunUnifiedTemporalBayesianStageExecutesWhenCalibrationRegistered.
+//
+// The CORPUS half remains genuinely, structurally open: this package's
+// own tests (and pkg/lifecycle's wiring test) register a clearly-
+// labelled FIXTURE LikelihoodTable/Model to prove the machinery is
+// real, exactly as this package's tests always have -- they do not,
+// and cannot, supply a real historical-loss-event dataset a genuine
+// calibration process would be fit against. No production Orchestrator
+// this repository constructs (veriqo/kernel.New included) sets
+// TemporalCalibration, so TEMPORAL_BAYESIAN still honestly records
+// SKIPPED on every real deployment today, exactly as
+// TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction
+// (pkg/lifecycle) continues to assert for that unmodified default --
+// until an operator registers a real, calibrated dataset through this
+// exact Registry, which is now a real integration point, not a
+// hypothetical one.
 package calibration
 
 import (
@@ -171,12 +180,15 @@ func (t LikelihoodTable) Validate() error {
 type Registry struct {
 	mu     sync.RWMutex
 	tables map[string]LikelihoodTable // predicate -> table
+	models map[string]*hbayes.Model   // predicate -> temporal model
 }
 
 // NewRegistry constructs an empty registry. An empty registry is the
 // correct, honest default: it can build ZERO observations until a real,
 // validated calibration is registered.
-func NewRegistry() *Registry { return &Registry{tables: map[string]LikelihoodTable{}} }
+func NewRegistry() *Registry {
+	return &Registry{tables: map[string]LikelihoodTable{}, models: map[string]*hbayes.Model{}}
+}
 
 // Register adds or replaces a predicate's likelihood table, refusing
 // anything that fails Validate -- the one and only door through which
@@ -234,5 +246,63 @@ func (r *Registry) Calibrated(predicate string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	_, ok := r.tables[predicate]
+	return ok
+}
+
+// RegisterTemporalModel closes the WIRING half of the gap this
+// package's header comment names distinctly from the CORPUS half: it
+// binds a full hbayes.Model (transition dynamics, causal edges, decay)
+// to predicate, so a real caller (pkg/lifecycle.Orchestrator.RunUnified)
+// can obtain BOTH a per-observation Likelihood distribution (via
+// BuildObservation) AND the temporal Model those observations must be
+// run through, from the SAME registry, keyed by the SAME predicate.
+//
+// The model's Prior is deliberately NOT a second, independently-passed
+// argument: it is read back from predicate's already-registered
+// LikelihoodTable (Register must be called first), so a table's prior
+// and its model's prior can never silently diverge into two different
+// numbers for what is supposed to be one governed belief about the
+// same predicate.
+func (r *Registry) RegisterTemporalModel(predicate string, tr hbayes.Transition, edges []hbayes.CausalEdge, decayLambda float64) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	table, ok := r.tables[predicate]
+	if !ok {
+		return fmt.Errorf("%w: predicate %q (register a LikelihoodTable for it first)", ErrNoCalibration, predicate)
+	}
+	states := make([]hbayes.State, 0, len(table.Record.Prior))
+	for s := range table.Record.Prior {
+		states = append(states, s)
+	}
+	model, err := hbayes.NewTemporalModel(states, tr, table.Record.Prior, edges, decayLambda)
+	if err != nil {
+		return err
+	}
+	r.models[predicate] = model
+	return nil
+}
+
+// BuildTemporalModel returns predicate's registered hbayes.Model, fail-
+// closed (ErrNoCalibration) if RegisterTemporalModel was never called
+// for it -- the second half of "is TEMPORAL_BAYESIAN really wired",
+// alongside Calibrated for the likelihood-table half.
+func (r *Registry) BuildTemporalModel(predicate string) (*hbayes.Model, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	m, ok := r.models[predicate]
+	if !ok {
+		return nil, fmt.Errorf("%w: predicate %q has no registered temporal model", ErrNoCalibration, predicate)
+	}
+	return m, nil
+}
+
+// TemporalModelRegistered reports whether predicate has BOTH a
+// LikelihoodTable and a temporal Model registered -- the exact,
+// machine-checkable precondition for RunUnified's TEMPORAL_BAYESIAN
+// stage to execute for real rather than record SKIPPED.
+func (r *Registry) TemporalModelRegistered(predicate string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.models[predicate]
 	return ok
 }

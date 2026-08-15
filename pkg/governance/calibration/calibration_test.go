@@ -215,3 +215,92 @@ func TestFeedsARealHBayesModelEndToEnd(t *testing.T) {
 		t.Fatalf("expected 2 inference steps, got %d", len(trace.Steps))
 	}
 }
+
+func fixtureTransition() hbayes.Transition {
+	return hbayes.Transition{States: []hbayes.State{"DARK", "NORMAL"}, P: map[hbayes.State]map[hbayes.State]float64{
+		"DARK":   {"DARK": 0.7, "NORMAL": 0.3},
+		"NORMAL": {"DARK": 0.1, "NORMAL": 0.9},
+	}}
+}
+
+// TestRegisterTemporalModelFailsClosedWithoutALikelihoodTable is the
+// same fail-closed discipline BuildObservation already enforces,
+// applied to the model half of the bridge: a Transition/CausalEdges/
+// decay may not be registered for a predicate that has no
+// LikelihoodTable, because RegisterTemporalModel reads its Prior back
+// from that table -- there is nothing to read back from if it does not
+// exist.
+func TestRegisterTemporalModelFailsClosedWithoutALikelihoodTable(t *testing.T) {
+	reg := NewRegistry()
+	if err := reg.RegisterTemporalModel("AIS_STATUS", fixtureTransition(), nil, 0); !errors.Is(err, ErrNoCalibration) {
+		t.Fatalf("expected ErrNoCalibration registering a model for an uncalibrated predicate, got %v", err)
+	}
+	if reg.TemporalModelRegistered("AIS_STATUS") {
+		t.Fatal("a refused registration must not mark the predicate as having a temporal model")
+	}
+}
+
+// TestRegisterTemporalModelReusesTheTablesPrior proves the single-
+// source-of-truth invariant the method's own doc comment states: the
+// registered model's Prior must be exactly the LikelihoodTable's own
+// Prior, never a second, independently-supplied value that could
+// silently diverge from it.
+func TestRegisterTemporalModelReusesTheTablesPrior(t *testing.T) {
+	reg := NewRegistry()
+	if err := reg.Register(fixtureTable()); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if err := reg.RegisterTemporalModel("AIS_STATUS", fixtureTransition(), nil, 0); err != nil {
+		t.Fatalf("RegisterTemporalModel: %v", err)
+	}
+	model, err := reg.BuildTemporalModel("AIS_STATUS")
+	if err != nil {
+		t.Fatalf("BuildTemporalModel: %v", err)
+	}
+	want := fixtureTable().Record.Prior
+	if len(model.Prior) != len(want) {
+		t.Fatalf("prior size mismatch: got %+v want %+v", model.Prior, want)
+	}
+	for state, p := range want {
+		if model.Prior[state] != p {
+			t.Fatalf("model prior[%s]=%.6f does not match the registered table's prior=%.6f -- the two must never diverge", state, model.Prior[state], p)
+		}
+	}
+	if !reg.TemporalModelRegistered("AIS_STATUS") {
+		t.Fatal("TemporalModelRegistered must report true once both a table and a model are registered")
+	}
+}
+
+// TestBuildTemporalModelFailsClosedWithoutRegistration is the third
+// fail-closed check: a LikelihoodTable alone (no RegisterTemporalModel
+// call) must not be enough to obtain a Model -- both halves of the
+// bridge are independently required.
+func TestBuildTemporalModelFailsClosedWithoutRegistration(t *testing.T) {
+	reg := NewRegistry()
+	if err := reg.Register(fixtureTable()); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if _, err := reg.BuildTemporalModel("AIS_STATUS"); !errors.Is(err, ErrNoCalibration) {
+		t.Fatalf("expected ErrNoCalibration without a registered temporal model, got %v", err)
+	}
+	if reg.TemporalModelRegistered("AIS_STATUS") {
+		t.Fatal("TemporalModelRegistered must report false without RegisterTemporalModel")
+	}
+}
+
+// TestRegisterTemporalModelRejectsAnInvalidTransition proves
+// RegisterTemporalModel does not bypass hbayes's own validation --
+// hbayes.NewTemporalModel's error must propagate, not be swallowed.
+func TestRegisterTemporalModelRejectsAnInvalidTransition(t *testing.T) {
+	reg := NewRegistry()
+	if err := reg.Register(fixtureTable()); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	bad := hbayes.Transition{States: []hbayes.State{"DARK", "NORMAL"}, P: map[hbayes.State]map[hbayes.State]float64{
+		"DARK":   {"DARK": 0.9, "NORMAL": 0.5}, // does not sum to 1
+		"NORMAL": {"DARK": 0.1, "NORMAL": 0.9},
+	}}
+	if err := reg.RegisterTemporalModel("AIS_STATUS", bad, nil, 0); err == nil {
+		t.Fatal("a non-stochastic transition must be refused, not silently accepted")
+	}
+}
