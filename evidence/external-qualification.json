@@ -9,14 +9,14 @@
   {
     "gate_id": "scale_qualification",
     "description": "100-node / 1M-evidence physical benchmark",
-    "blocker": "requires physical multi-node infrastructure. pkg/blockers/scale now runs a real goroutine-based NodeProvider and a real exactly-once-delivery integrity check (with deliberate loss/duplication injection tests proving the check actually works) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). A RealNodeProvider satisfying the same interface against 100 real nodes is a provider swap, not a rewrite.",
+    "blocker": "requires physical multi-node infrastructure at the full 100-node scale. pkg/blockers/scale runs a real goroutine-based NodeProvider and a real exactly-once-delivery integrity check (with deliberate loss/duplication injection tests proving the check actually works) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). The promised RealNodeProvider now exists too: HTTPNodeProvider plus a real worker binary (cmd/veriqo-scale-node) were run as 10 genuinely separate Docker containers over real HTTP -- 50,000 records, zero lost, zero duplicated, ~4373/s -- see evidence/scale_qualification-multi-container-drill.txt. Still one order of magnitude short of the literal 100-node acceptance criterion and real cloud/physical infrastructure.",
     "status": "BLOCKED_EXTERNAL",
     "history": null
   },
   {
     "gate_id": "multi_region_dr",
     "description": "multi-region deployment and DR drill with measured RPO/RTO",
-    "blocker": "requires multi-region infrastructure. pkg/blockers/dr now models regions as real raftlite nodes connected through a real network-partition-capable transport, fails the leader region, measures real RTO/RPO, heals it, and confirms convergence -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). Still requires real cross-datacenter infrastructure to qualify real network behavior.",
+    "blocker": "requires multi-region infrastructure. pkg/blockers/dr models regions as real raftlite nodes connected through a real network-partition-capable transport, fails the leader region, measures real RTO/RPO, heals it, and confirms convergence -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). A separate drill ran the actual production binary (cmd/veriqo-node) as three real Docker containers on a real bridge network, partitioned the leader with a real `docker network disconnect`, measured ~500ms RTO and RPO=0 with the surviving majority still serving writes, then healed the partition and independently verified identical converged state on all three containers -- see evidence/multi_region_dr-multi-container-drill.txt. Still requires real cross-datacenter infrastructure (WAN characteristics, real cloud regions, traffic-manager cutover) to qualify real cross-region network behavior.",
     "status": "BLOCKED_EXTERNAL",
     "history": null
   },
@@ -37,14 +37,14 @@
   {
     "gate_id": "soak_72h",
     "description": "72-hour continuous soak with zero leak and zero ledger corruption",
-    "blocker": "the harness now exists and genuinely runs — see test/soak and evidence/soak-report.json (2188 real iterations over 90s in this session, 0 errors, goroutines flat at 2-\u003e2) — but this environment cannot honestly stay up for the required 72h continuous window; VERIQO_SOAK_MINUTES=4320 against the same unchanged test on a long-lived host produces the qualifying evidence. pkg/blockers/soak now formalizes the same technique behind a Start/Checkpoint/Monitor/DetectLeak/DetectDrift/Finalize/GenerateEvidence API with a hash-chained, tamper-evident checkpoint sequence -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION on the machinery; the real 72h window is still unrun).",
+    "blocker": "the harness now exists and genuinely runs — see test/soak and evidence/soak-report.json (2188 real iterations over 90s in this session, 0 errors, goroutines flat at 2-\u003e2) — but this environment cannot honestly stay up for the required 72h continuous window; VERIQO_SOAK_MINUTES=4320 against the same unchanged test on a long-lived host produces the qualifying evidence. A best-effort extension was also run: one genuine, unbroken 60-minute pass of the same unmodified test (30x the smoke pass) completed with zero errors -- see evidence/soak-60min-run-log.txt for the raw run output and an honest note on why its structured JSON specifically wasn't retained. pkg/blockers/soak now formalizes the same technique behind a Start/Checkpoint/Monitor/DetectLeak/DetectDrift/Finalize/GenerateEvidence API with a hash-chained, tamper-evident checkpoint sequence -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION on the machinery; the real 72h window is still unrun).",
     "status": "BLOCKED_EXTERNAL",
     "history": null
   },
   {
     "gate_id": "spire_mtls",
     "description": "real SPIRE deployment with workload attestation and mTLS rotation",
-    "blocker": "a real single-node SPIRE server+agent was run in this session — see evidence/spire_mtls-local-integration.txt — with genuine attestation, X.509-SVID issuance and revocation; still requires a multi-node cluster with a production node attestor and a Workload API client wired into pkg/transport/rafttcp, none of which this evidence covers. pkg/blockers/spiffe now qualifies the client-side validation logic with real X.509 chain verification and a full failure matrix (expired, revoked, untrusted CA, claimed-vs-actual identity mismatch) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION).",
+    "blocker": "a real single-node SPIRE server+agent was run in one session — see evidence/spire_mtls-local-integration.txt — with genuine attestation, X.509-SVID issuance and revocation; a later session ran a real multi-container cluster instead -- one spire-server and two independently-attested spire-agent containers on a real Docker bridge network, node-scoped workload identity isolation confirmed, and per-node revocation proven live across the cluster -- see evidence/spire_mtls-multi-container-integration.txt. Still requires a production node attestor (join_token is a test/demo attestor, not cloud-instance-identity/k8s-PSAT/TPM) and a Workload API client wired into pkg/transport/rafttcp, neither of which either evidence file covers. pkg/blockers/spiffe now qualifies the client-side validation logic with real X.509 chain verification and a full failure matrix (expired, revoked, untrusted CA, claimed-vs-actual identity mismatch) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION).",
     "status": "BLOCKED_EXTERNAL",
     "history": null
   },
