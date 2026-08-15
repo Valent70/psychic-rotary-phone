@@ -32,12 +32,14 @@
 package calibration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
 	"veriqo/pkg/moat/hbayes"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Errors.
@@ -176,6 +178,10 @@ func (r *Registry) Register(t LikelihoodTable) error {
 // -- when no table is registered for predicate, or when value has no
 // entry in that table.
 func (r *Registry) BuildObservation(sourceID, predicate, value string, tick uint64, correlation float64) (hbayes.Observation, error) {
+	_, span := telemetry.StartSpan(context.Background(), "calibration.BuildObservation",
+		telemetry.Attribute{Key: "predicate", Value: predicate}, telemetry.Attribute{Key: "source_id", Value: sourceID})
+	defer span.End()
+
 	r.mu.RLock()
 	table, ok := r.tables[predicate]
 	r.mu.RUnlock()

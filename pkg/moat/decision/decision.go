@@ -15,12 +15,15 @@
 package decision
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -119,6 +122,10 @@ func (e *Engine) RegisterPolicy(p Policy) error {
 // supply a value for is treated as 0 and called out explicitly in the
 // explanation, rather than silently ignored.
 func (e *Engine) Decide(actorID, subject, policyName string, values map[string]float64, tick uint64) (Decision, error) {
+	_, span := telemetry.StartSpan(context.Background(), "decision.Decide",
+		telemetry.Attribute{Key: "subject", Value: subject}, telemetry.Attribute{Key: "policy", Value: policyName})
+	defer span.End()
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

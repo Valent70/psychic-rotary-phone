@@ -21,10 +21,12 @@
 package risk
 
 import (
+	"context"
 	"errors"
 
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/provenance"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // CompositeInput is every named signal the risk model combines. Zero
@@ -160,6 +162,9 @@ func (m Model) ScoreCanonical(in CompositeInput) (Result, error) {
 // the existing IVF (Independent Verification Function) replay guarantee
 // the rest of the kernel provides.
 func (m Model) Score(in CompositeInput) Result {
+	_, span := telemetry.StartSpan(context.Background(), "risk.Score")
+	defer span.End()
+
 	independence := 1.0
 	if in.HasProvenanceData {
 		independence = clamp01(in.ProvenanceIndependenceRatio)

@@ -20,11 +20,14 @@
 package contradiction
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // --- Stage 1: Observation -------------------------------------------------
@@ -275,6 +278,10 @@ func (a *ArbitrationEngine) Observations(claimKey string) []RawObservation {
 // corrections/additional evidence remain part of the claim's history —
 // consistent with the append-only discipline used across this project).
 func (a *ArbitrationEngine) ArbitrateClaim(claimKey string, arbitrationTick uint64, halfLifeTicks uint64) (TruthVersion, error) {
+	_, span := telemetry.StartSpan(context.Background(), "contradiction.ArbitrateClaim",
+		telemetry.Attribute{Key: "claim_key", Value: claimKey})
+	defer span.End()
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

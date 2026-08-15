@@ -20,8 +20,12 @@
 package evidencegraph
 
 import (
+	"context"
 	"sort"
+	"strconv"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // DependencyKind classifies WHY two evidence nodes might be
@@ -155,6 +159,10 @@ func (g *Graph) sharedAncestorFraction(nodes []NodeID) map[NodeID]float64 {
 //
 //	effective(n) = base(n) * (1 - sharedAncestorFraction(n))
 func (g *Graph) EffectiveWeight(nodes []NodeID, base map[NodeID]float64) map[NodeID]float64 {
+	_, span := telemetry.StartSpan(context.Background(), "evidencegraph.EffectiveWeight",
+		telemetry.Attribute{Key: "node_count", Value: strconv.Itoa(len(nodes))})
+	defer span.End()
+
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	shared := g.sharedAncestorFraction(nodes)

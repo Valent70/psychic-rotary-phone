@@ -26,6 +26,7 @@
 package knowledge
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -35,6 +36,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -674,6 +677,10 @@ type State struct {
 // EffectiveTo, never the proposal's current State field, so a proposal
 // reverted at T2 still applies to StateAt(T1) for T1 in its window.
 func (e *Engine) StateAt(tick uint64) State {
+	_, span := telemetry.StartSpan(context.Background(), "knowledge.StateAt",
+		telemetry.Attribute{Key: "tick", Value: strconv.FormatUint(tick, 10)})
+	defer span.End()
+
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.stateAtLocked(tick)

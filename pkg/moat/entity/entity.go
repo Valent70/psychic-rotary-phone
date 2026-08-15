@@ -33,12 +33,15 @@
 package entity
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // ErrTamperDetected mirrors the sibling MOAT packages' hash-chain
@@ -156,6 +159,10 @@ func hashMerge(r MergeRecord) string {
 // audit trails should show the assertion was made, not silently drop
 // it.
 func (r *Registry) Merge(actorID string, aliasA, aliasB Alias, tick uint64) (CanonicalID, error) {
+	_, span := telemetry.StartSpan(context.Background(), "entity.Merge",
+		telemetry.Attribute{Key: "alias_a", Value: aliasA.key()}, telemetry.Attribute{Key: "alias_b", Value: aliasB.key()})
+	defer span.End()
+
 	if aliasA.Kind == "" || aliasA.Value == "" || aliasB.Kind == "" || aliasB.Value == "" {
 		return "", errors.New("entity: alias Kind and Value must be non-empty")
 	}

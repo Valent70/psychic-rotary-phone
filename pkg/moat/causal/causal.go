@@ -22,6 +22,7 @@
 package causal
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -29,6 +30,8 @@ import (
 	"math"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -195,6 +198,10 @@ func cloneVisited(v map[NodeID]bool) map[NodeID]bool {
 // confidence figure via noisy-OR (same math as fusion.fuseGroup — several
 // independent contributing causes strictly increase overall support).
 func (g *Graph) AggregateSupport(effect NodeID) float64 {
+	_, span := telemetry.StartSpan(context.Background(), "causal.AggregateSupport",
+		telemetry.Attribute{Key: "effect", Value: string(effect)})
+	defer span.End()
+
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	causes := g.directCausesOf(effect)

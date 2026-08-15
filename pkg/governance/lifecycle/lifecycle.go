@@ -23,6 +23,7 @@
 package lifecycle
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -31,6 +32,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -503,6 +506,10 @@ type Binding struct {
 // year-old certificate would fail to reproduce for a reason that has
 // nothing to do with the decision.
 func (r *Registry) BindingAt(tick uint64) Binding {
+	_, span := telemetry.StartSpan(context.Background(), "lifecycle.BindingAt",
+		telemetry.Attribute{Key: "tick", Value: strconv.FormatUint(tick, 10)})
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

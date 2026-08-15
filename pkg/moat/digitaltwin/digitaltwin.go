@@ -16,6 +16,7 @@
 package digitaltwin
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -25,6 +26,7 @@ import (
 
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/fusion"
+	"veriqo/pkg/platform/telemetry"
 )
 
 var ErrTamperDetected = errors.New("digitaltwin: hash chain verification failed")
@@ -127,6 +129,10 @@ func (r *Registry) ApplyArbitration(actorID string, entity EntityID, res fusion.
 // ApplyDecision folds one decision.Decision into the named entity's
 // twin, updating (or creating) the Risk state for that policy.
 func (r *Registry) ApplyDecision(actorID string, entity EntityID, d decision.Decision, tick uint64) error {
+	_, span := telemetry.StartSpan(context.Background(), "digitaltwin.ApplyDecision",
+		telemetry.Attribute{Key: "entity", Value: string(entity)})
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

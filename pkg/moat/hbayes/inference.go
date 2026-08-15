@@ -1,11 +1,15 @@
 package hbayes
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Model is the temporal RS-CHDBN: hidden states, a transition model, a
@@ -108,6 +112,10 @@ type InferenceTrace struct {
 //
 // The whole function is pure: (model, obs, interventions) -> trace.
 func (m *Model) Infer(seq []TickObservations, interventions []Intervention) (InferenceTrace, error) {
+	_, span := telemetry.StartSpan(context.Background(), "hbayes.Infer",
+		telemetry.Attribute{Key: "tick_count", Value: strconv.Itoa(len(seq))})
+	defer span.End()
+
 	if len(seq) == 0 {
 		return InferenceTrace{}, ErrNoObservations
 	}

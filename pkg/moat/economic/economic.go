@@ -20,6 +20,7 @@
 package economic
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -28,6 +29,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -122,6 +125,10 @@ type Input struct {
 // common way a risk model understates a tail is by dropping the tail
 // scenario and renormalising what is left.
 func Evaluate(in Input) (Consequence, error) {
+	_, span := telemetry.StartSpan(context.Background(), "economic.Evaluate",
+		telemetry.Attribute{Key: "decision_id", Value: in.DecisionID}, telemetry.Attribute{Key: "subject", Value: in.Subject})
+	defer span.End()
+
 	if in.DecisionID == "" || in.Subject == "" {
 		return Consequence{}, fmt.Errorf("%w: decision id and subject are required", ErrNoLineage)
 	}
