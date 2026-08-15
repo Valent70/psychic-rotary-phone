@@ -143,3 +143,66 @@ between "what is implemented and tested" and "what is documented as the
 path to production but not executed in this sandbox" (gRPC-compatible
 transport, real OTel collector wiring, SPIRE/OPA runtime enforcement,
 100+ node benchmarks, Kubernetes rollout).
+
+## The canonical execution API, and Registry's real role (v7.12.1)
+
+Everything above this section predates `pkg/execution.Engine` (the real
+18-stage production DAG) and `pkg/lifecycle.Orchestrator.RunUnified`
+(its HTTP-reachable entrypoint, `POST /lifecycle/run_unified`) — both
+added across this session's P0-1 through P0-8 rounds. `RunCanonical`,
+described above as "the single composed path" in v7.10.2, is now ONE
+stage among 18 that `RunUnified` calls, not the top of the call chain
+itself. An external audit correctly flagged that this left an
+unresolved question on the record: `veriqo/gateway/rest` serves BOTH
+`generated_routes.go` (23 routes, each calling straight into
+`veriqo/registry.Registry` — the original "Gateway -> Engine Registry
+-> Kernel" design this document opens with) AND
+`/lifecycle/run_unified` (the new unified DAG), with no explicit
+statement of which one is canonical. Left unresolved, this is exactly
+the "three engines / two truths / two execution paths" problem this
+project has already had to unwind once (see the v7.10.2 section above).
+This section is that explicit statement, made now rather than left
+implicit:
+
+**Registry is a compatibility/control surface. Lifecycle/Execution is
+the ONE canonical execution API for governed decisions.**
+
+Concretely:
+
+- `veriqo/registry.Registry`'s seven engines (`TrustAPI`, `IntentAPI`,
+  `EvidenceAPI`, `ReasoningAPI`, `PolicyAPI`, `VerificationAPI`,
+  `ReplayAPI`) are fine-grained, single-subsystem operations — inspect
+  trust state, submit one evidence assertion, query one policy, replay
+  one log. None of them, alone or chained by a caller, produces a
+  governed decision: none returns a `certificate_hash`, `decision_id`,
+  or `execution_root_hash` (verified directly — grep both
+  `generated_routes.go` and `registry.go` for those field names: zero
+  matches). That is not an oversight; it is the reason Registry is safe
+  to keep. It exists for administration, debugging, direct
+  component-level access, and backward compatibility with the CLI and
+  Go SDK that are generated from the same `veriqo/contracts/*.yaml`
+  Registry itself is generated from — real, still-load-bearing
+  consumers, not dead weight to delete for its own sake.
+- `pkg/lifecycle.Orchestrator.RunUnified` (`POST
+  /lifecycle/run_unified`) is the ONE path that produces a governed
+  decision: it runs the full Identity -> Evidence -> Temporal Bayesian
+  -> Policy -> Decision -> DigitalTwin -> Certificate -> Ledger chain,
+  every stage's output entering the same certificate and the same
+  audit/observability trail. Any new capability that needs to produce
+  a decision, a certificate, or anything that gets treated as this
+  system's output of record belongs on this path, not as a new
+  Registry engine.
+- This split is enforced, not just documented: see
+  `veriqo/gateway/rest/architecture_test.go`'s
+  `TestRegistryNeverProducesGovernedDecisionArtifacts`, which fails the
+  build the day any Registry route response starts carrying a
+  certificate/decision/execution-root identity field, catching drift
+  back toward "two truths" before it ships rather than at the next
+  audit.
+
+What this deliberately does NOT do: delete or freeze Registry, rewrite
+the CLI/SDK to call Lifecycle instead, or add a gRPC transport (still
+the named, un-built next step from the section above). Those are real,
+larger follow-on projects this decision unblocks by giving them an
+unambiguous target architecture to build toward, not smaller tasks this
+one paragraph can respectfully claim to have quietly finished too.
