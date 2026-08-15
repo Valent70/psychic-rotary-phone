@@ -249,7 +249,7 @@
     "owner_package": "`deploy/spire`",
     "tests": "\u2014",
     "status": "BLOCKED",
-    "note": "a real single-node SPIRE server+agent was run in this session with genuine attestation, SVID issuance and revocation (see evidence/spire_mtls-local-integration.txt) -- narrows but does not close this: still needs a multi-node cluster, a production node attestor, and a Workload API client wired into pkg/transport/rafttcp"
+    "note": "a real single-node SPIRE server+agent was run in this session with genuine attestation, SVID issuance and revocation (see evidence/spire_mtls-local-integration.txt); a later session extended this to a real multi-container cluster -- one spire-server and two spire-agent containers on a real Docker bridge network, each agent independently attested with its own join token, node-scoped workload identity isolation confirmed, and per-node revocation proven live (revoking agent-1's entry left agent-2 unaffected) -- see evidence/spire_mtls-multi-container-integration.txt. Narrows but does not close this: still needs a production node attestor (join_token is a test/demo attestor) and a Workload API client wired into pkg/transport/rafttcp"
   },
   {
     "id": "R-028",
