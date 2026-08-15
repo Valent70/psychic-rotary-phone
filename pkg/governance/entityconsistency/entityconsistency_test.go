@@ -1,6 +1,8 @@
 package entityconsistency
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"veriqo/pkg/identity"
@@ -161,5 +163,125 @@ func TestCheckIsDeterministicAcrossRepeatedCalls(t *testing.T) {
 	}
 	if first != second {
 		t.Fatalf("Check must be deterministic given the same state and tick: %+v vs %+v", first, second)
+	}
+}
+
+// TestScanProductionAuthorityAgainstRealRepoFindsNoViolations is the
+// caller-coverage half of P0-B run against the ACTUAL repository: as
+// of this test, exactly one production file
+// (pkg/lifecycle/lifecycle.go) constructs entity.NewRegistry(), and it
+// is the documented fallback authority. A non-zero Violations here
+// means a NEW production file has silently reintroduced an independent
+// entity-resolution authority pkg/identity never sees.
+func TestScanProductionAuthorityAgainstRealRepoFindsNoViolations(t *testing.T) {
+	root := repoRootForScan(t)
+	rep, err := ScanProductionAuthority(root)
+	if err != nil {
+		t.Fatalf("ScanProductionAuthority: %v", err)
+	}
+	if len(rep.Violations) != 0 {
+		t.Fatalf("found %d unauthorized entity.NewRegistry() construction site(s), reopening the exact P0-B "+
+			"fragmentation risk this package exists to keep closed: %v", len(rep.Violations), rep.Violations)
+	}
+	if rep.ScannedFiles < 100 {
+		t.Fatalf("expected to scan the real repo (hundreds of .go files), only scanned %d -- root likely wrong", rep.ScannedFiles)
+	}
+}
+
+// TestScanProductionAuthorityDetectsARealViolation is the adversarial
+// proof: a synthetic tree with an unauthorized construction site must
+// be caught.
+func TestScanProductionAuthorityDetectsARealViolation(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteScanFile(t, filepath.Join(dir, "pkg", "sneaky", "bypass.go"), `package sneaky
+
+import "veriqo/pkg/moat/entity"
+
+func New() *entity.Registry {
+	return entity.NewRegistry()
+}
+`)
+	rep, err := ScanProductionAuthority(dir)
+	if err != nil {
+		t.Fatalf("ScanProductionAuthority: %v", err)
+	}
+	if len(rep.Violations) != 1 || rep.Violations[0] != "pkg/sneaky/bypass.go" {
+		t.Fatalf("expected exactly [pkg/sneaky/bypass.go], got %v", rep.Violations)
+	}
+}
+
+// TestScanProductionAuthorityAllowsTheDocumentedFallback proves the
+// one real exemption (pkg/lifecycle/lifecycle.go) does not trip the
+// scanner -- the negative-space proof that authorityAllowedFiles is
+// doing real filtering.
+func TestScanProductionAuthorityAllowsTheDocumentedFallback(t *testing.T) {
+	dir := t.TempDir()
+	body := `package lifecycle
+
+import "veriqo/pkg/moat/entity"
+
+func f() *entity.Registry { return entity.NewRegistry() }
+`
+	mustWriteScanFile(t, filepath.Join(dir, "pkg", "lifecycle", "lifecycle.go"), body)
+	rep, err := ScanProductionAuthority(dir)
+	if err != nil {
+		t.Fatalf("ScanProductionAuthority: %v", err)
+	}
+	if len(rep.Violations) != 0 {
+		t.Fatalf("expected the documented fallback to be allowed, got violations: %v", rep.Violations)
+	}
+}
+
+// TestScanProductionAuthorityIgnoresTestFilesAndComments mirrors
+// internal/nobypass's own adversarial proofs for the identical classes
+// of false positive.
+func TestScanProductionAuthorityIgnoresTestFilesAndComments(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteScanFile(t, filepath.Join(dir, "pkg", "moat", "entity", "entity_test.go"), `package entity
+
+func f() *Registry { return NewRegistry() }
+`)
+	mustWriteScanFile(t, filepath.Join(dir, "pkg", "docs", "notes.go"), `package docs
+
+// Historically this called entity.NewRegistry() directly.
+func f() {}
+`)
+	rep, err := ScanProductionAuthority(dir)
+	if err != nil {
+		t.Fatalf("ScanProductionAuthority: %v", err)
+	}
+	if len(rep.Violations) != 0 {
+		t.Fatalf("expected _test.go files and comment-only mentions to be excluded, got %v", rep.Violations)
+	}
+}
+
+func mustWriteScanFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+}
+
+// repoRootForScan finds the real repository root by walking up from
+// this test's working directory until go.mod is found, mirroring
+// internal/nobypass's own repoRoot test helper.
+func repoRootForScan(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("could not find repo root (go.mod) walking up from test working directory")
+		}
+		dir = parent
 	}
 }

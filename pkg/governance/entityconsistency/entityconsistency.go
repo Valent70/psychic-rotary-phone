@@ -57,6 +57,10 @@ package entityconsistency
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/entity"
@@ -134,4 +138,87 @@ func Check(idResolver *identity.Resolver, entReg *entity.Registry, aliasA, alias
 	}
 
 	return f, nil
+}
+
+// authorityAllowedFiles are the only repo-relative paths permitted to
+// construct entity.NewRegistry() -- currently exactly one, audited
+// individually: pkg/lifecycle/lifecycle.go, which this package's own
+// doc comment already documents as the sole, deliberate FALLBACK
+// authority behind pkg/identity.Resolver (used only for alias Kinds
+// identity.Kind does not model). A second production constructor
+// appearing anywhere else would mean a caller silently reintroduced an
+// independent, un-consolidated entity-resolution authority -- exactly
+// the P0-B fragmentation risk this whole package exists to keep
+// visible.
+var authorityAllowedFiles = map[string]bool{
+	filepath.FromSlash("pkg/lifecycle/lifecycle.go"):                            true,
+	filepath.FromSlash("pkg/governance/entityconsistency/entityconsistency.go"): true, // this file: the marker string itself, not a real call
+}
+
+// authoritySkipDirs mirrors internal/nobypass's own exclusions.
+var authoritySkipDirs = []string{".git", "evidence"}
+
+// AuthorityReport is ScanProductionAuthority's result.
+type AuthorityReport struct {
+	ScannedFiles int      `json:"scanned_files"`
+	Violations   []string `json:"violations"` // repo-relative paths that construct entity.NewRegistry() outside authorityAllowedFiles
+}
+
+// ScanProductionAuthority is the caller-coverage half of audit item
+// P0-B ("Canonical Entity Authority") this package's own Check
+// function does not provide by itself: Check proves two ALREADY-
+// CONSTRUCTED resolvers agree or disagree about a specific alias pair;
+// it says nothing about whether some OTHER, unaudited production file
+// has quietly constructed a second, independent pkg/moat/entity.
+// Registry that pkg/identity never sees at all. ScanProductionAuthority
+// closes that gap directly: a real, whole-tree scan for
+// entity.NewRegistry() call sites, exactly mirroring internal/
+// nobypass's own constructor-scan technique for the P0-A evidence
+// authority, applied here to the P0-B entity authority.
+func ScanProductionAuthority(repoRoot string) (AuthorityReport, error) {
+	rep := AuthorityReport{}
+	const marker = "entity.NewRegistry("
+	err := filepath.Walk(repoRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+		if info.IsDir() {
+			for _, skip := range authoritySkipDirs {
+				if info.Name() == skip {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		rel, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			return err
+		}
+		raw, err := os.ReadFile(path) // #nosec G304 G122 -- path comes from this function's own filepath.Walk over repoRoot, the same trust boundary internal/nobypass.Check already relies on
+		if err != nil {
+			return err
+		}
+		rep.ScannedFiles++
+		for _, line := range strings.Split(string(raw), "\n") {
+			if idx := strings.Index(line, "//"); idx >= 0 {
+				line = line[:idx]
+			}
+			if strings.Contains(line, marker) && !authorityAllowedFiles[rel] {
+				rep.Violations = append(rep.Violations, filepath.ToSlash(rel))
+				break
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return AuthorityReport{}, fmt.Errorf("entityconsistency: walk %s: %w", repoRoot, err)
+	}
+	sort.Strings(rep.Violations)
+	return rep, nil
 }

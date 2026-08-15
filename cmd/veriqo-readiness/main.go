@@ -44,6 +44,7 @@ import (
 	"veriqo/internal/timestamp"
 	"veriqo/internal/version"
 	"veriqo/pkg/execution"
+	"veriqo/pkg/governance/entityconsistency"
 	"veriqo/pkg/governance/qualification"
 )
 
@@ -322,6 +323,63 @@ func main() {
 		}
 		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d violations=%d)\n",
 			"truth_arbitration_no_bypass", "internal:nobypass.Check", code, ev.ArtifactID, byp.ScannedFiles, len(byp.Violations))
+	}
+
+	// canonical_entity_authority_coverage (master implementation
+	// directive, P0-B "Canonical Entity Authority"): pkg/governance/
+	// entityconsistency existed as a real divergence detector between
+	// pkg/identity and pkg/moat/entity, but was wired into nothing
+	// beyond its own test suite -- not this readiness pipeline. This
+	// gate closes that: a real, whole-tree scan (ScanProductionAuthority)
+	// proving no production file outside pkg/lifecycle/lifecycle.go
+	// (the documented fallback authority behind pkg/identity.Resolver)
+	// constructs an independent pkg/moat/entity.Registry. Failing this
+	// gate means a future caller has quietly reopened the exact
+	// entity-authority fragmentation P0-B closed.
+	{
+		auth, authErr := entityconsistency.ScanProductionAuthority(".")
+		authOut, _ := json.MarshalIndent(auth, "", "  ")
+		code := 0
+		if authErr != nil {
+			code = 1
+			authOut = []byte(authErr.Error())
+		} else if len(auth.Violations) > 0 {
+			code = 1
+		}
+		if err := reg.Register(assurance.Gate{
+			ID: "canonical_entity_authority_coverage",
+			Description: "no production source file outside pkg/lifecycle/lifecycle.go constructs an " +
+				"independent pkg/moat/entity.Registry -- pkg/identity.Resolver remains the ONE canonical " +
+				"entity-resolution authority every production caller resolves through first",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./pkg/governance/entityconsistency",
+			// Deliberately does not spell out the literal constructor
+			// call this gate scans for: doing so would make this very
+			// description string itself trip the scan (a real, found-
+			// during-testing false positive -- see entityconsistency.go's
+			// own analogous self-referential allowlist entry for the
+			// same class of mistake).
+			ExitCriteria: "zero unauthorized direct constructions of the legacy entity registry found by a real whole-tree source scan",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("canonical_entity_authority_coverage", "internal:entityconsistency.ScanProductionAuthority", string(authOut), code, now)
+		writeArtifact(*evidenceDir, "canonical_entity_authority_coverage", "internal:entityconsistency.ScanProductionAuthority", code, string(authOut))
+		_ = os.WriteFile("evidence/canonical_entity_authority_coverage.json", authOut, 0o600)
+		gateHashes["canonical_entity_authority_coverage"] = ev.Hash
+		gatePassed["canonical_entity_authority_coverage"] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("canonical_entity_authority_coverage", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d violations=%d)\n",
+			"canonical_entity_authority_coverage", "internal:entityconsistency.ScanProductionAuthority", code, ev.ArtifactID, auth.ScannedFiles, len(auth.Violations))
 	}
 
 	// Regenerate SBOM.json from THIS release's actual identity, and
