@@ -219,6 +219,27 @@ func TestPreVote_IsolatedMinorityNeverPoisonsTerm(t *testing.T) {
 		}
 	}
 
+	// waitForLeader returns the instant the winning node flips its own
+	// IsLeader() flag -- BEFORE it has necessarily sent its first
+	// heartbeat to either follower. A follower's leaderLive only becomes
+	// true once HandleAppendEntries actually runs for it (see raft.go),
+	// and HandlePreVote grants on the OTHER condition (!leaderLive) as
+	// well as log freshness. Isolating the minority node in that gap
+	// races its own (possibly already-counting-down) election timer
+	// against the leader's first heartbeat: if the minority's PreVote
+	// reaches a not-yet-isolated peer whose leaderLive is still false,
+	// that peer can legitimately grant it, letting the minority win
+	// pre-vote and bump its term WITHOUT ever contacting the leader --
+	// exactly the "isolated node incremented its term" failure this test
+	// exists to rule out, and exactly what was seen on a real GitHub
+	// Actions run of this branch. Waiting several heartbeat intervals
+	// (HeartbeatInterval=20ms in buildSumCluster) here guarantees every
+	// follower has received at least one real heartbeat -- leaderLive
+	// genuinely true -- before the partition is introduced, closing the
+	// race at its root instead of narrowing it with wider timeouts (which
+	// was already tried for this same test and evidently insufficient).
+	time.Sleep(150 * time.Millisecond)
+
 	// Isolate the minority node from both remaining peers.
 	for _, n := range nodes {
 		if n == minority {
