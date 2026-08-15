@@ -4,14 +4,26 @@
 // delivery, throughput, and convergence. SimulatedNodeProvider is a
 // goroutine-based fixture (mode "SIMULATED") standing in for the real
 // 100-physical/cloud-node deployment the scale_qualification blocker
-// ultimately requires; a future RealNodeProvider satisfying the same
-// interface is a provider swap, not a rewrite.
+// ultimately requires. HTTPNodeProvider is the promised "provider
+// swap, not a rewrite": it satisfies the identical NodeProvider
+// interface but Submit/Collect are real HTTP calls to real,
+// independently-running cmd/veriqo-scale-node processes -- this
+// package stays infra-agnostic (it does not itself provision
+// machines or containers, matching pkg/blockers/dr's RegionProvider
+// pattern), so HTTPNodeProvider works unmodified whether those
+// processes are Docker containers on one host or real nodes spread
+// across real datacenters; only the addresses handed to it change.
 package scale
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -164,6 +176,121 @@ func (p *SimulatedNodeProvider) Collect(ctx context.Context) ([]ProcessedRecord,
 // Destroy is a no-op for the simulated provider: goroutines already
 // exited in Collect. A real provider would deprovision machines here.
 func (p *SimulatedNodeProvider) Destroy(ctx context.Context, nodes []Node) error { return nil }
+
+// httpProcessedRecord mirrors cmd/veriqo-scale-node's wire format for
+// one entry in a GET /collect response.
+type httpProcessedRecord struct {
+	NodeID     string    `json:"node_id"`
+	RecordID   string    `json:"record_id"`
+	ReceivedAt time.Time `json:"received_at"`
+}
+
+// HTTPNodeProvider drives real cmd/veriqo-scale-node processes over
+// real HTTP. It does not provision or destroy the processes themselves
+// -- callers point it at addresses of already-running nodes (real
+// Docker containers, real VMs, whatever), matching pkg/blockers/dr's
+// RegionProvider split between "the consensus/logic abstraction" and
+// "who actually stands up the infrastructure".
+type HTTPNodeProvider struct {
+	// NodeAddrs maps a node ID to its base URL, e.g.
+	// "http://127.0.0.1:18090". Every ID Provision(ctx, n) is asked
+	// for must have an entry here.
+	NodeAddrs map[string]string
+	Token     string
+	Client    *http.Client
+}
+
+func (p *HTTPNodeProvider) Mode() string { return "REAL" }
+
+func (p *HTTPNodeProvider) client() *http.Client {
+	if p.Client != nil {
+		return p.Client
+	}
+	return http.DefaultClient
+}
+
+// Provision returns the first n node IDs from NodeAddrs, sorted for
+// determinism. It does not start any process -- every address in
+// NodeAddrs must already be a live, reachable veriqo-scale-node.
+func (p *HTTPNodeProvider) Provision(ctx context.Context, n int) ([]Node, error) {
+	if n <= 0 {
+		return nil, errors.New("scale: node count must be positive")
+	}
+	if len(p.NodeAddrs) < n {
+		return nil, fmt.Errorf("scale: HTTPNodeProvider configured with %d node addresses, need %d", len(p.NodeAddrs), n)
+	}
+	ids := make([]string, 0, len(p.NodeAddrs))
+	for id := range p.NodeAddrs {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	nodes := make([]Node, n)
+	for i := 0; i < n; i++ {
+		nodes[i] = Node{ID: ids[i]}
+	}
+	return nodes, nil
+}
+
+// Submit POSTs rec as JSON to node's real /submit endpoint.
+func (p *HTTPNodeProvider) Submit(ctx context.Context, node Node, rec EvidenceRecord) error {
+	addr, ok := p.NodeAddrs[node.ID]
+	if !ok {
+		return fmt.Errorf("scale: unknown node %q", node.ID)
+	}
+	body, err := json.Marshal(EvidenceRecord{ID: rec.ID, Payload: rec.Payload})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, addr+"/submit", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+p.Token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := p.client().Do(req)
+	if err != nil {
+		return fmt.Errorf("scale: submit to %s: %w", node.ID, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("scale: submit to %s: status %d: %s", node.ID, resp.StatusCode, b)
+	}
+	return nil
+}
+
+// Collect GETs /collect from every configured node in turn and
+// aggregates their real, independently-reported results.
+func (p *HTTPNodeProvider) Collect(ctx context.Context) ([]ProcessedRecord, error) {
+	var out []ProcessedRecord
+	for id, addr := range p.NodeAddrs {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, addr+"/collect", nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+p.Token)
+		resp, err := p.client().Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("scale: collect from %s: %w", id, err)
+		}
+		var recs []httpProcessedRecord
+		decErr := json.NewDecoder(resp.Body).Decode(&recs)
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("scale: collect from %s: status %d", id, resp.StatusCode)
+		}
+		if decErr != nil {
+			return nil, fmt.Errorf("scale: collect from %s: decode: %w", id, decErr)
+		}
+		for _, r := range recs {
+			out = append(out, ProcessedRecord(r))
+		}
+	}
+	return out, nil
+}
+
+// Destroy is a no-op: this provider never owned the processes' lifecycle.
+func (p *HTTPNodeProvider) Destroy(ctx context.Context, nodes []Node) error { return nil }
 
 // IntegrityReport is the result of comparing what was submitted against
 // what was actually processed.
