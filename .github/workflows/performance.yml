@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: '1.24.x' }
+        with: { go-version: 'stable' }
       - name: benchmarks
         # Single-process benchmarks are a REGRESSION signal only. PHASE 40
         # scale qualification (100 nodes / 1M evidence) is a separate,
