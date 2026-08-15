@@ -15,10 +15,19 @@
 // DecisionID as a content-addressed hash over the ExecutionID plus the
 // decision's own real content (subject, policy, action, risk score),
 // not an alias of ExecutionID -- see execution.go's own decisionID
-// function. IntentID remains the one gap: pkg/kernel/intent is still
-// never imported by pkg/execution, so fabricating it here would be
-// exactly the kind of invented correlation this project's reports have
-// consistently refused to produce.
+// function. IntentID remains empty from FromExecutionResult specifically
+// (pkg/execution itself still never imports pkg/kernel/intent, so
+// fabricating it at THIS layer would be exactly the kind of invented
+// correlation this project's reports have consistently refused to
+// produce) -- but pkg/lifecycle.Orchestrator.RunUnified, which DOES
+// hold the originating Intent, now fills it in for real after calling
+// FromExecutionResult (see lifecycle.go's Result.Correlation field),
+// closing the audit's P1-07 "Unified Observability" gap at the one
+// layer that actually has every one of these seven identifiers
+// simultaneously -- and giving this package's Key its first real
+// production caller anywhere in the repository (previously "sudah ada,
+// tetapi belum menjadi universal runtime primitive" -- exists, but was
+// never wired into anything real).
 //
 // What Key DOES provide, honestly: the six identifiers that ARE real
 // and already produced by a single execution.Result today --

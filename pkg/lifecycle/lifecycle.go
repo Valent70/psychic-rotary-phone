@@ -49,6 +49,8 @@ import (
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
+	"veriqo/pkg/platform/correlation"
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/verification"
 )
 
@@ -210,6 +212,20 @@ type Result struct {
 	Execution   *execution.Result
 	IVFResult   verification.VerificationResult
 	Certificate LifecycleCertificate
+	// Correlation is the audit's P1-07 ("Unified Observability")
+	// deliverable: the ONE joined set of real identifiers (intent,
+	// execution, evidence, entity, decision, verification, replay) this
+	// specific RunUnified call produced, in the audit's own named
+	// vocabulary. pkg/platform/correlation.Key already existed but had
+	// zero production callers anywhere in this repository before this
+	// field -- a real "documented but not a universal runtime
+	// primitive" gap, closed here by giving it its first one. Unlike
+	// correlation.FromExecutionResult's own bare-execution.Result case
+	// (which cannot know an IntentID -- pkg/execution never imports
+	// pkg/kernel/intent), RunUnified genuinely holds the originating
+	// Intent, so IntentID below is real, not the permanently-empty
+	// placeholder FromExecutionResult's own doc comment describes.
+	Correlation correlation.Key
 }
 
 func hashLifecycleCert(c LifecycleCertificate) string {
@@ -375,6 +391,25 @@ func (o *Orchestrator) resolveCanonicalEntity(actorID string, aliases []entity.A
 // layer down where a real caller's cancellation/deadline would
 // otherwise be discarded.
 func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidencePlan, caseIn canonical.CaseInput) (*Result, error) {
+	// The audit's P1-07 ("Unified Observability") named RunUnified
+	// itself as the one join-point every downstream span, log line and
+	// audit record should be traceable back to, using the SAME IDs --
+	// but before this span existed, RunUnified carried NO telemetry of
+	// its own at all (confirmed by grep: zero telemetry.StartSpan calls
+	// in this file), even though P0-9 gave 12 of the engines it calls
+	// real spans. ctx is reassigned to the span's own context so
+	// o.Execution.Run below (which already threads ctx down through
+	// pkg/execution's own stages per P0-6) is genuinely parented under
+	// this span, not a disconnected root. Attributes it can't know yet
+	// (execution_id, decision_id, entity_id) are attached via
+	// SetAttribute once each becomes available below, rather than
+	// waiting until the end and losing them on an early error return.
+	ctx, span := telemetry.StartSpan(ctx, "lifecycle.RunUnified",
+		telemetry.Attribute{Key: "intent_id", Value: in.ID()},
+		telemetry.Attribute{Key: "tenant_id", Value: in.Tenant},
+		telemetry.Attribute{Key: "actor_id", Value: in.ActorID})
+	defer span.End()
+
 	// Entities and Verifier accumulate state across calls (see the
 	// Orchestrator doc comment); mu serializes RunUnified and
 	// RecordOutcome so two concurrent callers cannot race on that
@@ -384,7 +419,9 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	defer o.mu.Unlock()
 
 	if plan.IntentID != in.ID() {
-		return nil, fmt.Errorf("lifecycle: evidence plan does not belong to this intent (plan.IntentID=%s intent.ID()=%s)", plan.IntentID, in.ID())
+		err := fmt.Errorf("lifecycle: evidence plan does not belong to this intent (plan.IntentID=%s intent.ID()=%s)", plan.IntentID, in.ID())
+		span.RecordError(err)
+		return nil, err
 	}
 
 	// --- Entity Resolution ---------------------------------------------
@@ -409,22 +446,28 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 			var err error
 			canonEntity, err = o.Entities.Register(in.ActorID, first, in.Tick)
 			if err != nil {
-				return nil, fmt.Errorf("lifecycle: entity resolution: %w", err)
+				err = fmt.Errorf("lifecycle: entity resolution: %w", err)
+				span.RecordError(err)
+				return nil, err
 			}
 			for _, alias := range in.EntityAliases[1:] {
 				canonEntity, err = o.Entities.Merge(in.ActorID, first, alias, in.Tick)
 				if err != nil {
-					return nil, fmt.Errorf("lifecycle: entity resolution: %w", err)
+					err = fmt.Errorf("lifecycle: entity resolution: %w", err)
+					span.RecordError(err)
+					return nil, err
 				}
 			}
 		}
 		caseIn.Entity = digitaltwin.EntityID(canonEntity)
 		caseIn.Subject = string(canonEntity)
 	}
+	span.SetAttribute(telemetry.Attribute{Key: "entity_id", Value: string(canonEntity)})
 
 	// --- Evidence Plan enforcement --------------------------------------
 	unmet, err := checkPlan(plan, caseIn)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -448,21 +491,29 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	if identityKeySet {
 		execIn.IdentityAliases = []identity.Identifier{identityKey}
 	}
+	span.SetAttribute(telemetry.Attribute{Key: "execution_id", Value: execCtx.ExecutionID})
 	execRes, err := o.Execution.Run(ctx, execIn)
 	if err != nil {
-		return nil, fmt.Errorf("lifecycle: execution run: %w", err)
+		err = fmt.Errorf("lifecycle: execution run: %w", err)
+		span.RecordError(err)
+		return nil, err
 	}
 	canonRes := execRes.Canonical
+	span.SetAttribute(telemetry.Attribute{Key: "decision_id", Value: execRes.Explanation.DecisionID})
 
 	// --- IVF: build a REAL bundle from the fusion records that backed
 	// this exact arbitration, and independently verify it. -------------
 	ivfBundle, err := buildIVFBundle(o.Pipeline, caseIn, canonRes.Arbitration)
 	if err != nil {
-		return nil, fmt.Errorf("lifecycle: building IVF bundle: %w", err)
+		err = fmt.Errorf("lifecycle: building IVF bundle: %w", err)
+		span.RecordError(err)
+		return nil, err
 	}
 	ivfResult, err := o.Verifier.Verify("lifecycle.fusion_arbitration", ivfBundle)
 	if err != nil {
-		return nil, fmt.Errorf("lifecycle: IVF verify: %w", err)
+		err = fmt.Errorf("lifecycle: IVF verify: %w", err)
+		span.RecordError(err)
+		return nil, err
 	}
 
 	cert := LifecycleCertificate{
@@ -477,9 +528,15 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	}
 	cert.Hash = hashLifecycleCert(cert)
 
+	corr := correlation.FromExecutionResult(*execRes)
+	corr.IntentID = in.ID()
+	span.SetAttribute(telemetry.Attribute{Key: "verification_certificate_id", Value: corr.VerificationCertificateID})
+	span.SetAttribute(telemetry.Attribute{Key: "replay_package_id", Value: corr.ReplayPackageID})
+
 	return &Result{
 		Intent: in, Plan: plan, EntityID: canonEntity, SourceIDs: canonical.SortedSourceIDs(caseIn.Submissions),
 		Canonical: canonRes, Execution: execRes, IVFResult: ivfResult, Certificate: cert,
+		Correlation: corr,
 	}, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
 	"veriqo/pkg/moat/intelligence/risk"
+	"veriqo/pkg/platform/telemetry"
 )
 
 func testIntent() Intent {
@@ -345,5 +346,67 @@ func TestRunUnifiedTemporalBayesianStageIsHonestlySkippedInProduction(t *testing
 	}
 	if temporalNode.Status != execution.StatusSkipped {
 		t.Fatalf("RunUnified's real production path supplies no TemporalModel/TemporalObservations today -- StageTemporal must be SKIPPED, not %s; a non-skipped status here without a real production caller populating those fields would mean a fabricated result slipped through", temporalNode.Status)
+	}
+}
+
+// TestRunUnifiedProducesARealCorrelatedSpanAndKey is the direct proof
+// for audit item P1-07 ("Unified Observability"): RunUnified previously
+// carried zero telemetry of its own (confirmed by grep before this
+// change), and pkg/platform/correlation.Key had zero production callers
+// anywhere in the repository. Both gaps are closed together here: a
+// real span named "lifecycle.RunUnified" must exist, carrying the same
+// real IDs (not placeholders) the returned Result.Correlation also
+// carries -- proving the span and the Key are reporting the SAME
+// underlying execution, not two independently-plausible-looking values.
+func TestRunUnifiedProducesARealCorrelatedSpanAndKey(t *testing.T) {
+	prior := telemetry.Global()
+	rec := telemetry.NewRecorder()
+	telemetry.SetGlobalTracer(rec)
+	defer telemetry.SetGlobalTracer(prior)
+
+	o := NewOrchestrator(nil, nil)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	spans := rec.Spans()
+	var span *telemetry.SpanRecord
+	for i := range spans {
+		if spans[i].Name == "lifecycle.RunUnified" {
+			span = &spans[i]
+		}
+	}
+	if span == nil {
+		t.Fatal("expected a real lifecycle.RunUnified span to be recorded")
+	}
+	if !span.Ended {
+		t.Fatal("expected the span to have been ended (defer span.End())")
+	}
+
+	attr := map[string]string{}
+	for _, a := range span.Attributes {
+		attr[a.Key] = a.Value
+	}
+	want := map[string]string{
+		"intent_id":    res.Correlation.IntentID,
+		"tenant_id":    in.Tenant,
+		"entity_id":    string(res.EntityID),
+		"execution_id": res.Correlation.ExecutionID,
+		"decision_id":  res.Correlation.DecisionID,
+	}
+	for key, wantVal := range want {
+		if wantVal == "" {
+			t.Fatalf("test setup produced an empty expected value for %q -- cannot prove correlation with a placeholder", key)
+		}
+		if attr[key] != wantVal {
+			t.Fatalf("span attribute %q = %q, want %q (must match Result.Correlation exactly -- same execution, same IDs)", key, attr[key], wantVal)
+		}
+	}
+	if res.Correlation.EvidencePackageID == "" || res.Correlation.VerificationCertificateID == "" || res.Correlation.ReplayPackageID == "" {
+		t.Fatal("expected Result.Correlation to carry non-empty EvidencePackageID/VerificationCertificateID/ReplayPackageID")
 	}
 }
