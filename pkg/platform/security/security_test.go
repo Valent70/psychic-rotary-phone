@@ -56,10 +56,37 @@ func TestJWTRejectsExpiredToken(t *testing.T) {
 func TestJWTRejectsTamperedSignature(t *testing.T) {
 	secret := []byte("s")
 	tok, _ := SignHS256(Claims{Subject: "u", Exp: time.Now().Add(time.Hour).Unix()}, secret)
-	tampered := tok[:len(tok)-2] + "xx"
+	tampered := flipLastChar(t, tok)
 	if _, err := VerifyHS256(tampered, secret); err == nil {
 		t.Fatal("expected error for tampered signature")
 	}
+}
+
+// flipLastChar returns s with its final character replaced by a
+// character guaranteed to differ from the original -- unlike
+// overwriting the last N characters with a fixed literal (this test's
+// own prior approach: `tok[:len(tok)-2] + "xx"`), which is a no-op
+// whenever the real base64url-encoded signature already happens to end
+// in that exact literal (1-in-4096 for two base64url characters),
+// silently turning an intended tamper-detection test into "verify an
+// untampered token and expect an error." That is the same class of
+// latent test bug pkg/platform/security/keys's own
+// TestEnvelopeEncryptDecryptAndAADBinding was found to have via this
+// exact flakiness reproducing live in this session -- found by
+// grepping for the same fixed-literal-overwrite pattern elsewhere in
+// the repo once the first instance was diagnosed, fixed here
+// preemptively before it could flake on its own.
+func flipLastChar(t *testing.T, s string) string {
+	t.Helper()
+	if s == "" {
+		t.Fatal("cannot tamper an empty string")
+	}
+	last := s[len(s)-1]
+	repl := byte('x')
+	if last == repl {
+		repl = 'y'
+	}
+	return s[:len(s)-1] + string(repl)
 }
 
 func TestJWTRejectsWrongSecret(t *testing.T) {

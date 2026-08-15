@@ -4,9 +4,32 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"testing"
 )
+
+// flipLastHexByte returns hexStr with its last encoded byte's bits all
+// inverted (XOR 0xFF), guaranteeing a different byte regardless of the
+// original value -- unlike overwriting the last byte with a fixed
+// literal (this test's own prior approach), which is a no-op roughly
+// 1-in-256 times, whenever the real ciphertext already happens to end
+// in that exact literal, silently turning an intended tamper-detection
+// test into "decrypt an untampered ciphertext and expect an error" --
+// a real, previously-latent test bug this exact flakiness reproduced,
+// not a defect in AEAD authentication itself.
+func flipLastHexByte(t *testing.T, hexStr string) string {
+	t.Helper()
+	raw, err := hex.DecodeString(hexStr)
+	if err != nil {
+		t.Fatalf("decode hex for tamper: %v", err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("cannot tamper an empty ciphertext")
+	}
+	raw[len(raw)-1] ^= 0xFF
+	return hex.EncodeToString(raw)
+}
 
 func setup(t *testing.T) (*Manager, *MemoryKeyProvider) {
 	t.Helper()
@@ -202,7 +225,7 @@ func TestEnvelopeEncryptDecryptAndAADBinding(t *testing.T) {
 		t.Fatal("ciphertext replayed into a different context")
 	}
 	tampered := ct
-	tampered.Ciphertext = tampered.Ciphertext[:len(tampered.Ciphertext)-2] + "ff"
+	tampered.Ciphertext = flipLastHexByte(t, tampered.Ciphertext)
 	if _, err := e.Decrypt(tampered); !errors.Is(err, ErrCiphertextBad) {
 		t.Fatal("tampered ciphertext authenticated")
 	}

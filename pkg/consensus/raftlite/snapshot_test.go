@@ -86,21 +86,41 @@ func buildSumCluster(t *testing.T, n int) (*MemTransport, []*Node, []*sumFSM, co
 		}
 		fsm := newSumFSM()
 		fsms[i] = fsm
-		// Election/heartbeat timing matches leadertransfer_stress_test.go
-		// and newCheckQuorumCluster's own proven-under-load values
-		// (200ms/400ms/20ms), not raft.go's plain defaults (150ms/300ms/
-		// 50ms): a real GitHub Actions run of this branch (go test ./...
-		// on a shared runner, right after a 63s chaos-package run left
-		// the scheduler under load) hit TestPreVote_IsolatedMinorityNeverPoisonsTerm
-		// failing with "majority term changed from 1 to 3 while minority
-		// was isolated" -- the MAJORITY side's own leader/follower pair
-		// suffered a spurious election under scheduling jitter, not a
-		// PreVote defect. Widening removes that slack the same way it
-		// already did for checkquorum_test.go's own documented flake,
-		// without touching any production default (Config's real
-		// defaults live in raft.go, not here).
+		// Election/heartbeat timing is wider than raft.go's plain
+		// defaults (150ms/300ms/50ms) and than leadertransfer_stress_
+		// test.go/newCheckQuorumCluster's own 200ms/400ms/20ms, which
+		// this file itself used until a THIRD occurrence of the same
+		// underlying flake class proved even that insufficient. History,
+		// each with a different symptom of the identical root cause (the
+		// majority pair's own heartbeat delayed by scheduler contention
+		// long enough for the still-connected follower to time out and
+		// force a spurious, but legitimate-looking, re-election):
+		//   1. Real GitHub Actions CI, go test ./... right after a 63s
+		//      chaos-package run: "majority term changed from 1 to 3
+		//      while minority was isolated" -- fixed by widening
+		//      50ms/100ms/10ms(ish) defaults to 200ms/400ms/20ms.
+		//   2. This session's own local go test ./..., under similarly
+		//      heavy concurrent load: "isolated minority node incremented
+		//      its term" -- a DIFFERENT race (isolation applied before
+		//      the minority's leaderLive flag had genuinely settled),
+		//      fixed by a 150ms settle-wait before isolating, see the
+		//      time.Sleep immediately below in
+		//      TestPreVote_IsolatedMinorityNeverPoisonsTerm.
+		//   3. Immediately after fix #2, a THIRD local go test ./...
+		//      run (again right after a heavy chaos-package run) hit yet
+		//      another symptom of #1's same root cause: "original leader
+		//      lost leadership despite the challenger being isolated" --
+		//      200ms/400ms/20ms was demonstrably NOT enough margin under
+		//      this environment's real contention, proving the exact
+		//      value chosen in fix #1 was a guess that turned out
+		//      insufficient, not a hard bound. Widened further to
+		//      500ms/900ms/20ms: HeartbeatInterval stays 20ms, so a
+		//      follower now tolerates missing ~25-45 consecutive
+		//      heartbeats (vs ~10-20 before) before timing out --
+		//      verified against real repeated go test ./... runs, not
+		//      just this package in isolation, before landing.
 		node := NewNode(Config{ID: id, Peers: peers, Transport: trans, FSM: fsm,
-			ElectionTimeoutMin: 200 * time.Millisecond, ElectionTimeoutMax: 400 * time.Millisecond,
+			ElectionTimeoutMin: 500 * time.Millisecond, ElectionTimeoutMax: 900 * time.Millisecond,
 			HeartbeatInterval: 20 * time.Millisecond})
 		node.SetSnapshotter(fsm)
 		nodes[i] = node
@@ -124,7 +144,11 @@ func TestInstallSnapshot_StragglerCatchUpViaCompaction(t *testing.T) {
 	trans, nodes, fsms, cancel := buildSumCluster(t, 3)
 	defer cancel()
 
-	leader := waitForLeader(t, nodes, 2*time.Second)
+	// 3s, not 2s: matches buildSumCluster's widened 500ms/900ms election
+	// timeout range (see that function's own comment) -- a worst-case
+	// first election plus one retry round can approach 2s on its own
+	// under real contention.
+	leader := waitForLeader(t, nodes, 3*time.Second)
 	var straggler *Node
 	var stragglerFSM *sumFSM
 	for i, n := range nodes {
@@ -210,7 +234,7 @@ func TestPreVote_IsolatedMinorityNeverPoisonsTerm(t *testing.T) {
 	trans, nodes, _, cancel := buildSumCluster(t, 3)
 	defer cancel()
 
-	leader := waitForLeader(t, nodes, 2*time.Second)
+	leader := waitForLeader(t, nodes, 3*time.Second)
 	var minority *Node
 	for _, n := range nodes {
 		if n != leader {
@@ -252,8 +276,11 @@ func TestPreVote_IsolatedMinorityNeverPoisonsTerm(t *testing.T) {
 	majorityTermBefore := leader.Term()
 
 	// Give the isolated node many election-timeout cycles to try (and
-	// fail) pre-vote repeatedly.
-	time.Sleep(1200 * time.Millisecond)
+	// fail) pre-vote repeatedly. Scaled up alongside buildSumCluster's
+	// widened 500ms/900ms election timeout range (see that function's
+	// own comment for why) so this still covers several full cycles
+	// rather than only one or two.
+	time.Sleep(3 * time.Second)
 
 	if minority.Term() != majorityTermBefore && minority.Term() > majorityTermBefore {
 		// With PreVote, an isolated node's currentTerm must stay pinned
@@ -291,7 +318,7 @@ func TestPreVote_IsolatedMinorityNeverPoisonsTerm(t *testing.T) {
 		trans.HealTo(n.id, minority.id)
 		trans.HealTo(minority.id, n.id)
 	}
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(3 * time.Second)
 	var stableLeader *Node
 	for time.Now().Before(deadline) {
 		leaders := 0

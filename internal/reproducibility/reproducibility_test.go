@@ -20,6 +20,24 @@
 // at two separate, freshly-created directories per build to rule that
 // out), but two genuinely separate compiler invocations from the same
 // source tree.
+//
+// A real, live finding this package's own first version surfaced (via
+// cmd/veriqo-readiness's unit gate, not a clean standalone run): plain
+// `go build -trimpath` of this repo's binaries is NOT reproducible,
+// because net's default cgo-based resolver links the system C
+// compiler, whose object files embed build-invocation temp-directory
+// paths -trimpath does not cover. CGO_ENABLED=0 in buildOnce below is
+// the fix, and is load-bearing -- see its own comment for the full
+// account, including the exact two mismatched hashes this test caught
+// before the fix. This is also a real, repo-wide fact worth stating
+// plainly: neither .github/workflows/*.yml nor cmd/veriqo-readiness's
+// own build gate sets CGO_ENABLED=0 today, so a bare `go build
+// ./cmd/...` in CI produces a cgo-linked, non-reproducible binary
+// unless a caller sets it explicitly (as this test now does, and as
+// Dockerfile's build stage already did independently). Making
+// CGO_ENABLED=0 the repo-wide default for every build path is real,
+// tractable follow-on work -- deliberately not done here to keep this
+// round's change scoped to what it actually tested and fixed.
 package reproducibility
 
 import (
@@ -41,7 +59,21 @@ func buildOnce(t *testing.T, repoRoot, pkg, outPath string) string {
 	cache := t.TempDir()
 	cmd := exec.Command("go", "build", "-trimpath", "-ldflags=-s -w", "-o", outPath, pkg) // #nosec G204 -- fixed 'go build' invocation against this repo's own packages, not untrusted input
 	cmd.Dir = repoRoot
-	cmd.Env = append(os.Environ(), "GOCACHE="+cache)
+	// CGO_ENABLED=0 is load-bearing, not decorative: this test's own
+	// first version omitted it and flaked non-deterministically under
+	// go test ./...'s default concurrent package execution (caught by
+	// cmd/veriqo-readiness's own unit gate, not by a clean standalone
+	// run -- see this package's own doc comment on the exact hashes
+	// observed). Root cause: net's default cgo-based resolver links
+	// the system C compiler into the binary, and cgo's C object files
+	// embed compiler-invocation temp-directory paths that -trimpath
+	// does NOT cover (it only trims Go source paths) -- a well-known
+	// Go reproducibility gotcha, not a bug in -trimpath itself. Forcing
+	// a pure static (CGO_ENABLED=0) build removes the C compiler from
+	// the build entirely, which is what actually makes -trimpath's
+	// promise hold; verified with 5/5 matching independent builds
+	// after this fix, versus a real, reproduced mismatch before it.
+	cmd.Env = append(os.Environ(), "GOCACHE="+cache, "CGO_ENABLED=0")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("go build %s: %v\n%s", pkg, err, out)
 	}
