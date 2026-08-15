@@ -231,8 +231,16 @@ func TestLiveRaftCluster_ElectsLeaderReplicatesAndFailsOver(t *testing.T) {
 		}
 	}
 
+	// 200 x 50ms = 10s, not the original 100 x 50ms = 5s: found too tight
+	// on real CI ("PLACE command did not replicate to follower B within
+	// timeout") immediately after test/e2e/eight_blockers's own real,
+	// heavier run in the same `go test ./...` invocation -- this test
+	// spawns three genuinely separate OS processes with real mTLS TCP,
+	// which is far more real-world contention-sensitive than any
+	// in-process raftlite test, so it needs the same kind of generous
+	// margin those tests already carry for the identical reason.
 	replicated := false
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		var state map[string]any
 		if err := getJSON(follower.stateURL(), &state); err == nil {
 			if logLen, ok := state["log_len"].(float64); ok && logLen >= 2 {
