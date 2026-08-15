@@ -85,7 +85,14 @@ func TestReplication_CommitsAcrossMajority(t *testing.T) {
 	if err != nil {
 		t.Fatalf("propose failed: %v", err)
 	}
-	ctx, done := context.WithTimeout(context.Background(), time.Second)
+	// 3s, not 1s: matches the budget confchange_test.go, snapshot_test.go
+	// and leadertransfer_stress_test.go already use for the same reason --
+	// a 1s WaitApplied budget on a cluster running default 150/300/50ms
+	// timeouts is comfortable in isolation but has been observed to miss
+	// under go test ./...'s real scheduler contention immediately
+	// following pkg/chaos's ~60s run (see TestKGAdapter_EndToEndCommit
+	// below, which hit exactly this on real CI).
+	ctx, done := context.WithTimeout(context.Background(), 3*time.Second)
 	defer done()
 	if err := leader.WaitApplied(ctx, idx); err != nil {
 		t.Fatalf("entry not applied: %v", err)
@@ -106,7 +113,16 @@ func TestKGAdapter_EndToEndCommit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("propose failed: %v", err)
 	}
-	ctx, done := context.WithTimeout(context.Background(), time.Second)
+	// 3s, not 1s -- this exact 1s budget was observed to fail on real CI
+	// ("not applied: context deadline exceeded") immediately after
+	// pkg/chaos's ~60s run in the same `go test ./...` invocation: the
+	// cluster here runs default 150/300/50ms election/heartbeat timeouts
+	// (buildCluster passes no explicit Config timeouts), which is fine
+	// under normal scheduling but leaves near-zero slack under real CPU
+	// contention from concurrently-running packages. Widened to match
+	// the budget confchange_test.go, snapshot_test.go and
+	// leadertransfer_stress_test.go already use for the same reason.
+	ctx, done := context.WithTimeout(context.Background(), 3*time.Second)
 	defer done()
 	if err := leader.WaitApplied(ctx, idx); err != nil {
 		t.Fatalf("not applied: %v", err)
