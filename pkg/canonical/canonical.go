@@ -148,6 +148,40 @@ type CanonicalCertificate struct {
 
 // CanonicalResult is the full, explainable output of one RunCanonical
 // call — every layer's own result object, plus the certificate.
+//
+// Schema-level provenance (audit item P0-A's explicit follow-up:
+// "bukan lagi soal jumlah struct... schema-level provenance, bukan
+// hanya stage-level hashing" -- not just how many structs exist, but
+// real per-field provenance, not only stage-level hashing), domain by
+// domain, stated honestly per domain rather than claimed uniformly:
+//   - Evidence/Truth: Arbitration carries per-source fusion.Contribution
+//     records and Truth carries the full contradiction.Observation this
+//     verdict was ingested from -- real, per-input provenance.
+//   - Provenance: IndependenceAssessment IS the provenance computation
+//     itself (Status + Score), not a derived summary of one.
+//   - Causal: CausalSupport is a scalar; the CausalLinks it was
+//     aggregated from are in the caller's own CaseInput, not
+//     duplicated onto the result -- traceable by replaying with the
+//     same input, not self-contained.
+//   - Risk: Breakdown ([]FactorContribution, one entry per real input
+//     signal with Name/RawValue/Weight/Contribution) and Explanation
+//     ([]string, real prose keyed to which factors crossed threshold)
+//     -- see TestRunCanonicalDomainOutputsCarryRealSchemaLevelProvenance
+//     for the live proof these are populated, not empty placeholders.
+//   - Decision: Explanation ([]string) is the policy engine's own
+//     stated reasoning, checked by the same test above.
+//   - Digital Twin: AttributeState/RiskState carry Confidence/
+//     UpdatedAtTick but no independent "why" text of their own -- a
+//     twin state's provenance is its SOURCE record (the Decision or
+//     evidence submission that produced it), not duplicated onto the
+//     twin to avoid two copies of the same explanation drifting apart.
+//     This is a real, understood design choice, not a silent gap.
+//   - Identity: entity resolution's own provenance (which source
+//     asserted which alias, under which authority, at which tick) lives
+//     in pkg/identity.Resolver's event ledger, one layer above
+//     CanonicalResult (see pkg/lifecycle.Orchestrator.Identity) --
+//     RunCanonical itself only ever sees an already-resolved Subject
+//     string, so it is not this struct's field to carry.
 type CanonicalResult struct {
 	Arbitration    fusion.ArbitrationResult
 	Truth          contradiction.Record

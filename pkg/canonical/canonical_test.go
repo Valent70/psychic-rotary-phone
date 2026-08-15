@@ -105,6 +105,73 @@ func TestRunCanonicalFullChain(t *testing.T) {
 	}
 }
 
+// TestRunCanonicalDomainOutputsCarryRealSchemaLevelProvenance is the
+// direct answer to an external audit's explicit follow-up ask (P0-A):
+// "Saya ingin audit lanjutan terhadap schema-level provenance, bukan
+// hanya stage-level hashing" (schema-level provenance, not just
+// stage-level hashing). TestRunCanonicalFullChain above already proves
+// every domain's own hash chain verifies -- that is stage-level
+// integrity, proving nothing was tampered with, but nothing about
+// whether the domain output's OWN explanatory fields (why this score,
+// why this action) are real and populated rather than present-but-
+// empty placeholders. This test checks exactly that, for every domain
+// with an explanatory field in its schema: risk.Result.Breakdown/
+// Explanation and decision.Decision.Explanation.
+func TestRunCanonicalDomainOutputsCarryRealSchemaLevelProvenance(t *testing.T) {
+	p := NewPipeline(nil)
+	in := testCase()
+	in.PatternScore = 0.7 // above risk.Score's 0.5 explanation threshold
+
+	res, err := p.RunCanonical("case-provenance", in)
+	if err != nil {
+		t.Fatalf("RunCanonical: %v", err)
+	}
+
+	// Risk.Breakdown: every factor risk.Model.Score computes must be
+	// present with a real, traceable name and a genuinely computed
+	// (not zero-value-by-omission) contribution.
+	wantFactors := map[string]bool{
+		"sanctions_evasion_pattern_score":  false,
+		"price_anomaly_score":              false,
+		"provenance_independence_discount": false,
+	}
+	if len(res.Risk.Breakdown) != len(wantFactors) {
+		t.Fatalf("expected exactly %d risk factors in the breakdown, got %d: %+v", len(wantFactors), len(res.Risk.Breakdown), res.Risk.Breakdown)
+	}
+	for _, f := range res.Risk.Breakdown {
+		if _, known := wantFactors[f.Name]; !known {
+			t.Fatalf("unexpected, unnamed risk factor in breakdown: %q", f.Name)
+		}
+		wantFactors[f.Name] = true
+	}
+	for name, seen := range wantFactors {
+		if !seen {
+			t.Fatalf("expected risk factor %q in the breakdown, it was missing", name)
+		}
+	}
+	// The pattern-score factor's own RawValue must equal the real input
+	// we supplied -- not a placeholder disconnected from the case.
+	for _, f := range res.Risk.Breakdown {
+		if f.Name == "sanctions_evasion_pattern_score" && f.RawValue != in.PatternScore {
+			t.Fatalf("expected the pattern-score factor's RawValue to equal the supplied PatternScore %v, got %v", in.PatternScore, f.RawValue)
+		}
+	}
+	if len(res.Risk.Explanation) == 0 {
+		t.Fatal("expected at least one real risk explanation line, given PatternScore=0.7 crosses risk.Score's own 0.5 threshold")
+	}
+
+	// Decision.Explanation: the policy engine's own stated reasoning,
+	// not just an Action label.
+	if len(res.Decision.Explanation) == 0 {
+		t.Fatal("expected at least one real decision explanation line")
+	}
+	for _, line := range res.Decision.Explanation {
+		if line == "" {
+			t.Fatal("expected every decision explanation line to be real text, found an empty one")
+		}
+	}
+}
+
 // TestRunCanonicalIsDeterministic is the core canonical-path proof:
 // two independent pipelines given byte-identical input must produce
 // byte-identical certificates — the whole point of a "canonical" path.
