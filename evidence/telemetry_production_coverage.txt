@@ -9,13 +9,25 @@ exit: 0
     "pkg/consensus/raftlite",
     "pkg/engine",
     "pkg/execution",
+    "pkg/governance/calibration",
     "pkg/governance/entityconsistency",
+    "pkg/governance/knowledge",
+    "pkg/governance/lifecycle",
     "pkg/identity",
     "pkg/kernel/intent",
+    "pkg/moat/causal",
+    "pkg/moat/contradiction",
+    "pkg/moat/decision",
+    "pkg/moat/digitaltwin",
+    "pkg/moat/economic",
+    "pkg/moat/entity",
+    "pkg/moat/evidencegraph",
     "pkg/moat/fusion",
+    "pkg/moat/hbayes",
+    "pkg/moat/intelligence/risk",
     "pkg/storage/wal",
     "pkg/transport/rafttcp",
     "veriqo/core/intelligence"
   ],
-  "coverage": 0.19642857142857142
+  "coverage": 0.4107142857142857
 }
