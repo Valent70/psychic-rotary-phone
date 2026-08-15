@@ -66,6 +66,35 @@ func TestGitDirectoryIsExcluded(t *testing.T) {
 	}
 }
 
+func TestClaudeDirectoryIsExcludedSoHarnessStateNeverAffectsTheHash(t *testing.T) {
+	// Regression test for a real, reproduced bug: a long-running Claude
+	// Code session accumulates .claude/ harness state (e.g. a scheduled
+	// task lock) in the working tree, but that directory is
+	// .gitignore'd and never part of what a fresh `git clone` or
+	// `git archive` of the same commit produces. Before .claude/ was
+	// added to DefaultExclusions, cmd/veriqo-verify-release-identity
+	// passed against the working tree (whose Compute included the
+	// stray file) but failed against an archive of the exact same
+	// commit -- the source hash was not actually a function of the
+	// committed source, only of incidental session-local clutter.
+	dir := writeTree(t, map[string]string{
+		"main.go":                      "package main\n",
+		".claude/scheduled_tasks.lock": "pid=12345\n",
+	})
+	res, err := Compute(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range res.Files {
+		if f.Path == ".claude/scheduled_tasks.lock" {
+			t.Fatalf(".claude contents must never be hashed, got %s", f.Path)
+		}
+	}
+	if res.FileCount != 1 {
+		t.Fatalf("expected exactly 1 hashed file (main.go), got %d: %+v", res.FileCount, res.Files)
+	}
+}
+
 func TestEvidenceDirectoryIsExcludedSoReRunningGatesDoesNotChangeTheHash(t *testing.T) {
 	dir := writeTree(t, map[string]string{
 		"main.go":                 "package main\n",

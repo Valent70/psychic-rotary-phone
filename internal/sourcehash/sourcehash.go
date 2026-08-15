@@ -48,6 +48,14 @@ type Result struct {
 // exclusion list itself is auditable:
 //
 //   - .git/            — VCS metadata, not tree content
+//   - .claude/          — Claude Code harness state (e.g. scheduled-task
+//     locks), an artifact of whatever environment happens to be running
+//     this tool, not repository content; a fresh `git clone` of this
+//     same commit never has one. Found via a real, reproduced mismatch:
+//     cmd/veriqo-verify-release-identity passed against a working tree
+//     that had accumulated a .claude/scheduled_tasks.lock file over a
+//     long session, then failed against a `git archive` of the exact
+//     same commit, which -- correctly -- never contained it.
 //   - evidence/         — gate output written BY this same readiness
 //     run; including it would make the hash of a fixed commit change
 //     every time the gates are re-run, which is the opposite of what a
@@ -61,6 +69,7 @@ type Result struct {
 //   - binaries this repo's .gitignore names (go build output)
 var DefaultExclusions = []string{
 	".git/",
+	".claude/",
 	"evidence/",
 	"READINESS_MANIFEST.json",
 	"SBOM.json",

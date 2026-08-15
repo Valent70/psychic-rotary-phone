@@ -1,201 +1,201 @@
 {
   "required_hours": 72,
-  "actual_duration": "30.092771391s",
-  "actual_minutes": 0.50154618985,
+  "actual_duration": "30.133166477s",
+  "actual_minutes": 0.5022194412833333,
   "is_full_72h_soak": false,
-  "total_iterations": 388,
+  "total_iterations": 385,
   "errors": 0,
   "before_state_hash": "362a89dee8e65dce6271b90b1c4965486f8b989a3ae80bb32b42552c678dc2c8",
-  "after_state_hash": "0f6583ef96c881748d1e773662c89f8c14a10cca6f3c7b4adf733214d1c108cc",
+  "after_state_hash": "0433451d41e96578c56d7b7db4b07e79be18fc750c6286cfc24944d4a3bfafe9",
   "baseline_goroutines": 2,
   "final_goroutines": 2,
   "max_goroutines": 2,
   "samples": [
     {
-      "at_seconds": 0.004415166,
+      "at_seconds": 0.00421909,
       "goroutines": 2,
-      "heap_alloc_mb": 0.9150238037109375,
+      "heap_alloc_mb": 0.9221038818359375,
       "iterations_so_far": 1
     },
     {
-      "at_seconds": 1.001171346,
+      "at_seconds": 1.003889794,
       "goroutines": 2,
-      "heap_alloc_mb": 2.2418975830078125,
-      "iterations_so_far": 68
+      "heap_alloc_mb": 2.1877059936523438,
+      "iterations_so_far": 67
     },
     {
-      "at_seconds": 2.019803576,
+      "at_seconds": 2.001343172,
       "goroutines": 2,
-      "heap_alloc_mb": 2.2865142822265625,
-      "iterations_so_far": 100
+      "heap_alloc_mb": 3.2441329956054688,
+      "iterations_so_far": 98
     },
     {
-      "at_seconds": 3.025336397,
+      "at_seconds": 3.023937069,
       "goroutines": 2,
-      "heap_alloc_mb": 5.056526184082031,
-      "iterations_so_far": 122
+      "heap_alloc_mb": 2.8319244384765625,
+      "iterations_so_far": 121
     },
     {
-      "at_seconds": 4.024110559,
+      "at_seconds": 4.017539395,
       "goroutines": 2,
-      "heap_alloc_mb": 3.0786285400390625,
-      "iterations_so_far": 141
+      "heap_alloc_mb": 5.600593566894531,
+      "iterations_so_far": 140
     },
     {
-      "at_seconds": 5.042640237,
+      "at_seconds": 5.013321096,
       "goroutines": 2,
-      "heap_alloc_mb": 3.3891372680664062,
-      "iterations_so_far": 159
+      "heap_alloc_mb": 6.475250244140625,
+      "iterations_so_far": 157
     },
     {
-      "at_seconds": 6.050275243,
+      "at_seconds": 6.003691208,
       "goroutines": 2,
-      "heap_alloc_mb": 4.061775207519531,
-      "iterations_so_far": 174
+      "heap_alloc_mb": 6.8411865234375,
+      "iterations_so_far": 170
     },
     {
-      "at_seconds": 7.0837322,
+      "at_seconds": 7.0440451060000004,
       "goroutines": 2,
-      "heap_alloc_mb": 3.8993988037109375,
-      "iterations_so_far": 188
+      "heap_alloc_mb": 6.907859802246094,
+      "iterations_so_far": 184
     },
     {
-      "at_seconds": 8.018344274,
+      "at_seconds": 8.079314606,
       "goroutines": 2,
-      "heap_alloc_mb": 5.693855285644531,
-      "iterations_so_far": 200
+      "heap_alloc_mb": 4.067848205566406,
+      "iterations_so_far": 197
     },
     {
-      "at_seconds": 9.06981812,
+      "at_seconds": 9.036563879,
       "goroutines": 2,
-      "heap_alloc_mb": 4.879570007324219,
-      "iterations_so_far": 213
+      "heap_alloc_mb": 7.5249176025390625,
+      "iterations_so_far": 209
     },
     {
-      "at_seconds": 10.04619121,
+      "at_seconds": 10.026031308,
       "goroutines": 2,
-      "heap_alloc_mb": 4.6328125,
-      "iterations_so_far": 225
+      "heap_alloc_mb": 7.858406066894531,
+      "iterations_so_far": 221
     },
     {
-      "at_seconds": 11.038795926,
+      "at_seconds": 11.047976732,
       "goroutines": 2,
-      "heap_alloc_mb": 5.1717681884765625,
-      "iterations_so_far": 237
+      "heap_alloc_mb": 5.183021545410156,
+      "iterations_so_far": 234
     },
     {
-      "at_seconds": 12.023317102,
+      "at_seconds": 12.033217325,
       "goroutines": 2,
-      "heap_alloc_mb": 5.150581359863281,
-      "iterations_so_far": 248
+      "heap_alloc_mb": 9.485633850097656,
+      "iterations_so_far": 244
     },
     {
-      "at_seconds": 13.036361907,
+      "at_seconds": 13.056805395,
       "goroutines": 2,
-      "heap_alloc_mb": 11.275009155273438,
-      "iterations_so_far": 258
+      "heap_alloc_mb": 5.900970458984375,
+      "iterations_so_far": 255
     },
     {
-      "at_seconds": 14.131378874,
+      "at_seconds": 14.035450604,
       "goroutines": 2,
-      "heap_alloc_mb": 10.564811706542969,
-      "iterations_so_far": 268
+      "heap_alloc_mb": 9.943794250488281,
+      "iterations_so_far": 264
     },
     {
-      "at_seconds": 15.030043875,
+      "at_seconds": 15.07084016,
       "goroutines": 2,
-      "heap_alloc_mb": 5.820228576660156,
-      "iterations_so_far": 276
+      "heap_alloc_mb": 10.16485595703125,
+      "iterations_so_far": 273
     },
     {
-      "at_seconds": 16.063039874,
+      "at_seconds": 16.097242334,
       "goroutines": 2,
-      "heap_alloc_mb": 5.4773406982421875,
-      "iterations_so_far": 285
+      "heap_alloc_mb": 6.53717041015625,
+      "iterations_so_far": 282
     },
     {
-      "at_seconds": 17.117533504,
+      "at_seconds": 17.015589499,
       "goroutines": 2,
-      "heap_alloc_mb": 11.358634948730469,
-      "iterations_so_far": 294
+      "heap_alloc_mb": 11.212753295898438,
+      "iterations_so_far": 290
     },
     {
-      "at_seconds": 18.102271441,
+      "at_seconds": 18.057580756,
       "goroutines": 2,
-      "heap_alloc_mb": 11.700897216796875,
-      "iterations_so_far": 302
+      "heap_alloc_mb": 11.493728637695312,
+      "iterations_so_far": 298
     },
     {
-      "at_seconds": 19.049464203,
+      "at_seconds": 19.045274344,
       "goroutines": 2,
-      "heap_alloc_mb": 11.973716735839844,
-      "iterations_so_far": 310
+      "heap_alloc_mb": 8.293075561523438,
+      "iterations_so_far": 306
     },
     {
-      "at_seconds": 20.139231324,
+      "at_seconds": 20.119434319,
       "goroutines": 2,
-      "heap_alloc_mb": 6.4778289794921875,
-      "iterations_so_far": 318
+      "heap_alloc_mb": 12.134498596191406,
+      "iterations_so_far": 314
     },
     {
-      "at_seconds": 21.02645691,
+      "at_seconds": 21.035312338,
       "goroutines": 2,
-      "heap_alloc_mb": 8.818634033203125,
-      "iterations_so_far": 325
+      "heap_alloc_mb": 6.6964874267578125,
+      "iterations_so_far": 321
     },
     {
-      "at_seconds": 22.124595299,
+      "at_seconds": 22.093363993,
       "goroutines": 2,
-      "heap_alloc_mb": 12.606056213378906,
-      "iterations_so_far": 333
+      "heap_alloc_mb": 7.5770111083984375,
+      "iterations_so_far": 329
     },
     {
-      "at_seconds": 23.005833959,
+      "at_seconds": 23.039844685,
       "goroutines": 2,
-      "heap_alloc_mb": 6.918754577636719,
-      "iterations_so_far": 339
+      "heap_alloc_mb": 8.69940185546875,
+      "iterations_so_far": 336
     },
     {
-      "at_seconds": 24.086978179,
+      "at_seconds": 24.107868536,
       "goroutines": 2,
-      "heap_alloc_mb": 14.529121398925781,
-      "iterations_so_far": 347
+      "heap_alloc_mb": 7.198089599609375,
+      "iterations_so_far": 344
     },
     {
-      "at_seconds": 25.043583693,
+      "at_seconds": 25.109653824,
       "goroutines": 2,
-      "heap_alloc_mb": 7.009735107421875,
-      "iterations_so_far": 354
+      "heap_alloc_mb": 14.666580200195312,
+      "iterations_so_far": 351
     },
     {
-      "at_seconds": 26.033767744,
+      "at_seconds": 26.039376502,
       "goroutines": 2,
-      "heap_alloc_mb": 6.9843597412109375,
-      "iterations_so_far": 361
+      "heap_alloc_mb": 7.473167419433594,
+      "iterations_so_far": 358
     },
     {
-      "at_seconds": 27.070859645,
+      "at_seconds": 27.08211783,
       "goroutines": 2,
-      "heap_alloc_mb": 7.620765686035156,
-      "iterations_so_far": 368
+      "heap_alloc_mb": 7.082427978515625,
+      "iterations_so_far": 365
     },
     {
-      "at_seconds": 28.045405333,
+      "at_seconds": 28.137536441,
       "goroutines": 2,
-      "heap_alloc_mb": 11.509162902832031,
-      "iterations_so_far": 375
+      "heap_alloc_mb": 7.858177185058594,
+      "iterations_so_far": 372
     },
     {
-      "at_seconds": 29.062654434,
+      "at_seconds": 29.012676272,
       "goroutines": 2,
-      "heap_alloc_mb": 7.525016784667969,
-      "iterations_so_far": 381
+      "heap_alloc_mb": 13.766105651855469,
+      "iterations_so_far": 378
     },
     {
-      "at_seconds": 30.090626838,
+      "at_seconds": 30.131033281,
       "goroutines": 2,
-      "heap_alloc_mb": 14.053024291992188,
-      "iterations_so_far": 388
+      "heap_alloc_mb": 13.920738220214844,
+      "iterations_so_far": 385
     }
   ],
   "verdict": "PARTIAL: 0.0 of the required 72 hours (0.01%) -- zero errors, goroutines bounded over this window, but this is NOT a closure of soak_72h"
