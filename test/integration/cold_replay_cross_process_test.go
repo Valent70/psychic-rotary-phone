@@ -7,14 +7,20 @@
 // certificate purely from that file -- the same cross-process pattern
 // TestIVFCrossProcess_* already proves for the fusion/contradiction/
 // decision domains (ivf_cross_process_test.go), extended here to the
-// full execution DAG. See cmd/veriqo-cold-replay's own doc comment for
-// the explicit scope note: entity resolution is NOT covered, since no
-// existing adapter bundles pkg/identity's independent ledger into an
-// exportable execution.ReplayRequest.
+// full execution DAG.
+//
+// TestColdReplay_CrossProcess_IdentityResolutionSurvivesColdRestart
+// closes what this file's own doc comment used to name as an explicit,
+// out-of-scope gap: entity resolution now cold-restores too, via
+// cmd/veriqo-cold-replay's -identity-export flag and pkg/identity's
+// own ColdReplayExport/VerifyColdReplay (Rebuild's real replay proof,
+// finally wired across a genuine process boundary rather than only
+// exercised in-process by pkg/identity's own tests).
 package integration
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +29,7 @@ import (
 
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/execution"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/evidencegraph"
 	"veriqo/pkg/moat/fusion"
@@ -151,5 +158,147 @@ func TestColdReplay_CrossProcess_TamperedExportFails(t *testing.T) {
 	}
 	if !contains(string(out), "VERDICT                : FAILED") {
 		t.Fatalf("expected FAILED verdict from the independent cold-replay process, got:\n%s", out)
+	}
+}
+
+// TestColdReplay_CrossProcess_IdentityResolutionSurvivesColdRestart is
+// the real closure of the gap this file's own doc comment used to name
+// explicitly: pkg/identity.Resolver's independent ledger now cold-
+// restores across a genuine process boundary too, not just the
+// execution DAG. A real Resolver merges IMO+CALLSIGN aliases for one
+// vessel, its ledger is exported alongside the two EntityIDAt answers
+// the original (pre-restart) process got, and a genuinely separate
+// veriqo-cold-replay process -- launched here alongside the SAME
+// -export DAG check this file's other tests already prove -- must
+// independently rebuild a fresh Resolver from nothing but the export
+// and reproduce the identical entity ID for both aliases.
+func TestColdReplay_CrossProcess_IdentityResolutionSurvivesColdRestart(t *testing.T) {
+	bin := buildVeriqoColdReplay(t)
+
+	e := execution.NewEngine(nil)
+	res, err := e.Run(context.Background(), execution.Input{Context: coldReplayExecContext(), Case: coldReplayCaseInput()})
+	if err != nil {
+		t.Fatalf("original execution: %v", err)
+	}
+	req := execution.ReplayRequest{Context: coldReplayExecContext(), Case: coldReplayCaseInput(), Committed: res.Trace}
+	execData, err := req.Marshal()
+	if err != nil {
+		t.Fatalf("marshal export: %v", err)
+	}
+	execPath := filepath.Join(t.TempDir(), "cold-export.json")
+	if err := os.WriteFile(execPath, execData, 0o600); err != nil {
+		t.Fatalf("write export: %v", err)
+	}
+
+	// A real identity resolver, in THIS process: merge IMO/CALLSIGN for
+	// one vessel, exactly the shape pkg/lifecycle's own production
+	// entity-authority path uses.
+	idResolver := identity.NewResolver()
+	if err := idResolver.RegisterAuthority(identity.Authority{
+		SourceID: "flag-registry", Weight: 1, AuthoritativeFor: []identity.Kind{identity.KindIMO},
+	}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	imoAlias := identity.Identifier{Kind: identity.KindIMO, Value: "9998887"}
+	csAlias := identity.Identifier{Kind: identity.KindCallsign, Value: "ABCD1"}
+	if _, err := idResolver.Merge("op", "flag-registry", imoAlias, csAlias, 1, "cold-replay-identity-fixture"); err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	originalEntityID, err := idResolver.EntityIDAt(imoAlias, 1)
+	if err != nil {
+		t.Fatalf("EntityIDAt: %v", err)
+	}
+	if originalEntityID == "" {
+		t.Fatal("expected a real, non-empty entity ID from the original process")
+	}
+
+	idExport := identity.ColdReplayExport{
+		Ledger:      idResolver.Ledger(),
+		Authorities: []identity.Authority{{SourceID: "flag-registry", Weight: 1, AuthoritativeFor: []identity.Kind{identity.KindIMO}}},
+		Queries: []identity.ColdReplayQuery{
+			{Alias: imoAlias, AsOfTick: 1, ExpectedEntityID: originalEntityID},
+			{Alias: csAlias, AsOfTick: 1, ExpectedEntityID: originalEntityID},
+		},
+	}
+	idData, err := json.Marshal(idExport)
+	if err != nil {
+		t.Fatalf("marshal identity export: %v", err)
+	}
+	idPath := filepath.Join(t.TempDir(), "cold-identity-export.json")
+	if err := os.WriteFile(idPath, idData, 0o600); err != nil {
+		t.Fatalf("write identity export: %v", err)
+	}
+
+	cmd := exec.Command(bin, "-export", execPath, "-identity-export", idPath)
+	out, err := cmd.CombinedOutput()
+	t.Logf("veriqo-cold-replay output:\n%s", out)
+	if err != nil {
+		t.Fatalf("cold-replay process exited non-zero on genuine exports: %v", err)
+	}
+	if !contains(string(out), "VERDICT                : PASSED") {
+		t.Fatalf("expected the DAG VERDICT to PASS, got:\n%s", out)
+	}
+	if !contains(string(out), "IDENTITY VERDICT       : PASSED") {
+		t.Fatalf("expected the independent process to reproduce the SAME entity ID (%s) from a cold-restored "+
+			"identity ledger alone, got:\n%s", originalEntityID, out)
+	}
+	if !contains(string(out), "identity queries       : 2 checked") {
+		t.Fatalf("expected exactly 2 identity queries checked, got:\n%s", out)
+	}
+}
+
+// TestColdReplay_CrossProcess_TamperedIdentityLedgerFails is the
+// adversarial companion: an identity export whose ledger was altered
+// after the fact must be refused by the independent process, exactly
+// like TestColdReplay_CrossProcess_TamperedExportFails already proves
+// for the execution DAG's own committed trace.
+func TestColdReplay_CrossProcess_TamperedIdentityLedgerFails(t *testing.T) {
+	bin := buildVeriqoColdReplay(t)
+
+	e := execution.NewEngine(nil)
+	res, err := e.Run(context.Background(), execution.Input{Context: coldReplayExecContext(), Case: coldReplayCaseInput()})
+	if err != nil {
+		t.Fatalf("original execution: %v", err)
+	}
+	req := execution.ReplayRequest{Context: coldReplayExecContext(), Case: coldReplayCaseInput(), Committed: res.Trace}
+	execData, err := req.Marshal()
+	if err != nil {
+		t.Fatalf("marshal export: %v", err)
+	}
+	execPath := filepath.Join(t.TempDir(), "cold-export.json")
+	if err := os.WriteFile(execPath, execData, 0o600); err != nil {
+		t.Fatalf("write export: %v", err)
+	}
+
+	idResolver := identity.NewResolver()
+	if err := idResolver.RegisterAuthority(identity.Authority{SourceID: "flag-registry", Weight: 1}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	imoAlias := identity.Identifier{Kind: identity.KindIMO, Value: "9998887"}
+	csAlias := identity.Identifier{Kind: identity.KindCallsign, Value: "ABCD1"}
+	if _, err := idResolver.Merge("op", "flag-registry", imoAlias, csAlias, 1, "cold-replay-identity-fixture"); err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	ledger := idResolver.Ledger()
+	ledger[0].Confidence = 0.99 // tamper: alters the event without recomputing its hash
+
+	idExport := identity.ColdReplayExport{Ledger: ledger}
+	idData, err := json.Marshal(idExport)
+	if err != nil {
+		t.Fatalf("marshal identity export: %v", err)
+	}
+	idPath := filepath.Join(t.TempDir(), "cold-identity-export-tampered.json")
+	if err := os.WriteFile(idPath, idData, 0o600); err != nil {
+		t.Fatalf("write identity export: %v", err)
+	}
+
+	cmd := exec.Command(bin, "-export", execPath, "-identity-export", idPath)
+	out, err := cmd.CombinedOutput()
+	t.Logf("veriqo-cold-replay output:\n%s", out)
+	if err == nil {
+		t.Fatal("expected the cold-replay process to exit non-zero on a tampered identity ledger")
+	}
+	if !contains(string(out), "IDENTITY VERDICT       : FAILED") {
+		t.Fatalf("expected the tampered identity ledger to be refused, got:\n%s", out)
 	}
 }

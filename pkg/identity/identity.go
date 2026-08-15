@@ -36,6 +36,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -484,4 +485,63 @@ func Rebuild(events []Event, authorities []Authority) (*Resolver, error) {
 		r.ledger = append(r.ledger, e)
 	}
 	return r, nil
+}
+
+// ColdReplayQuery names one EntityIDAt call a cold-replay process must
+// reproduce, and the answer the original (pre-restart) process got.
+type ColdReplayQuery struct {
+	Alias            Identifier `json:"alias"`
+	AsOfTick         uint64     `json:"as_of_tick"`
+	ExpectedEntityID string     `json:"expected_entity_id"`
+}
+
+// ColdReplayExport is the file format cmd/veriqo-cold-replay reads to
+// close the entity-resolution half of audit item P0-E ("distributed
+// cold replay"): everything a genuinely separate process needs to
+// independently rebuild a Resolver from nothing but this file and
+// confirm it resolves the SAME queries to the SAME entity IDs the
+// original, pre-restart process got -- no shared memory, no import of
+// whatever produced the export.
+type ColdReplayExport struct {
+	Ledger      []Event           `json:"ledger"`
+	Authorities []Authority       `json:"authorities"`
+	Queries     []ColdReplayQuery `json:"queries"`
+}
+
+// ColdReplayVerdict is VerifyColdReplay's result.
+type ColdReplayVerdict struct {
+	Matched        bool     `json:"matched"`
+	QueriesChecked int      `json:"queries_checked"`
+	Mismatches     []string `json:"mismatches,omitempty"` // "alias: got X want Y" for each failing query
+}
+
+// VerifyColdReplay is the one-shot entry point a cold-replay process
+// calls: unmarshal an exported ColdReplayExport, rebuild a Resolver
+// from ONLY its ledger and authorities (Rebuild independently re-
+// verifies the ledger's own hash chain, so a corrupted or tampered
+// export is refused, not silently trusted), then confirm every
+// exported query's EntityIDAt reproduces the exact entity ID the
+// original process recorded.
+func VerifyColdReplay(data []byte) (ColdReplayVerdict, error) {
+	var exp ColdReplayExport
+	if err := json.Unmarshal(data, &exp); err != nil {
+		return ColdReplayVerdict{}, err
+	}
+	r, err := Rebuild(exp.Ledger, exp.Authorities)
+	if err != nil {
+		return ColdReplayVerdict{}, err
+	}
+	v := ColdReplayVerdict{Matched: true}
+	for _, q := range exp.Queries {
+		got, err := r.EntityIDAt(q.Alias, q.AsOfTick)
+		if err != nil {
+			return ColdReplayVerdict{}, fmt.Errorf("identity: cold replay query %s: %w", q.Alias.Key(), err)
+		}
+		v.QueriesChecked++
+		if got != q.ExpectedEntityID {
+			v.Matched = false
+			v.Mismatches = append(v.Mismatches, fmt.Sprintf("%s: got %s want %s", q.Alias.Key(), got, q.ExpectedEntityID))
+		}
+	}
+	return v, nil
 }

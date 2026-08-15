@@ -19,18 +19,23 @@
 //
 // Honest scope: this proves cold restoration of evidence root,
 // decision, explanation and verification hash from an exported file
-// across a real process boundary. It does NOT include entity
-// resolution: pkg/identity.Resolver keeps its own independent ledger
-// with no existing adapter bundling it into a ReplayRequest export, so
-// claiming this replays entity resolution too would be fabricated
-// scope, not a real property this binary checks.
+// across a real process boundary. Entity resolution is a SEPARATE,
+// optional check: pass -identity-export alongside -export to ALSO
+// prove pkg/identity.Resolver's own independent ledger cold-restores
+// identically -- a genuinely separate process rebuilding a Resolver
+// from nothing but pkg/identity.ColdReplayExport's JSON and confirming
+// every exported EntityIDAt query reproduces the SAME entity ID the
+// original, pre-restart process recorded. Omitting -identity-export
+// simply skips that check (not a failure): most callers only care
+// about the execution DAG.
 //
 // Usage:
 //
-//	veriqo-cold-replay -export path/to/exported-execution.json
+//	veriqo-cold-replay -export path/to/exported-execution.json [-identity-export path/to/exported-identity.json]
 //
-// Exit codes: 0 = PASSED (every compared node hash matches),
-// 1 = FAILED (a divergent stage was found, or replay errored),
+// Exit codes: 0 = PASSED (every compared node hash matches, and the
+// identity check if requested also matched), 1 = FAILED (a divergent
+// stage or identity query was found, or replay errored),
 // 2 = usage/input error.
 package main
 
@@ -40,6 +45,7 @@ import (
 	"os"
 
 	"veriqo/pkg/execution"
+	"veriqo/pkg/identity"
 )
 
 func main() {
@@ -47,14 +53,21 @@ func main() {
 }
 
 func run(args []string, stdout, stderr *os.File) int {
-	var exportPath string
+	var exportPath, identityExportPath string
 	for i := 0; i < len(args); i++ {
-		if args[i] == "-export" && i+1 < len(args) {
-			exportPath = args[i+1]
+		switch args[i] {
+		case "-export":
+			if i+1 < len(args) {
+				exportPath = args[i+1]
+			}
+		case "-identity-export":
+			if i+1 < len(args) {
+				identityExportPath = args[i+1]
+			}
 		}
 	}
 	if exportPath == "" {
-		fmt.Fprintln(stderr, "usage: veriqo-cold-replay -export <exported-execution.json>")
+		fmt.Fprintln(stderr, "usage: veriqo-cold-replay -export <exported-execution.json> [-identity-export <exported-identity.json>]")
 		return 2
 	}
 
@@ -81,14 +94,44 @@ func run(args []string, stdout, stderr *os.File) int {
 	fmt.Fprintf(stdout, "  replayed evidence root : %s\n", verdict.ReplayRootHash)
 	fmt.Fprintf(stdout, "  nodes compared         : %d\n", verdict.NodesCompared)
 
-	if verdict.Matched {
+	dagOK := verdict.Matched
+	if dagOK {
 		fmt.Fprintf(stdout, "  VERDICT                : PASSED (evidence root, decision, explanation and "+
 			"verification certificate all reproduced from cold-restored history alone)\n")
+	} else {
+		fmt.Fprintf(stdout, "  divergent stage        : %s\n", verdict.DivergentStage)
+		fmt.Fprintf(stdout, "  original node hash     : %s\n", verdict.OriginalNodeHash)
+		fmt.Fprintf(stdout, "  replayed node hash     : %s\n", verdict.ReplayNodeHash)
+		fmt.Fprintf(stdout, "  VERDICT                : FAILED\n")
+	}
+
+	identityOK := true
+	if identityExportPath != "" {
+		idData, err := os.ReadFile(identityExportPath) // #nosec G304 G703 -- identityExportPath is an operator-supplied CLI argument, not untrusted input
+		if err != nil {
+			fmt.Fprintf(stderr, "veriqo-cold-replay: reading identity export: %v\n", err)
+			return 2
+		}
+		idVerdict, err := identity.VerifyColdReplay(idData)
+		if err != nil {
+			fmt.Fprintf(stdout, "  IDENTITY VERDICT       : FAILED (%v)\n", err)
+			return 1
+		}
+		identityOK = idVerdict.Matched
+		fmt.Fprintf(stdout, "  identity queries       : %d checked\n", idVerdict.QueriesChecked)
+		if identityOK {
+			fmt.Fprintf(stdout, "  IDENTITY VERDICT       : PASSED (every exported EntityIDAt query reproduced "+
+				"from a cold-restored pkg/identity.Resolver ledger alone)\n")
+		} else {
+			for _, m := range idVerdict.Mismatches {
+				fmt.Fprintf(stdout, "  identity mismatch      : %s\n", m)
+			}
+			fmt.Fprintf(stdout, "  IDENTITY VERDICT       : FAILED\n")
+		}
+	}
+
+	if dagOK && identityOK {
 		return 0
 	}
-	fmt.Fprintf(stdout, "  divergent stage        : %s\n", verdict.DivergentStage)
-	fmt.Fprintf(stdout, "  original node hash     : %s\n", verdict.OriginalNodeHash)
-	fmt.Fprintf(stdout, "  replayed node hash     : %s\n", verdict.ReplayNodeHash)
-	fmt.Fprintf(stdout, "  VERDICT                : FAILED\n")
 	return 1
 }

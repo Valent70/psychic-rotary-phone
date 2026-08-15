@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -247,6 +248,88 @@ func TestLedgerChainAndRebuild(t *testing.T) {
 	tampered[1].Confidence = 0.99
 	if _, err := Rebuild(tampered, nil); !errors.Is(err, ErrChainBroken) {
 		t.Fatalf("tampered identity ledger rebuilt: %v", err)
+	}
+}
+
+// TestVerifyColdReplayMatchesRealExport is the unit-level proof behind
+// cmd/veriqo-cold-replay's own entity-resolution closure (audit item
+// P0-E): a real ledger, a real set of EntityIDAt queries recorded
+// against it, marshaled to JSON and handed to VerifyColdReplay exactly
+// the way a genuinely separate process would receive it, must report
+// Matched=true.
+func TestVerifyColdReplayMatchesRealExport(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) { return r.Merge("op", "flag-registry", imo("9998887"), callsign("ABCD"), 1, "a") })
+
+	entityID, err := r.EntityIDAt(imo("9998887"), 1)
+	must(t, err)
+
+	exp := ColdReplayExport{
+		Ledger: r.Ledger(),
+		Authorities: []Authority{
+			{SourceID: "flag-registry", Weight: 1, AuthoritativeFor: []Kind{KindIMO}},
+			{SourceID: "aggregator", Weight: 0.4},
+		},
+		Queries: []ColdReplayQuery{
+			{Alias: imo("9998887"), AsOfTick: 1, ExpectedEntityID: entityID},
+			{Alias: callsign("ABCD"), AsOfTick: 1, ExpectedEntityID: entityID},
+		},
+	}
+	data, err := json.Marshal(exp)
+	must(t, err)
+
+	v, err := VerifyColdReplay(data)
+	must(t, err)
+	if !v.Matched {
+		t.Fatalf("expected a genuine export to match, got mismatches: %v", v.Mismatches)
+	}
+	if v.QueriesChecked != 2 {
+		t.Fatalf("expected 2 queries checked, got %d", v.QueriesChecked)
+	}
+}
+
+// TestVerifyColdReplayCatchesAWrongExpectation is the adversarial
+// proof this is a real check, not a rubber stamp: an export whose
+// ExpectedEntityID does not match what the ledger actually resolves to
+// must be reported as a mismatch.
+func TestVerifyColdReplayCatchesAWrongExpectation(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) { return r.Merge("op", "flag-registry", imo("9998887"), callsign("ABCD"), 1, "a") })
+
+	exp := ColdReplayExport{
+		Ledger:      r.Ledger(),
+		Authorities: []Authority{{SourceID: "flag-registry", Weight: 1, AuthoritativeFor: []Kind{KindIMO}}},
+		Queries:     []ColdReplayQuery{{Alias: imo("9998887"), AsOfTick: 1, ExpectedEntityID: "not-the-real-entity-id"}},
+	}
+	data, err := json.Marshal(exp)
+	must(t, err)
+
+	v, err := VerifyColdReplay(data)
+	must(t, err)
+	if v.Matched {
+		t.Fatal("expected a wrong expected entity ID to be caught, not silently matched")
+	}
+	if len(v.Mismatches) != 1 {
+		t.Fatalf("expected exactly 1 mismatch, got %v", v.Mismatches)
+	}
+}
+
+// TestVerifyColdReplayRefusesATamperedLedger proves the same fail-
+// closed guarantee Rebuild already provides propagates through
+// VerifyColdReplay: a corrupted ledger must be refused outright, not
+// silently rebuilt and queried against.
+func TestVerifyColdReplayRefusesATamperedLedger(t *testing.T) {
+	r := newResolverWithAuthorities(t)
+	must2(t, func() (Event, error) { return r.Merge("op", "flag-registry", imo("9998887"), callsign("ABCD"), 1, "a") })
+
+	tampered := r.Ledger()
+	tampered[0].Confidence = 0.99
+	exp := ColdReplayExport{Ledger: tampered}
+	data, err := json.Marshal(exp)
+	must(t, err)
+
+	if _, err := VerifyColdReplay(data); !errors.Is(err, ErrChainBroken) {
+		t.Fatalf("expected a tampered ledger to be refused with ErrChainBroken, got %v", err)
 	}
 }
 
