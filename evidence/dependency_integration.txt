@@ -2,4 +2,4 @@ gate: dependency_integration
 command: go test -run Dependency ./pkg/canonical/
 exit: 0
 ---
-ok  	veriqo/pkg/canonical	(cached)
+ok  	veriqo/pkg/canonical	0.002s
