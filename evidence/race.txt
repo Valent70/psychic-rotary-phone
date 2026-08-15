@@ -9,21 +9,21 @@ ok  	veriqo/cmd/veriqo-demo	(cached)
 ?   	veriqo/cmd/veriqo-live-demo	[no test files]
 ?   	veriqo/cmd/veriqo-node	[no test files]
 ?   	veriqo/cmd/veriqo-qualification	[no test files]
-ok  	veriqo/cmd/veriqo-readiness	1.415s
+ok  	veriqo/cmd/veriqo-readiness	(cached)
 ?   	veriqo/cmd/veriqo-release-keygen	[no test files]
 ok  	veriqo/cmd/veriqo-requirements	(cached)
 ?   	veriqo/cmd/veriqo-scale-node	[no test files]
 ?   	veriqo/cmd/veriqo-testrunner	[no test files]
 ?   	veriqo/cmd/veriqo-verify	[no test files]
 ?   	veriqo/cmd/veriqo-verify-release	[no test files]
-ok  	veriqo/cmd/veriqo-verify-release-identity	1.458s
+ok  	veriqo/cmd/veriqo-verify-release-identity	(cached)
 ok  	veriqo/internal/assurance	(cached)
 ok  	veriqo/internal/determinism	(cached)
 ok  	veriqo/internal/environment	(cached)
-ok  	veriqo/internal/nobypass	1.048s
-ok  	veriqo/internal/reproducibility	12.321s
+ok  	veriqo/internal/nobypass	1.050s
+ok  	veriqo/internal/reproducibility	13.367s
 ok  	veriqo/internal/sbom	(cached)
-ok  	veriqo/internal/sourcehash	1.025s
+ok  	veriqo/internal/sourcehash	(cached)
 ok  	veriqo/internal/telemetrycoverage	(cached)
 ok  	veriqo/internal/timestamp	(cached)
 ok  	veriqo/internal/version	(cached)
@@ -34,11 +34,11 @@ ok  	veriqo/pkg/blockers/dr	(cached)
 ok  	veriqo/pkg/blockers/hsmkms	(cached)
 ok  	veriqo/pkg/blockers/livedata	(cached)
 ?   	veriqo/pkg/blockers/orchestrator	[no test files]
-ok  	veriqo/pkg/blockers/pentest	3.788s
-ok  	veriqo/pkg/blockers/scale	(cached)
+ok  	veriqo/pkg/blockers/pentest	3.124s
+ok  	veriqo/pkg/blockers/scale	1.928s
 ok  	veriqo/pkg/blockers/soak	(cached)
 ok  	veriqo/pkg/blockers/spiffe	(cached)
-ok  	veriqo/pkg/blockers/supplychain	1.022s
+ok  	veriqo/pkg/blockers/supplychain	1.021s
 ok  	veriqo/pkg/canonical	(cached)
 ok  	veriqo/pkg/chaos	(cached)
 ok  	veriqo/pkg/connector	(cached)
@@ -54,7 +54,7 @@ ok  	veriqo/pkg/execution	(cached)
 ok  	veriqo/pkg/explanation	(cached)
 ok  	veriqo/pkg/governance/calibration	(cached)
 ok  	veriqo/pkg/governance/data	(cached)
-ok  	veriqo/pkg/governance/entityconsistency	1.042s
+ok  	veriqo/pkg/governance/entityconsistency	1.038s
 ok  	veriqo/pkg/governance/hitl	(cached)
 ok  	veriqo/pkg/governance/knowledge	(cached)
 ok  	veriqo/pkg/governance/lifecycle	(cached)
@@ -113,12 +113,12 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	1.915s
+ok  	veriqo/test/acceptance/replay	1.938s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/e2e/eight_blockers	21.285s
-ok  	veriqo/test/integration	3.132s
-ok  	veriqo/test/soak	31.155s
-ok  	veriqo/test/stress	1.390s
+ok  	veriqo/test/e2e/eight_blockers	22.320s
+ok  	veriqo/test/integration	3.401s
+ok  	veriqo/test/soak	31.160s
+ok  	veriqo/test/stress	1.502s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -126,7 +126,7 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	(cached)
+ok  	veriqo/veriqo/gateway/rest	1.496s
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
 ok  	veriqo/veriqo/kernel	(cached)
