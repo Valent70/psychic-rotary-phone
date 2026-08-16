@@ -527,11 +527,15 @@ func TestRunUnifiedProducesARealCorrelatedSpanAndKey(t *testing.T) {
 		attr[a.Key] = a.Value
 	}
 	want := map[string]string{
-		"intent_id":    res.Correlation.IntentID,
-		"tenant_id":    in.Tenant,
-		"entity_id":    string(res.EntityID),
-		"execution_id": res.Correlation.ExecutionID,
-		"decision_id":  res.Correlation.DecisionID,
+		"intent_id":                   res.Correlation.IntentID,
+		"tenant_id":                   in.Tenant,
+		"entity_id":                   string(res.EntityID),
+		"execution_id":                res.Correlation.ExecutionID,
+		"decision_id":                 res.Correlation.DecisionID,
+		"evidence_package_id":         res.Correlation.EvidencePackageID,
+		"verification_certificate_id": res.Correlation.VerificationCertificateID,
+		"replay_package_id":           res.Correlation.ReplayPackageID,
+		"entity_identity_ledger_head": res.Correlation.EntityIdentityLedgerHead,
 	}
 	for key, wantVal := range want {
 		if wantVal == "" {
@@ -541,7 +545,30 @@ func TestRunUnifiedProducesARealCorrelatedSpanAndKey(t *testing.T) {
 			t.Fatalf("span attribute %q = %q, want %q (must match Result.Correlation exactly -- same execution, same IDs)", key, attr[key], wantVal)
 		}
 	}
-	if res.Correlation.EvidencePackageID == "" || res.Correlation.VerificationCertificateID == "" || res.Correlation.ReplayPackageID == "" {
-		t.Fatal("expected Result.Correlation to carry non-empty EvidencePackageID/VerificationCertificateID/ReplayPackageID")
+	// P0-F: EntityIdentityLedgerHead must be the SAME real ledger head
+	// pkg/execution's own IDENTITY_RESOLUTION stage committed into its
+	// node hash -- not a second, disconnected value that merely looks
+	// non-empty.
+	var idNode execution.Node
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageIdentityResolution {
+			idNode = n
+		}
 	}
+	if !strings.Contains(idNode.Detail, shortHeadFor(res.Correlation.EntityIdentityLedgerHead)) {
+		t.Fatalf("expected IDENTITY_RESOLUTION's own node detail (%q) to reference the same ledger head correlation reports (%q)",
+			idNode.Detail, res.Correlation.EntityIdentityLedgerHead)
+	}
+}
+
+// shortHeadFor mirrors pkg/execution's own unexported shortHash
+// truncation (12 chars + "...") so this test can check the ledger head
+// correlation reports is the SAME one IDENTITY_RESOLUTION's human-
+// readable node detail already displays, without needing that
+// unexported helper to be exported just for a test.
+func shortHeadFor(h string) string {
+	if len(h) <= 12 {
+		return h
+	}
+	return h[:12] + "..."
 }

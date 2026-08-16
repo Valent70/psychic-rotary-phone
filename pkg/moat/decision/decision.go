@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"sync"
 
 	"veriqo/pkg/platform/telemetry"
@@ -57,6 +58,52 @@ type Policy struct {
 	Factors           []FactorWeight
 	FlagThreshold     float64 // risk score >= this -> at least FLAG
 	EscalateThreshold float64 // risk score >= this -> ESCALATE
+	// RequiresTemporalCalibration, when true, declares that a decision
+	// under this policy is not trustworthy without real Temporal
+	// Bayesian reasoning over the case's evidence — pkg/execution's
+	// TEMPORAL_BAYESIAN stage fails closed (rather than the default
+	// honest SKIPPED) when this policy is active and the caller
+	// supplied neither a TemporalModel nor a TemporalObservations
+	// series. False (the default) preserves every existing policy's
+	// exact prior behavior byte-for-byte -- this is an opt-in
+	// escalation, not a retroactive tightening of policies that were
+	// never designed to need temporal reasoning.
+	RequiresTemporalCalibration bool
+}
+
+// Hash content-addresses a Policy's real, decision-relevant content —
+// Name, every Factor (sorted by name so caller-supplied ordering
+// cannot change the hash of an otherwise-identical policy), and both
+// thresholds. It deliberately excludes RequiresTemporalCalibration:
+// that flag governs a DIFFERENT stage's fail-closed behavior, not the
+// risk-scoring math this hash exists to fingerprint, so toggling it
+// must not silently change what "the same policy" means to a caller
+// verifying a policy hash they were told to expect.
+//
+// This is what makes pkg/execution's Policy stage (P0-3/P0-D) a real,
+// independently-verifiable DAG node rather than a decorative label:
+// Context.PolicyVersion is a caller-declared string, but nothing
+// previously checked it against the ACTUAL Policy object the caller
+// also supplied in CaseInput -- a caller could declare
+// PolicyVersion="v2" while silently running v1's thresholds and
+// nothing would notice. Input.ExpectedPolicyHash, when supplied,
+// closes exactly that gap the same way Input.IdentityAliases closed it
+// for identity (P0-4): a real, independent recomputation of Hash()
+// against the policy that actually ran, failing closed on mismatch.
+func (p Policy) Hash() string {
+	factors := append([]FactorWeight(nil), p.Factors...)
+	sort.Slice(factors, func(i, j int) bool { return factors[i].Name < factors[j].Name })
+	h := sha256.New()
+	fmt.Fprintf(h, "decision_policy/v1|name=%s|flag=%s|escalate=%s|",
+		p.Name, formatFloat(p.FlagThreshold), formatFloat(p.EscalateThreshold))
+	for _, f := range factors {
+		fmt.Fprintf(h, "factor=%s:%s|", f.Name, formatFloat(f.Weight))
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func formatFloat(v float64) string {
+	return strconv.FormatFloat(v, 'g', 17, 64)
 }
 
 // Decision is the caller-facing output of Decide.

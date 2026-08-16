@@ -72,7 +72,7 @@ func TestAcceptance53_FullLifecycleReplayMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunCanonical: %v", err)
 	}
-	rec, err := replay.Record("a", in, res, p.Dependencies.ReplayAll())
+	rec, err := replay.Record("a", in, res, p.Dependencies.ReplayAll(), "")
 	if err != nil {
 		t.Fatalf("Record: %v", err)
 	}

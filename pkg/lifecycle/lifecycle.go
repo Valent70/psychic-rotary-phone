@@ -545,6 +545,7 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	}
 
 	span.SetAttribute(telemetry.Attribute{Key: "execution_id", Value: execCtx.ExecutionID})
+	span.SetAttribute(telemetry.Attribute{Key: "evidence_package_id", Value: execCtx.EvidencePackageID})
 	execRes, err := o.Execution.Run(ctx, execIn)
 	if err != nil {
 		err = fmt.Errorf("lifecycle: execution run: %w", err)
@@ -581,10 +582,33 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	}
 	cert.Hash = hashLifecycleCert(cert)
 
-	corr := correlation.FromExecutionResult(*execRes)
+	// P0-F (universal correlation propagation): corr is built from the
+	// SAME values already individually attached to the span above as
+	// each became available (see this function's own doc comment on
+	// why they are set progressively rather than only here -- an early
+	// error return must not leave a trace blind to the identifiers it
+	// already had). WithIdentityLedgerHead attaches the real
+	// *identity.Resolver.Head() this Orchestrator resolved entities
+	// against for this call -- the SAME value IDENTITY_RESOLUTION's own
+	// node hash already committed to (see pkg/execution's
+	// StageIdentityResolution) -- so this is the identical real
+	// commitment, not a second, disconnected one. Every field of corr
+	// is now attached to the span, not only the two it used to be
+	// attached for, closing the "Key exists but is not really used by
+	// logs/telemetry/audit records" gap: corr (not ad-hoc individual
+	// values) is now the one object every consumer of this call --
+	// telemetry, the returned Result, and any caller logging or
+	// auditing this execution -- reads the same seven identifiers from.
+	corr := correlation.FromExecutionResult(*execRes).WithIdentityLedgerHead(o.Identity.Head())
 	corr.IntentID = in.ID()
+	span.SetAttribute(telemetry.Attribute{Key: "intent_id", Value: corr.IntentID})
+	span.SetAttribute(telemetry.Attribute{Key: "execution_id", Value: corr.ExecutionID})
+	span.SetAttribute(telemetry.Attribute{Key: "evidence_package_id", Value: corr.EvidencePackageID})
+	span.SetAttribute(telemetry.Attribute{Key: "entity_id", Value: corr.EntityID})
+	span.SetAttribute(telemetry.Attribute{Key: "decision_id", Value: corr.DecisionID})
 	span.SetAttribute(telemetry.Attribute{Key: "verification_certificate_id", Value: corr.VerificationCertificateID})
 	span.SetAttribute(telemetry.Attribute{Key: "replay_package_id", Value: corr.ReplayPackageID})
+	span.SetAttribute(telemetry.Attribute{Key: "entity_identity_ledger_head", Value: corr.EntityIdentityLedgerHead})
 
 	return &Result{
 		Intent: in, Plan: plan, EntityID: canonEntity, SourceIDs: canonical.SortedSourceIDs(caseIn.Submissions),

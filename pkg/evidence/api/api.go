@@ -360,7 +360,7 @@ func (f *Facade) Arbitrate(actorID, subject, predicate string, policy decision.P
 	if err != nil {
 		return nil, err
 	}
-	rec, err := replay.Record(actorID, in, res, f.pipeline.Dependencies.ReplayAll())
+	rec, err := replay.Record(actorID, in, res, f.pipeline.Dependencies.ReplayAll(), f.identity.Head())
 	if err != nil {
 		return nil, err
 	}

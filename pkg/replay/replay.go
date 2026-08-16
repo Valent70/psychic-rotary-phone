@@ -101,6 +101,34 @@ type ExecutionRecord struct {
 	Stages             []StageResult                    `json:"stages"`
 	OriginalResultHash string                           `json:"original_result_hash"`
 	SchemaVersion      string                           `json:"schema_version"`
+	// IdentityLedgerHead is the real *identity.Resolver.Head() the
+	// original execution's identity resolution was bound to, when the
+	// caller had one (empty otherwise -- nil-safe, preserving every
+	// prior caller's exact behavior byte-for-byte). Closing a real gap
+	// named by audit follow-up P0-E: cold replay previously carried
+	// Evidence + Dependency + Decision + Twin but never Identity, so
+	// "same posterior, same decision, same twin" could be reproduced
+	// from an export that had silently forgotten WHICH identity-ledger
+	// state those conclusions were reached against. It is carried
+	// through JSON round-trip like every other field here (see
+	// SchemaVersion's own comment on why this struct is the complete,
+	// self-contained record) -- an independent replayer can compare it
+	// against its own ledger's Head() without needing the pointer that
+	// produced it, the same "data, not engine pointers" discipline
+	// ReplayPackage's own doc comment states.
+	//
+	// Honest scope limitation: unlike CaseInput/DependencyLedger, this
+	// field does not yet feed Replay()'s own tamper-detection --
+	// ReplayResultHash is derived purely from the canonical computation
+	// (Evidence through Certificate), which never consumes identity
+	// data, so Replay() itself cannot notice IdentityLedgerHead being
+	// altered in transit the way it notices a tampered CaseInput. It is
+	// present, real, and survives serialization intact -- the gap this
+	// closes -- but a caller wanting IdentityLedgerHead to also be
+	// tamper-evident must independently compare it against their own
+	// held *identity.Resolver.Head(), the same shape of verification
+	// pkg/execution's ExpectedPolicyHash/IdentityAliases already use.
+	IdentityLedgerHead string `json:"identity_ledger_head,omitempty"`
 }
 
 // SchemaVersion for the replay contract (PHASE 51).
@@ -147,13 +175,13 @@ func hashJSON(prefix string, v any) (string, error) {
 // Record captures a completed canonical execution as an independently
 // replayable ExecutionRecord. It reads only the RESULT and the INPUT —
 // it does not retain the pipeline.
-func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResult, depLedger []evidencegraph.DependencyRecord) (ExecutionRecord, error) {
+func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResult, depLedger []evidencegraph.DependencyRecord, identityLedgerHead string) (ExecutionRecord, error) {
 	if len(in.Submissions) == 0 {
 		return ExecutionRecord{}, ErrEmptyPackage
 	}
 	rec := ExecutionRecord{
 		ActorID: actorID, CaseInput: in, DependencyLedger: depLedger,
-		SchemaVersion: SchemaVersion,
+		SchemaVersion: SchemaVersion, IdentityLedgerHead: identityLedgerHead,
 	}
 	var err error
 	if rec.EvidencePackageID, err = hashJSON("veriqo.evidence_package/v1", in.Submissions); err != nil {

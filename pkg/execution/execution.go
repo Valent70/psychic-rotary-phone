@@ -74,6 +74,21 @@ var (
 	// ErrBindingMismatch is raised when the governance binding at replay
 	// time differs from the one the execution committed to.
 	ErrBindingMismatch = errors.New("execution: governance binding mismatch")
+	// ErrPolicyMismatch is raised (P0-D) when Input.ExpectedPolicyHash is
+	// supplied and it does not match decision.Policy.Hash() of the
+	// policy actually carried in Case.Policy -- proof the POLICY stage
+	// performs a real, independent verification against the policy that
+	// will actually run, in the same spirit as ErrIdentityMismatch,
+	// rather than trusting Context.PolicyVersion as an unverified label.
+	ErrPolicyMismatch = errors.New("execution: policy: independently recomputed policy hash does not match the expected policy hash")
+	// ErrTemporalCalibrationRequired is raised (P0-D) when the active
+	// policy declares RequiresTemporalCalibration and the caller
+	// supplied neither a TemporalModel nor a TemporalObservations
+	// series -- TEMPORAL_BAYESIAN fails closed instead of the default
+	// honest SKIPPED, because for a policy that declares temporal
+	// reasoning load-bearing, a decision reached without it is not one
+	// this policy is willing to stand behind.
+	ErrTemporalCalibrationRequired = errors.New("execution: temporal_bayesian: policy requires temporal calibration but none was supplied")
 	// ErrIdentityMismatch is raised (P0-4) when Input.IdentityAliases is
 	// supplied and Engine.Identity independently re-resolves it to a
 	// DIFFERENT canonical entity than the caller-supplied
@@ -274,6 +289,16 @@ type Input struct {
 	TemporalModel         *hbayes.Model
 	TemporalObservations  []hbayes.TickObservations
 	TemporalInterventions []hbayes.Intervention
+	// ExpectedPolicyHash, when set, makes StagePolicy (P0-3/P0-D)
+	// independently recompute Case.Policy.Hash() and require it match --
+	// a real second computation against the policy that will actually
+	// run this decision, exactly the way IdentityAliases makes
+	// IDENTITY_RESOLUTION independently re-resolve rather than trust a
+	// caller-supplied label. Nil-safe: leave empty (the default) to
+	// preserve prior behavior byte-for-byte -- Context.PolicyVersion
+	// remains a caller-declared label with no independent check, as
+	// before this field existed.
+	ExpectedPolicyHash string
 }
 
 // Engine executes the graph. All sub-engines are injected so an
@@ -666,6 +691,19 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 			// Marking it SKIPPED when neither is supplied is honest; a
 			// fabricated posterior would not be.
 			if in.TemporalModel == nil || len(in.TemporalObservations) == 0 {
+				if in.Case.Policy.RequiresTemporalCalibration {
+					// P0-D Test 2: a policy that declares temporal
+					// reasoning load-bearing does not get a silent
+					// SKIPPED pass -- the stage fails closed, and (since
+					// StagePolicy/StageDecision are attributional over
+					// canon, which already ran) so does the whole
+					// execution: the loop below returns ErrStageFailed
+					// once any node is FAILED.
+					record(id, []string{"observation_series"}, nil, StatusFailed,
+						"policy "+in.Case.Policy.Name+" requires temporal calibration but none was supplied",
+						"", ErrTemporalCalibrationRequired)
+					continue
+				}
 				record(id, []string{"observation_series"}, nil, StatusSkipped,
 					"no temporal observation series supplied for this case", "temporal:skipped", nil)
 				produced[id] = true // a skipped-but-evaluated stage satisfies dependants
@@ -698,6 +736,30 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 
 		case StagePolicy:
 			d := canon.Decision
+			// P0-D: when the caller declares what policy content they
+			// expect, independently recompute the hash of the policy
+			// that actually ran and require agreement -- a real second
+			// computation, not a decorative re-statement of
+			// ctx.PolicyVersion (see decision.Policy.Hash's doc comment
+			// for why this closes a genuine gap: nothing previously
+			// checked ctx.PolicyVersion against Case.Policy's actual
+			// content at all).
+			if in.ExpectedPolicyHash != "" {
+				actualHash := in.Case.Policy.Hash()
+				if actualHash != in.ExpectedPolicyHash {
+					record(id, []string{ctx.PolicyVersion}, nil, StatusFailed,
+						"independently recomputed policy hash "+shortHash(actualHash)+
+							" does not match expected policy hash "+shortHash(in.ExpectedPolicyHash),
+						"", fmt.Errorf("%w: expected=%s actual=%s",
+							ErrPolicyMismatch, in.ExpectedPolicyHash, actualHash))
+					continue
+				}
+				record(id, []string{"tbml_composite_risk_score"}, []string{ctx.PolicyVersion}, StatusOK,
+					"policy "+d.PolicyName+" under version "+ctx.PolicyVersion+
+						" (flag "+fnum(d.RiskScore)+"); independently verified policy hash "+shortHash(actualHash),
+					d.PolicyName+"|"+ctx.PolicyVersion+"|verified="+actualHash, nil)
+				continue
+			}
 			record(id, []string{"tbml_composite_risk_score"}, []string{ctx.PolicyVersion}, StatusOK,
 				"policy "+d.PolicyName+" under version "+ctx.PolicyVersion+
 					" (flag "+fnum(d.RiskScore)+")",
@@ -763,7 +825,11 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 				StatusOK, "consolidated over "+strconv.Itoa(len(ex.Chain))+" chain links", ex.Hash, nil)
 
 		case StageReplayPackage:
-			rec, err := replay.Record(ctx.Actor, in.Case, canon, e.Pipeline.Dependencies.Ledger())
+			var identityLedgerHead string
+			if e.Identity != nil {
+				identityLedgerHead = e.Identity.Head()
+			}
+			rec, err := replay.Record(ctx.Actor, in.Case, canon, e.Pipeline.Dependencies.Ledger(), identityLedgerHead)
 			if err != nil {
 				record(id, nil, nil, StatusFailed, "replay record failed", "", err)
 				continue

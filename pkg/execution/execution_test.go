@@ -885,3 +885,174 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+// TestPolicyStageIndependentlyVerifiesExpectedHash is P0-D's positive
+// property for POLICY: when the caller declares what policy content
+// they expect, the stage independently recomputes decision.Policy.Hash
+// over the ACTUAL policy that ran and requires agreement -- proof this
+// is a real check, not a decorative re-statement of Context.PolicyVersion
+// (which, before this, was never cross-checked against Case.Policy at
+// all).
+func TestPolicyStageIndependentlyVerifiesExpectedHash(t *testing.T) {
+	c := caseInput()
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(),
+		Currency: "USD", ExpectedPolicyHash: c.Policy.Hash()})
+	if err != nil {
+		t.Fatalf("expected a matching expected policy hash to succeed, got: %v", err)
+	}
+	var polNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StagePolicy {
+			polNode = n
+		}
+	}
+	if polNode.Status != StatusOK {
+		t.Fatalf("expected POLICY to succeed, got %s: %s", polNode.Status, polNode.Error)
+	}
+	if !strings.Contains(polNode.Detail, "independently verified policy hash") {
+		t.Fatalf("expected the node detail to record the independent verification, got %q", polNode.Detail)
+	}
+}
+
+// TestPolicyStageFailsClosedWhenExpectedHashDisagrees is P0-D's
+// adversarial property for POLICY: a Case.Policy whose real content
+// does not match the caller-declared ExpectedPolicyHash must fail the
+// stage (and the whole execution), not silently proceed under
+// Context.PolicyVersion's unverified label. This is exactly the
+// "policy version" analogue of ErrIdentityMismatch, and is the concrete
+// fix for the auditor finding that Policy was "registry entry, not a
+// real DAG node": before ExpectedPolicyHash existed, nothing could ever
+// make POLICY fail this way, because nothing compared the declared
+// version to the policy's actual content.
+func TestPolicyStageFailsClosedWhenExpectedHashDisagrees(t *testing.T) {
+	c := caseInput()
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(),
+		Currency: "USD", ExpectedPolicyHash: "sha256-of-a-totally-different-policy-that-was-never-run"})
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("expected ErrStageFailed, got %v", err)
+	}
+	if !strings.Contains(err.Error(), string(StagePolicy)) {
+		t.Fatalf("expected the error to name POLICY, got %v", err)
+	}
+	var polNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StagePolicy {
+			polNode = n
+		}
+	}
+	if polNode.Status != StatusFailed {
+		t.Fatalf("expected POLICY to FAIL on disagreement, got %s", polNode.Status)
+	}
+	if !strings.Contains(polNode.Error, ErrPolicyMismatch.Error()) {
+		t.Fatalf("expected the node's own error to name the policy mismatch, got %q", polNode.Error)
+	}
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageDecision && n.Status == StatusOK {
+			t.Fatal("DECISION must not succeed when POLICY failed")
+		}
+	}
+}
+
+// TestPolicyStageWithoutExpectedHashPreservesPriorBehavior proves
+// nil-safety: omitting ExpectedPolicyHash (every existing production/
+// test call site before this round) must not change behavior at all.
+func TestPolicyStageWithoutExpectedHashPreservesPriorBehavior(t *testing.T) {
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: caseInput(),
+		Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	var polNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StagePolicy {
+			polNode = n
+		}
+	}
+	if polNode.Status != StatusOK {
+		t.Fatalf("expected POLICY to succeed without ExpectedPolicyHash, got %s", polNode.Status)
+	}
+	if strings.Contains(polNode.Detail, "independently verified") {
+		t.Fatal("expected no independent-verification claim when ExpectedPolicyHash was not supplied")
+	}
+}
+
+// TestPolicyHashIsDeterministicAndOrderIndependent proves Policy.Hash
+// is a genuine content address: identical content in a different
+// Factors order hashes the same, and any real content change (a
+// threshold, a weight, a factor name) changes the hash.
+func TestPolicyHashIsDeterministicAndOrderIndependent(t *testing.T) {
+	p1 := decision.Policy{Name: "p", FlagThreshold: 0.5, EscalateThreshold: 0.8,
+		Factors: []decision.FactorWeight{{Name: "a", Weight: 1}, {Name: "b", Weight: 2}}}
+	p2 := decision.Policy{Name: "p", FlagThreshold: 0.5, EscalateThreshold: 0.8,
+		Factors: []decision.FactorWeight{{Name: "b", Weight: 2}, {Name: "a", Weight: 1}}}
+	if p1.Hash() != p2.Hash() {
+		t.Fatal("expected reordered-but-identical factors to hash the same")
+	}
+	p3 := p1
+	p3.FlagThreshold = 0.6
+	if p3.Hash() == p1.Hash() {
+		t.Fatal("expected a changed threshold to change the hash")
+	}
+}
+
+// TestTemporalStageFailsClosedWhenPolicyRequiresCalibration is P0-D
+// Test 2's exact acceptance criterion: a policy that declares
+// RequiresTemporalCalibration must not get a silent SKIPPED pass when
+// no temporal model/observations were supplied -- the stage fails
+// closed, and the failure cascades to every downstream stage (CAUSAL
+// depends on TEMPORAL_BAYESIAN in the declared graph) rather than
+// fabricating a decision that never really reasoned temporally.
+func TestTemporalStageFailsClosedWhenPolicyRequiresCalibration(t *testing.T) {
+	c := caseInput()
+	c.Policy.RequiresTemporalCalibration = true
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD"})
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("expected ErrStageFailed, got %v", err)
+	}
+	if !strings.Contains(err.Error(), string(StageTemporal)) {
+		t.Fatalf("expected the error to name TEMPORAL_BAYESIAN, got %v", err)
+	}
+	var temporalNode, decisionNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageTemporal {
+			temporalNode = n
+		}
+		if n.StageID == StageDecision {
+			decisionNode = n
+		}
+	}
+	if temporalNode.Status != StatusFailed {
+		t.Fatalf("expected TEMPORAL_BAYESIAN to FAIL when the policy requires calibration, got %s", temporalNode.Status)
+	}
+	if !strings.Contains(temporalNode.Error, ErrTemporalCalibrationRequired.Error()) {
+		t.Fatalf("expected the node's own error to name the missing calibration, got %q", temporalNode.Error)
+	}
+	if decisionNode.Status == StatusOK {
+		t.Fatal("DECISION must not succeed when a required TEMPORAL_BAYESIAN stage failed")
+	}
+}
+
+// TestTemporalStageStillSkipsWhenPolicyDoesNotRequireCalibration proves
+// the opt-in nature of RequiresTemporalCalibration: policies that never
+// set it (every existing policy before this round, including
+// risk.DefaultPolicy) keep the exact prior honest-SKIPPED behavior.
+func TestTemporalStageStillSkipsWhenPolicyDoesNotRequireCalibration(t *testing.T) {
+	c := caseInput()
+	if c.Policy.RequiresTemporalCalibration {
+		t.Fatal("test fixture assumption violated: default policy must not require temporal calibration")
+	}
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageTemporal && n.Status != StatusSkipped {
+			t.Fatalf("expected TEMPORAL_BAYESIAN to remain SKIPPED, got %s", n.Status)
+		}
+	}
+}

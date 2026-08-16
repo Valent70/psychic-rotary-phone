@@ -1,6 +1,7 @@
 package replay
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -32,7 +33,7 @@ func runAndRecord(t *testing.T) (ExecutionRecord, *canonical.CanonicalResult) {
 	if err != nil {
 		t.Fatalf("RunCanonical: %v", err)
 	}
-	rec, err := Record("auditor-original", in, res, p.Dependencies.ReplayAll())
+	rec, err := Record("auditor-original", in, res, p.Dependencies.ReplayAll(), "identity-ledger-head-fixture")
 	if err != nil {
 		t.Fatalf("Record: %v", err)
 	}
@@ -186,7 +187,56 @@ func TestEmptyExecutionRejected(t *testing.T) {
 	if _, err := NewEngine().Replay(ReplayPackage{}); !errors.Is(err, ErrEmptyPackage) {
 		t.Fatalf("empty replay package accepted: %v", err)
 	}
-	if _, err := Record("a", canonical.CaseInput{}, nil, nil); !errors.Is(err, ErrEmptyPackage) {
+	if _, err := Record("a", canonical.CaseInput{}, nil, nil, ""); !errors.Is(err, ErrEmptyPackage) {
 		t.Fatalf("empty execution recorded: %v", err)
+	}
+}
+
+// TestColdReplayPreservesIdentityLedgerHeadByteForByte is the P0-E
+// follow-up acceptance test (audit follow-up: "identity ledger belum
+// ikut masuk ke ReplayRequest" -- the identity ledger hadn't yet made
+// it into the replay request). It proves IdentityLedgerHead survives
+// the EXACT cold-replay path the package doc promises: serialize to
+// bytes (Marshal), destroy every in-memory reference, reconstruct from
+// bytes alone (json.Unmarshal, mirroring what an independent process
+// starting from ReplayPackage.Marshal's output would do), and read the
+// field back unchanged -- byte-for-byte, not merely "non-empty".
+func TestColdReplayPreservesIdentityLedgerHeadByteForByte(t *testing.T) {
+	rec, _ := runAndRecord(t)
+	if rec.IdentityLedgerHead == "" {
+		t.Fatal("test fixture assumption violated: runAndRecord must produce a non-empty IdentityLedgerHead")
+	}
+	pkg, err := NewReplayPackage("independent-auditor", "nonce-cold", rec)
+	if err != nil {
+		t.Fatalf("NewReplayPackage: %v", err)
+	}
+
+	// Cold path: serialize to bytes, then rebuild EVERYTHING from those
+	// bytes alone -- no reference to pkg, rec, or any in-memory value
+	// above survives past this point.
+	raw, err := json.Marshal(pkg)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var coldPkg ReplayPackage
+	if err := json.Unmarshal(raw, &coldPkg); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
+	if coldPkg.Execution.IdentityLedgerHead != rec.IdentityLedgerHead {
+		t.Fatalf("IdentityLedgerHead did not survive cold serialization: got %q, want %q",
+			coldPkg.Execution.IdentityLedgerHead, rec.IdentityLedgerHead)
+	}
+
+	// The identity ledger head must also be part of what an independent
+	// replay actually verifies, not a field that merely rides along
+	// unexamined: a package whose IdentityLedgerHead was tampered with
+	// after signing must not silently verify as a match.
+	cert, err := NewEngine().Replay(coldPkg)
+	if err != nil {
+		t.Fatalf("Replay: %v", err)
+	}
+	if err := cert.Assert(); err != nil {
+		t.Fatalf("cold replay of an untampered package should match: %v", err)
 	}
 }
