@@ -10,12 +10,12 @@
     "DependencyRoot"
   ],
   "reference": {
-    "execution_root_hash": "57b309620291fb3e7bd0cb03ae941fae4af93eb10a7657c634bc1063470ab28f",
-    "replay_result_hash": "4fae9a0a3a4e2a8eb9b4747d2745c77dc4106ad7ee0ac46b75d54784fbd9387a",
-    "original_result_hash": "4fae9a0a3a4e2a8eb9b4747d2745c77dc4106ad7ee0ac46b75d54784fbd9387a",
+    "execution_root_hash": "fc7625fb06ce04ddfc35c1c61d8c86d3ce29344328572c216c2117f81c61058c",
+    "replay_result_hash": "55b7436929c19d97790e2cb3615332a7eedda173d002073bc82210956dd4d968",
+    "original_result_hash": "55b7436929c19d97790e2cb3615332a7eedda173d002073bc82210956dd4d968",
     "decision": "ESCALATE",
     "explanation_hash": "be873bcaa1402d76121aca6085434a487655266ebfa08ba3997773ad34604601",
-    "certificate_id": "4603e99d651f04b5a3d2b812b4e1de93133cd166ec06f4fd28c8cc629b1e121d",
+    "certificate_id": "7c340d3da026404ed9251110d0bba5d2c76d54f480d3d7240474f4b4403e5cbe",
     "certificate_match": true,
     "dependency_root_hash": "0d0331f1ca7f28ce5ff23cad40dbdf228751430225311ac6d8489484bf5f3505"
   },
