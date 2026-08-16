@@ -49,6 +49,24 @@
 // correct BPF allow-list for an arbitrary Go/native plugin binary
 // without over- or under-restricting it is separable, higher-risk
 // work, not attempted here). None of those are fabricated as done.
+//
+// Sandbox hardening follow-up (real, bounded increment; still not
+// seccomp-BPF): SandboxRunner.ShimPath, when set, routes the plugin
+// through cmd/veriqo-plugin-shim, a tiny separate binary whose entire
+// job is one prctl(PR_SET_NO_NEW_PRIVS) call before it execs into the
+// real plugin -- closing the specific gap that a sandboxed plugin could
+// still gain privileges by exec-ing a setuid/setgid binary or one with
+// file capabilities. This is deliberately NOT the full seccomp-BPF
+// syscall-filtering or rootfs-confinement ask: NO_NEW_PRIVS cannot
+// filter or deny any syscall (it can only refuse a SUBSEQUENT exec new
+// privileges), so unlike a hand-rolled BPF program it has no failure
+// mode where a subtly wrong filter silently breaks legitimate plugin
+// operation -- the one property that made this specific increment safe
+// to add without the correctness-testing burden a real BPF encoder
+// would need. Full seccomp-BPF syscall filtering and filesystem
+// confinement (chroot/pivot_root/user namespace) remain genuinely open,
+// for the same reasons stated above, not fabricated as closed by this
+// narrower fix.
 package plugin
 
 import (
@@ -87,6 +105,17 @@ type SandboxRunner struct {
 	// with the binary, holder, exit reason, and duration — the audit
 	// trail the critique explicitly named as an acceptance criterion.
 	Audit *audit.AuditStore
+	// ShimPath, when set, makes RunOnce launch the plugin binary
+	// through cmd/veriqo-plugin-shim (path to that binary) instead of
+	// directly -- the shim's own job is exactly one prctl(
+	// PR_SET_NO_NEW_PRIVS) call before it execs into the real plugin,
+	// closing the "a sandboxed plugin could still gain privileges by
+	// exec-ing a setuid/setgid binary" gap (see sandbox hardening
+	// follow-up). Nil-safe: leave empty (the default) to preserve
+	// RunOnce's exact prior direct-exec behavior byte-for-byte --
+	// every caller before this field existed, and every caller that
+	// does not have the shim binary co-deployed, is unaffected.
+	ShimPath string
 }
 
 func NewSandboxRunner(cgroupPrefix string) *SandboxRunner {
@@ -143,6 +172,15 @@ func (s *SandboxRunner) RunOnce(ctx context.Context, holder, binary string, limi
 	}()
 
 	cmd := exec.CommandContext(runCtx, binary)
+	if s.ShimPath != "" {
+		// cmd.Path is ALREADY the fully resolved path exec.Command's own
+		// PATH lookup produced for `binary` -- required here because
+		// the shim's syscall.Exec (a raw execve, unlike os/exec) does
+		// NOT perform a PATH search itself; passing a bare command name
+		// through unresolved would silently fail inside the shim.
+		resolvedBinary := cmd.Path
+		cmd = exec.CommandContext(runCtx, s.ShimPath, resolvedBinary) // #nosec G204 -- s.ShimPath is this SandboxRunner's own operator-configured field and resolvedBinary is RunOnce's own `binary` parameter, both caller-trusted, not untrusted network input
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS |
 			syscall.CLONE_NEWIPC | syscall.CLONE_NEWNET,

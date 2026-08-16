@@ -212,3 +212,101 @@ func TestSandboxRunner_NamespaceIsolation_ChildIsPID1WithNoHostInterfaces(t *tes
 		}
 	}
 }
+
+// nnpReportPluginSource reports what the sandboxed process itself
+// observes about its own PR_SET_NO_NEW_PRIVS status (read from
+// /proc/self/status, the kernel's own ground truth for this bit) --
+// proof ShimPath's prctl call actually took effect inside the plugin
+// process, not merely that the shim binary ran without erroring.
+const nnpReportPluginSource = `package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"os"
+	"strconv"
+	"strings"
+)
+
+type req struct{}
+type resp struct{ NoNewPrivs int }
+
+func main() {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	f, _ := os.Open("/proc/self/status")
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	val := -1
+	for s.Scan() {
+		line := s.Text()
+		if strings.HasPrefix(line, "NoNewPrivs:") {
+			fields := strings.Fields(line)
+			if len(fields) == 2 {
+				val, _ = strconv.Atoi(fields[1])
+			}
+		}
+	}
+	out, _ := json.Marshal(resp{NoNewPrivs: val})
+	os.Stdout.Write(append(out, '\n'))
+}
+`
+
+func buildShimBinary(t *testing.T) string {
+	t.Helper()
+	bin := filepath.Join(t.TempDir(), "veriqo-plugin-shim")
+	cmd := exec.Command("go", "build", "-o", bin, "veriqo/cmd/veriqo-plugin-shim")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("building veriqo-plugin-shim: %v\n%s", err, out)
+	}
+	return bin
+}
+
+// TestSandboxRunner_ShimAppliesNoNewPrivs is the sandbox-hardening
+// follow-up's real proof: with ShimPath set, a sandboxed plugin
+// observes PR_SET_NO_NEW_PRIVS=1 on itself -- the kernel's own ground
+// truth that the shim's prctl call took effect on the process the
+// plugin's real code actually runs as, not merely on some intermediate
+// process that then got replaced without the bit surviving.
+func TestSandboxRunner_ShimAppliesNoNewPrivs(t *testing.T) {
+	runner := NewSandboxRunner("veriqo-plugin-test")
+	if !runner.Available() {
+		t.Skip("cgroup v1 not writable in this environment")
+	}
+	runner.ShimPath = buildShimBinary(t)
+	bin := buildHelperBinary(t, "nnpreportplugin", nnpReportPluginSource)
+
+	var resp struct{ NoNewPrivs int }
+	if err := runner.RunOnce(context.Background(), "nnpreport-holder", bin,
+		SandboxLimits{MemoryBytes: 64 * 1024 * 1024, CPUCores: 1, Timeout: 5 * time.Second},
+		struct{}{}, &resp); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if resp.NoNewPrivs != 1 {
+		t.Fatalf("expected the sandboxed plugin to observe NoNewPrivs=1 via the shim, got %d", resp.NoNewPrivs)
+	}
+}
+
+// TestSandboxRunner_WithoutShimPathPreservesPriorBehavior is the nil-
+// safety property: RunOnce with ShimPath left empty (every caller
+// before this field existed) still execs the plugin directly, with no
+// NO_NEW_PRIVS guarantee -- exactly the behavior this repo's own prior,
+// already-passing sandbox tests assume.
+func TestSandboxRunner_WithoutShimPathPreservesPriorBehavior(t *testing.T) {
+	runner := NewSandboxRunner("veriqo-plugin-test")
+	if !runner.Available() {
+		t.Skip("cgroup v1 not writable in this environment")
+	}
+	bin := buildHelperBinary(t, "nnpreportplugin2", nnpReportPluginSource)
+
+	var resp struct{ NoNewPrivs int }
+	if err := runner.RunOnce(context.Background(), "nnpreport-holder2", bin,
+		SandboxLimits{MemoryBytes: 64 * 1024 * 1024, CPUCores: 1, Timeout: 5 * time.Second},
+		struct{}{}, &resp); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if resp.NoNewPrivs != 0 {
+		t.Fatalf("expected NoNewPrivs=0 without ShimPath set (unaffected default behavior), got %d", resp.NoNewPrivs)
+	}
+}
