@@ -151,7 +151,7 @@ func run(args []string, stdout, stderr *os.File) int {
 		engine.Identity = resolver
 	}
 
-	verdict, err := execution.ReplayDAG(context.Background(), data, engine)
+	verdict, out, err := execution.ReplayDAGWithResult(context.Background(), data, engine)
 	if err != nil {
 		fmt.Fprintf(stderr, "veriqo-cold-replay: REPLAY ERROR: %v\n", err)
 		return 1
@@ -166,6 +166,42 @@ func run(args []string, stdout, stderr *os.File) int {
 	if dagOK {
 		fmt.Fprintf(stdout, "  VERDICT                : PASSED (evidence root, decision, explanation and "+
 			"verification certificate all reproduced from cold-restored history alone)\n")
+		// A "PASSED" verdict already cryptographically proves every
+		// node's own hash (and therefore every field its artifact
+		// commits to) is reproduced identically -- these lines exist
+		// so an operator can SEE the specific named values a later
+		// audit round asked for ("Same: IntentID, EvidenceRoot,
+		// EntityID, IdentityLedgerHead, DecisionID, PolicyHash,
+		// Bayesian result, Decision, Twin, Verification"), not to
+		// perform a SEPARATE check beyond what the node-by-node
+		// comparison above already enforces.
+		if out != nil {
+			var temporalDetail string
+			for _, n := range out.Trace.Nodes {
+				if n.StageID == execution.StageTemporal {
+					temporalDetail = n.Detail
+				}
+			}
+			var identityLedgerHead string
+			if engine.Identity != nil {
+				identityLedgerHead = engine.Identity.Head()
+			}
+			policyHash := out.ExpectedPolicyHash
+			if policyHash == "" {
+				policyHash = out.Case.Policy.Hash()
+			}
+			fmt.Fprintf(stdout, "  reproduced fields (cold-restored, not independently re-derived beyond "+
+				"the node comparison above):\n")
+			fmt.Fprintf(stdout, "    IntentID              : %s\n", out.Trace.Context.CaseID)
+			fmt.Fprintf(stdout, "    EntityID              : %s\n", out.Canonical.Twin.Entity)
+			fmt.Fprintf(stdout, "    IdentityLedgerHead    : %s\n", identityLedgerHead)
+			fmt.Fprintf(stdout, "    DecisionID            : %s\n", out.Explanation.DecisionID)
+			fmt.Fprintf(stdout, "    PolicyHash            : %s\n", policyHash)
+			fmt.Fprintf(stdout, "    Bayesian result       : %s\n", temporalDetail)
+			fmt.Fprintf(stdout, "    Decision              : %s\n", out.Decision)
+			fmt.Fprintf(stdout, "    TwinHead              : %s\n", out.Canonical.Certificate.TwinHead)
+			fmt.Fprintf(stdout, "    VerificationCertID    : %s\n", out.Certificate.VerificationCertificateID)
+		}
 	} else {
 		fmt.Fprintf(stdout, "  divergent stage        : %s\n", verdict.DivergentStage)
 		fmt.Fprintf(stdout, "  original node hash     : %s\n", verdict.OriginalNodeHash)

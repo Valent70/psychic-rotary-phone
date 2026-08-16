@@ -247,6 +247,9 @@ func TestGatewayIntegration_ColdReplayFromHTTPBoundary(t *testing.T) {
 		t.Fatalf("POST /lifecycle/run_unified: status %d", resp.StatusCode)
 	}
 	var runResult struct {
+		IntentID             string `json:"intent_id"`
+		EntityID             string `json:"entity_id"`
+		DecisionID           string `json:"decision_id"`
 		ExecutionRootHash    string `json:"execution_root_hash"`
 		ReplayExport         []byte `json:"replay_export"`
 		IdentityLedgerExport []byte `json:"identity_ledger_export"`
@@ -289,6 +292,23 @@ func TestGatewayIntegration_ColdReplayFromHTTPBoundary(t *testing.T) {
 	if !strings.Contains(string(out), runResult.ExecutionRootHash) {
 		t.Fatalf("expected the cold-replay process to reproduce the same execution root hash %s the HTTP "+
 			"response reported, got:\n%s", runResult.ExecutionRootHash, out)
+	}
+	// The literal acceptance list a later audit round named explicitly:
+	// "Same: IntentID, EvidenceRoot, EntityID, ..., DecisionID, ...".
+	// EvidenceRoot is already checked above (ExecutionRootHash); these
+	// three are the ones this test can independently cross-check
+	// against the ORIGINAL HTTP response's own reported values, over
+	// and above the aggregate node-by-node hash match cmd/veriqo-cold-
+	// replay's own VERDICT already proves.
+	for _, want := range []string{
+		"IntentID              : " + runResult.IntentID,
+		"EntityID              : " + runResult.EntityID,
+		"DecisionID            : " + runResult.DecisionID,
+	} {
+		if !strings.Contains(string(out), want) {
+			t.Fatalf("expected the cold-replay process's reproduced-fields report to contain %q "+
+				"(matching the original HTTP response), got:\n%s", want, out)
+		}
 	}
 
 	_ = proc.Process.Signal(os.Interrupt)

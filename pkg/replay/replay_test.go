@@ -240,3 +240,42 @@ func TestColdReplayPreservesIdentityLedgerHeadByteForByte(t *testing.T) {
 		t.Fatalf("cold replay of an untampered package should match: %v", err)
 	}
 }
+
+// TestReplayDetectsTamperedIdentityLedgerHead is the adversarial
+// closure of the gap TestColdReplayPreservesIdentityLedgerHeadByteForByte
+// only gestured at: an attacker who edits IdentityLedgerHead in transit
+// (e.g. to make a decision appear bound to a DIFFERENT identity-ledger
+// state than the one that actually produced it) must be caught by
+// Replay(), not silently accepted because the field merely "rode along"
+// unexamined. IdentityLedgerHead is now folded into ResultHash as its
+// own StageIdentity fingerprint (see stageFingerprints), so this
+// exercises the exact same tamper-detection mechanism
+// TestReplayDetectsTamperedEvidenceAndLocatesStage already proves for
+// CaseInput, extended to identity.
+func TestReplayDetectsTamperedIdentityLedgerHead(t *testing.T) {
+	rec, _ := runAndRecord(t)
+	if rec.IdentityLedgerHead == "" {
+		t.Fatal("test fixture assumption violated: runAndRecord must produce a non-empty IdentityLedgerHead")
+	}
+	// An attacker rewrites the identity ledger head after the fact,
+	// hoping the replay rubber-stamps a decision as bound to a ledger
+	// state it was never actually bound to.
+	rec.IdentityLedgerHead = "tampered-" + rec.IdentityLedgerHead
+	pkg, err := NewReplayPackage("independent-auditor", "nonce-tamper", rec)
+	if err != nil {
+		t.Fatalf("NewReplayPackage: %v", err)
+	}
+	cert, err := NewEngine().Replay(pkg)
+	if err != nil {
+		t.Fatalf("Replay: %v", err)
+	}
+	if cert.Match {
+		t.Fatal("tampered IdentityLedgerHead replayed as matching")
+	}
+	if err := cert.Assert(); !errors.Is(err, ErrExecutionMismatch) {
+		t.Fatalf("expected execution mismatch on a tampered IdentityLedgerHead, got %v", err)
+	}
+	if cert.DivergedStage != StageIdentity {
+		t.Fatalf("expected divergence localised to %s, got %s", StageIdentity, cert.DivergedStage)
+	}
+}

@@ -79,6 +79,13 @@ const (
 	StageTwin          = "digital_twin"
 	StageEconomic      = "economic_consequence"
 	StageCertificate   = "canonical_certificate"
+	// StageIdentity binds IdentityLedgerHead into the same tamper-
+	// detection ResultHash every other stage participates in (audit
+	// follow-up on P0-E: "IdentityLedgerHead belum ikut masuk ke
+	// Replay tamper-detection hash"). Appended last rather than
+	// inserted in resolution order so existing StageOrder indices
+	// used elsewhere are not renumbered.
+	StageIdentity = "identity_ledger"
 )
 
 // StageOrder is the authoritative ordering used for divergence
@@ -86,7 +93,7 @@ const (
 var StageOrder = []string{
 	StageEvidence, StageDependency, StageProvenance, StageArbitration,
 	StageContradiction, StageCausal, StageRisk, StageDecision, StageTwin,
-	StageEconomic, StageCertificate,
+	StageEconomic, StageCertificate, StageIdentity,
 }
 
 // ExecutionRecord is the complete, self-contained record of one
@@ -117,17 +124,20 @@ type ExecutionRecord struct {
 	// produced it, the same "data, not engine pointers" discipline
 	// ReplayPackage's own doc comment states.
 	//
-	// Honest scope limitation: unlike CaseInput/DependencyLedger, this
-	// field does not yet feed Replay()'s own tamper-detection --
-	// ReplayResultHash is derived purely from the canonical computation
-	// (Evidence through Certificate), which never consumes identity
-	// data, so Replay() itself cannot notice IdentityLedgerHead being
-	// altered in transit the way it notices a tampered CaseInput. It is
-	// present, real, and survives serialization intact -- the gap this
-	// closes -- but a caller wanting IdentityLedgerHead to also be
-	// tamper-evident must independently compare it against their own
-	// held *identity.Resolver.Head(), the same shape of verification
-	// pkg/execution's ExpectedPolicyHash/IdentityAliases already use.
+	// This field now DOES feed Replay()'s own tamper-detection: it is
+	// folded into ResultHash as its own StageIdentity fingerprint (see
+	// stageFingerprints), exactly like every other stage. Record()
+	// commits a fingerprint of the value it was given; Replay()
+	// recomputes a fingerprint from exec.IdentityLedgerHead as read off
+	// the (possibly tampered) package. An untampered round trip
+	// reproduces the identical fingerprint; a tampered one changes
+	// ReplayResultHash without touching the OriginalResultHash already
+	// committed at Record time, so Replay() catches it the same way it
+	// already catches a tampered CaseInput -- closing what was
+	// previously an honestly-documented scope limitation (this
+	// comment used to say the field survived serialization but did not
+	// participate in tamper-detection; a later round's own audit named
+	// that gap explicitly, and it is closed here).
 	IdentityLedgerHead string `json:"identity_ledger_head,omitempty"`
 }
 
@@ -194,7 +204,7 @@ func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResu
 	}{actorID, in, depLedger}); err != nil {
 		return ExecutionRecord{}, err
 	}
-	rec.Stages = stageFingerprints(res)
+	rec.Stages = stageFingerprints(res, identityLedgerHead)
 	rec.OriginalResultHash = resultHash(rec.Stages)
 	return rec, nil
 }
@@ -203,7 +213,18 @@ func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResu
 // stage from a canonical result. Every stage is derived from the
 // RESULT objects, never from engine internals, so a replay computes
 // them the same way from its own result.
-func stageFingerprints(res *canonical.CanonicalResult) []StageResult {
+//
+// identityLedgerHead is folded in as its own StageIdentity fingerprint
+// (audit follow-up: IdentityLedgerHead previously survived
+// serialization but did not participate in ResultHash, so tampering it
+// after Record went undetected by Replay). Both callers pass the value
+// straight from the ExecutionRecord they hold -- Record from the value
+// it was just given, Replay from exec.IdentityLedgerHead as read off
+// the (possibly tampered) package -- so an untampered round trip
+// reproduces the identical fingerprint and a tampered one does not,
+// the exact same mechanism CaseInput tampering already relies on via
+// resultHash comparison against the ORIGINAL committed hash.
+func stageFingerprints(res *canonical.CanonicalResult, identityLedgerHead string) []StageResult {
 	h := func(prefix string, v any) string {
 		s, err := hashJSON(prefix, v)
 		if err != nil {
@@ -250,6 +271,7 @@ func stageFingerprints(res *canonical.CanonicalResult) []StageResult {
 			string(res.Certificate.RiskLabel), res.Certificate.RiskScore,
 			string(res.Certificate.DecisionAction), res.Certificate.DependencyRootHash,
 			res.Certificate.MaxDependencyDiscount, res.Certificate.IndependentFamilies})},
+		{StageIdentity, h(StageIdentity, identityLedgerHead)},
 	}
 }
 
@@ -328,7 +350,7 @@ func (Engine) Replay(pkg ReplayPackage) (VerificationCertificate, error) {
 		return VerificationCertificate{}, fmt.Errorf("replay: re-execution failed: %w", err)
 	}
 
-	replayStages := stageFingerprints(res)
+	replayStages := stageFingerprints(res, exec.IdentityLedgerHead)
 	cert := VerificationCertificate{
 		ExecutionID: exec.ExecutionID, EvidencePackageID: exec.EvidencePackageID,
 		ReplayPackageID: pkg.ReplayPackageID, OriginalResultHash: exec.OriginalResultHash,

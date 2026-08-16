@@ -1287,22 +1287,38 @@ type ReplayVerdict struct {
 // does: consuming a shared object would let a replay accidentally read
 // live engine state and report a false match.
 func ReplayDAG(goCtx context.Context, data []byte, freshEngine *Engine) (ReplayVerdict, error) {
+	v, _, err := ReplayDAGWithResult(goCtx, data, freshEngine)
+	return v, err
+}
+
+// ReplayDAGWithResult is ReplayDAG's full form: it additionally returns
+// the independently rebuilt *Result itself, not only the pass/fail
+// verdict. This is what a caller needs to prove field-by-field, not
+// merely "the aggregate hash matched", that specific named values
+// (IntentID via Trace.Context.CaseID, EntityID, DecisionID, the
+// Bayesian posterior, the Decision, Twin, and VerificationCertificate)
+// were genuinely reproduced from cold-restored history alone -- the
+// literal acceptance criterion a later audit round asked for
+// ("Same: IntentID, EvidenceRoot, EntityID, ..., Bayesian result,
+// Decision, Twin, Verification"). ReplayDAG remains the simple form
+// for every existing caller that only needs the verdict.
+func ReplayDAGWithResult(goCtx context.Context, data []byte, freshEngine *Engine) (ReplayVerdict, *Result, error) {
 	var req ReplayRequest
 	if err := json.Unmarshal(data, &req); err != nil {
-		return ReplayVerdict{}, err
+		return ReplayVerdict{}, nil, err
 	}
 	if freshEngine.Lifecycle != nil {
 		if err := freshEngine.Lifecycle.VerifyBinding(lifecycle.Binding{
 			Tick: req.Context.Tick, Hash: req.Context.BindingHash,
 		}); err != nil && req.Context.BindingHash != "" {
-			return ReplayVerdict{}, fmt.Errorf("%w: %v", ErrBindingMismatch, err)
+			return ReplayVerdict{}, nil, fmt.Errorf("%w: %v", ErrBindingMismatch, err)
 		}
 	}
 	out, err := freshEngine.Run(goCtx, Input{Context: req.Context, Case: req.Case,
 		Scenarios: req.Scenarios, Currency: req.Currency, IdentityAliases: req.IdentityAliases,
 		ExpectedPolicyHash: req.ExpectedPolicyHash, EvidenceRequirements: req.EvidenceRequirements})
 	if out == nil {
-		return ReplayVerdict{}, err
+		return ReplayVerdict{}, nil, err
 	}
 	v := ReplayVerdict{OriginalRootHash: req.Committed.RootHash,
 		ReplayRootHash: out.Trace.RootHash}
@@ -1333,7 +1349,7 @@ func ReplayDAG(goCtx context.Context, data []byte, freshEngine *Engine) (ReplayV
 	if !v.Matched && v.DivergentStage == "" {
 		v.DivergentStage = StageID("ROOT_HASH")
 	}
-	return v, nil
+	return v, out, nil
 }
 
 // Assert converts a non-matching verdict into an error, so a caller
