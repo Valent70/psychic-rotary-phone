@@ -41,8 +41,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"veriqo/pkg/execution"
 	"veriqo/pkg/identity"
@@ -83,7 +85,73 @@ func run(args []string, stdout, stderr *os.File) int {
 	// standalone CLI batch job with no inbound request to inherit a
 	// context from, unlike pkg/lifecycle.Orchestrator.RunUnified's real
 	// Intent entrypoint.
-	verdict, err := execution.ReplayDAG(context.Background(), data, execution.NewEngine(nil))
+	engine := execution.NewEngine(nil)
+
+	// P0-D/P1-10 fix: a real production execution (anything that ran
+	// through pkg/lifecycle.Orchestrator) always binds a live
+	// *identity.Resolver to its execution.Engine, which changes
+	// IDENTITY_RESOLUTION's own committed node hash (see execution.go's
+	// StageIdentityResolution case: the hash input gains an
+	// "|identity_ledger_head=..." term whenever Engine.Identity is
+	// non-nil). Before this fix, this binary unconditionally replayed
+	// with Identity left nil, so cold-replaying ANY real
+	// lifecycle-produced execution was structurally guaranteed to
+	// diverge at IDENTITY_RESOLUTION regardless of whether the ledger
+	// content itself was faithfully restored -- a real defect this
+	// round's HTTP-boundary P1-10 test caught. The committed trace
+	// itself honestly discloses whether the original run was bound
+	// (its IDENTITY_RESOLUTION node's own Detail string says "bound to
+	// identity ledger head" only when it was), so that -- not merely
+	// whether -identity-export was passed -- decides whether this
+	// replay binds an Identity too. This keeps the pre-existing,
+	// already-audited -identity-export contract intact: passing it
+	// alongside an UNBOUND original execution (this file's own
+	// pre-existing tests do exactly that, to independently prove
+	// pkg/identity's cold-restore in isolation from the DAG) still only
+	// runs the separate identity-queries check below, not a DAG-level
+	// binding it never had.
+	var peek execution.ReplayRequest
+	if err := json.Unmarshal(data, &peek); err != nil {
+		fmt.Fprintf(stderr, "veriqo-cold-replay: parsing export: %v\n", err)
+		return 2
+	}
+	originalWasIdentityBound := false
+	for _, n := range peek.Committed.Nodes {
+		if n.StageID == execution.StageIdentityResolution && strings.Contains(n.Detail, "bound to identity ledger head") {
+			originalWasIdentityBound = true
+			break
+		}
+	}
+
+	var idExport identity.ColdReplayExport
+	if identityExportPath != "" {
+		idData, err := os.ReadFile(identityExportPath) // #nosec G304 G703 -- identityExportPath is an operator-supplied CLI argument, not untrusted input
+		if err != nil {
+			fmt.Fprintf(stderr, "veriqo-cold-replay: reading identity export: %v\n", err)
+			return 2
+		}
+		if err := json.Unmarshal(idData, &idExport); err != nil {
+			fmt.Fprintf(stderr, "veriqo-cold-replay: parsing identity export: %v\n", err)
+			return 2
+		}
+	}
+
+	if originalWasIdentityBound {
+		if identityExportPath == "" {
+			fmt.Fprintln(stderr, "veriqo-cold-replay: the committed execution's IDENTITY_RESOLUTION stage was "+
+				"bound to a real identity ledger at record time; -identity-export is required to cold-replay "+
+				"it (proceeding without it would silently diverge, not silently match)")
+			return 2
+		}
+		resolver, err := identity.Rebuild(idExport.Ledger, idExport.Authorities)
+		if err != nil {
+			fmt.Fprintf(stderr, "veriqo-cold-replay: rebuilding identity resolver from export: %v\n", err)
+			return 1
+		}
+		engine.Identity = resolver
+	}
+
+	verdict, err := execution.ReplayDAG(context.Background(), data, engine)
 	if err != nil {
 		fmt.Fprintf(stderr, "veriqo-cold-replay: REPLAY ERROR: %v\n", err)
 		return 1

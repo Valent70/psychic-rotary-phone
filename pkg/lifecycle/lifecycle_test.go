@@ -126,6 +126,21 @@ func TestUnifiedIntentTrustDecisionLifecycle(t *testing.T) {
 	if res.Certificate.EvidencePlanHash != plan.Hash {
 		t.Fatalf("EvidencePlanHash mismatch")
 	}
+
+	// P0-D Test 3 production wiring: the DAG's own INTENT node must
+	// independently re-verify plan.Requirements, not merely attribute
+	// tenant/actor/caseID -- proof this is a real causal gate wired
+	// into the actual production RunUnified path, not only reachable
+	// via a hand-built execution.Input in pkg/execution's own tests.
+	var intentNode execution.Node
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageIntent {
+			intentNode = n
+		}
+	}
+	if intentNode.Status != execution.StatusOK {
+		t.Fatalf("expected INTENT to succeed with a satisfied plan, got %s: %s", intentNode.Status, intentNode.Error)
+	}
 }
 
 // TestRunUnifiedRejectsMismatchedPlan proves a plan built for a

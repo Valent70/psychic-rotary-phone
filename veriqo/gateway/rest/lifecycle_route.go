@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/digitaltwin"
@@ -115,6 +116,29 @@ type respRunUnified struct {
 	EvidencePackageID         string `json:"evidence_package_id"`
 	VerificationCertificateID string `json:"verification_certificate_id"`
 	ReplayPackageID           string `json:"replay_package_id"`
+	// ReplayExport is the real cold-replay export (P1-10) for this
+	// exact execution: a serialized execution.ReplayRequest, byte-for-
+	// byte the same shape cmd/veriqo-cold-replay already independently
+	// verifies from a file. Its presence here closes the literal
+	// "prove E2E replay against the exact same pipeline" gap: this is
+	// no longer only reachable from a test holding a live *Engine --
+	// any caller of this real HTTP route now receives, over the
+	// network boundary, exactly what an independent, genuinely
+	// separate process needs to cold-restore and verify the DAG this
+	// request produced. encoding/json base64-encodes []byte
+	// automatically, so this is a normal JSON string on the wire.
+	ReplayExport []byte `json:"replay_export,omitempty"`
+	// IdentityLedgerExport is the companion export cmd/veriqo-cold-
+	// replay's own -identity-export flag consumes. A real production
+	// RunUnified call always binds Orchestrator.Identity to the
+	// execution engine (see pkg/lifecycle.NewOrchestrator), which
+	// IDENTITY_RESOLUTION's own node hash commits to -- so a caller
+	// that wants to independently cold-replay a real production
+	// execution byte-for-byte needs this alongside ReplayExport, not
+	// only the DAG trace. Sourced from the SAME *identity.Resolver
+	// Orchestrator.RunUnified resolved this request's entities
+	// against, not a reconstruction.
+	IdentityLedgerExport []byte `json:"identity_ledger_export,omitempty"`
 }
 
 // lifecycleRoutes returns the one hand-written route this file adds. A
@@ -212,6 +236,25 @@ func handleLifecycleRunUnified(o *lifecycle.Orchestrator) http.HandlerFunc {
 		if res.Execution != nil {
 			resp.ExecutionID = res.Execution.Trace.Context.ExecutionID
 			resp.DecisionID = res.Execution.Explanation.DecisionID
+			// P1-10: hand back the real cold-replay export for this exact
+			// execution. A marshal failure here is a genuine server-side
+			// defect (ReplayRequest's own fields are all JSON-safe), not a
+			// caller error -- surfaced as 500 rather than silently
+			// dropping the export and returning 200 with a response the
+			// audit's own acceptance test would then fail to replay.
+			export, exportErr := res.Execution.ExportReplay()
+			if exportErr != nil {
+				http.Error(w, "building replay export: "+exportErr.Error(), http.StatusInternalServerError)
+				return
+			}
+			resp.ReplayExport = export
+
+			idExport, idExportErr := json.Marshal(identity.ColdReplayExport{Ledger: o.Identity.Ledger()})
+			if idExportErr != nil {
+				http.Error(w, "building identity ledger export: "+idExportErr.Error(), http.StatusInternalServerError)
+				return
+			}
+			resp.IdentityLedgerExport = idExport
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)

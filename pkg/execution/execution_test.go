@@ -1056,3 +1056,225 @@ func TestTemporalStageStillSkipsWhenPolicyDoesNotRequireCalibration(t *testing.T
 		}
 	}
 }
+
+// TestIntentStageFailsClosedWhenRequiredEvidenceUnmet is P0-D Test 3's
+// adversarial property for INTENT: when the caller declares a Required
+// evidence requirement whose MinSources exceeds what Case.Submissions
+// actually provides, INTENT must independently catch it and fail the
+// whole DAG closed -- not merely attribute tenant/actor/caseID and let
+// an upstream (pre-flight, outside-the-DAG) check be the only thing
+// standing between an under-evidenced case and a decision.
+func TestIntentStageFailsClosedWhenRequiredEvidenceUnmet(t *testing.T) {
+	c := caseInput() // Predicate "port_call", 4 submissions
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+		EvidenceRequirements: []EvidenceRequirement{{Kind: "port_call", Required: true, MinSources: 10}}})
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("expected ErrStageFailed, got %v", err)
+	}
+	if !strings.Contains(err.Error(), string(StageIntent)) {
+		t.Fatalf("expected the error to name INTENT, got %v", err)
+	}
+	var intentNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageIntent {
+			intentNode = n
+		}
+	}
+	if intentNode.Status != StatusFailed {
+		t.Fatalf("expected INTENT to FAIL, got %s", intentNode.Status)
+	}
+	if !strings.Contains(intentNode.Detail, "required evidence plan item unmet") {
+		t.Fatalf("expected the node's own detail to name the unmet requirement, got %q", intentNode.Detail)
+	}
+	if !strings.Contains(intentNode.Error, ErrEvidencePlanUnsatisfied.Error()) {
+		t.Fatalf("expected the node's own error to name ErrEvidencePlanUnsatisfied, got %q", intentNode.Error)
+	}
+}
+
+// TestIntentStageOKWhenEvidenceRequirementsSatisfied is the positive
+// property: real submissions that DO satisfy every Required item let
+// INTENT succeed exactly as before, and the independent check is
+// recorded (not merely assumed).
+func TestIntentStageOKWhenEvidenceRequirementsSatisfied(t *testing.T) {
+	c := caseInput() // 4 submissions under Predicate "port_call"
+	e := NewEngine(nil)
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+		EvidenceRequirements: []EvidenceRequirement{
+			{Kind: "port_call", Required: true, MinSources: 2},
+			{Kind: "sanctions_hit", Required: false, MinSources: 5}, // optional, unmet, must not block
+		}})
+	if err != nil {
+		t.Fatalf("expected satisfied requirements to succeed, got: %v", err)
+	}
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageIntent && n.Status != StatusOK {
+			t.Fatalf("expected INTENT to succeed, got %s: %s", n.Status, n.Error)
+		}
+	}
+}
+
+// TestIntentStageWithoutEvidenceRequirementsPreservesPriorBehavior is
+// the nil-safety property every optional Input field in this file
+// shares: omitting EvidenceRequirements (every call site before this
+// round, and every call site that doesn't opt in) preserves INTENT's
+// exact prior always-succeeds behavior.
+func TestIntentStageWithoutEvidenceRequirementsPreservesPriorBehavior(t *testing.T) {
+	_, res := run(t)
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StageIntent && n.Status != StatusOK {
+			t.Fatalf("expected INTENT to succeed with no EvidenceRequirements supplied, got %s", n.Status)
+		}
+	}
+}
+
+// TestEvidencePlanUnsatisfiedSurvivesColdReplay proves the P1-10 replay-
+// fidelity fix: EvidenceRequirements (and ExpectedPolicyHash) are now
+// part of ReplayRequest/Result, so a cold replay of an execution that
+// used them reproduces the SAME verdict, not a silently laxer one that
+// omits the check the original execution actually enforced.
+func TestEvidencePlanUnsatisfiedSurvivesColdReplay(t *testing.T) {
+	c := caseInput()
+	e := NewEngine(nil)
+	reqs := []EvidenceRequirement{{Kind: "port_call", Required: true, MinSources: 2}}
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD",
+		EvidenceRequirements: reqs, ExpectedPolicyHash: c.Policy.Hash()})
+	if err != nil {
+		t.Fatalf("original run failed: %v", err)
+	}
+	data, err := res.ExportReplay()
+	if err != nil {
+		t.Fatalf("ExportReplay: %v", err)
+	}
+	verdict, err := ReplayDAG(context.Background(), data, NewEngine(nil))
+	if err != nil {
+		t.Fatalf("ReplayDAG: %v", err)
+	}
+	if err := verdict.Assert(); err != nil {
+		t.Fatalf("cold replay of an execution using EvidenceRequirements/ExpectedPolicyHash should match: %v", err)
+	}
+}
+
+// activePolicyRegistry builds a real governance lifecycle.Registry with
+// one policy version registered, approved and made ACTIVE -- the "real,
+// separate source of truth" P0-D's automatic-wiring gap needed: an
+// independently governed record, not the same Case.Policy checked
+// against itself.
+func activePolicyRegistry(t *testing.T, name string, p decision.Policy, tick uint64) *lifecycle.Registry {
+	t.Helper()
+	reg := lifecycle.NewRegistry()
+	if _, err := reg.RegisterPolicy(name, "v1", p, "governance-op", tick); err != nil {
+		t.Fatalf("RegisterPolicy: %v", err)
+	}
+	key := name + "@v1"
+	if _, err := reg.TransitionPolicy(key, lifecycle.PolicyApproved, "governance-op", "approver-1", "review", tick, nil); err != nil {
+		t.Fatalf("TransitionPolicy(APPROVED): %v", err)
+	}
+	if _, err := reg.TransitionPolicy(key, lifecycle.PolicyActive, "governance-op", "approver-1", "activate", tick, nil); err != nil {
+		t.Fatalf("TransitionPolicy(ACTIVE): %v", err)
+	}
+	return reg
+}
+
+// TestPolicyStageAutoWiresExpectedHashFromGovernanceRegistry is P0-D's
+// "automatic wiring" closure: a caller that supplies NO
+// Input.ExpectedPolicyHash at all still gets a real, independent
+// verification, sourced from a governance Registry an operator
+// populated separately -- not a circular self-check of Case.Policy
+// against its own hash.
+func TestPolicyStageAutoWiresExpectedHashFromGovernanceRegistry(t *testing.T) {
+	c := caseInput()
+	reg := activePolicyRegistry(t, c.Policy.Name, c.Policy, ctx().Tick)
+	e := NewEngine(nil)
+	e.Lifecycle = reg
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("expected auto-wired verification against a matching governed policy to succeed, got: %v", err)
+	}
+	var polNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StagePolicy {
+			polNode = n
+		}
+	}
+	if polNode.Status != StatusOK {
+		t.Fatalf("expected POLICY to succeed, got %s: %s", polNode.Status, polNode.Error)
+	}
+	if !strings.Contains(polNode.Detail, "independently verified policy hash") {
+		t.Fatalf("expected the node detail to disclose the independent verification, got %q", polNode.Detail)
+	}
+	if res.ExpectedPolicyHash == "" {
+		t.Fatal("expected the auto-wired hash to be captured back onto Result.ExpectedPolicyHash for replay fidelity")
+	}
+	if res.ExpectedPolicyHash != c.Policy.Hash() {
+		t.Fatalf("expected the auto-wired hash to equal the governed policy's real content hash, got %s want %s",
+			res.ExpectedPolicyHash, c.Policy.Hash())
+	}
+}
+
+// TestPolicyStageAutoWiredVerificationFailsClosedOnStaleGovernedHash is
+// the adversarial property: a governance registry whose ACTIVE policy
+// version's content no longer matches what Case.Policy actually is
+// (the real-world case a stale or tampered deployment would produce)
+// must fail POLICY closed via the SAME automatic path, with no
+// explicit caller opt-in required to catch it.
+func TestPolicyStageAutoWiredVerificationFailsClosedOnStaleGovernedHash(t *testing.T) {
+	c := caseInput()
+	staleGoverned := c.Policy
+	staleGoverned.FlagThreshold += 0.5 // a real content difference -> a real different Hash()
+	reg := activePolicyRegistry(t, c.Policy.Name, staleGoverned, ctx().Tick)
+	e := NewEngine(nil)
+	e.Lifecycle = reg
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD"})
+	if !errors.Is(err, ErrStageFailed) {
+		t.Fatalf("expected ErrStageFailed when the governed hash disagrees, got %v", err)
+	}
+	var polNode Node
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == StagePolicy {
+			polNode = n
+		}
+	}
+	if polNode.Status != StatusFailed {
+		t.Fatalf("expected POLICY to FAIL against a stale governed hash, got %s", polNode.Status)
+	}
+	if !strings.Contains(polNode.Error, ErrPolicyMismatch.Error()) {
+		t.Fatalf("expected the node's own error to name ErrPolicyMismatch, got %q", polNode.Error)
+	}
+	if !strings.Contains(polNode.Detail, "does not match expected policy hash") {
+		t.Fatalf("expected the failure detail to name the mismatch, got %q", polNode.Detail)
+	}
+}
+
+// TestAutoWiredPolicyVerificationSurvivesColdReplayWithoutARegistry is
+// the replay-fidelity property: a cold replay engine that has NO
+// Lifecycle Registry attached at all (cmd/veriqo-cold-replay's normal,
+// honest configuration -- it has no governance ledger to read) must
+// still reproduce the SAME verdict an auto-wired original execution
+// reached, because Result.ExpectedPolicyHash captured the resolved
+// value and ReplayRequest threads it through -- not because the
+// replay somehow re-derives it from a registry it was never given.
+func TestAutoWiredPolicyVerificationSurvivesColdReplayWithoutARegistry(t *testing.T) {
+	c := caseInput()
+	reg := activePolicyRegistry(t, c.Policy.Name, c.Policy, ctx().Tick)
+	e := NewEngine(nil)
+	e.Lifecycle = reg
+	res, err := e.Run(context.Background(), Input{Context: ctx(), Case: c, Scenarios: scenarios(), Currency: "USD"})
+	if err != nil {
+		t.Fatalf("original run: %v", err)
+	}
+	data, err := res.ExportReplay()
+	if err != nil {
+		t.Fatalf("ExportReplay: %v", err)
+	}
+	// Deliberately NewEngine(nil) with no .Lifecycle set: the honest
+	// cold-replay configuration.
+	verdict, err := ReplayDAG(context.Background(), data, NewEngine(nil))
+	if err != nil {
+		t.Fatalf("ReplayDAG: %v", err)
+	}
+	if err := verdict.Assert(); err != nil {
+		t.Fatalf("cold replay without a governance registry should still match via the captured "+
+			"ExpectedPolicyHash: %v", err)
+	}
+}

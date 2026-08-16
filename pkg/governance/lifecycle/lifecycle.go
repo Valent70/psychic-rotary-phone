@@ -33,6 +33,7 @@ import (
 	"strings"
 	"sync"
 
+	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/platform/telemetry"
 )
 
@@ -121,6 +122,37 @@ var sourceTransitions = map[SourceState][]SourceState{
 	SourceRetired:    {},
 }
 
+// PolicyState is the governance lifecycle for a decision policy version
+// (P0-D "automatic wiring"): the audit's remaining ask after
+// StagePolicy gained the ABILITY to independently verify a caller-
+// declared ExpectedPolicyHash (see pkg/execution's StagePolicy and
+// pkg/moat/decision.Policy.Hash) was that PRODUCTION calls populate
+// that field automatically, from a real, separate source of truth --
+// not from the same Case.Policy value being checked against itself,
+// which would be a circular, decorative check dressed up as a real
+// one. This registry is that separate source: an operator registers
+// and approves a policy version here, independently of any particular
+// case's Case.Policy, exactly mirroring the Model/Source pattern this
+// file already established for the identical "committed decision must
+// not silently replay under a different governed version" problem.
+type PolicyState string
+
+const (
+	PolicyDraft      PolicyState = "DRAFT"
+	PolicyApproved   PolicyState = "APPROVED"
+	PolicyActive     PolicyState = "ACTIVE"
+	PolicyDeprecated PolicyState = "DEPRECATED"
+	PolicyRetired    PolicyState = "RETIRED"
+)
+
+var policyTransitions = map[PolicyState][]PolicyState{
+	PolicyDraft:      {PolicyApproved, PolicyRetired},
+	PolicyApproved:   {PolicyActive, PolicyRetired},
+	PolicyActive:     {PolicyDeprecated, PolicyRetired},
+	PolicyDeprecated: {PolicyActive, PolicyRetired}, // reactivation = rollback
+	PolicyRetired:    {},                            // terminal
+}
+
 func allowed[S comparable](table map[S][]S, from, to S) bool {
 	for _, s := range table[from] {
 		if s == to {
@@ -175,6 +207,26 @@ type Source struct {
 // Key is the registry key.
 func (s Source) Key() string { return s.SourceID + "@" + s.Version }
 
+// Policy is the registered descriptor of one decision-policy version.
+// ContentHash is computed by RegisterPolicy from the actual
+// decision.Policy submitted (never operator-declared separately from
+// it), so a registered Policy record can never silently diverge from
+// the real policy content it governs.
+type Policy struct {
+	Name          string      `json:"name"`
+	Version       string      `json:"version"`
+	ContentHash   string      `json:"content_hash"`
+	CreatedTick   uint64      `json:"created_tick"`
+	ApprovedTick  uint64      `json:"approved_tick"`
+	ApprovedBy    string      `json:"approved_by"`
+	State         PolicyState `json:"state"`
+	EffectiveFrom uint64      `json:"effective_from"`
+	EffectiveTo   uint64      `json:"effective_to"` // 0 = open-ended
+}
+
+// Key is the registry key: policies are identified by name AND version.
+func (p Policy) Key() string { return p.Name + "@" + p.Version }
+
 // EventKind distinguishes registration from transition.
 type EventKind string
 
@@ -183,6 +235,8 @@ const (
 	EventModelTransition  EventKind = "MODEL_TRANSITION"
 	EventRegisterSource   EventKind = "REGISTER_SOURCE"
 	EventSourceTransition EventKind = "SOURCE_TRANSITION"
+	EventRegisterPolicy   EventKind = "REGISTER_POLICY"
+	EventPolicyTransition EventKind = "POLICY_TRANSITION"
 )
 
 // Event is one immutable ledger entry.
@@ -214,13 +268,14 @@ type Registry struct {
 	mu       sync.RWMutex
 	models   map[string]*Model
 	sources  map[string]*Source
+	policies map[string]*Policy
 	ledger   []Event
 	lastTick uint64
 }
 
 // NewRegistry constructs an empty registry.
 func NewRegistry() *Registry {
-	return &Registry{models: map[string]*Model{}, sources: map[string]*Source{}}
+	return &Registry{models: map[string]*Model{}, sources: map[string]*Source{}, policies: map[string]*Policy{}}
 }
 
 // RegisterModel adds a new model version in DRAFT.
@@ -387,6 +442,79 @@ func (r *Registry) TransitionSource(key string, to SourceState, actor, approver,
 		Payload: hashSource(*s), EvidenceRefs: evidenceRefs}), nil
 }
 
+// RegisterPolicy adds a new decision-policy version in DRAFT.
+// ContentHash is computed here, from the real decision.Policy p the
+// caller submits -- never accepted as an operator-declared string --
+// so a registered record can never silently diverge from the policy
+// content it is meant to govern.
+func (r *Registry) RegisterPolicy(name, version string, p decision.Policy, actor string, tick uint64) (Event, error) {
+	if name == "" || version == "" {
+		return Event{}, fmt.Errorf("%w: policy name and version are required", ErrUnknown)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := r.checkTickLocked(tick); err != nil {
+		return Event{}, err
+	}
+	rec := Policy{Name: name, Version: version, ContentHash: p.Hash(), CreatedTick: tick, State: PolicyDraft}
+	if _, dup := r.policies[rec.Key()]; dup {
+		return Event{}, fmt.Errorf("%w: %s", ErrDuplicate, rec.Key())
+	}
+	cp := rec
+	r.policies[rec.Key()] = &cp
+	return r.appendLocked(Event{Kind: EventRegisterPolicy, Key: rec.Key(), To: string(PolicyDraft),
+		Tick: tick, Actor: actor, Payload: hashPolicy(rec)}), nil
+}
+
+// TransitionPolicy moves a policy version through its state machine.
+// ACTIVE requires a named approver, exactly like Model/Source: a
+// governed policy version silently becoming the one production checks
+// against, with no accountable approver, would defeat the point of
+// this registry existing at all.
+func (r *Registry) TransitionPolicy(key string, to PolicyState, actor, approver, reason string,
+	tick uint64, evidenceRefs []string) (Event, error) {
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := r.checkTickLocked(tick); err != nil {
+		return Event{}, err
+	}
+	p, ok := r.policies[key]
+	if !ok {
+		return Event{}, fmt.Errorf("%w: policy %s", ErrUnknown, key)
+	}
+	if !allowed(policyTransitions, p.State, to) {
+		return Event{}, fmt.Errorf("%w: policy %s %s -> %s", ErrIllegalTransition, key, p.State, to)
+	}
+	if to == PolicyApproved && approver == "" {
+		return Event{}, fmt.Errorf("%w: %s", ErrApprovalRequired, key)
+	}
+	from := p.State
+	p.State = to
+	switch to {
+	case PolicyApproved:
+		p.ApprovedBy, p.ApprovedTick = approver, tick
+	case PolicyActive:
+		p.EffectiveFrom = tick
+		p.EffectiveTo = 0
+		// Exactly one version of a policy name may be ACTIVE, mirroring
+		// Model's own uniqueness rule -- the binding resolver below
+		// depends on it.
+		for k, other := range r.policies {
+			if k != key && other.Name == p.Name && other.State == PolicyActive {
+				other.State = PolicyDeprecated
+				other.EffectiveTo = tick
+				r.appendLockedNoReturn(Event{Kind: EventPolicyTransition, Key: k,
+					From: string(PolicyActive), To: string(PolicyDeprecated), Tick: tick,
+					Actor: actor, Reason: "superseded by " + key, Payload: hashPolicy(*other)})
+			}
+		}
+	}
+	return r.appendLocked(Event{Kind: EventPolicyTransition, Key: key, From: string(from),
+		To: string(to), Tick: tick, Actor: actor, Reason: reason, Approver: approver,
+		Payload: hashPolicy(*p), EvidenceRefs: evidenceRefs}), nil
+}
+
 // SetCalibration attaches a calibration artifact ID to a model version.
 // It is only legal before APPROVED: re-calibrating an approved model
 // silently would break every certificate that committed to it.
@@ -492,11 +620,20 @@ func (r *Registry) VerifyChain() error {
 
 // Binding is the exact model/source version set an execution ran under.
 type Binding struct {
-	Tick         uint64   `json:"tick"`
-	Models       []string `json:"models"`  // "id@version" sorted
-	Sources      []string `json:"sources"` // "id@version" sorted
-	RegistryHead string   `json:"registry_head"`
-	Hash         string   `json:"hash"`
+	Tick    uint64   `json:"tick"`
+	Models  []string `json:"models"`  // "id@version" sorted
+	Sources []string `json:"sources"` // "id@version" sorted
+	// Policies maps a governed policy Name to the ContentHash of
+	// whichever version was ACTIVE at Tick (see decision.Policy.Hash
+	// -- the SAME hash a caller can independently recompute over the
+	// policy content they intend to run, and pkg/execution.StagePolicy
+	// independently recomputes and compares against
+	// Input.ExpectedPolicyHash). A policy Name with no ACTIVE governed
+	// version at this tick is simply absent from the map -- there is
+	// no fabricated entry standing in for "not yet governed".
+	Policies     map[string]string `json:"policies,omitempty"`
+	RegistryHead string            `json:"registry_head"`
+	Hash         string            `json:"hash"`
 }
 
 // BindingAt resolves what was ACTIVE at a tick by folding the ledger.
@@ -515,6 +652,7 @@ func (r *Registry) BindingAt(tick uint64) Binding {
 
 	modelState := map[string]ModelState{}
 	sourceState := map[string]SourceState{}
+	policyState := map[string]PolicyState{}
 	for _, e := range r.ledger {
 		if e.Tick > tick {
 			break
@@ -524,6 +662,8 @@ func (r *Registry) BindingAt(tick uint64) Binding {
 			modelState[e.Key] = ModelState(e.To)
 		case EventRegisterSource, EventSourceTransition:
 			sourceState[e.Key] = SourceState(e.To)
+		case EventRegisterPolicy, EventPolicyTransition:
+			policyState[e.Key] = PolicyState(e.To)
 		}
 	}
 	b := Binding{Tick: tick, RegistryHead: r.headLocked(tick)}
@@ -535,6 +675,23 @@ func (r *Registry) BindingAt(tick uint64) Binding {
 	for k, s := range sourceState {
 		if s == SourceActive {
 			b.Sources = append(b.Sources, k)
+		}
+	}
+	for k, s := range policyState {
+		if s != PolicyActive {
+			continue
+		}
+		// Name/ContentHash are immutable once registered (only State
+		// ever changes), so reading them from the live map for a key
+		// whose ACTIVE-ness was itself determined by folding the
+		// ledger above is safe -- the same reasoning modelState/
+		// sourceState's own siblings rely on implicitly by using r.
+		// models/r.sources elsewhere in this file.
+		if p, ok := r.policies[k]; ok {
+			if b.Policies == nil {
+				b.Policies = map[string]string{}
+			}
+			b.Policies[p.Name] = p.ContentHash
 		}
 	}
 	sort.Strings(b.Models)
@@ -565,6 +722,21 @@ func (b Binding) computeHash() string {
 	}
 	for _, s := range b.Sources {
 		sb.WriteString("source=" + s + "\n")
+	}
+	// Policies is folded in only when non-empty, so a binding with no
+	// governed policy versions (every Binding before this field
+	// existed, and every registry that never registers one) produces
+	// the exact same hash as before -- byte-for-byte, not merely
+	// "usually the same".
+	if len(b.Policies) > 0 {
+		names := make([]string, 0, len(b.Policies))
+		for name := range b.Policies {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			sb.WriteString("policy=" + name + ":" + b.Policies[name] + "\n")
+		}
 	}
 	sb.WriteString("head=" + b.RegistryHead + "\n")
 	sum := sha256.Sum256([]byte(sb.String()))
@@ -606,6 +778,16 @@ func hashSource(s Source) string {
 		"\nstate=" + string(s.State) + "\ncred=" + s.CredentialRef +
 		"\nfrom=" + strconv.FormatUint(s.ValidFrom, 10) +
 		"\nto=" + strconv.FormatUint(s.ValidTo, 10) + "\n")
+	sum := sha256.Sum256([]byte(sb.String()))
+	return hex.EncodeToString(sum[:])
+}
+
+func hashPolicy(p Policy) string {
+	var sb strings.Builder
+	sb.WriteString("policy/v1\n" + p.Name + "@" + p.Version + "\ncontent=" + p.ContentHash +
+		"\nstate=" + string(p.State) + "\napprover=" + p.ApprovedBy +
+		"\nfrom=" + strconv.FormatUint(p.EffectiveFrom, 10) +
+		"\nto=" + strconv.FormatUint(p.EffectiveTo, 10) + "\n")
 	sum := sha256.Sum256([]byte(sb.String()))
 	return hex.EncodeToString(sum[:])
 }

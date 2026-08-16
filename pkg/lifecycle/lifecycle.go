@@ -401,14 +401,14 @@ func (o *Orchestrator) resolveCanonicalEntity(actorID string, aliases []entity.A
 // ctx is the real caller-supplied context (P0-6): the Intent
 // entrypoint's own request/operation context, threaded through to
 // pkg/execution.Engine.Run rather than fabricated internally via
-// context.Background(). No production HTTP/gateway caller invokes
-// RunUnified yet (veriqo/gateway does not import pkg/lifecycle at all
-// -- an honestly separate, larger gap this round does not claim to
-// close), so every current call site is a test harness genuinely
-// passing context.Background() because that is what it has; the fix
-// here is the CONTRACT -- ctx is no longer silently regenerated one
-// layer down where a real caller's cancellation/deadline would
-// otherwise be discarded.
+// context.Background(). A real production HTTP/gateway caller DOES
+// invoke RunUnified now: veriqo/gateway/rest/lifecycle_route.go's
+// POST /lifecycle/run_unified passes r.Context() straight through, so
+// a client disconnect or server shutdown genuinely cancels an
+// in-flight execution (this paragraph previously said no such caller
+// existed; that became stale the round that route shipped and is
+// corrected here rather than left to silently mislead a future
+// reader).
 func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidencePlan, caseIn canonical.CaseInput) (*Result, error) {
 	// The audit's P1-07 ("Unified Observability") named RunUnified
 	// itself as the one join-point every downstream span, log line and
@@ -509,6 +509,25 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	execIn := execution.Input{Context: execCtx, Case: caseIn}
 	if identityKeySet {
 		execIn.IdentityAliases = []identity.Identifier{identityKey}
+	}
+	// P0-D Test 3 production wiring: INTENT independently re-verifies
+	// the SAME plan.Requirements checkPlan just enforced above, so the
+	// DAG's own committed trace carries a genuine, independently-
+	// checked record of evidence-plan satisfaction (and a cold replay
+	// of this execution re-confirms it too) -- not only an invisible
+	// pre-flight gate that leaves no trace inside the DAG itself. This
+	// never changes RunUnified's own pass/fail outcome (checkPlan
+	// already returned above on any unmet Required item, so execution.
+	// Engine.Run is never reached with one), but it is not redundant:
+	// it is the difference between "trust one caller-side check" and
+	// "the DAG itself can prove this, including under independent cold
+	// replay with no access to pkg/lifecycle at all".
+	if len(plan.Requirements) > 0 {
+		reqs := make([]execution.EvidenceRequirement, len(plan.Requirements))
+		for i, r := range plan.Requirements {
+			reqs[i] = execution.EvidenceRequirement{Kind: r.Kind, Required: r.Required, MinSources: r.MinSources}
+		}
+		execIn.EvidenceRequirements = reqs
 	}
 
 	// --- Temporal Bayesian bridge (P0-C WIRING half) --------------------

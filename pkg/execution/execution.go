@@ -97,6 +97,16 @@ var (
 	// ledger, in the same spirit as pkg/lifecycle's own
 	// replayFusionArbitration, rather than trusting the caller's claim.
 	ErrIdentityMismatch = errors.New("execution: identity resolution: independently re-resolved entity does not match the supplied case entity")
+	// ErrEvidencePlanUnsatisfied is raised (P0-D Test 3) when
+	// Input.EvidenceRequirements is supplied and a Required requirement's
+	// MinSources is not met by Case.Submissions -- INTENT independently
+	// re-derives the same verdict pkg/lifecycle.checkPlan already
+	// computed before ever calling Engine.Run, rather than only
+	// attributing the case's tenant/actor/caseID. See
+	// EvidenceRequirement's doc comment for why this is a duplicate,
+	// import-cycle-avoiding type rather than a reuse of
+	// pkg/lifecycle.EvidenceRequirement.
+	ErrEvidencePlanUnsatisfied = errors.New("execution: intent: required evidence plan item not satisfied")
 )
 
 // StageID names a node of the graph.
@@ -250,6 +260,66 @@ type Result struct {
 	ReplayPackage     replay.ReplayPackage            `json:"replay_package"`
 	Certificate       replay.VerificationCertificate  `json:"verification_certificate"`
 	Binding           lifecycle.Binding               `json:"binding"`
+	// Case, Scenarios and Currency are exactly the Input fields THIS
+	// Run call actually used (P1-10) -- captured here, not
+	// reconstructed by a caller, because Case in particular may differ
+	// from what a caller originally supplied: pkg/lifecycle.Orchestrator
+	// .RunUnified resolves entity aliases and mutates its OWN local
+	// copy of CaseInput before calling Engine.Run, so the only place
+	// that ever sees the exact Case bytes this specific run committed
+	// to is inside Run itself. Exporting an approximation reconstructed
+	// one layer up would silently diverge from what ReplayDAG actually
+	// needs to reproduce this Trace. See ExportReplay.
+	Case      canonical.CaseInput `json:"case"`
+	Scenarios []economic.Scenario `json:"scenarios,omitempty"`
+	Currency  string              `json:"currency,omitempty"`
+	// IdentityAliases is exactly Input.IdentityAliases this Run call
+	// used -- captured for the same reason Case is (see above). Its
+	// absence from ReplayRequest was a real, previously-undiscovered
+	// gap this round's P1-10 test caught: any production execution
+	// that went through pkg/lifecycle.Orchestrator.RunUnified sets
+	// this (see resolveCanonicalEntity/identityKeySet), which makes
+	// IDENTITY_RESOLUTION additionally commit to an independently
+	// re-resolved entity ID (P0-4's "|reresolved=..." hash term). A
+	// cold replay that omitted IdentityAliases entirely -- as
+	// ReplayDAG unconditionally did before this fix -- could never
+	// reproduce that node's hash for ANY real production execution,
+	// only for the narrower case of a bare *Engine call with no
+	// identity aliases at all.
+	IdentityAliases []identity.Identifier `json:"identity_aliases,omitempty"`
+	// ExpectedPolicyHash and EvidenceRequirements are exactly the
+	// matching Input fields this Run call used -- the same replay-
+	// fidelity gap as IdentityAliases above, and found the same way
+	// (a genuinely independent field, not derivable from Case alone,
+	// whose absence from a replay changes which branch StagePolicy/
+	// StageIntent take and therefore their committed node hash). Both
+	// were added to Input in earlier rounds without a matching export
+	// path; closed together here.
+	ExpectedPolicyHash   string                `json:"expected_policy_hash,omitempty"`
+	EvidenceRequirements []EvidenceRequirement `json:"evidence_requirements,omitempty"`
+}
+
+// ExportReplay serializes this Result into the exact ReplayRequest
+// bytes an independent replayer (cmd/veriqo-cold-replay, or any other
+// process holding nothing but this byte slice) consumes to
+// independently rebuild and verify the DAG this Result committed to.
+// It is the real production capability P1-10 needed: previously the
+// only way to obtain a cold-replayable export was to hold a live
+// *Engine reference and read res.Trace out of process memory directly
+// -- reachable from tests and cmd/veriqo-cold-replay's own callers,
+// but not from an execution reached over a real network boundary (an
+// HTTP handler that only has this Result value, not the Engine that
+// produced it). ExportReplay closes that gap: any caller holding a
+// Result -- including veriqo/gateway/rest's real
+// /lifecycle/run_unified handler -- can now produce the identical
+// bytes ReplayDAG expects, without reaching back into engine state.
+func (r Result) ExportReplay() ([]byte, error) {
+	return ReplayRequest{
+		Context: r.Trace.Context, Case: r.Case, Scenarios: r.Scenarios,
+		Currency: r.Currency, IdentityAliases: r.IdentityAliases,
+		ExpectedPolicyHash: r.ExpectedPolicyHash, EvidenceRequirements: r.EvidenceRequirements,
+		Committed: r.Trace,
+	}.Marshal()
 }
 
 // Input is one execution request.
@@ -299,6 +369,31 @@ type Input struct {
 	// remains a caller-declared label with no independent check, as
 	// before this field existed.
 	ExpectedPolicyHash string
+	// EvidenceRequirements, when set, makes StageIntent (P0-D Test 3)
+	// independently verify that Case.Submissions satisfies every
+	// Required entry's MinSources -- a real second computation of the
+	// same verdict pkg/lifecycle.checkPlan already produces before ever
+	// calling Engine.Run, so INTENT is a genuine causal gate over the
+	// exact evidence the DAG itself operates on, not only an
+	// attribution of tenant/actor/caseID. Nil-safe: leave empty (the
+	// default) to preserve INTENT's prior always-OK behavior exactly.
+	EvidenceRequirements []EvidenceRequirement
+}
+
+// EvidenceRequirement mirrors pkg/lifecycle.EvidenceRequirement's shape
+// exactly (Kind/Required/MinSources) but is declared independently here
+// rather than imported: pkg/lifecycle already imports pkg/execution (it
+// is execution's real production caller, see pkg/lifecycle.Orchestrator
+// .RunUnified), so the reverse import would be a cycle. This is a
+// deliberate, minimal, primitive data shape -- not a rewrite of
+// lifecycle's richer EvidencePlan/Intent types -- and
+// pkg/lifecycle.RunUnified converts its own []EvidenceRequirement into
+// this one when calling Engine.Run, so both checks operate on
+// byte-identical field values, not a lossy approximation.
+type EvidenceRequirement struct {
+	Kind       string
+	Required   bool
+	MinSources int
 }
 
 // Engine executes the graph. All sub-engines are injected so an
@@ -538,7 +633,9 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 	// still giving every stage a real, separately-hashed artifact.
 	canon, canonErr := e.Pipeline.RunCanonical(ctx.Actor, in.Case)
 
-	res := &Result{Binding: binding}
+	res := &Result{Binding: binding, Case: in.Case, Scenarios: in.Scenarios, Currency: in.Currency,
+		IdentityAliases: in.IdentityAliases, ExpectedPolicyHash: in.ExpectedPolicyHash,
+		EvidenceRequirements: in.EvidenceRequirements}
 	nodes := make([]Node, 0, len(order))
 	produced := map[StageID]bool{}
 	byID := map[StageID][]StageID{}
@@ -608,6 +705,25 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 
 		switch id {
 		case StageIntent:
+			// P0-D Test 3: when the caller declares the evidence plan
+			// this Intent committed to, independently verify Case.
+			// Submissions actually satisfies every REQUIRED item's
+			// MinSources -- a real second computation of the same
+			// verdict pkg/lifecycle.checkPlan already produced upstream
+			// (see EvidenceRequirement's doc comment), not a trust of
+			// the caller's own pre-flight check. A violation fails INTENT
+			// closed, and since every other stage transitively depends
+			// on it, the DAG's existing dependency guard cascades the
+			// failure through the whole graph -- INTENT genuinely gates
+			// what runs, it does not merely attribute who raised it.
+			if unmet := unmetRequiredEvidence(in.EvidenceRequirements, in.Case); unmet != nil {
+				record(id, []string{ctx.Tenant, ctx.Actor}, []string{ctx.CaseID}, StatusFailed,
+					"required evidence plan item unmet: kind="+unmet.Kind+
+						" need>="+strconv.Itoa(unmet.MinSources)+" got="+strconv.Itoa(submissionCount(in.Case, unmet.Kind)),
+					"", fmt.Errorf("%w: kind=%s need>=%d got=%d",
+						ErrEvidencePlanUnsatisfied, unmet.Kind, unmet.MinSources, submissionCount(in.Case, unmet.Kind)))
+				continue
+			}
 			record(id, []string{ctx.Tenant, ctx.Actor}, []string{ctx.CaseID}, StatusOK,
 				"intent "+ctx.CaseID+" raised by "+ctx.Actor+" under tenant "+ctx.Tenant,
 				ctx.CaseID+"|"+ctx.Tenant+"|"+ctx.Actor+"|"+ctx.PolicyVersion, nil)
@@ -736,22 +852,76 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 
 		case StagePolicy:
 			d := canon.Decision
-			// P0-D: when the caller declares what policy content they
-			// expect, independently recompute the hash of the policy
-			// that actually ran and require agreement -- a real second
-			// computation, not a decorative re-statement of
+			// P0-D: independently recompute the hash of the policy that
+			// actually ran and require it to agree with an expected
+			// hash from a real, separate source of truth -- a genuine
+			// second computation, not a decorative re-statement of
 			// ctx.PolicyVersion (see decision.Policy.Hash's doc comment
 			// for why this closes a genuine gap: nothing previously
 			// checked ctx.PolicyVersion against Case.Policy's actual
 			// content at all).
-			if in.ExpectedPolicyHash != "" {
+			//
+			// "Automatic wiring" (the remaining half of this gap after
+			// the check itself was proven able to fail closed): an
+			// explicit Input.ExpectedPolicyHash always wins when a
+			// caller supplies one, but when it does not, this stage now
+			// falls back to binding.Policies[in.Case.Policy.Name] --
+			// the SAME governance Registry lookup StageIntent's sibling
+			// Model/Source binding already performs above, extended
+			// this round to cover policy versions too (see
+			// pkg/governance/lifecycle's new Policy/PolicyState/
+			// RegisterPolicy/TransitionPolicy). This is not the
+			// caller's own Case.Policy checked against itself -- it is
+			// an independently governed, separately-approved record a
+			// different actor (an operator, via RegisterPolicy/
+			// TransitionPolicy) committed to, which is exactly what
+			// makes it a real check rather than a circular one. A
+			// policy Name with no governed ACTIVE version registered
+			// simply has no expected hash to check against (nil-safe:
+			// every Engine without a Lifecycle Registry, and every
+			// policy Name no operator has registered yet, preserves the
+			// exact unconditional-OK behavior from before this field
+			// existed).
+			expected := in.ExpectedPolicyHash
+			if expected == "" && binding.Policies != nil {
+				if h, ok := binding.Policies[in.Case.Policy.Name]; ok {
+					expected = h
+				}
+			}
+			// Capture whichever expected hash was ACTUALLY used (caller-
+			// declared or auto-wired from the governance registry) back
+			// onto Result, not only the Input field it started from --
+			// otherwise a cold replay via a freshEngine with no
+			// Lifecycle Registry attached (the normal case for
+			// cmd/veriqo-cold-replay, which has no governance ledger to
+			// read) would resolve binding.Policies to nil and silently
+			// re-derive a DIFFERENT (empty) expected hash than the
+			// original run auto-wired, diverging at this exact node for
+			// every execution that used auto-wiring. Result.
+			// ExpectedPolicyHash threads through ExportReplay into
+			// ReplayRequest and back into a replay's own Input, so the
+			// replay independently re-verifies against the SAME value,
+			// not a value it would have to re-derive from a registry it
+			// was never given.
+			//
+			// Deliberately NOT naming the source (caller-declared vs
+			// auto-wired) in Detail/Error: those strings are hashed
+			// (see hashNode), and a replay engine reconstructs
+			// ExpectedPolicyHash from the explicit Input field alone
+			// (see above) regardless of how the ORIGINAL run obtained
+			// it -- wording that varied by source would make every
+			// auto-wired execution structurally unreplayable, which
+			// defeats the whole point of capturing the value for
+			// replay in the first place.
+			res.ExpectedPolicyHash = expected
+			if expected != "" {
 				actualHash := in.Case.Policy.Hash()
-				if actualHash != in.ExpectedPolicyHash {
+				if actualHash != expected {
 					record(id, []string{ctx.PolicyVersion}, nil, StatusFailed,
 						"independently recomputed policy hash "+shortHash(actualHash)+
-							" does not match expected policy hash "+shortHash(in.ExpectedPolicyHash),
+							" does not match expected policy hash "+shortHash(expected),
 						"", fmt.Errorf("%w: expected=%s actual=%s",
-							ErrPolicyMismatch, in.ExpectedPolicyHash, actualHash))
+							ErrPolicyMismatch, expected, actualHash))
 					continue
 				}
 				record(id, []string{"tbml_composite_risk_score"}, []string{ctx.PolicyVersion}, StatusOK,
@@ -1083,7 +1253,17 @@ type ReplayRequest struct {
 	Case      canonical.CaseInput `json:"case"`
 	Scenarios []economic.Scenario `json:"scenarios"`
 	Currency  string              `json:"currency"`
-	Committed Trace               `json:"committed_trace"`
+	// IdentityAliases is exactly Input.IdentityAliases the original run
+	// used (see Result.IdentityAliases's doc comment for why this is
+	// required, not optional, for a faithful replay of any execution
+	// that went through pkg/lifecycle.Orchestrator).
+	IdentityAliases []identity.Identifier `json:"identity_aliases,omitempty"`
+	// ExpectedPolicyHash and EvidenceRequirements are exactly the
+	// matching Result fields (see Result's own doc comment for why
+	// both are required, not optional, for a faithful replay).
+	ExpectedPolicyHash   string                `json:"expected_policy_hash,omitempty"`
+	EvidenceRequirements []EvidenceRequirement `json:"evidence_requirements,omitempty"`
+	Committed            Trace                 `json:"committed_trace"`
 }
 
 // Marshal serialises the request.
@@ -1119,7 +1299,8 @@ func ReplayDAG(goCtx context.Context, data []byte, freshEngine *Engine) (ReplayV
 		}
 	}
 	out, err := freshEngine.Run(goCtx, Input{Context: req.Context, Case: req.Case,
-		Scenarios: req.Scenarios, Currency: req.Currency})
+		Scenarios: req.Scenarios, Currency: req.Currency, IdentityAliases: req.IdentityAliases,
+		ExpectedPolicyHash: req.ExpectedPolicyHash, EvidenceRequirements: req.EvidenceRequirements})
 	if out == nil {
 		return ReplayVerdict{}, err
 	}
@@ -1169,6 +1350,31 @@ func sortedCopy(in []string) []string {
 	out := append([]string(nil), in...)
 	sort.Strings(out)
 	return out
+}
+
+// submissionCount mirrors pkg/lifecycle.checkPlan's own counting rule
+// exactly (kind matched against the case's own Predicate, count =
+// number of submissions when it matches, 0 otherwise) so INTENT's
+// independent check and lifecycle's upstream pre-flight check can never
+// silently diverge on what "satisfied" means.
+func submissionCount(c canonical.CaseInput, kind string) int {
+	if kind == c.Predicate {
+		return len(c.Submissions)
+	}
+	return 0
+}
+
+// unmetRequiredEvidence returns the first REQUIRED EvidenceRequirement
+// whose MinSources is not met, or nil when every required item is
+// satisfied (optional items are never blocking, matching checkPlan's
+// own "preserve unknown/missing evidence as uncertainty" rule).
+func unmetRequiredEvidence(reqs []EvidenceRequirement, c canonical.CaseInput) *EvidenceRequirement {
+	for i := range reqs {
+		if reqs[i].Required && submissionCount(c, reqs[i].Kind) < reqs[i].MinSources {
+			return &reqs[i]
+		}
+	}
+	return nil
 }
 
 func fnum(v float64) string { return strconv.FormatFloat(v, 'g', 17, 64) }
