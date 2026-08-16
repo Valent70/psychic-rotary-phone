@@ -125,5 +125,3688 @@
       "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
     ],
     "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "network_partition",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 439,
+    "commits": 365,
+    "refusals": 235,
+    "violations": 0,
+    "run_hashes": [
+      "8bbf7660ed9b44ebd77397c71fdd19cd57ba1b1aa27c8cbdc459bb59d001de60",
+      "690cacff16c4da6c18b41434f44746c38bc0de5914cb0ada9dfda2c854be026d",
+      "42f2b52c930955c8566186c1990854e439f2d1281a32dea3161624f466f2dca9",
+      "e4574f9961f41d1bf1da4030f4972af231492c89c5ab4ce221e1e2d150aa89cf",
+      "23c915e94782fd68bca027dce969218c5b3b5b45699d77b8012f665d00db83b8"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "delivery_degradation",
+    "seeds": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 433,
+    "commits": 600,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "818aed751c5b4cbcef795fd7de873b8950b02f0536ce2d780e4bd525b56dfae2",
+      "7b46267c80bbe91714907f8e751e31f17c9d4cc76927591689bb2ff2408b09ca",
+      "d92481093c3e35a24753a151a62d88db3e315c1bdb8144557cb8b54034713306",
+      "265c2d4d62172277cc2c024e9080713bc53956852b0b9de416f4f64fd7b77d1b",
+      "984acae9cfec660b2c0dd34c46d0a58e525f2c24e2720c416e217b62d9efb150"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "crash_restart_recovery",
+    "seeds": [
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 507,
+    "commits": 404,
+    "refusals": 196,
+    "violations": 0,
+    "run_hashes": [
+      "3fbec37f86a86c6a8d646043ee5113f70206fd3604be899ac667ab199435882a",
+      "069dbacdcb1d4dbb82d0523dff9ed608044cb07bde4220d97abbe3e041fc77d1",
+      "aae386cb164d3d18fb99e5e00c043c98df5d4cd9437242d1bb8a9b9dd73bd189",
+      "68d519fa816c162d304890884335f50f3a85fed8ee70f53ec6ee89a707ed3575",
+      "d1dc80635ccfba3c08eefd32598e747b70689ea592168c4e6a48193c57289461"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "clock_skew",
+    "seeds": [
+      31,
+      32,
+      33
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 318,
+    "commits": 360,
+    "refusals": 0,
+    "violations": 0,
+    "run_hashes": [
+      "76df35c495a84266953432f214a20655f9c64f7e735c5bd24e971571ff39ae22",
+      "a68703c18b20ce628c762414c1c39ef6eb0367ddf8c68b98ef8b5ce4f3209d46",
+      "8380ae83f885747c737186d36f5c2af34891735b4c3c271b6190064058d40ddc"
+    ],
+    "passed": true
+  },
+  {
+    "scenario": "combined",
+    "seeds": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "nodes": 5,
+    "quorum": 3,
+    "ticks_each": 120,
+    "faults_applied": 770,
+    "commits": 867,
+    "refusals": 93,
+    "violations": 0,
+    "run_hashes": [
+      "80c60849cdde1b75afa8d5fc5689fb29ec9b1abc39ce6f9ee147b3066da3e472",
+      "e0e08576d0b19acc4a75143ff13c35f2e8e4b15e220b2b60ded111014ccf33b0",
+      "f2251776e2d4c531dd5a2a8697e3121cf37c5d1b43f35375bd767c75e493ce10",
+      "dd8e928b82400e335b36c52b224f28d0c8ab8ec3a4b07d0355c3d788b3ef5fbc",
+      "a211b65d072148a0ec9ebe09a1fdff91f68ad1c21ff942432f04f4c944f2a52e",
+      "c939c9e07e610e57f514d2b3f500967715a0d360560191d8d3eaf2dff2cd2e04",
+      "cb4219cd971591efd291699abc75466ab566daf2764a1aeb7037e20abf10cad8",
+      "397ea35a63cc685f35ebadbf39f828fb50d60be8b47bbde06f8ea50ea74f1189"
+    ],
+    "passed": true
   }
 ]

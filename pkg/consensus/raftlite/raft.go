@@ -398,8 +398,38 @@ func (n *Node) IsLeader() bool { return n.Role() == Leader }
 
 // Run drives the election/heartbeat loop until ctx is cancelled or
 // Shutdown() is called.
+//
+// A real, reproduced bug lived here: this loop's own top never checked
+// ctx.Done()/shutdownCh -- it relied entirely on leaderLoop noticing
+// shutdown internally and returning, then trusted the NEXT iteration to
+// stop. But leaderLoop's ctx.Done()/shutdownCh exit paths return without
+// demoting n.role away from Leader, so once every peer is already gone
+// (e.g., every node in a cluster is being torn down in the same
+// process, which is exactly what a bounded test run does at the end of
+// each case), this loop re-reads role=Leader and calls leaderLoop(ctx)
+// again -- which immediately re-observes the same already-closed
+// ctx.Done()/shutdownCh and returns again, forever, in as tight a spin
+// as replicateToAll's real per-iteration lock/goroutine overhead
+// allows. The only thing that could ever break the spin was
+// leaderLoop's own select happening to catch its heartbeat ticker
+// instead of the (also always-ready) shutdown channels on some
+// iteration, which is not guaranteed to happen promptly and was
+// observed, once something finally waited on Run() actually returning
+// (pkg/blockers/dr's Destroy(), which nothing had ever done before),
+// to take up to several seconds under real -race CPU contention rather
+// than the microseconds a shutdown should take. Checking both channels
+// directly here, before ever re-entering the Leader case, makes
+// termination immediate and independent of role or ticker timing.
 func (n *Node) Run(ctx context.Context) {
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-n.shutdownCh:
+			return
+		default:
+		}
+
 		n.mu.Lock()
 		role := n.role
 		n.mu.Unlock()

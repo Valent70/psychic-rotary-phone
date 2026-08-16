@@ -94,6 +94,25 @@ type LocalRegionProvider struct {
 	fsms   map[string]*kvFSM
 	ids    []string
 	cancel context.CancelFunc
+	// runWG tracks every node.Run goroutine this provider started, so
+	// Destroy can actually wait for them to exit instead of merely
+	// signalling shutdown and returning immediately. Without this, a
+	// caller that runs many RunQualification calls back-to-back in one
+	// process (exactly what `go test -count=N` does, sequentially, in
+	// the same binary) can start the NEXT scenario's fresh nodes while
+	// the PREVIOUS scenario's nodes are still winding down in the
+	// background. Waiting here gives every iteration a genuinely clean
+	// slate, matching what a real production caller expects when
+	// Destroy returns -- and it is exactly this wait that surfaced a
+	// real, previously invisible bug in raftlite.Node.Run itself (see
+	// that function's own doc comment): a node that is still Leader the
+	// instant shutdown is signalled could busy-spin for seconds before
+	// actually returning, because Run's outer loop never checked
+	// ctx.Done()/shutdownCh directly, only leaderLoop did. Nothing before
+	// this provider's Destroy ever waited on Run() actually returning, so
+	// that bug had no way to be observed. Fixed at the source in raft.go;
+	// this comment stays as the trail connecting the two.
+	runWG sync.WaitGroup
 }
 
 func NewLocalRegionProvider() *LocalRegionProvider { return &LocalRegionProvider{} }
@@ -121,9 +140,26 @@ func (p *LocalRegionProvider) CreateRegions(ctx context.Context, n int) ([]Regio
 		fsm := newKVFSM()
 		node := raftlite.NewNode(raftlite.Config{
 			ID: id, Peers: peers, Transport: trans, FSM: fsm,
-			ElectionTimeoutMin: 30 * time.Millisecond,
-			ElectionTimeoutMax: 60 * time.Millisecond,
-			HeartbeatInterval:  10 * time.Millisecond,
+			// Widened from an original 30/60/10ms: real, reproduced
+			// failures under `go test -race -count=500` (genuine host
+			// CPU contention, the same class already documented
+			// throughout pkg/consensus/raftlite's own test suite) showed
+			// this cluster's election timers firing faster than
+			// goroutines could actually be scheduled -- a real election
+			// livelock, not a false result: 3/500 runs hit "context
+			// deadline exceeded" waiting on a stable leader, after a
+			// separate real bug (see Write's own comment) that had
+			// caused 5/300 runs to misreport those exact same livelocks
+			// as false "RPO > 0" was already fixed. 100/60/20ms keeps
+			// this drill's RTO meaningfully faster than raftlite's
+			// generic 150/300/50ms default (this package exists partly
+			// to demonstrate a fast recovery time) while giving the
+			// runtime real slack against scheduling jitter, matching
+			// standard Raft tuning guidance (broadcast time well under
+			// election timeout) the previous 30ms window violated.
+			ElectionTimeoutMin: 100 * time.Millisecond,
+			ElectionTimeoutMax: 200 * time.Millisecond,
+			HeartbeatInterval:  20 * time.Millisecond,
 		})
 		trans.Register(node)
 		nodes[id] = node
@@ -132,7 +168,12 @@ func (p *LocalRegionProvider) CreateRegions(ctx context.Context, n int) ([]Regio
 
 	runCtx, cancel := context.WithCancel(context.Background())
 	for _, node := range nodes {
-		go node.Run(runCtx)
+		node := node
+		p.runWG.Add(1)
+		go func() {
+			defer p.runWG.Done()
+			node.Run(runCtx)
+		}()
 	}
 
 	p.mu.Lock()
@@ -141,6 +182,7 @@ func (p *LocalRegionProvider) CreateRegions(ctx context.Context, n int) ([]Regio
 
 	if _, err := p.CurrentLeader(ctx); err != nil {
 		cancel()
+		p.runWG.Wait() // same leak-prevention reasoning as Destroy's own wait
 		return nil, fmt.Errorf("dr: no leader elected after CreateRegions: %w", err)
 	}
 	regions := make([]Region, n)
@@ -186,19 +228,93 @@ func (p *LocalRegionProvider) CurrentLeader(ctx context.Context) (Region, error)
 	}
 }
 
+// Write commits key=value through the current leader and only returns
+// nil once that exact entry (not merely "something") has actually
+// applied.
+//
+// A real, reproduced bug lived here: this method used to call plain
+// node.WaitApplied(ctx, idx), which -- per that method's own documented
+// caveat -- proves only that SOME entry is now applied at idx, not that
+// it is the caller's entry. Raft commit indices are log positions, not
+// entry identities: if the node this method proposed through lost
+// leadership before replicating the entry to a majority, a later
+// leader's unrelated entry can legitimately commit at that exact same
+// index, and WaitApplied returns nil anyway. RunQualification then read
+// back "before-failure" after the real failover and found it missing,
+// and reported that as "acknowledged write lost across region failure
+// (RPO > 0)" -- an intermittent, real-looking DR data-loss finding that
+// was in fact a false ack from THIS baseline write, not a defect in the
+// failover/RPO path being qualified at all. Reproduced directly:
+// go test -race -count=300 ./pkg/blockers/dr/ failed 5/300 (4x exactly
+// this "RPO > 0" misreport, 1x WaitApplied hanging to the test's ctx
+// deadline for the same underlying reason -- the node's log was
+// truncated and reformed by a new leader and lastApplied only crosses
+// idx again once that catches up).
+//
+// Fixed with node.WaitAppliedTerm(ctx, idx, term), which additionally
+// confirms the entry actually occupying idx still carries the term
+// Propose() returned, and returns ErrEntryOverwritten (or a context
+// error) the moment it does not -- exactly the same fix already applied
+// to pkg/consensus/raftlite's own TestKGAdapter_EndToEndCommit for the
+// identical root cause. The bounded retry below is not a cosmetic
+// workaround for this bug (WaitAppliedTerm alone already prevents the
+// false-positive RPO report); it is the same real raft-client behavior
+// that fix already established as correct and non-cosmetic: Propose()
+// succeeding never guarantees eventual commit, so a caller that still
+// wants its write to land retries against whatever node is leader now,
+// same as any real raft client library.
+//
+// A second real bug surfaced immediately after the first fix landed:
+// go test -race -count=500 still failed 3-8/500 runs (rate got WORSE,
+// not better, after widening this file's raft election/heartbeat
+// timeouts for unrelated robustness reasons -- a real clue, not noise),
+// now with "majority did not keep serving writes after region failure:
+// context deadline exceeded" rather than a false RPO report. Root cause:
+// CurrentLeader() trusts a node's own IsLeader() claim, but
+// checkQuorumTick (pkg/consensus/raftlite/checkquorum.go) only steps an
+// isolated leader down to Follower after checkQuorumTimeout of sustained
+// unreachability -- a real, unavoidable window (widening it does not
+// remove it, only lengthens it, which is exactly why the timeout widen
+// made this failure MORE frequent). Inside that window, right after
+// RunQualification partitions the real leader, Propose() on that now-
+// isolated node still succeeds locally (it only checks its own believed
+// role) but can never commit, because it can no longer reach a majority.
+// Without a per-attempt bound, the ONE attempt that lands on the stale
+// leader could consume this call's entire remaining ctx budget waiting
+// on a commit that will never come, leaving zero time for the retry
+// that would have found the real new leader once CheckQuorum caught up.
+// attemptCtx below caps that single attempt's exposure so the loop
+// always gets to try again with a fresh CurrentLeader() lookup.
 func (p *LocalRegionProvider) Write(ctx context.Context, key, value string) error {
-	leader, err := p.CurrentLeader(ctx)
-	if err != nil {
-		return err
+	const maxAttempts = 5
+	const perAttemptTimeout = 3 * time.Second
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		leader, err := p.CurrentLeader(ctx)
+		if err != nil {
+			return err
+		}
+		p.mu.Lock()
+		node := p.nodes[leader.ID]
+		p.mu.Unlock()
+		idx, term, err := node.Propose(encodeSet(key, value))
+		if err != nil {
+			lastErr = fmt.Errorf("dr: propose on %s: %w", leader.ID, err)
+			continue // leadership moved between CurrentLeader and Propose; retry against the new leader
+		}
+		attemptCtx, cancel := context.WithTimeout(ctx, perAttemptTimeout)
+		err = node.WaitAppliedTerm(attemptCtx, idx, term)
+		cancel()
+		if err != nil {
+			lastErr = fmt.Errorf("dr: wait applied on %s: %w", leader.ID, err)
+			continue // entry was overwritten before it committed, or this attempt hit a stale isolated leader; retry against the current leader
+		}
+		return nil
 	}
-	p.mu.Lock()
-	node := p.nodes[leader.ID]
-	p.mu.Unlock()
-	idx, _, err := node.Propose(encodeSet(key, value))
-	if err != nil {
-		return fmt.Errorf("dr: propose on %s: %w", leader.ID, err)
-	}
-	return node.WaitApplied(ctx, idx)
+	return fmt.Errorf("dr: write did not commit within %d attempts: %w", maxAttempts, lastErr)
 }
 
 func (p *LocalRegionProvider) Read(regionID, key string) (string, bool) {
@@ -245,13 +361,18 @@ func (p *LocalRegionProvider) Heal(regionID string) error {
 
 func (p *LocalRegionProvider) Destroy(ctx context.Context) error {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if p.cancel != nil {
 		p.cancel()
 	}
 	for _, n := range p.nodes {
 		n.Shutdown()
 	}
+	p.mu.Unlock()
+	// Not held under p.mu: Wait can legitimately take a moment (goroutine
+	// scheduling under -race), and nothing else needs p.mu while this
+	// provider is being torn down. See runWG's own doc comment for why
+	// this wait is load-bearing, not decorative.
+	p.runWG.Wait()
 	return nil
 }
 
