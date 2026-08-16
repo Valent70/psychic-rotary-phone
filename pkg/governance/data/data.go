@@ -23,6 +23,7 @@
 package data
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -31,6 +32,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -349,6 +352,10 @@ func holdCovers(h Hold, r *Record) bool {
 // destroys anything by itself — PURGED requires an explicit Purge call
 // with a named actor.
 func (e *Engine) Evaluate(tick uint64) ([]Event, error) {
+	_, span := telemetry.StartSpan(context.Background(), "data.Evaluate",
+		telemetry.Attribute{Key: "tick", Value: strconv.FormatUint(tick, 10)})
+	defer span.End()
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if err := e.tickLocked(tick); err != nil {

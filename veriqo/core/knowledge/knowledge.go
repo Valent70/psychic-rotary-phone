@@ -9,6 +9,7 @@
 package knowledge
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"veriqo/pkg/core/trustcalc"
 	"veriqo/pkg/evidence/graph"
 	"veriqo/pkg/kernel/reasoning"
+	"veriqo/pkg/platform/telemetry"
 )
 
 type Version struct {
@@ -68,6 +70,9 @@ func (s *Store) Conflicts(t reasoning.Triple) []Conflict {
 // belief revision against a prior confidence for the SAME fact — use
 // Revise for that.
 func (s *Store) Assert(t reasoning.Triple, confidence float64, provenance graph.NodeID) Version {
+	_, span := telemetry.StartSpan(context.Background(), "knowledge.Assert")
+	defer span.End()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.assertLocked(t, confidence, provenance)

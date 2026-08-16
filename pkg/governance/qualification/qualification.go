@@ -39,6 +39,7 @@
 package qualification
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
@@ -48,6 +49,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Status is the lifecycle state of one gate's external qualification.
@@ -529,6 +532,10 @@ func (r *Registry) Validate(gateID string, nowTick uint64, releaseCommit, releas
 // external dependency has real, checked, unexpired, cryptographically
 // authenticated evidence behind it.
 func (r *Registry) Qualify(gateID string, nowTick uint64) error {
+	_, span := telemetry.StartSpan(context.Background(), "qualification.Qualify",
+		telemetry.Attribute{Key: "gate_id", Value: gateID})
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	rec, ok := r.records[gateID]

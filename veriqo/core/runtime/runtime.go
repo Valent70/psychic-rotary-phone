@@ -24,9 +24,12 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Capability is a named ability an Engine exposes, e.g. "trust.certify".
@@ -197,6 +200,9 @@ func mergeSorted(a, b []string, entries map[string]*entry) []string {
 }
 
 func (m *Manager) StartAll() error {
+	_, span := telemetry.StartSpan(context.Background(), "runtime.StartAll")
+	defer span.End()
+
 	order, err := m.DependencyOrder()
 	if err != nil {
 		return err

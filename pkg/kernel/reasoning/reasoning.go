@@ -19,8 +19,11 @@
 package reasoning
 
 import (
+	"context"
 	"fmt"
 	"sort"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Triple is one ground fact: (Subject, Predicate, Object). Object may
@@ -152,6 +155,9 @@ func (kb *KB) solvePattern(pattern Triple, b bindings) []struct {
 // a buggy rule set producing unbounded new constants would not — the
 // cap turns that into a bounded, reported condition instead of a hang.
 func (kb *KB) Infer() (newFacts int, err error) {
+	_, span := telemetry.StartSpan(context.Background(), "reasoning.Infer")
+	defer span.End()
+
 	const maxIterations = 10000
 	for iter := 0; iter < maxIterations; iter++ {
 		addedThisPass := 0

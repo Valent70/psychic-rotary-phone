@@ -22,12 +22,15 @@
 package policy
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Verdict is the terminal outcome of gating one action.
@@ -116,6 +119,11 @@ func (g *Gate) RegisterRule(r Rule) {
 // the first non-empty Verdict (or falling back to the Gate's default),
 // and appends a hash-chained Record of the outcome.
 func (g *Gate) Evaluate(in Input) (Verdict, error) {
+	_, span := telemetry.StartSpan(context.Background(), "policy.Evaluate",
+		telemetry.Attribute{Key: "action", Value: in.Action},
+		telemetry.Attribute{Key: "subject", Value: in.Subject})
+	defer span.End()
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 

@@ -26,6 +26,7 @@
 package patterns
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -33,6 +34,8 @@ import (
 	"math"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -353,6 +356,10 @@ func NewLibrary(patterns []Pattern) *Library {
 // numeric input (NaN/Inf/negative — v7.9 audit P1) is rejected before
 // any pattern runs, rather than silently producing a misleading score.
 func (l *Library) Evaluate(subject string, s Signal, tick uint64) ([]Match, error) {
+	_, span := telemetry.StartSpan(context.Background(), "patterns.Evaluate",
+		telemetry.Attribute{Key: "subject", Value: subject})
+	defer span.End()
+
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}

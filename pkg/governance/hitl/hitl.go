@@ -20,6 +20,7 @@
 package hitl
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -28,6 +29,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -302,6 +305,10 @@ func New(rule ReviewRule) *Engine {
 // has the same shape and the same audit trail as a reviewed one.
 func (e *Engine) Submit(m MachineDecision, packet ReviewerPacket, requestedBy string,
 	priority int, tick uint64) (Case, error) {
+
+	_, span := telemetry.StartSpan(context.Background(), "hitl.Submit",
+		telemetry.Attribute{Key: "subject", Value: m.Subject}, telemetry.Attribute{Key: "action", Value: m.Action})
+	defer span.End()
 
 	if m.DecisionID == "" || m.Subject == "" {
 		return Case{}, fmt.Errorf("%w: decision id and subject are required", ErrUnknownCase)

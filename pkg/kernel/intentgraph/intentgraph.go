@@ -43,6 +43,7 @@
 package intentgraph
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -50,6 +51,7 @@ import (
 	"veriqo/pkg/kernel/reasoning"
 	"veriqo/pkg/moat/contradiction"
 	"veriqo/pkg/platform/observability"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // reliabilityHighThreshold is the boundary the one shipped prediction
@@ -232,6 +234,10 @@ func (g *Graph) Conflicts(subject string) bool {
 // applied to a different claim shape. Records IntentConfidence (the
 // winning proposal's Confidence) to MOATMetrics if configured.
 func (g *Graph) Arbitrate(subject string, arbitrationTick uint64, halfLifeTicks uint64) (contradiction.TruthVersion, error) {
+	_, tspan := telemetry.StartSpan(context.Background(), "intentgraph.Arbitrate",
+		telemetry.Attribute{Key: "subject", Value: subject})
+	defer tspan.End()
+
 	var span *observability.Span
 	if g.metrics != nil {
 		span = g.metrics.StartStage(observability.StageIntent)

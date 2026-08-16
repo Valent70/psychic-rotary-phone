@@ -16,10 +16,13 @@
 package execgraph
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -178,6 +181,10 @@ func (g *Graph) recomputeReadyLocked(id string) {
 // SetStatus transitions a node's status, recording the tick, and — on
 // transition to Done — recomputes readiness for its direct dependents.
 func (g *Graph) SetStatus(id string, to Status, tick uint64) error {
+	_, span := telemetry.StartSpan(context.Background(), "execgraph.SetStatus",
+		telemetry.Attribute{Key: "node_id", Value: id}, telemetry.Attribute{Key: "to", Value: string(to)})
+	defer span.End()
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	n, ok := g.nodes[id]

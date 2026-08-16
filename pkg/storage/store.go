@@ -12,10 +12,13 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // ErrNotFound is returned by Load when no state has ever been
@@ -45,6 +48,9 @@ func (s *FileStore) Path() string { return s.path }
 // untouched; a crash after cannot happen because rename(2) is a
 // single atomic filesystem operation.
 func (s *FileStore) Persist(data []byte) error {
+	_, span := telemetry.StartSpan(context.Background(), "storage.Persist", telemetry.Attribute{Key: "path", Value: s.path})
+	defer span.End()
+
 	dir := filepath.Dir(s.path)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("storage: mkdir %s: %w", dir, err)

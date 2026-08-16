@@ -21,12 +21,15 @@
 package plugin
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -98,6 +101,11 @@ func NewRegistry(h Host) *Registry {
 // -> Ready, in one call, matching the critique's exact three-step
 // pipeline name.
 func (r *Registry) Drop(p Plugin) error {
+	_, span := telemetry.StartSpan(context.Background(), "plugin.Drop",
+		telemetry.Attribute{Key: "plugin_id", Value: p.ID()},
+		telemetry.Attribute{Key: "plugin_version", Value: p.Version()})
+	defer span.End()
+
 	r.mu.Lock()
 	id := p.ID()
 	if _, exists := r.plugins[id]; exists {

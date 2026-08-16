@@ -10,11 +10,14 @@
 package selfheal
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var ErrMaxAttemptsExceeded = errors.New("selfheal: max recovery attempts exceeded")
@@ -108,6 +111,10 @@ func (w *Watcher) appendLocked(unit string, action Action, attempt int, tick uin
 // up to MaxAttempts times (each attempt re-checks health after
 // Restart+Replay) before giving up with ErrMaxAttemptsExceeded.
 func (w *Watcher) Check(name string, tick uint64) (Health, error) {
+	_, span := telemetry.StartSpan(context.Background(), "selfheal.Check",
+		telemetry.Attribute{Key: "unit", Value: name})
+	defer span.End()
+
 	w.mu.Lock()
 	u, ok := w.units[name]
 	w.mu.Unlock()

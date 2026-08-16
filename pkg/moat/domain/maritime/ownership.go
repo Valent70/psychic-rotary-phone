@@ -18,6 +18,7 @@
 package maritime
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -25,6 +26,8 @@ import (
 	"math"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Additional EntityKinds closing the "7 not 100+" gap the audit names.
@@ -446,6 +449,10 @@ func (g *OwnershipGraph) AllOwnersInChain(targetID string, ownType OwnershipType
 // AllOwnersInChain (or DirectOwners for one-hop) to see intermediate
 // owners.
 func (g *OwnershipGraph) UltimateBeneficialOwners(targetID string, ownType OwnershipType, thresholdPercent float64, maxHops int) []UBOResult {
+	_, span := telemetry.StartSpan(context.Background(), "maritime.UltimateBeneficialOwners",
+		telemetry.Attribute{Key: "target_id", Value: targetID})
+	defer span.End()
+
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	acc := g.allOwnersInChain(targetID, ownType, maxHops)

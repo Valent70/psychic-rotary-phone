@@ -37,6 +37,7 @@
 package calibration
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -45,6 +46,7 @@ import (
 	"sync"
 
 	"veriqo/pkg/core/trustcalc"
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/trust"
 )
 
@@ -321,6 +323,10 @@ func creditWeights(sourceIDs []string, contributions map[string]float64) map[str
 //  4. computes match + Brier score, appends a hash-chained Record, and
 //     consumes (clears) the pending prediction.
 func (e *Engine) RecordGroundTruth(gt GroundTruth) (Record, error) {
+	_, span := telemetry.StartSpan(context.Background(), "calibration.RecordGroundTruth",
+		telemetry.Attribute{Key: "claim_key", Value: gt.ClaimKey}, telemetry.Attribute{Key: "source_id", Value: gt.SourceID})
+	defer span.End()
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

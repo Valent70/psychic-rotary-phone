@@ -17,10 +17,13 @@
 package pricing
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -128,6 +131,10 @@ func (d Detector) validateConfig() error {
 // make an anomaly comparison spuriously evaluate false ("not
 // anomalous") for genuinely invalid data.
 func (d Detector) Evaluate(observedPrice float64, reference []float64) (AnomalyResult, error) {
+	_, span := telemetry.StartSpan(context.Background(), "pricing.Evaluate",
+		telemetry.Attribute{Key: "observed_price", Value: fmt.Sprintf("%v", observedPrice)})
+	defer span.End()
+
 	if err := d.validateConfig(); err != nil {
 		return AnomalyResult{}, err
 	}

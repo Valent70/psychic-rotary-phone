@@ -21,12 +21,15 @@
 package ontology
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -264,6 +267,10 @@ func checkKind(k FieldKind, v string) error {
 // Accept validates and, if valid, appends an Instance to the ontology's
 // instance ledger, returning its content-addressed ID.
 func (m *Manager) Accept(in Instance) (string, error) {
+	_, span := telemetry.StartSpan(context.Background(), "ontology.Accept",
+		telemetry.Attribute{Key: "type_name", Value: in.TypeName})
+	defer span.End()
+
 	if err := m.Validate(in); err != nil {
 		return "", err
 	}

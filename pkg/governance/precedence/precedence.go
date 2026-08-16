@@ -24,11 +24,14 @@
 package precedence
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Action is the lattice's own five-value vocabulary. It is
@@ -100,6 +103,10 @@ type Verdict struct {
 // is what makes a replayed decision reproducible from an unordered set
 // of subsystem outputs rather than from an incidental slice order.
 func Combine(signals []Signal) (Verdict, error) {
+	_, span := telemetry.StartSpan(context.Background(), "precedence.Combine",
+		telemetry.Attribute{Key: "signal_count", Value: fmt.Sprintf("%d", len(signals))})
+	defer span.End()
+
 	if len(signals) == 0 {
 		return Verdict{}, ErrNoSignals
 	}

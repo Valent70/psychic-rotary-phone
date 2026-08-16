@@ -25,12 +25,15 @@
 package temporal
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -106,6 +109,9 @@ func hashOf(b []byte) string {
 // removes a prior Version — corrections are new Versions with a later
 // TxTick, preserving the full bitemporal history.
 func (e *Engine) Assert(v Version) (Record, error) {
+	_, span := telemetry.StartSpan(context.Background(), "temporal.Assert")
+	defer span.End()
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.assertLocked(v)

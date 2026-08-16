@@ -28,6 +28,7 @@
 package reliability
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -36,6 +37,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -845,6 +848,9 @@ func (a Assessment) Err() error {
 // neither healthy nor degraded.
 func Assess(modelID, modelVersion string, samples []Sample, bins int, calibratorID string,
 	drift []DriftReport, th Thresholds, minimumSample int, tick uint64) (Assessment, error) {
+	_, span := telemetry.StartSpan(context.Background(), "reliability.Assess",
+		telemetry.Attribute{Key: "model_id", Value: modelID}, telemetry.Attribute{Key: "model_version", Value: modelVersion})
+	defer span.End()
 
 	a := Assessment{ModelID: modelID, ModelVersion: modelVersion, Tick: tick,
 		SampleCount: len(samples), CalibratorID: calibratorID, MinimumSample: minimumSample}

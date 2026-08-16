@@ -17,6 +17,7 @@
 package runtime
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -24,6 +25,7 @@ import (
 
 	"veriqo/pkg/kernel/execgraph"
 	"veriqo/pkg/kernel/selfheal"
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -99,6 +101,9 @@ func (r *Runtime) Phase() Phase {
 // requirement (Discover naturally orders them for the caller if it
 // passes dependency-free components first, same as any DAG builder).
 func (r *Runtime) Boot(components ...Component) error {
+	_, span := telemetry.StartSpan(context.Background(), "runtime.Boot")
+	defer span.End()
+
 	r.mu.Lock()
 	r.phase = PhaseBoot
 	r.mu.Unlock()

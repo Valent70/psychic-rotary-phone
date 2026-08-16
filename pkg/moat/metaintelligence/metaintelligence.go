@@ -33,10 +33,12 @@
 package metaintelligence
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
 	"veriqo/pkg/moat/decision"
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/pkg/trust"
 )
 
@@ -126,6 +128,10 @@ type DiagnoseInput struct {
 // call Kernel.Certify themselves afterward with the same evidence used
 // for TrustAfter.
 func Diagnose(in DiagnoseInput) (RootCauseReport, error) {
+	_, span := telemetry.StartSpan(context.Background(), "metaintelligence.Diagnose",
+		telemetry.Attribute{Key: "policy", Value: in.Policy.Name})
+	defer span.End()
+
 	breakdown := decision.ExplainBreakdown(in.Policy, in.Values)
 	if len(breakdown) == 0 {
 		return RootCauseReport{}, fmt.Errorf("metaintelligence: policy %q has no factors to attribute against", in.Policy.Name)

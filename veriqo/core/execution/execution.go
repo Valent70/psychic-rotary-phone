@@ -11,6 +11,7 @@
 package execution
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"veriqo/pkg/platform/telemetry"
 	"veriqo/veriqo/core/runtime"
 )
 
@@ -230,6 +232,9 @@ func levels(steps []Step) ([][]Step, error) {
 }
 
 func (o *Orchestrator) Execute(p Pipeline, input map[string]string) (*ExecutionTrace, error) {
+	_, span := telemetry.StartSpan(context.Background(), "execution.Execute", telemetry.Attribute{Key: "pipeline", Value: p.Name})
+	defer span.End()
+
 	waves, err := levels(p.Steps)
 	if err != nil {
 		return nil, err

@@ -15,6 +15,7 @@
 package evidence
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -22,6 +23,7 @@ import (
 
 	"veriqo/pkg/core/trustcalc"
 	"veriqo/pkg/evidence/graph"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Observation is one piece of evidence about one claim from one
@@ -175,6 +177,9 @@ func (e *Engine) Ingest(o Observation) (graph.NodeID, error) {
 }
 
 func (e *Engine) Fuse(claimKey string, fusionTick uint64) (FusionResult, error) {
+	_, span := telemetry.StartSpan(context.Background(), "evidence.Fuse", telemetry.Attribute{Key: "claim_key", Value: claimKey})
+	defer span.End()
+
 	e.mu.RLock()
 	obs := append([]WeightedObservation(nil), e.observations[claimKey]...)
 	e.mu.RUnlock()

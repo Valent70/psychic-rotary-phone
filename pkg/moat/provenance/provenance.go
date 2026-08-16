@@ -33,9 +33,11 @@
 package provenance
 
 import (
+	"context"
 	"sort"
 
 	egraph "veriqo/pkg/evidence/graph"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Graph tracks declared "derives-from" edges between evidence sources
@@ -270,6 +272,9 @@ type IndependenceResult struct {
 // caller-asserted ProvenanceIndependenceRatio with one the engine
 // itself derives from the declared graph.
 func (p *Graph) ComputeIndependence(sourceIDs []string) (IndependenceResult, error) {
+	_, span := telemetry.StartSpan(context.Background(), "provenance.ComputeIndependence")
+	defer span.End()
+
 	uniq := dedupeSorted(sourceIDs)
 	if len(uniq) <= 1 {
 		return IndependenceResult{Ratio: 1.0}, nil

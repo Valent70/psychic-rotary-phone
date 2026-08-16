@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var ErrClosed = errors.New("flowcontrol: window closed")
@@ -32,6 +34,9 @@ func NewWindow(maxEntries int, maxBytes int64) *Window {
 // Acquire blocks until capacity for `entries`/`bytes` is available, ctx is
 // done, or the window is closed.
 func (w *Window) Acquire(ctx context.Context, entries int, bytes int64) error {
+	ctx, span := telemetry.StartSpan(ctx, "flowcontrol.Acquire")
+	defer span.End()
+
 	done := make(chan struct{})
 	var ctxErr error
 	go func() {

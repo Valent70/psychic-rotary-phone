@@ -13,10 +13,13 @@
 package resource
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -82,6 +85,11 @@ func grantKey(holder string, k Kind) string { return holder + "|" + string(k) }
 // the prior grant (releasing it first), so callers can resize a
 // reservation without a manual Release+Reserve pair.
 func (m *Manager) Reserve(holder string, k Kind, amount uint64, priority int) error {
+	_, span := telemetry.StartSpan(context.Background(), "resource.Reserve",
+		telemetry.Attribute{Key: "holder", Value: holder},
+		telemetry.Attribute{Key: "kind", Value: string(k)})
+	defer span.End()
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if amount == 0 {

@@ -28,6 +28,7 @@
 package distributed
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -35,6 +36,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -192,6 +195,10 @@ func (r *Registry) nextIndex() uint64 {
 // Place assigns engineID to the least-loaded healthy node (deterministic:
 // fewest current placements, ties broken by lowest node ID).
 func (r *Registry) Place(engineID string) (string, error) {
+	_, span := telemetry.StartSpan(context.Background(), "distributed.Place",
+		telemetry.Attribute{Key: "engine_id", Value: engineID})
+	defer span.End()
+
 	target, err := r.pickTargetNode()
 	if err != nil {
 		return "", err

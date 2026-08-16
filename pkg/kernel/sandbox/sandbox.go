@@ -19,6 +19,7 @@
 package sandbox
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -28,6 +29,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -260,6 +263,11 @@ func (s *Sandbox) Start(tick uint64) {
 
 // Evaluate decides one request.
 func (s *Sandbox) Evaluate(r Request) Verdict {
+	_, span := telemetry.StartSpan(context.Background(), "sandbox.Evaluate",
+		telemetry.Attribute{Key: "kind", Value: string(r.Kind)},
+		telemetry.Attribute{Key: "target", Value: r.Target})
+	defer span.End()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v := s.decideLocked(r)

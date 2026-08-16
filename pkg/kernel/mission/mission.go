@@ -13,12 +13,14 @@
 package mission
 
 import (
+	"context"
 	"sort"
 
 	"veriqo/pkg/kernel/execgraph"
 	"veriqo/pkg/kernel/resource"
 	"veriqo/pkg/kernel/runtime"
 	"veriqo/pkg/kernel/selfheal"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // GlobalState is the whole-system snapshot the critique's first bullet
@@ -62,6 +64,9 @@ func New(rt *runtime.Runtime, resources *resource.Manager) *Controller {
 
 // GlobalState returns the whole-system snapshot.
 func (c *Controller) GlobalState() GlobalState {
+	_, span := telemetry.StartSpan(context.Background(), "mission.GlobalState")
+	defer span.End()
+
 	health := c.rt.Monitor()
 	gs := GlobalState{Phase: c.rt.Phase(), EngineHealth: health}
 	for _, h := range health {

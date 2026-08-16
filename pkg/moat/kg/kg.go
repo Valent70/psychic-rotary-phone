@@ -5,12 +5,15 @@
 package kg
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
 	"sync"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -178,6 +181,10 @@ func (g *Graph) apply(actorID string, op OpType, n *Node, e *Edge) (Mutation, er
 }
 
 func (g *Graph) Apply(actorID string, op OpType, n *Node, e *Edge) (Mutation, error) {
+	_, span := telemetry.StartSpan(context.Background(), "kg.Apply",
+		telemetry.Attribute{Key: "actor_id", Value: actorID}, telemetry.Attribute{Key: "op", Value: fmt.Sprintf("%v", op)})
+	defer span.End()
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.apply(actorID, op, n, e)

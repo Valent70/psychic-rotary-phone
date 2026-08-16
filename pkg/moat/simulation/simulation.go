@@ -35,6 +35,7 @@
 package simulation
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -43,6 +44,7 @@ import (
 
 	"veriqo/pkg/moat/causal"
 	"veriqo/pkg/moat/digitaltwin"
+	"veriqo/pkg/platform/telemetry"
 )
 
 // Errors.
@@ -118,6 +120,10 @@ func New(c *causal.Graph, t *digitaltwin.Registry) *Engine { return &Engine{Caus
 // SimulateDecision projects the consequence of acting on a decision
 // under the entity's current causal state.
 func (e *Engine) SimulateDecision(entity digitaltwin.EntityID, policyName string, effect causal.NodeID, p Params) (Result, error) {
+	_, span := telemetry.StartSpan(context.Background(), "simulation.SimulateDecision",
+		telemetry.Attribute{Key: "entity", Value: string(entity)}, telemetry.Attribute{Key: "policy", Value: policyName})
+	defer span.End()
+
 	if p.Horizon == 0 {
 		return Result{}, ErrNoHorizon
 	}

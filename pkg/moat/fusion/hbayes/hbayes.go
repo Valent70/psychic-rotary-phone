@@ -24,9 +24,13 @@
 package hbayes
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"math"
 	"sort"
+
+	"veriqo/pkg/platform/telemetry"
 )
 
 var (
@@ -314,6 +318,10 @@ type GroupContribution struct {
 //     strongly correlated groups (e.g. AIS + a SAR vendor fed by the same
 //     satellite operator) don't double-count either.
 func (m *Model) ComputeEventRisk(signals []Signal, intraGroupCorrelation map[ProviderGroupID]float64) (EventRiskResult, error) {
+	_, span := telemetry.StartSpan(context.Background(), "hbayes.ComputeEventRisk",
+		telemetry.Attribute{Key: "signal_count", Value: fmt.Sprintf("%d", len(signals))})
+	defer span.End()
+
 	// P3 hardening (audit §13): use the Level-2 POSTERIOR reliability —
 	// not the raw per-signal Reliability field — as each group's
 	// confirming-weight basis. This is the actual hierarchical-Bayesian
