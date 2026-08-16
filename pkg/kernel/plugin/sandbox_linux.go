@@ -50,23 +50,31 @@
 // without over- or under-restricting it is separable, higher-risk
 // work, not attempted here). None of those are fabricated as done.
 //
-// Sandbox hardening follow-up (real, bounded increment; still not
-// seccomp-BPF): SandboxRunner.ShimPath, when set, routes the plugin
-// through cmd/veriqo-plugin-shim, a tiny separate binary whose entire
-// job is one prctl(PR_SET_NO_NEW_PRIVS) call before it execs into the
-// real plugin -- closing the specific gap that a sandboxed plugin could
-// still gain privileges by exec-ing a setuid/setgid binary or one with
-// file capabilities. This is deliberately NOT the full seccomp-BPF
-// syscall-filtering or rootfs-confinement ask: NO_NEW_PRIVS cannot
-// filter or deny any syscall (it can only refuse a SUBSEQUENT exec new
-// privileges), so unlike a hand-rolled BPF program it has no failure
-// mode where a subtly wrong filter silently breaks legitimate plugin
-// operation -- the one property that made this specific increment safe
-// to add without the correctness-testing burden a real BPF encoder
-// would need. Full seccomp-BPF syscall filtering and filesystem
-// confinement (chroot/pivot_root/user namespace) remain genuinely open,
-// for the same reasons stated above, not fabricated as closed by this
-// narrower fix.
+// Sandbox hardening follow-up, now including real seccomp-BPF:
+// SandboxRunner.ShimPath, when set, routes the plugin through
+// cmd/veriqo-plugin-shim, a tiny separate binary that applies prctl(
+// PR_SET_NO_NEW_PRIVS) before it execs into the real plugin -- closing
+// the specific gap that a sandboxed plugin could still gain privileges
+// by exec-ing a setuid/setgid binary or one with file capabilities.
+// SandboxRunner.Seccomp, when additionally set, makes the shim install
+// a real, hand-encoded classic-BPF DENYLIST seccomp filter first (see
+// cmd/veriqo-plugin-shim's own doc comment for the exact syscall list
+// and the byte-for-byte BPF program layout). Both were verified by
+// direct syscall probing before being wired in: exec-ing a small Go
+// test binary through the shim showed mount()/ptrace() return EPERM
+// under the filter (vs. their normal kernel error/success without it)
+// while getpid() and every syscall a normal plugin round trip needs
+// (open/read/write/close/exit) are completely unaffected -- the
+// concrete evidence that a DENYLIST (default ALLOW, deny a small named
+// set of real container/sandbox-escape and host-tampering primitives)
+// avoids the failure mode an ALLOWLIST would risk: getting the list
+// wrong here can only mean "not yet more restrictive than today", never
+// "silently breaks a legitimate plugin". A complete allowlist-style
+// seccomp profile and full filesystem confinement (chroot/pivot_root/
+// user namespace) remain genuinely open -- hand-authoring either
+// correctly for an arbitrary Go/native plugin binary without over- or
+// under-restricting it is real, separable, higher-risk work this round
+// still does not attempt.
 package plugin
 
 import (
@@ -107,15 +115,25 @@ type SandboxRunner struct {
 	Audit *audit.AuditStore
 	// ShimPath, when set, makes RunOnce launch the plugin binary
 	// through cmd/veriqo-plugin-shim (path to that binary) instead of
-	// directly -- the shim's own job is exactly one prctl(
-	// PR_SET_NO_NEW_PRIVS) call before it execs into the real plugin,
-	// closing the "a sandboxed plugin could still gain privileges by
-	// exec-ing a setuid/setgid binary" gap (see sandbox hardening
-	// follow-up). Nil-safe: leave empty (the default) to preserve
+	// directly -- the shim always applies prctl(PR_SET_NO_NEW_PRIVS)
+	// before it execs into the real plugin, closing the "a sandboxed
+	// plugin could still gain privileges by exec-ing a setuid/setgid
+	// binary" gap. Nil-safe: leave empty (the default) to preserve
 	// RunOnce's exact prior direct-exec behavior byte-for-byte --
 	// every caller before this field existed, and every caller that
 	// does not have the shim binary co-deployed, is unaffected.
 	ShimPath string
+	// Seccomp, when true (and ShimPath is set), additionally makes the
+	// shim install a real, hand-encoded classic-BPF DENYLIST seccomp
+	// filter before exec-ing into the plugin -- see cmd/veriqo-plugin-
+	// shim's own doc comment for exactly which syscalls it denies and
+	// why a denylist (not an allowlist) is the safe direction to get
+	// this feature's first real increment wrong in: every syscall not
+	// named defaults to ALLOW, so a gap in the list can only mean "not
+	// yet more restrictive than today", never "silently breaks a
+	// legitimate plugin". Nil-safe: false (the default) preserves
+	// ShimPath's own NO_NEW_PRIVS-only behavior unchanged.
+	Seccomp bool
 }
 
 func NewSandboxRunner(cgroupPrefix string) *SandboxRunner {
@@ -179,7 +197,11 @@ func (s *SandboxRunner) RunOnce(ctx context.Context, holder, binary string, limi
 		// NOT perform a PATH search itself; passing a bare command name
 		// through unresolved would silently fail inside the shim.
 		resolvedBinary := cmd.Path
-		cmd = exec.CommandContext(runCtx, s.ShimPath, resolvedBinary) // #nosec G204 -- s.ShimPath is this SandboxRunner's own operator-configured field and resolvedBinary is RunOnce's own `binary` parameter, both caller-trusted, not untrusted network input
+		shimArgs := []string{resolvedBinary}
+		if s.Seccomp {
+			shimArgs = append([]string{"-seccomp"}, shimArgs...)
+		}
+		cmd = exec.CommandContext(runCtx, s.ShimPath, shimArgs...) // #nosec G204 -- s.ShimPath is this SandboxRunner's own operator-configured field and resolvedBinary is RunOnce's own `binary` parameter, both caller-trusted, not untrusted network input
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS |

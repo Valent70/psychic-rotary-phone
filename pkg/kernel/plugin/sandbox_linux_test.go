@@ -252,6 +252,32 @@ func main() {
 }
 `
 
+// seccompProbePluginSource attempts a real mount() syscall (denied by
+// the shim's -seccomp filter) and reports the resulting errno -- the
+// kernel's own ground truth for whether the filter actually took
+// effect on the process the plugin's real code runs as, not merely
+// that the shim exited without erroring.
+const seccompProbePluginSource = `package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"os"
+	"syscall"
+)
+
+type req struct{}
+type resp struct{ MountErrno int }
+
+func main() {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	_, _, errno := syscall.Syscall(syscall.SYS_MOUNT, 0, 0, 0)
+	out, _ := json.Marshal(resp{MountErrno: int(errno)})
+	os.Stdout.Write(append(out, '\n'))
+}
+`
+
 func buildShimBinary(t *testing.T) string {
 	t.Helper()
 	bin := filepath.Join(t.TempDir(), "veriqo-plugin-shim")
@@ -308,5 +334,88 @@ func TestSandboxRunner_WithoutShimPathPreservesPriorBehavior(t *testing.T) {
 	}
 	if resp.NoNewPrivs != 0 {
 		t.Fatalf("expected NoNewPrivs=0 without ShimPath set (unaffected default behavior), got %d", resp.NoNewPrivs)
+	}
+}
+
+// TestSandboxRunner_SeccompDeniesMount is the real seccomp-BPF proof:
+// with ShimPath and Seccomp both set, a sandboxed plugin's own real
+// mount() syscall attempt returns EPERM (errno 1) -- the kernel's own
+// ground truth that the hand-encoded BPF denylist filter actually
+// intercepted the syscall before it reached mount's real
+// implementation (which would instead fail with EFAULT/EINVAL on the
+// null arguments this probe passes, not EPERM -- see
+// TestSandboxRunner_SeccompAllowsNormalRoundTrip for the same plugin
+// process's ordinary syscalls proceeding unaffected).
+func TestSandboxRunner_SeccompDeniesMount(t *testing.T) {
+	runner := NewSandboxRunner("veriqo-plugin-test")
+	if !runner.Available() {
+		t.Skip("cgroup v1 not writable in this environment")
+	}
+	runner.ShimPath = buildShimBinary(t)
+	runner.Seccomp = true
+	bin := buildHelperBinary(t, "seccompprobeplugin", seccompProbePluginSource)
+
+	var resp struct{ MountErrno int }
+	if err := runner.RunOnce(context.Background(), "seccompprobe-holder", bin,
+		SandboxLimits{MemoryBytes: 64 * 1024 * 1024, CPUCores: 1, Timeout: 5 * time.Second},
+		struct{}{}, &resp); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	const ePerm = 1
+	if resp.MountErrno != ePerm {
+		t.Fatalf("expected mount() to fail with EPERM (%d) under the seccomp filter, got errno %d",
+			ePerm, resp.MountErrno)
+	}
+}
+
+// TestSandboxRunner_SeccompAllowsNormalRoundTrip is the companion
+// safety property a DENYLIST is supposed to guarantee: with Seccomp
+// active, a plugin's ORDINARY operation (the same echo-and-double
+// round trip TestSandboxRunner_NormalRoundTrip already proves without
+// seccomp) is completely unaffected -- proving the filter's default-
+// ALLOW behavior for every syscall not on the denylist, not merely
+// that ONE denied syscall was caught.
+func TestSandboxRunner_SeccompAllowsNormalRoundTrip(t *testing.T) {
+	runner := NewSandboxRunner("veriqo-plugin-test")
+	if !runner.Available() {
+		t.Skip("cgroup v1 not writable in this environment")
+	}
+	runner.ShimPath = buildShimBinary(t)
+	runner.Seccomp = true
+	bin := buildHelperBinary(t, "echopluginseccomp", echoPluginSource)
+
+	var resp struct{ Doubled int }
+	if err := runner.RunOnce(context.Background(), "echo-seccomp-holder", bin,
+		SandboxLimits{MemoryBytes: 64 * 1024 * 1024, CPUCores: 1, Timeout: 5 * time.Second},
+		struct{ Value int }{Value: 21}, &resp); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if resp.Doubled != 42 {
+		t.Fatalf("want 42, got %d -- a legitimate plugin's normal syscalls must be unaffected by the seccomp denylist", resp.Doubled)
+	}
+}
+
+// TestSandboxRunner_WithoutSeccompPreservesShimOnlyBehavior is the
+// nil-safety property: ShimPath set but Seccomp left false (every
+// caller before this field existed) still applies only NO_NEW_PRIVS,
+// with no syscall filtering -- exactly TestSandboxRunner_
+// ShimAppliesNoNewPrivs's own already-passing behavior.
+func TestSandboxRunner_WithoutSeccompPreservesShimOnlyBehavior(t *testing.T) {
+	runner := NewSandboxRunner("veriqo-plugin-test")
+	if !runner.Available() {
+		t.Skip("cgroup v1 not writable in this environment")
+	}
+	runner.ShimPath = buildShimBinary(t)
+	bin := buildHelperBinary(t, "seccompprobeplugin2", seccompProbePluginSource)
+
+	var resp struct{ MountErrno int }
+	if err := runner.RunOnce(context.Background(), "seccompprobe-holder2", bin,
+		SandboxLimits{MemoryBytes: 64 * 1024 * 1024, CPUCores: 1, Timeout: 5 * time.Second},
+		struct{}{}, &resp); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if resp.MountErrno == 1 {
+		t.Fatalf("expected mount() to NOT be EPERM-blocked without Seccomp set (got EPERM anyway, "+
+			"which would mean ShimPath alone unexpectedly filters syscalls): errno=%d", resp.MountErrno)
 	}
 }
