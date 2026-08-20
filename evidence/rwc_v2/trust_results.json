@@ -1,0 +1,62 @@
+{
+  "RWC-001-A": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-001-B": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-001-C": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-001-D": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-001-E": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "MEDIUM",
+    "risk_score": 0.5
+  },
+  "RWC-002-CARGO_IDENTITY": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-002-DOCUMENT_EXISTENCE": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-002-TRANSACTION_SEQUENCE": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-002-VESSEL_IDENTITY": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-002-VOYAGE_POSITION": {
+    "provenance_score": 1,
+    "provenance_status": "UNKNOWN",
+    "risk_label": "LOW",
+    "risk_score": 0
+  }
+}

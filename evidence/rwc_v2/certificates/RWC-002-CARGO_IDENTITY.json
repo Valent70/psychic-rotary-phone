@@ -1,0 +1,27 @@
+{
+  "IntentID": "d1e1d55a76c3912afa6c81192cb8f8a3ec52e9ae8e8bb8b185bb0a77158d55ae",
+  "EntityID": "ENT:488dcd5be7d76e9db604263170eba305",
+  "EvidencePlanHash": "004727d5160303ca469cfdedefafac6a5c182befa69da8df853efc70613bcdf2",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:488dcd5be7d76e9db604263170eba305",
+    "Predicate": "CARGO_IDENTITY",
+    "ArbitrationWinner": "PRODUCT=EN590 10ppm;QUANTITY=50,000 MT;PRICE=630-10",
+    "ArbitrationHash": "9df42eb2ddadddb9675d299eb4e5798a66fd0e24ee85baf7590ae32bac4704fe",
+    "TruthHash": "249809cefa40e1ada80ec11c2d9e76601351ce1234fcc3089bda65bba2fe3bc5",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "LOW",
+    "RiskScore": 0,
+    "DecisionAction": "MONITOR",
+    "TwinHead": "192bdca8eeee6ae5c666f6510f301390e5919412051acf723453e4efa9d3736c",
+    "DependencyRootHash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 1,
+    "Hash": "22a6bd1142ff3cb6df11090848e862e9abf07ead683b24b24cba8c6441ed9694"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "0593c1e8088b56ff21da24080a71132dfca1e847170ac2c30b8ba88f4f47e4b3",
+  "ReplayID": "22a6bd1142ff3cb6df11090848e862e9abf07ead683b24b24cba8c6441ed9694",
+  "ExecutionRootHash": "ed187ffa981e03240a4399ff7e4f900134a4ffca1630778ac742d0309b0c50a6",
+  "Hash": "4a01313ec9f3a3f202f92e24a50a88f7823dce861d9748ae418c5107cde695ed"
+}

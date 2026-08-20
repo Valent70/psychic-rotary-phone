@@ -1,0 +1,27 @@
+{
+  "IntentID": "47e227973d691f70d09a74d5c256eda2ecb0081b6facfebf1ed62f8bcb0061c8",
+  "EntityID": "ENT:488dcd5be7d76e9db604263170eba305",
+  "EvidencePlanHash": "a4bb5ad9fa898852cc5116763f966de528bf387037f34950d2c5024d814fcc46",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:488dcd5be7d76e9db604263170eba305",
+    "Predicate": "TRANSACTION_STEP",
+    "ArbitrationWinner": "CI|CICC|CIS/KYC|DTA|MATB|MT103/72 USD 390,000|PPOP|SGS/CIQ/CCIC|TTO contract|balance payment after inspection|consignee listed on documentation is seller|intermediary settlement",
+    "ArbitrationHash": "1b1f27d71ddf99aeb2c82ec302c1f5ac24cb61bb7386fea66f5e1757de636a1a",
+    "TruthHash": "82815c026c0bfa45a9cf4a21e0c69a6d21ed55f0be263cb33f116f168714b2c4",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "CRITICAL",
+    "RiskScore": 1,
+    "DecisionAction": "ESCALATE",
+    "TwinHead": "80d1e906e7c7112c3f96e57f2c4f0012074dd98a8cc9b3c534e1a585d37ef5a7",
+    "DependencyRootHash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 1,
+    "Hash": "8a25cb984436e1c7edb1fd3c30c07abb9d68bb7c7db8c8beecb2dd720e245bca"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "63fff6a24365bd090cffba869f6b50c7c1d2bb2dc141dffeb1ba784e00be5943",
+  "ReplayID": "8a25cb984436e1c7edb1fd3c30c07abb9d68bb7c7db8c8beecb2dd720e245bca",
+  "ExecutionRootHash": "5f67d949fd939b2ae2df93754cdabce906afb6eb289e4253e41f4ab128217281",
+  "Hash": "125688d7dd4604f2b5971bd615150c8158fb51370b862a3dabcb20ed48bc4a0b"
+}

@@ -1,0 +1,27 @@
+{
+  "IntentID": "b509aeed938227eef1038700ad12e45c0ede3a1cd2e334fb649b4195d5105758",
+  "EntityID": "ENT:488dcd5be7d76e9db604263170eba305",
+  "EvidencePlanHash": "6753dd663bc31a1bf44c9799c07d2ec95aee7c68917598f98cbff4338bfb5fc9",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:488dcd5be7d76e9db604263170eba305",
+    "Predicate": "VESSEL_IDENTITY",
+    "ArbitrationWinner": "IMO=8508292;MMSI=525008029;NAME=GUNUNG KEMALA / PERTAMINA 8003",
+    "ArbitrationHash": "0506541d858e75536c53088443608464c177ddb4376c0aa820930d06701ca497",
+    "TruthHash": "b5029a81f275b4c4a05fd4e2e7b71a23ade0f9a6284569a1cb30f01370c8f8df",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "LOW",
+    "RiskScore": 0,
+    "DecisionAction": "MONITOR",
+    "TwinHead": "51f52231cb63837da00b1afd2a2246657c3bbdece8283aa15a63298f7adcb0f4",
+    "DependencyRootHash": "bbc6a9519830b80f63553cd36288bd4d7365ef9dc676520bcb2d98e654a74e11",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 2,
+    "Hash": "473b909a3f7d99a1e1478d6ca79d2a6d68a35c146ed2195d261b947861d365e6"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "393121d8e8a89d35be0b43efc2ddb134d67d65c8cc6068b60771effad936f115",
+  "ReplayID": "473b909a3f7d99a1e1478d6ca79d2a6d68a35c146ed2195d261b947861d365e6",
+  "ExecutionRootHash": "c758967b680a8781bbe6834de07125275dbee4f1cebf7b26cd3e2fe75b064689",
+  "Hash": "6307406aa30ab074094209e56554c6d6f3a739bef5173d500061365b112de621"
+}

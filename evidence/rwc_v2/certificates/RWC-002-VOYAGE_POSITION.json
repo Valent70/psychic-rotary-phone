@@ -1,0 +1,27 @@
+{
+  "IntentID": "7c710765d4c01a46da4bd9ef7beb37dff49ce8ba421aa62af38593fd07eceb12",
+  "EntityID": "ENT:488dcd5be7d76e9db604263170eba305",
+  "EvidencePlanHash": "0acdba485ada9d253c0e373528f87c508ecf65f54f738a27cd93b41c4a347188",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:488dcd5be7d76e9db604263170eba305",
+    "Predicate": "VOYAGE_POSITION_CLAIM",
+    "ArbitrationWinner": "Departed Poti, Georgia; currently reported at Lome anchorage",
+    "ArbitrationHash": "08f35bef368d840fb4879bb07eea746a05104f3b7e2755bec5c7174fba51ddce",
+    "TruthHash": "d539198eaa51eeb4025992439c59dd10a4f3106b39ffc157743e112e1ff9066a",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "LOW",
+    "RiskScore": 0,
+    "DecisionAction": "MONITOR",
+    "TwinHead": "fc0cd642320094521e73b50522a52753342e84be7e71f97660a8a3e2a6c17b90",
+    "DependencyRootHash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 1,
+    "Hash": "8191afd380d1a3f3c62a1718e587ed6d373d45bca83a3dc7aa2961556cf547ce"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "b677a047d25d97f753e51458b3a0f249944be87e981c22d22b1e572c1e6b0608",
+  "ReplayID": "8191afd380d1a3f3c62a1718e587ed6d373d45bca83a3dc7aa2961556cf547ce",
+  "ExecutionRootHash": "bcb9f63a01ceaba4dd8446914518cd9e8627e32e7904ce0ec7db8692334042ef",
+  "Hash": "20b780a191913de6bd6bdc31206f3684960381baa427337f7a79e91d0d9e4d8b"
+}

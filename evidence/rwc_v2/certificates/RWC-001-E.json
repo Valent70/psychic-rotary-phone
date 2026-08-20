@@ -1,0 +1,27 @@
+{
+  "IntentID": "5b1a8e70975aa6519d01bdd4bef46f312a2a2d645d1635636db7836f97825c2e",
+  "EntityID": "ENT:9a697a813fe18013deb9a381a82cd142",
+  "EvidencePlanHash": "924ac6caa3777d8144254556041e91288a2154f76049bcb07c419f12b89cc779",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:9a697a813fe18013deb9a381a82cd142",
+    "Predicate": "VESSEL_CONSTRAINT:DOUALA",
+    "ArbitrationWinner": "{\"loa_m\":140,\"draft_m\":7.2,\"geared\":true,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "ArbitrationHash": "7376d993ec0e233f1ac837789f0b51f9a00825c5a1f03e556d3e5cf49788fa12",
+    "TruthHash": "5dd271c3f5d6058059a8893ce6b0ead6a502380d0851f3e2770b9915e76054a7",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "MEDIUM",
+    "RiskScore": 0.5,
+    "DecisionAction": "FLAG",
+    "TwinHead": "4eccb0d34e95ca9878357748552ac3cdf3a3c0e615a4b9ed1f2dfd739ca260d7",
+    "DependencyRootHash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 1,
+    "Hash": "919be4f1f99fea1554d9c825206716e09046bcc113c355c82bfbcf686b8a8f6c"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "e2355827088688e5a6743b9e8c1138458942f7934c5094ff1640c8ea445a0865",
+  "ReplayID": "919be4f1f99fea1554d9c825206716e09046bcc113c355c82bfbcf686b8a8f6c",
+  "ExecutionRootHash": "d26dacb18f71c34e2395aef3283e0df7a82e22753ff245ce36661df7bed674cd",
+  "Hash": "46f505015dd46e8ff4132a52b8e498fb0d4c5dcbea4b19473538db72ddc7148d"
+}

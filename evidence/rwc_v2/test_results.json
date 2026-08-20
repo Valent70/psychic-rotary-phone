@@ -1,0 +1,136 @@
+{
+  "full_repository_verification": {
+    "command": "./scripts/verify.sh  (go build ./...; go vet ./...; gofmt -l .; zero-dependency check; go test ./... -race -cover; go test ./pkg/consensus/... ./pkg/workflow/... ./pkg/platform/audit/... -race -count=5)",
+    "failed_packages": [],
+    "not_run_offline_blocked": [
+      "golangci-lint (requires proxy.golang.org)",
+      "govulncheck / Go vulnerability database lookups",
+      "SPIRE/SPIFFE identity attestation (needs running SPIRE server)",
+      "OPA policy bundle validation (needs opa binary)",
+      "gosec static analysis"
+    ],
+    "overall_result": "ALL CHECKS PASSED",
+    "package_count_reported": 123,
+    "rwc_package_result": "ok  \tveriqo/pkg/rwc\t1.112s\tcoverage: 77.0% of statements",
+    "steps": [
+      "1/6 go build ./... : PASS",
+      "2/6 go vet ./... : PASS",
+      "3/6 gofmt -l . : PASS (no unformatted files)",
+      "4/6 zero-external-dependency invariant : PASS",
+      "5/6 go test ./... -race -cover : PASS (all packages ok, see package_results)",
+      "6/6 race-repeat x5 on pkg/consensus/raftlite, pkg/workflow, pkg/platform/audit : PASS"
+    ]
+  },
+  "targeted_rwc_tests": {
+    "command": "go test ./pkg/rwc/... -race -v -json",
+    "failed_tests": [],
+    "package_result": {
+      "action": "pass",
+      "elapsed_sec": 1.1,
+      "package": "veriqo/pkg/rwc"
+    },
+    "tests": [
+      {
+        "elapsed_sec": 0.02,
+        "outcome": "pass",
+        "test": "TestRWC001AdversarialCandidates"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC001AdversarialCandidates/A"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC001AdversarialCandidates/B"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC001AdversarialCandidates/C"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC001AdversarialCandidates/D"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC001AdversarialCandidates/E"
+      },
+      {
+        "elapsed_sec": 0.01,
+        "outcome": "pass",
+        "test": "TestRWC001DeterministicReplay"
+      },
+      {
+        "elapsed_sec": 0.04,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected/baseline_is_control_PASS"
+      },
+      {
+        "elapsed_sec": 0.01,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected/draft_7.2_to_8.4_flips_to_FAIL"
+      },
+      {
+        "elapsed_sec": 0.01,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected/geared_true_to_false_flips_to_FAIL"
+      },
+      {
+        "elapsed_sec": 0.01,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected/irrelevant_field_bowthruster_does_not_change_verdict"
+      },
+      {
+        "elapsed_sec": 0.01,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected/port_max_LOA_150_to_149_flips_baseline_to_FAIL"
+      },
+      {
+        "elapsed_sec": 0.01,
+        "outcome": "pass",
+        "test": "TestRWC001MutationChangesDecisionOnlyWhenExpected/vessel_LOA_140_to_151_flips_to_FAIL"
+      },
+      {
+        "elapsed_sec": 0.02,
+        "outcome": "pass",
+        "test": "TestRWC002ProvenanceSeparation"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC002ProvenanceSeparation/cargo_identity_unverified_not_corroborated"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC002ProvenanceSeparation/document_existence_unverified_not_corroborated"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC002ProvenanceSeparation/transaction_sequence_redflags_detected"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC002ProvenanceSeparation/vessel_identity_corroborated_by_structural_check"
+      },
+      {
+        "elapsed_sec": 0,
+        "outcome": "pass",
+        "test": "TestRWC002ProvenanceSeparation/voyage_position_unverified_not_corroborated"
+      }
+    ],
+    "total_tests": 20
+  }
+}
