@@ -254,6 +254,27 @@ func NewPipeline() *Pipeline {
 	return &Pipeline{seenHash: make(map[string]bool)}
 }
 
+// EnforceLiveProvenance is the one provenance rule this whole blocker
+// exists to make impossible to violate: content tagged with any
+// live-family mode (see IsLive) must never have been produced by
+// anything other than a REAL-mode producer, and content with no
+// provenance tag at all is refused outright rather than defaulted to
+// anything. It is deliberately generic over "what produced this" (a
+// livedata.FeedConnector's Mode(), or any other producer's equivalent
+// REAL/SIMULATED self-report) so other packages that need to enforce
+// this exact rule against their own data-origin-tagged types call this
+// instead of reimplementing it a second time -- see
+// pkg/evidenceorigin.ValidateClaim, which wraps this directly.
+func EnforceLiveProvenance(mode DataMode, producerMode string) error {
+	if mode == "" {
+		return errors.New("missing data_mode provenance tag")
+	}
+	if IsLive(mode) && producerMode != "REAL" {
+		return fmt.Errorf("a SIMULATED-mode connector must never produce a record tagged %s", mode)
+	}
+	return nil
+}
+
 // Ingest validates, normalizes and dedups one record. connectorMode is
 // the producing connector's Mode() ("SIMULATED" or "REAL") -- passed
 // explicitly so the pipeline can refuse a fixture that lies about being
@@ -263,11 +284,8 @@ func (p *Pipeline) Ingest(rec Record, connectorMode string) (accepted bool, reas
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if rec.DataMode == "" {
-		return p.reject(rec, "missing data_mode provenance tag")
-	}
-	if IsLive(rec.DataMode) && connectorMode != "REAL" {
-		return p.reject(rec, "a SIMULATED-mode connector must never produce a record tagged "+string(rec.DataMode))
+	if err := EnforceLiveProvenance(rec.DataMode, connectorMode); err != nil {
+		return p.reject(rec, err.Error())
 	}
 	wantHash := ComputeHash(rec.Source, rec.Payload, rec.Timestamp)
 	if rec.Hash != wantHash {

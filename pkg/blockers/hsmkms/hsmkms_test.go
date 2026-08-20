@@ -109,6 +109,121 @@ func TestProductionGuardRejectsSoftwareProviders(t *testing.T) {
 	}
 }
 
+func TestRunFailureMatrixNewScenariosPass(t *testing.T) {
+	c := goodContract()
+	result, err := RunFailureMatrix(c)
+	if err != nil {
+		t.Fatalf("RunFailureMatrix: %v (measurements=%v)", err, result.Measurements)
+	}
+	if !result.Pass {
+		t.Fatalf("expected all scenarios to pass: %s", result.FailureReason)
+	}
+	if got := result.Measurements[string(FailWrongAlgorithm)]; got != "blocked=true" {
+		t.Errorf("WRONG_ALGORITHM (generic Sign-side injection): expected blocked=true, got %q", got)
+	}
+	if got := result.Measurements["WRONG_ALGORITHM_VERIFY"]; got != "blocked=true" {
+		t.Errorf("WRONG_ALGORITHM_VERIFY: expected blocked=true, got %q", got)
+	}
+	if got := result.Measurements["TAMPERED_MANIFEST"]; got != "blocked=true" {
+		t.Errorf("TAMPERED_MANIFEST: expected blocked=true, got %q", got)
+	}
+	for _, key := range []string{
+		"rotation_old_signature_still_verifies",
+		"rotation_new_signature_verifies",
+		"rotation_retired_key_cannot_sign_new",
+	} {
+		if got := result.Measurements[key]; got != "ok=true" {
+			t.Errorf("%s: expected ok=true, got %q", key, got)
+		}
+	}
+}
+
+// TestManagerVerifyFailsClosedOnWrongShapedSignature exercises
+// keys.Manager.Verify directly (outside RunFailureMatrix) to prove the
+// wrong-algorithm scenario's core claim in isolation: a signature of the
+// wrong shape/length for ed25519 is rejected with ErrBadSignature, never
+// a panic and never a false accept.
+func TestManagerVerifyFailsClosedOnWrongShapedSignature(t *testing.T) {
+	base := keys.NewMemoryKeyProvider()
+	md, err := base.Generate("wrong-shape-key", keys.PurposeEvidence, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := keys.NewManager(base)
+	if err := mgr.Register(md); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Activate("wrong-shape-key"); err != nil {
+		t.Fatal(err)
+	}
+	digest := []byte("some-digest")
+
+	for name, sig := range map[string][]byte{
+		"empty":              {},
+		"too_short":          {0x01, 0x02, 0x03},
+		"rsa2048_shaped_256": bytesN(256, 0xAB),
+		"ecdsa_der_shaped":   bytesN(72, 0x30),
+	} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("Verify panicked on a %s-shaped signature: %v", name, r)
+				}
+			}()
+			if err := mgr.Verify(context.Background(), "wrong-shape-key", digest, sig); !errors.Is(err, keys.ErrBadSignature) {
+				t.Fatalf("expected ErrBadSignature for a %s-shaped signature, got %v", name, err)
+			}
+		})
+	}
+}
+
+func bytesN(n int, b byte) []byte {
+	out := make([]byte, n)
+	for i := range out {
+		out[i] = b
+	}
+	return out
+}
+
+// TestLocalTestKeyProviderDelegatesToMemoryProvider proves
+// LocalTestKeyProvider is a thin wrapper -- not a reimplementation -- by
+// exercising Generate/Sign/PublicKey/SoftwareBacked through it exactly
+// as a caller of the embedded keys.MemoryKeyProvider would.
+func TestLocalTestKeyProviderDelegatesToMemoryProvider(t *testing.T) {
+	p := NewLocalTestKeyProvider()
+	if !p.SoftwareBacked() {
+		t.Fatal("expected LocalTestKeyProvider to report SoftwareBacked() == true")
+	}
+	md, err := p.Generate("ltkp-key", keys.PurposeEvidence, 0, 0)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	mgr := keys.NewManager(p)
+	if err := mgr.Register(md); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Activate("ltkp-key"); err != nil {
+		t.Fatal(err)
+	}
+	digest := []byte("ltkp-digest")
+	sig, err := mgr.Sign(context.Background(), "ltkp-key", digest, 1)
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	if err := mgr.Verify(context.Background(), "ltkp-key", digest, sig); err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if err := keys.RequireProductionSafe(p, "production"); !errors.Is(err, keys.ErrSoftwareProviderInProduction) {
+		t.Fatalf("expected LocalTestKeyProvider to be refused in production, got %v", err)
+	}
+}
+
+func TestRefuseRealProviderAcceptsLocalTestKeyProviderDirectly(t *testing.T) {
+	if err := RefuseRealProvider(NewLocalTestKeyProvider()); err != nil {
+		t.Fatalf("expected RefuseRealProvider to accept LocalTestKeyProvider, got %v", err)
+	}
+}
+
 func TestProductionGuardAcceptsNonSoftwareProvider(t *testing.T) {
 	var plain keys.KeyProvider = &touchTrackingProvider{}
 	// touchTrackingProvider deliberately DOES implement SoftwareBacked
