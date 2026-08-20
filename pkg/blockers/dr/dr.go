@@ -20,6 +20,7 @@ import (
 
 	"veriqo/pkg/blockers"
 	"veriqo/pkg/consensus/raftlite"
+	"veriqo/pkg/governance/reconciliation"
 )
 
 // Region identifies one participant in a DR run.
@@ -92,6 +93,7 @@ type LocalRegionProvider struct {
 	trans  *raftlite.MemTransport
 	nodes  map[string]*raftlite.Node
 	fsms   map[string]*kvFSM
+	chains map[string]*CheckpointChain
 	ids    []string
 	cancel context.CancelFunc
 	// runWG tracks every node.Run goroutine this provider started, so
@@ -130,6 +132,7 @@ func (p *LocalRegionProvider) CreateRegions(ctx context.Context, n int) ([]Regio
 	trans := raftlite.NewMemTransport()
 	nodes := make(map[string]*raftlite.Node, n)
 	fsms := make(map[string]*kvFSM, n)
+	chains := make(map[string]*CheckpointChain, n)
 	for _, id := range ids {
 		peers := make([]string, 0, n-1)
 		for _, other := range ids {
@@ -164,6 +167,7 @@ func (p *LocalRegionProvider) CreateRegions(ctx context.Context, n int) ([]Regio
 		trans.Register(node)
 		nodes[id] = node
 		fsms[id] = fsm
+		chains[id] = newCheckpointChain(id)
 	}
 
 	runCtx, cancel := context.WithCancel(context.Background())
@@ -177,7 +181,7 @@ func (p *LocalRegionProvider) CreateRegions(ctx context.Context, n int) ([]Regio
 	}
 
 	p.mu.Lock()
-	p.trans, p.nodes, p.fsms, p.ids, p.cancel = trans, nodes, fsms, ids, cancel
+	p.trans, p.nodes, p.fsms, p.chains, p.ids, p.cancel = trans, nodes, fsms, chains, ids, cancel
 	p.mu.Unlock()
 
 	if _, err := p.CurrentLeader(ctx); err != nil {
@@ -395,6 +399,10 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 	if err := provider.Write(ctx, "k1", "before-failure"); err != nil {
 		return blockers.RunResult{}, fmt.Errorf("dr: baseline write: %w", err)
 	}
+	checkpointer, hasCheckpointer := provider.(Checkpointer)
+	if hasCheckpointer {
+		checkpointer.CheckpointAll("baseline")
+	}
 
 	failedRegion, err := provider.CurrentLeader(ctx)
 	if err != nil {
@@ -415,7 +423,6 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 		}
 		return result, errors.New(result.FailureReason)
 	}
-	_ = newLeader
 
 	if err := provider.Write(ctx, "k2", "after-failure"); err != nil {
 		result.FailureReason = fmt.Sprintf("majority did not keep serving writes after region failure: %v", err)
@@ -424,7 +431,14 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 		}
 		return result, errors.New(result.FailureReason)
 	}
+	if hasCheckpointer {
+		checkpointer.CheckpointAll("after-failover-write")
+	}
 
+	// v1/ok1 is read from the NEW leader right after failover, before the
+	// old leader is healed -- this is the RPO measurement: did the
+	// pre-failure acknowledged write survive the region failure at all,
+	// on the surviving majority.
 	v1, ok1 := provider.Read(newLeader.ID, "k1")
 	rpoLost := 0
 	if !ok1 || v1 != "before-failure" {
@@ -435,21 +449,70 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 		return blockers.RunResult{}, fmt.Errorf("dr: heal: %w", err)
 	}
 	converged := waitForConvergence(failedRegion.ID, provider, "k2", "after-failure", 5*time.Second)
+	// v2/ok2 is read from the HEALED (previously-failed) region after
+	// convergence -- the failback measurement: did the post-failure write
+	// actually propagate back to the region that was down for it.
+	v2, ok2 := provider.Read(failedRegion.ID, "k2")
+	if hasCheckpointer {
+		checkpointer.CheckpointAll("post-heal-convergence")
+	}
 
-	result.Pass = rpoLost == 0 && converged
+	// Reconciliation: reuse A6's reconciliation.Engine instead of the
+	// bare "did I get the right single value back" comparison above --
+	// every committed write in this scenario becomes an accounted-for
+	// Envelope, and Pass/Fail is a real accounting invariant (input ==
+	// accepted + rejected, zero lost, zero hash mismatch), not merely a
+	// point comparison. Hash is the hash of what the scenario expects to
+	// have committed; Payload is what was actually read back, so a
+	// divergence surfaces as ReasonHashMismatch through the exact same
+	// path a real evidence-integrity failure would.
+	recEngine := reconciliation.NewEngine()
+	recEngine.Process(drWriteEnvelope("k1", "before-failure", v1, ok1, 0))
+	recEngine.Process(drWriteEnvelope("k2", "after-failure", v2, ok2, 1))
+	recReport := recEngine.Finalize(2)
+	reconciliationPass := recReport.Pass()
+
+	checkpointChainLength := 0
+	checkpointChainVerified := true
+	if hasCheckpointer {
+		for _, chain := range checkpointer.CheckpointChains() {
+			if err := chain.VerifyChain(); err != nil {
+				checkpointChainVerified = false
+			}
+			if l := chain.Len(); l > checkpointChainLength {
+				checkpointChainLength = l
+			}
+		}
+	} else {
+		// No checkpoint chain to verify at all -- honestly reported as
+		// unverified rather than a misleading "true", but this provider
+		// never had one, so it does not gate Pass below.
+		checkpointChainVerified = false
+	}
+
+	result.Pass = rpoLost == 0 && converged && reconciliationPass && (!hasCheckpointer || checkpointChainVerified)
 	result.Measurements = map[string]string{
-		"region_count":       fmt.Sprintf("%d", regionCount),
-		"failed_region":      failedRegion.ID,
-		"recovered_leader":   newLeader.ID,
-		"rto":                rto.String(),
-		"rpo_lost_writes":    fmt.Sprintf("%d", rpoLost),
-		"healed_convergence": fmt.Sprintf("%v", converged),
+		"region_count":              fmt.Sprintf("%d", regionCount),
+		"failed_region":             failedRegion.ID,
+		"recovered_leader":          newLeader.ID,
+		"rto":                       rto.String(),
+		"rpo_lost_writes":           fmt.Sprintf("%d", rpoLost),
+		"healed_convergence":        fmt.Sprintf("%v", converged),
+		"checkpoint_chain_length":   fmt.Sprintf("%d", checkpointChainLength),
+		"checkpoint_chain_verified": fmt.Sprintf("%v", checkpointChainVerified),
+		"reconciliation_pass":       fmt.Sprintf("%v", reconciliationPass),
+		"reconciliation_final_root": recReport.FinalRoot,
 	}
 	if !result.Pass {
-		if rpoLost != 0 {
+		switch {
+		case rpoLost != 0:
 			result.FailureReason = "acknowledged write lost across region failure (RPO > 0)"
-		} else {
+		case !converged:
 			result.FailureReason = "healed region did not converge with the surviving majority"
+		case !reconciliationPass:
+			result.FailureReason = fmt.Sprintf("evidence reconciliation failed acceptance invariants: %v", recReport.Verify())
+		case hasCheckpointer && !checkpointChainVerified:
+			result.FailureReason = "checkpoint hash chain failed verification (tamper detected)"
 		}
 	}
 
@@ -457,6 +520,32 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 		return result, err
 	}
 	return result, nil
+}
+
+// drWriteEnvelope converts one DR scenario write (a key this run
+// committed, the value it expects to still hold, and the value actually
+// read back) into a reconciliation.Envelope -- the adapter the audit's
+// A6 engine needs to reconcile DR writes without inventing a second
+// accounting scheme. Hash is computed from the EXPECTED value (what the
+// scenario committed), Payload is the ACTUAL value read back: Process
+// re-hashes Payload and compares against Hash, so any divergence
+// between what was written and what survived is reported as a genuine
+// ReasonHashMismatch rejection, not silently accepted. A key that was
+// not found at all reads back as "" (the empty payload never hashes to
+// a real committed value's hash), so a lost write is caught the same
+// way as a corrupted one.
+func drWriteEnvelope(key, expectedValue, actualValue string, found bool, seq uint64) reconciliation.Envelope {
+	payload := actualValue
+	if !found {
+		payload = ""
+	}
+	return reconciliation.Envelope{
+		ID:         key,
+		Sequence:   seq,
+		Hash:       reconciliation.ComputeHash(expectedValue),
+		Payload:    payload,
+		Authorized: true,
+	}
 }
 
 func waitForDifferentLeader(ctx context.Context, provider RegionProvider, oldLeaderID string) (Region, error) {

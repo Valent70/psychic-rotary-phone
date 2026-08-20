@@ -1,9 +1,12 @@
 package rwc
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/maritime"
 	"veriqo/pkg/moat/entity"
 )
 
@@ -140,4 +143,41 @@ func buildVesselPortCase(caseID string, v Vessel, p Port, portLabel string, cr C
 		Tick:         tick,
 	}
 	return req, nil
+}
+
+// BuildRWC001CaseWithAIS is BuildRWC001Case's real AIS-sourced sibling:
+// it fetches the candidate's arrival evidence from a
+// maritime.MaritimeEvidenceSource (pkg/maritime's real pluggable
+// AIS/PortCall/NOR/SOF adapter interface) and uses that fetched
+// arrival tick as the case's Tick, instead of a caller-supplied
+// literal. Everything else -- EvaluateVesselAtPort, the constraint
+// dimensions, the decision path -- is exactly BuildRWC001Case's own
+// unmodified code (buildVesselPortCase), reached the same way; only
+// where the logical Tick comes from changes.
+//
+// This is a real, additive integration point, not a decorative wrapper:
+// the fixture AIS adapter's arrival tick for candidate A/Akonikien is
+// deliberately kept equal to the tick RWC-001's own test suite already
+// hardcodes (see pkg/maritime/ais.go's aisArrivalTick doc comment) --
+// swapping BuildRWC001Case's literal tick=1 for this AIS-sourced call
+// therefore changes only where the number structurally comes from,
+// never the number itself, never the resulting Verdict (see
+// rwc001_ais_test.go, which runs both paths through the same real
+// kernel and asserts byte-identical verdicts/consistency).
+//
+// If the AIS source has no arrival record for this candidate's vessel/
+// port at all, this returns an error rather than silently falling back
+// to an arbitrary tick — an evidence adapter that cannot answer is not
+// the same thing as an adapter that answers "no arrival", and this
+// package does not paper over that difference.
+func BuildRWC001CaseWithAIS(ctx context.Context, c RWC001Candidate, ais maritime.MaritimeEvidenceSource) (CaseRequest, ConstraintResult, error) {
+	records, err := ais.Fetch(ctx, maritime.FetchRequest{VesselID: c.Vessel.Name, PortID: c.Port})
+	if err != nil {
+		return CaseRequest{}, ConstraintResult{}, fmt.Errorf("rwc: AIS fetch for %s/%s: %w", c.Vessel.Name, c.Port, err)
+	}
+	tick, ok := maritime.ArrivalTick(records)
+	if !ok {
+		return CaseRequest{}, ConstraintResult{}, fmt.Errorf("rwc: no AIS arrival evidence for %s at %s", c.Vessel.Name, c.Port)
+	}
+	return BuildRWC001Case(c, tick)
 }
