@@ -350,21 +350,21 @@ func (h *Harness) Finalize() time.Duration {
 
 // Report is the complete evidence document for one soak run.
 type Report struct {
-	RequiredHours  float64      `json:"required_hours"`
-	ActualDuration string       `json:"actual_duration"`
-	ActualMinutes  float64      `json:"actual_minutes"`
-	IsFullSoak     bool         `json:"is_full_72h_soak"`
-	Iterations     int          `json:"total_iterations"`
-	Errors         int          `json:"errors"`
+	RequiredHours  float64 `json:"required_hours"`
+	ActualDuration string  `json:"actual_duration"`
+	ActualMinutes  float64 `json:"actual_minutes"`
+	IsFullSoak     bool    `json:"is_full_72h_soak"`
+	Iterations     int     `json:"total_iterations"`
+	Errors         int     `json:"errors"`
 	// ErrorRate is Errors/Iterations over the whole run — audit item A9's
 	// "error rate" (not merely a count) requirement, at the report level.
-	ErrorRate   float64                `json:"error_rate"`
-	Restarts    int                    `json:"restarts"`
-	Samples     []Sample               `json:"samples"`
-	Checkpoints []Checkpoint           `json:"checkpoints"`
-	ChainVerified bool                 `json:"chain_verified"`
-	Leak          LeakVerdict          `json:"leak"`
-	Drift         DriftVerdict         `json:"drift"`
+	ErrorRate      float64               `json:"error_rate"`
+	Restarts       int                   `json:"restarts"`
+	Samples        []Sample              `json:"samples"`
+	Checkpoints    []Checkpoint          `json:"checkpoints"`
+	ChainVerified  bool                  `json:"chain_verified"`
+	Leak           LeakVerdict           `json:"leak"`
+	Drift          DriftVerdict          `json:"drift"`
 	Reconciliation reconciliation.Report `json:"reconciliation"`
 	Verdict        string                `json:"verdict"`
 }

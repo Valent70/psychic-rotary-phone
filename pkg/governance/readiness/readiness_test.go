@@ -122,7 +122,7 @@ func TestEvaluateUnmetNamedCriterionIsPartialAndDeterministic(t *testing.T) {
 // visible in Findings (never silently dropped by the worse one).
 func TestSeverityNeverDowngrades(t *testing.T) {
 	rec := baseRecord()
-	rec.Integrity = IntegrityMismatch // BLOCKED
+	rec.Integrity = IntegrityMismatch  // BLOCKED
 	rec.Provenance = ProvenancePartial // PARTIAL
 	res := Evaluate(rec, Criteria{RequireProvenanceComplete: true}, nil)
 	if res.Verdict != VerdictBlocked {

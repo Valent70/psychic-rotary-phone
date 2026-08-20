@@ -105,7 +105,7 @@ func TestBuildBlockerEvidenceMapFindsRealArtifactsAndSharesCrossBlockerOnes(t *t
 
 	blockers := map[string]productionBlocker{
 		"multi_region_dr": {ID: "multi_region_dr", Name: "Multi-region DR"},
-		"hsm_kms":          {ID: "hsm_kms", Name: "HSM/KMS"},
+		"hsm_kms":         {ID: "hsm_kms", Name: "HSM/KMS"},
 	}
 
 	bem := buildBlockerEvidenceMap(reg, dir, blockers)

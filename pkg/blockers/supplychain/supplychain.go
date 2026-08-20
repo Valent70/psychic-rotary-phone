@@ -57,6 +57,13 @@ type Vulnerability struct {
 type VulnerabilityProvider interface {
 	Mode() string // "SIMULATED" or "REAL"
 	SourceType() string
+	// Kind classifies this source as SAST/VULNERABILITY_DATABASE/KEV/VEX
+	// (see intelligence.go's SourceKind) so a caller assembling one
+	// evidence bundle can tell these categories apart instead of
+	// conflating them. Every VulnerabilityProvider queries a
+	// vulnerability database, so both implementations in this file
+	// return SourceKindVulnDB.
+	Kind() SourceKind
 	Query(ctx context.Context, deps []Dependency) ([]Vulnerability, error)
 }
 

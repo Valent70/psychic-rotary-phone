@@ -203,7 +203,7 @@ type TruthVersion struct {
 	// above — see RegisterAuthority's doc comment for why arbitration's
 	// existing, already-tested decay/weight/lexicographic-tiebreak
 	// mechanism is left unchanged.
-	WinningAuthority        int
+	WinningAuthority       int
 	HighestAuthoritySource string
 
 	PrevHash string

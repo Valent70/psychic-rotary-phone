@@ -29,7 +29,7 @@ func TestCleanRunPassesAllInvariants(t *testing.T) {
 func TestInputEqualsAcceptedPlusRejectedAlwaysHolds(t *testing.T) {
 	e := NewEngine()
 	e.Process(mkEnv("a", 0, "p1", true))
-	e.Process(mkEnv("a", 1, "p1", true)) // duplicate ID
+	e.Process(mkEnv("a", 1, "p1", true))  // duplicate ID
 	e.Process(mkEnv("b", 2, "p2", false)) // unauthorized
 	bad := mkEnv("c", 3, "p3", true)
 	bad.Hash = "not-the-real-hash"

@@ -66,15 +66,15 @@ const (
 // Report is what this command prints — every field a real auditor would
 // want to see, not just the bare outcome word.
 type Report struct {
-	Outcome        Outcome  `json:"outcome"`
-	Reasons        []string `json:"reasons,omitempty"`
-	Subject        string   `json:"subject,omitempty"`
-	VerifiedRoot   string   `json:"verified_root,omitempty"`
-	PublicKey      string   `json:"public_key,omitempty"`
-	TrustState     string   `json:"trust_state,omitempty"`
-	BundleRootMatch *bool   `json:"bundle_root_match,omitempty"`
-	EvidenceRootMatch *bool `json:"evidence_root_match,omitempty"`
-	ArtifactResults map[string]string `json:"artifact_results,omitempty"` // name -> "match" | "mismatch" | "unreadable: <err>"
+	Outcome           Outcome           `json:"outcome"`
+	Reasons           []string          `json:"reasons,omitempty"`
+	Subject           string            `json:"subject,omitempty"`
+	VerifiedRoot      string            `json:"verified_root,omitempty"`
+	PublicKey         string            `json:"public_key,omitempty"`
+	TrustState        string            `json:"trust_state,omitempty"`
+	BundleRootMatch   *bool             `json:"bundle_root_match,omitempty"`
+	EvidenceRootMatch *bool             `json:"evidence_root_match,omitempty"`
+	ArtifactResults   map[string]string `json:"artifact_results,omitempty"` // name -> "match" | "mismatch" | "unreadable: <err>"
 }
 
 type artifactSpec struct {

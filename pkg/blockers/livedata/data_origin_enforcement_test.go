@@ -35,7 +35,7 @@ func TestDataOriginEnforcement(t *testing.T) {
 		{"synthetic_promoted_to_live_LIVE", ModeLive, "SIMULATED", false},
 		{"synthetic_promoted_to_live_LICENSED", ModeLiveLicensed, "SIMULATED", false},
 		{"synthetic_promoted_to_live_CUSTOMER_OWNED", ModeLiveCustomerOwned, "SIMULATED", false},
-		{"replay_promoted_to_live", ModeReplay, "SIMULATED", true}, // REPLAY itself is not a live claim, so it's accepted as REPLAY -- the actual violation this scenario tests is the NEXT case
+		{"replay_promoted_to_live", ModeReplay, "SIMULATED", true},                          // REPLAY itself is not a live claim, so it's accepted as REPLAY -- the actual violation this scenario tests is the NEXT case
 		{"derived_benchmark_promoted_to_live", ModeRealDerivedBenchmark, "SIMULATED", true}, // same: REAL_DERIVED_BENCHMARK is not itself a live claim
 		{"valid_live_source", ModeLiveLicensed, "REAL", true},
 	}

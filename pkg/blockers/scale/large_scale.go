@@ -52,7 +52,7 @@ func buildNodeIdentities(nodes []Node, releaseVersion, sourceHash, environmentHa
 			// derivation — see HTTPNodeProvider's own doc comment on being
 			// infra-agnostic.
 			Region: "sim-region", AZ: "sim-az-" + fmt.Sprint(i%3),
-			ImageDigest: "sha256:unset-no-real-image-in-this-provider",
+			ImageDigest:    "sha256:unset-no-real-image-in-this-provider",
 			ReleaseVersion: releaseVersion, SourceHash: sourceHash, EnvironmentHash: environmentHash,
 			LaunchTick: launchTick,
 		}
@@ -132,17 +132,17 @@ func RunLargeScaleQualification(ctx context.Context, contract *blockers.Contract
 	result := blockers.RunResult{
 		BlockerID: contract.ID, Mode: provider.Mode(), Pass: report.Pass(),
 		Measurements: map[string]string{
-			"node_count":         fmt.Sprintf("%d", nodeCount),
-			"envelope_count":     fmt.Sprintf("%d", envelopeCount),
-			"seed":               fmt.Sprintf("%d", seed),
-			"data_origin":        string(report.DataOrigin),
-			"elapsed":            elapsed.String(),
-			"throughput_per_s":   fmt.Sprintf("%.2f", report.ThroughputPerSec),
-			"input_count":        fmt.Sprintf("%d", recon.InputCount),
-			"accepted_count":     fmt.Sprintf("%d", recon.AcceptedCount),
-			"lost_count":         fmt.Sprintf("%d", recon.LostCount),
-			"duplicate_count":    fmt.Sprintf("%d", recon.DuplicateCount),
-			"final_root":         recon.FinalRoot,
+			"node_count":       fmt.Sprintf("%d", nodeCount),
+			"envelope_count":   fmt.Sprintf("%d", envelopeCount),
+			"seed":             fmt.Sprintf("%d", seed),
+			"data_origin":      string(report.DataOrigin),
+			"elapsed":          elapsed.String(),
+			"throughput_per_s": fmt.Sprintf("%.2f", report.ThroughputPerSec),
+			"input_count":      fmt.Sprintf("%d", recon.InputCount),
+			"accepted_count":   fmt.Sprintf("%d", recon.AcceptedCount),
+			"lost_count":       fmt.Sprintf("%d", recon.LostCount),
+			"duplicate_count":  fmt.Sprintf("%d", recon.DuplicateCount),
+			"final_root":       recon.FinalRoot,
 		},
 	}
 	if !report.Pass() {

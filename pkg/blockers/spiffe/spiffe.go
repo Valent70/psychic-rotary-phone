@@ -21,8 +21,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
@@ -37,8 +39,17 @@ import (
 type SVID struct {
 	SpiffeID string
 	Cert     *x509.Certificate
-	Serial   string
-	NotAfter time.Time
+	// PrivateKey is the ECDSA key matching Cert's public key. Populated
+	// by TestIdentityProvider.IssueWithTTL (and therefore FetchSVID/
+	// RefreshSVID) so a caller can present this SVID as a real
+	// crypto/tls.Certificate -- e.g. plugging a minted identity into an
+	// actual mTLS connection -- not just validate it in isolation via
+	// ValidateSVID. Nil for an SVID built around a bare peer certificate
+	// with no known private key (e.g. the one ValidatePeer constructs
+	// internally to reuse ValidateSVID's checks).
+	PrivateKey *ecdsa.PrivateKey
+	Serial     string
+	NotAfter   time.Time
 }
 
 // TrustBundle is the set of root CAs an IdentityProvider trusts.
@@ -152,7 +163,7 @@ func (p *TestIdentityProvider) IssueWithTTL(spiffeID string, ttl time.Duration) 
 		return SVID{}, err
 	}
 
-	svid := SVID{SpiffeID: spiffeID, Cert: cert, Serial: serial.String(), NotAfter: tmpl.NotAfter}
+	svid := SVID{SpiffeID: spiffeID, Cert: cert, PrivateKey: key, Serial: serial.String(), NotAfter: tmpl.NotAfter}
 	p.mu.Lock()
 	p.current[spiffeID] = svid
 	watchers := append([]chan SVID(nil), p.watchers[spiffeID]...)
@@ -217,6 +228,51 @@ func (p *TestIdentityProvider) Revoke(serial string) {
 // GetTrustBundle returns this provider's self-signed root.
 func (p *TestIdentityProvider) GetTrustBundle(ctx context.Context) (TrustBundle, error) {
 	return TrustBundle{Certs: []*x509.Certificate{p.caCert}}, nil
+}
+
+// TLSCertificate returns svid as a crypto/tls.Certificate (leaf DER
+// chained with this provider's own CA DER, plus the matching private
+// key) suitable for tls.Config.Certificates -- the bridge that lets a
+// SPIFFE-minted identity actually secure a real network connection
+// (e.g. pkg/transport/rafttcp's mTLS transport) instead of only ever
+// being validated in isolation. Requires svid.PrivateKey, which is set
+// on any SVID this provider minted itself (FetchSVID/RefreshSVID/
+// IssueWithTTL); it deliberately errors rather than silently producing
+// a keyless, unusable tls.Certificate for an SVID built around a bare
+// peer cert (e.g. via ValidatePeer).
+func (p *TestIdentityProvider) TLSCertificate(svid SVID) (tls.Certificate, error) {
+	if svid.Cert == nil {
+		return tls.Certificate{}, errors.New("spiffe: SVID has no certificate")
+	}
+	if svid.PrivateKey == nil {
+		return tls.Certificate{}, errors.New("spiffe: SVID has no private key material (not minted by this provider)")
+	}
+	return tls.Certificate{
+		Certificate: [][]byte{svid.Cert.Raw, p.caCert.Raw},
+		PrivateKey:  svid.PrivateKey,
+	}, nil
+}
+
+// CACertPEM exports this provider's self-signed root certificate as
+// PEM, the same "CERTIFICATE" block shape rafttcp.CA.SavePEM produces.
+func (p *TestIdentityProvider) CACertPEM() []byte {
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: p.caCert.Raw})
+}
+
+// CAKeyPEM exports this provider's root private key as PEM, the same
+// "EC PRIVATE KEY" block shape rafttcp.CA.SavePEM produces. Combined
+// with CACertPEM, a caller can write both to files and load them with
+// rafttcp.LoadCAPEM to obtain a *rafttcp.CA whose trust pool is this
+// exact SPIFFE trust bundle -- proving a real rafttcp mTLS connection
+// can be secured by SPIFFE-issued identity rather than rafttcp's own
+// separate CA, without rafttcp needing to import this package or know
+// anything about SPIFFE at all.
+func (p *TestIdentityProvider) CAKeyPEM() ([]byte, error) {
+	der, err := x509.MarshalECPrivateKey(p.caKey)
+	if err != nil {
+		return nil, fmt.Errorf("spiffe: marshal ca key: %w", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}), nil
 }
 
 // ValidateSVID checks svid.Cert against this provider's own trust

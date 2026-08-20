@@ -28,9 +28,9 @@ import (
 type Verdict string
 
 const (
-	VerdictReady      Verdict = "READY"
-	VerdictPartial    Verdict = "PARTIAL"
-	VerdictBlocked    Verdict = "BLOCKED"
+	VerdictReady       Verdict = "READY"
+	VerdictPartial     Verdict = "PARTIAL"
+	VerdictBlocked     Verdict = "BLOCKED"
 	VerdictNotEligible Verdict = "NOT_ELIGIBLE"
 )
 
@@ -85,10 +85,10 @@ const (
 type LegalStatus string
 
 const (
-	LegalLicensed          LegalStatus = "LICENSED"
+	LegalLicensed           LegalStatus = "LICENSED"
 	LegalCustomerAuthorized LegalStatus = "CUSTOMER_AUTHORIZED"
-	LegalUnlicensed        LegalStatus = "UNLICENSED"
-	LegalUnknown           LegalStatus = "UNKNOWN"
+	LegalUnlicensed         LegalStatus = "UNLICENSED"
+	LegalUnknown            LegalStatus = "UNKNOWN"
 )
 
 // ProvenanceCompleteness answers "does this evidence record carry its
@@ -149,22 +149,22 @@ const (
 // integrity, evidence_strength, operational_status,
 // blocker_dependencies) mapped onto typed Go fields.
 type EvidenceRecord struct {
-	SourceID   string
-	SourceType string // e.g. "AIS", "PORT_CALL", "NOR", "SOF", "CARGO", "CLAIMS", "CUSTOMER_OPERATIONAL_EVIDENCE" — free text, not a closed enum, since A3's source taxonomy is intentionally open (see docs/AUDIT_A1_A18_GAP_MAPPING.md item A3)
-	DataOrigin livedata.DataMode // reuses A2's enum directly — this package never redefines data-origin semantics
+	SourceID     string
+	SourceType   string            // e.g. "AIS", "PORT_CALL", "NOR", "SOF", "CARGO", "CLAIMS", "CUSTOMER_OPERATIONAL_EVIDENCE" — free text, not a closed enum, since A3's source taxonomy is intentionally open (see docs/AUDIT_A1_A18_GAP_MAPPING.md item A3)
+	DataOrigin   livedata.DataMode // reuses A2's enum directly — this package never redefines data-origin semantics
 	AccessStatus AccessStatus
 	LegalStatus  LegalStatus
 	// Quality is a caller-supplied qualitative input signal (e.g. from an
 	// upstream data-quality check), NOT the output of this package and
 	// NOT a substitute for the deterministic rule evaluation below.
-	Quality              EvidenceStrength
-	Provenance           ProvenanceCompleteness
-	HasTimestamp         bool
-	Tick                 uint64
-	Integrity            IntegrityStatus
-	EvidenceStrength     EvidenceStrength
-	OperationalStatus    OperationalStatus
-	BlockerDependencies  []string // blocker IDs this evidence is submitted against/required by
+	Quality             EvidenceStrength
+	Provenance          ProvenanceCompleteness
+	HasTimestamp        bool
+	Tick                uint64
+	Integrity           IntegrityStatus
+	EvidenceStrength    EvidenceStrength
+	OperationalStatus   OperationalStatus
+	BlockerDependencies []string // blocker IDs this evidence is submitted against/required by
 	// SourceTrusted is whether SourceID appears in the caller's trust
 	// registry (e.g. docs/governance/TRUSTED_EVIDENCE_PROVIDERS.json via
 	// pkg/governance/qualification.TrustRegistry) — computed by the
@@ -177,11 +177,11 @@ type EvidenceRecord struct {
 // (e.g. read from docs/governance/production-blockers.json's own
 // evidence_requirements/acceptance_criteria arrays).
 type Criteria struct {
-	RequireLegalAccess       bool
+	RequireLegalAccess        bool
 	RequireProvenanceComplete bool
-	RequireIntegrityVerified bool
-	RequireSourceTrusted     bool
-	RequireExternalEvidence  bool
+	RequireIntegrityVerified  bool
+	RequireSourceTrusted      bool
+	RequireExternalEvidence   bool
 	// Named is an explicit list of named acceptance-criterion IDs the
 	// caller asserts must each be satisfied (e.g. "zero_replay_acceptance"
 	// from a blocker contract) — checked against Satisfied.

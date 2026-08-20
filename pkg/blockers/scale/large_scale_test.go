@@ -62,12 +62,12 @@ func TestRunLargeScaleQualificationCleanRun(t *testing.T) {
 	ctx := context.Background()
 	c := &blockers.Contract{
 		ID: "scale_qualification", Name: "100-node / 1M-envelope scale qualification", Version: "v1",
-		RequiredCapabilities: []string{"node_provisioning", "workload_distribution", "evidence_integrity_check"},
-		RealWorldDependencies: []string{"100_real_nodes_or_cloud_equivalent"},
-		TestProfile:          blockers.TestProfile{FixtureMode: true, SyntheticMode: true, ProductionRequiredForVerification: true},
-		EvidenceRequirements: []string{"reconciliation_report", "node_identity_manifest"},
-		FailureConditions:    []string{"lost_evidence", "duplicate_identity_count"},
-		AcceptanceCriteria:   []string{"reconciliation_pass"},
+		RequiredCapabilities:      []string{"node_provisioning", "workload_distribution", "evidence_integrity_check"},
+		RealWorldDependencies:     []string{"100_real_nodes_or_cloud_equivalent"},
+		TestProfile:               blockers.TestProfile{FixtureMode: true, SyntheticMode: true, ProductionRequiredForVerification: true},
+		EvidenceRequirements:      []string{"reconciliation_report", "node_identity_manifest"},
+		FailureConditions:         []string{"lost_evidence", "duplicate_identity_count"},
+		AcceptanceCriteria:        []string{"reconciliation_pass"},
 		RealQualificationRequired: true,
 	}
 	c.MarkImplemented()
@@ -112,8 +112,10 @@ func TestRunLargeScaleQualificationRefusesRealMode(t *testing.T) {
 
 type fakeRealProvider struct{}
 
-func (f *fakeRealProvider) Mode() string { return "REAL" }
-func (f *fakeRealProvider) Provision(ctx context.Context, n int) ([]Node, error)        { return nil, nil }
-func (f *fakeRealProvider) Submit(ctx context.Context, node Node, rec EvidenceRecord) error { return nil }
-func (f *fakeRealProvider) Collect(ctx context.Context) ([]ProcessedRecord, error)       { return nil, nil }
-func (f *fakeRealProvider) Destroy(ctx context.Context, nodes []Node) error              { return nil }
+func (f *fakeRealProvider) Mode() string                                         { return "REAL" }
+func (f *fakeRealProvider) Provision(ctx context.Context, n int) ([]Node, error) { return nil, nil }
+func (f *fakeRealProvider) Submit(ctx context.Context, node Node, rec EvidenceRecord) error {
+	return nil
+}
+func (f *fakeRealProvider) Collect(ctx context.Context) ([]ProcessedRecord, error) { return nil, nil }
+func (f *fakeRealProvider) Destroy(ctx context.Context, nodes []Node) error        { return nil }

@@ -64,8 +64,8 @@ type Engine struct {
 	maxSeq    uint64
 	sawAnySeq bool
 
-	accepted []Envelope
-	rejected []rejectedEnvelope
+	accepted  []Envelope
+	rejected  []rejectedEnvelope
 	reordered int
 }
 
