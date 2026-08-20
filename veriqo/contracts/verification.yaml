@@ -1,0 +1,27 @@
+# VerificationContract — canonical surface for the Independent
+# Verification Framework (pkg/verification): build a tamper-evident
+# bundle from raw evidence + a claimed result, then independently
+# replay it (via the real domain replay functions already proven in
+# pkg/engine for the contradiction/fusion engines) and issue an audit
+# certificate only if the manifest AND the replay both check out.
+engine: verification
+description: "Independent Verification Framework — tamper-evident bundle manifests, deterministic replay against a registered domain, and third-party-checkable audit certificates."
+methods:
+  - name: verify
+    description: "records_json is a JSON array of {\"Kind\":..,\"Index\":..,\"Payload\":<base64>}; domain selects the independent replay function (\"contradiction\" or \"fusion\")."
+    params:
+      - name: domain
+        type: string
+      - name: subject
+        type: string
+      - name: records_json
+        type: string
+      - name: claimed_result
+        type: string
+    returns: string
+  - name: verify_certificate
+    description: "Given a previously-issued AuditCertificate as JSON, confirm (third-party, bundle-free) that it has not been altered."
+    params:
+      - name: certificate_json
+        type: string
+    returns: string

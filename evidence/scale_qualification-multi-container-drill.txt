@@ -1,0 +1,62 @@
+gate: scale_qualification (multi-container drill, real cmd/veriqo-scale-node processes)
+tool: cmd/veriqo-scale-node (new, real production binary added this round -- the "future
+      RealNodeProvider satisfying the same interface is a provider swap, not a rewrite" that
+      pkg/blockers/scale's package doc already anticipated) + pkg/blockers/scale.HTTPNodeProvider
+      (new, real production code satisfying the exact same NodeProvider interface
+      SimulatedNodeProvider does, Mode()="REAL"), driven by the new gated test
+      TestHTTPNodeProvider_RealDockerContainers in pkg/blockers/scale/http_provider_test.go.
+git_commit: (see READINESS_MANIFEST.json for the commit this evidence accompanies)
+timestamp: 2026-08-15T08:03Z
+
+Extends pkg/blockers/scale's existing SimulatedNodeProvider qualification (8 goroutines sharing
+one process's memory) with a genuinely separate multi-container run, over real HTTP, against real
+independently-running processes:
+
+  1. Compiled cmd/veriqo-scale-node locally (go1.24.7, CGO_ENABLED=0 -trimpath -ldflags="-s -w")
+     and packaged it into a FROM-scratch Docker image -- same zero-external-pull technique as the
+     rest of this round's container evidence.
+  2. Created a real Docker bridge network and started TEN separate containers on it, each mapped
+     to a distinct host port, each a genuinely independent OS process with its own real HTTP
+     server implementing exactly the wire protocol pkg/blockers/scale.NodeProvider's Submit/
+     Collect describe (bearer-token-authenticated POST /submit, GET /collect).
+  3. Ran TestHTTPNodeProvider_RealDockerContainers (gated behind VERIQO_SCALE_DOCKER_ADDRS /
+     VERIQO_SCALE_DOCKER_TOKEN, unset by default -- same pattern as VERIQO_SOAK_MINUTES for the
+     72h soak gate, so ordinary `go test ./...` runs skip it rather than fabricating a pass)
+     against the real containers: 50,000 real evidence records, real-HTTP-round-tripped through
+     pkg/blockers/scale.HTTPNodeProvider to 10 real, separate processes and back.
+  4. Result, independently checked by the SAME checkIntegrity function SimulatedNodeProvider's
+     own tests use (no separate, weaker verification path for the "real" run):
+       nodes=10 records=50000 elapsed=11.43s throughput=4372.69/s
+       submitted=50000 processed=50000 lost=0 duplicated=0
+     Zero loss, zero duplication, across real process/network boundaries -- not goroutines.
+
+What this does NOT close (honest boundary):
+  - 10 containers on one Docker bridge network on one host, not 100 nodes and not real
+    cloud/physical infrastructure -- this proves the exactly-once distribution mechanism holds
+    across real OS-process and real-network boundaries at one order of magnitude below the
+    blocker's literal "100-node" acceptance criterion, not that it holds at that scale or against
+    real datacenter network conditions (WAN latency, partial failures, packet loss)
+  - cmd/veriqo-scale-node is a new, minimal, purpose-built qualification-harness worker -- it
+    proves the distribution/integrity-checking contract over a real network, not that VERIQO's
+    actual production workload-processing path (pkg/execution.Engine et al.) itself scales to
+    100 nodes; wiring a real workload handler behind this same HTTP contract remains open,
+    scoped, follow-on work
+  - no failure/loss/duplication injection was exercised against the real containers in this
+    round (SimulatedNodeProvider's own tests already cover that logic against the fixture
+    provider; repeating it against real containers is a smaller, deferred increment)
+  - HTTPNodeProvider.Destroy is intentionally a no-op (documented in scale.go): it never owned
+    container lifecycle, matching pkg/blockers/dr's RegionProvider split between the
+    consensus/logic abstraction and infrastructure provisioning
+
+verdict: pkg/blockers/scale now has a real, permanent, tested REAL-mode NodeProvider
+  (HTTPNodeProvider) and a real worker binary it can drive (cmd/veriqo-scale-node) -- not merely
+  an interface with no implementation, as the package doc previously described. A real 10-node,
+  50,000-record, zero-loss, zero-duplication drill across genuinely separate Docker containers
+  is captured here. RunQualification's own guard rail (it refuses to run against a REAL-mode
+  provider and directs that evidence to pkg/governance/qualification instead) was respected: this
+  evidence was NOT routed through RunQualification/RecordFixtureRun, and the blocker's status is
+  NOT claimed as fully qualified -- pkg/governance/qualification's cryptographically-signed
+  external-evidence pathway, which this sandbox cannot legitimately self-certify through, remains
+  the only route to that. What remains categorically open is real infrastructure at the literal
+  100-node scale the blocker names. All binaries, images, containers, and demo state were
+  built/run from scratch space and removed after capturing this evidence.

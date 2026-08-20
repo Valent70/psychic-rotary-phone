@@ -1,0 +1,26 @@
+# ReplayContract — canonical surface for the independent-recomputation
+# functions behind the IVF pipeline (pkg/engine's ReplayContradiction /
+# ReplayFusion): recompute a result from raw evidence alone, with no
+# access to any live engine's in-memory state. VerificationAPI composes
+# these same functions inside a full manifest+certificate pipeline;
+# ReplayAPI exposes stage 5/6 (deterministic replay) standalone for
+# callers that only need the recomputation itself.
+engine: replay
+description: "Independent Replay — recompute a contradiction-arbitration or fusion result directly from a raw evidence package, with no dependency on any live engine's state."
+methods:
+  - name: contradiction
+    description: "Independently recompute a contradiction-arbitration claim from raw evidence records (JSON array, must include one contradiction.ArbitrationParams record)."
+    params:
+      - name: subject
+        type: string
+      - name: records_json
+        type: string
+    returns: string
+  - name: fusion
+    description: "Independently recompute a fusion-arbitration result from raw evidence records (JSON array, must include one fusion arbitration-params record)."
+    params:
+      - name: subject
+        type: string
+      - name: records_json
+        type: string
+    returns: string

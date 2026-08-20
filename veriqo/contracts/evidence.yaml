@@ -1,0 +1,41 @@
+# EvidenceContract — canonical surface for the Evidence Graph engine
+# (pkg/evidence/graph): provenance nodes/edges over any other engine's
+# hash-chained records (lineage/influence traversal), generator-derived
+# CLI/SDK/REST bindings like every other contract in this directory.
+engine: evidence
+description: "Evidence Graph — content-addressed provenance nodes and DERIVED_FROM/SUPPORTS/CONTRADICTS/CORRECTS edges, with lineage/influence traversal."
+methods:
+  - name: add_node
+    description: "Register (or dedupe onto) a content-addressed evidence node and return its NodeID."
+    params:
+      - name: kind
+        type: string
+      - name: payload
+        type: string
+    returns: string
+  - name: add_edge
+    description: "Record a provenance relationship between two existing nodes (relation: derived_from|supports|contradicts|corrects)."
+    params:
+      - name: from
+        type: string
+      - name: to
+        type: string
+      - name: relation
+        type: string
+    returns: string
+  - name: lineage
+    description: "Return the full ancestry of a node — everything it was derived from or corrected by, breadth-first."
+    params:
+      - name: id
+        type: string
+    returns: NodeList
+  - name: influenced
+    description: "Return everything a node influenced forward — the exact inverse traversal of lineage."
+    params:
+      - name: id
+        type: string
+    returns: NodeList
+  - name: stats
+    description: "Return the current node/edge counts."
+    params: []
+    returns: string

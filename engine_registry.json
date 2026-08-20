@@ -1,0 +1,424 @@
+{
+  "generated_from": "pkg/execution.Registry() + this run's execution_graph/replay_determinism_100x gate results",
+  "engines": [
+    {
+      "engine_id": "INTENT",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/lifecycle",
+      "dependencies": [],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "EVIDENCE_INGESTION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "INTENT"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "IDENTITY_RESOLUTION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "EVIDENCE_INGESTION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "DEPENDENCY_EVALUATION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "IDENTITY_RESOLUTION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "TRUTH_ARBITRATION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "DEPENDENCY_EVALUATION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "CONTRADICTION_ARBITRATION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "TRUTH_ARBITRATION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "CORRELATION_FUSION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "DEPENDENCY_EVALUATION",
+        "TRUTH_ARBITRATION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "TEMPORAL_BAYESIAN",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/moat/hbayes",
+      "dependencies": [
+        "CORRELATION_FUSION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "CAUSAL_REASONING",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "CORRELATION_FUSION",
+        "TEMPORAL_BAYESIAN"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "RISK",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "CAUSAL_REASONING",
+        "CONTRADICTION_ARBITRATION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "POLICY",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/moat/decision",
+      "dependencies": [
+        "RISK"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "DECISION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "POLICY"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "TRUST_STATE",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/trust/state",
+      "dependencies": [
+        "DECISION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": true,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "DIGITAL_TWIN",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/canonical",
+      "dependencies": [
+        "DECISION",
+        "CAUSAL_REASONING"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "ECONOMIC_CONSEQUENCE",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/moat/economic",
+      "dependencies": [
+        "DIGITAL_TWIN"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "EXPLANATION",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/explanation",
+      "dependencies": [
+        "DECISION",
+        "TRUST_STATE",
+        "ECONOMIC_CONSEQUENCE",
+        "DEPENDENCY_EVALUATION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "REPLAY_PACKAGE",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/replay",
+      "dependencies": [
+        "EXPLANATION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
+      "engine_id": "VERIFICATION_CERTIFICATE",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/replay",
+      "dependencies": [
+        "REPLAY_PACKAGE"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": false,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "slo": {
+    "name": "sustained_execution",
+    "min_throughput_ops_per_sec": 10,
+    "max_p50_ms": 200,
+    "max_p95_ms": 400,
+    "max_p99_ms": 800,
+    "max_error_rate": 0,
+    "max_goroutine_leak": 4,
+    "max_heap_growth_mb": 1024
+  },
+  "operations": 400,
+  "errors": 0,
+  "error_rate": 0,
+  "throughput_ops_per_sec": 68.79715428331626,
+  "p50_ms": 13.977,
+  "p95_ms": 27.413,
+  "p99_ms": 34.24,
+  "max_ms": 48.878,
+  "goroutines_before": 2,
+  "goroutines_after": 2,
+  "heap_growth_mb": 2.009796142578125,
+  "evidence_produced": 0,
+  "breaches": null,
+  "passed": true
+}

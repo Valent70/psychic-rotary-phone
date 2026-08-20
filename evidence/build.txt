@@ -1,0 +1,4 @@
+gate: build
+command: go build ./...
+exit: 0
+---

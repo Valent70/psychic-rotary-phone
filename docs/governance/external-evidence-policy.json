@@ -1,0 +1,56 @@
+{
+  "schema": "veriqo.external_evidence_policy/v1",
+  "note": "Machine-readable policy per BLOCKED_EXTERNAL gate. Loaded conceptually alongside docs/governance/TRUSTED_EVIDENCE_PROVIDERS.json and TRUSTED_EVIDENCE_REVIEWERS.json by pkg/governance/qualification's caller (cmd/veriqo-readiness). All eight gates currently require the same maximal check set; a gate is never permitted to relax provider_signature_required or release_binding_required to true->false without an explicit, reviewed policy change to this file (itself part of the source tree, so weakening it changes the source hash and is visible in every subsequent diff).",
+  "gates": {
+    "pentest": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["penetration_testing_vendor"]
+    },
+    "scale_qualification": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["benchmark_lab", "cloud_provider"],
+      "benchmark_artifact_required": true, "infrastructure_inventory_required": true
+    },
+    "multi_region_dr": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["DR_assessor", "cloud_provider"]
+    },
+    "hsm_kms": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["cloud_provider", "hsm_vendor"]
+    },
+    "live_data": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["data_provider"]
+    },
+    "soak_72h": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["internal_operations"],
+      "minimum_duration_hours": 72
+    },
+    "spire_mtls": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["internal_operations", "security_scanner"]
+    },
+    "supply_chain_scan": {
+      "provider_required": true, "reviewer_required": true,
+      "provider_signature_required": true, "reviewer_signature_required": true,
+      "release_binding_required": true, "expiry_required": true,
+      "authorized_provider_types": ["security_scanner"]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+gate: bounded_test_execution
+command: go build ./cmd/veriqo-testrunner/
+exit: 0
+---

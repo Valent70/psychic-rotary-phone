@@ -1,0 +1,49 @@
+name: docker
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build veriqo-demo image
+        run: docker build --target veriqo-demo -t veriqo-demo:ci .
+
+      - name: build veriqo-node image
+        run: docker build --target veriqo-node -t veriqo-node:ci .
+
+      - name: image digests (content-addressed, real)
+        run: |
+          echo "veriqo-demo image ID: $(docker inspect veriqo-demo:ci --format='{{.Id}}')"
+          echo "veriqo-node  image ID: $(docker inspect veriqo-node:ci  --format='{{.Id}}')"
+          docker images --no-trunc --digests veriqo-demo:ci
+          docker images --no-trunc --digests veriqo-node:ci
+
+      - name: smoke test veriqo-demo (runs the real dark-vessel workflow to completion)
+        run: |
+          docker run --rm veriqo-demo:ci -scenario dark-vessel -tick 100 | tee /tmp/demo.out
+          grep -q 'manifest_valid=true replay_valid=true -> VERIFIED' /tmp/demo.out
+          grep -q 'steps_completed=8/8' /tmp/demo.out
+
+      - name: smoke test veriqo-node (starts and stays up as a single-node raft cluster)
+        run: |
+          timeout 5 docker run --rm veriqo-node:ci -id A -peers "A=127.0.0.1:9001" -listen "127.0.0.1:9001" || test $? -eq 124
+
+      - name: "confirm zero OS packages in shipped images (FROM scratch: no shell, no package manager)"
+        run: |
+          ! docker run --rm --entrypoint /bin/sh veriqo-demo:ci -c 'echo should-not-run' 2>&1
+          ! docker run --rm --entrypoint /bin/sh veriqo-node:ci  -c 'echo should-not-run' 2>&1
+
+      - name: base-image OS package inventory (golang:1.22-alpine, build stage only -- never shipped)
+        run: |
+          docker run --rm --entrypoint sh golang:1.22-alpine -c \
+            'apk info -v 2>/dev/null || cat /lib/apk/db/installed' > /tmp/base-image-packages.txt
+          wc -l /tmp/base-image-packages.txt
+          head -20 /tmp/base-image-packages.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-provenance
+          path: |
+            /tmp/demo.out
+            /tmp/base-image-packages.txt

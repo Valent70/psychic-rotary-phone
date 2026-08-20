@@ -1,0 +1,11 @@
+gate: supply_chain_scan (partial: SAST component)
+tool: staticcheck (honnef.co/go/tools/cmd/staticcheck), latest as of 2026-08-12T23:29:20Z
+command: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+exit: 0
+git_commit: f6c064b6b0b1247143939c9baa629d9eb52c2955
+---
+go: honnef.co/go/tools@v0.7.0 requires go >= 1.25.0; switching to go1.25.12
+---
+govulncheck component: BLOCKED — vuln.go.dev returned 403 Forbidden under this environment's network policy (proxy.golang.org itself is reachable; the OSV vulnerability feed host is not allow-listed). Confirmed via: go run golang.org/x/vuln/cmd/govulncheck@latest ./... -> "fetching vulnerabilities: Get https://vuln.go.dev/index/modules.json.gz: Forbidden".
+gosec: not attempted this session (would require the same network path as staticcheck; not run to keep this artifact strictly to what was executed).
+verdict: SAST (staticcheck) genuinely PASSES with 0 findings after fixing 3 real issues it found (pkg/lifecycle unused mutex on stateful Orchestrator, pkg/chaos style S1024, pkg/transport/rafttcp always-false uint comparison SA4003). Vulnerability-DB scanning (govulncheck) remains BLOCKED_EXTERNAL: not a sandbox-wide network block, but this environment's specific policy toward vuln.go.dev. supply_chain_scan gate is therefore left BLOCKED_EXTERNAL as a whole -- CI wiring with unrestricted scanner network access is still required for full closure -- but the blocker description is now precise rather than blanket, and one of its components has real, reproducible, clean evidence.

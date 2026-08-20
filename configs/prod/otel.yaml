@@ -1,0 +1,36 @@
+# Veriqo OpenTelemetry export configuration — PRODUCTION example.
+#
+# In this sandbox, pkg/platform/telemetry.NoopTracer is the only tracer
+# ever installed (no network access to pull the real
+# go.opentelemetry.io/otel SDK — see pkg/platform/telemetry/telemetry.go
+# doc comment for the full explanation). This file documents exactly how
+# a real deployment wires OTel in, with zero call-site changes required:
+# every StartSpan() call already scattered through pkg/workflow,
+# pkg/moat/fusion, pkg/moat/causal, pkg/moat/decision,
+# pkg/moat/digitaltwin, and pkg/platform/audit starts producing real
+# spans the moment telemetry.SetGlobalTracer(otelAdapter) is called once
+# at process startup.
+
+service_name: veriqo-kernel
+service_version: "0.3.0" # bump alongside go.mod / release tags
+
+exporter:
+  type: otlp_grpc
+  endpoint: "otel-collector.veriqo.internal:4317"
+  insecure: false # mTLS terminated at the collector sidecar in prod
+
+sampling:
+  strategy: parent_based_trace_id_ratio
+  ratio: 0.10 # sample 10% of traces in steady state; raise to 1.0 during incident response
+
+resource_attributes:
+  deployment.environment: prod
+  service.namespace: veriqo
+
+# Span naming convention used across the codebase (see telemetry.go):
+#   workflow.step.<step_name>
+#   fusion.arbitrate / fusion.cluster
+#   causal.why / causal.whatif
+#   decision.decide / decision.counterfactual
+#   digitaltwin.simulate / digitaltwin.economic_impact
+#   audit.append

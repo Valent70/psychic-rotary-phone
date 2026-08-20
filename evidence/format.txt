@@ -1,0 +1,4 @@
+gate: format
+command: gofmt -l .
+exit: 0
+---

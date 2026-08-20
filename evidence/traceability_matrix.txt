@@ -1,0 +1,5 @@
+gate: traceability_matrix
+command: go run ./cmd/veriqo-requirements -check
+exit: 0
+---
+veriqo-requirements: matrix matches requirements.json

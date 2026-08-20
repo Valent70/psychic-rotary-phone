@@ -1,0 +1,6 @@
+gate: chaos
+command: go test ./test/chaos/ ./pkg/chaos/
+exit: 0
+---
+ok  	veriqo/test/chaos	(cached)
+ok  	veriqo/pkg/chaos	(cached)

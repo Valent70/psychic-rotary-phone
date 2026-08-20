@@ -1,0 +1,31 @@
+# PolicyContract — canonical surface for the centralized, OPA-style
+# action-gating engine (pkg/kernel/policy.Gate). Like TrustAPI, this
+# adapter owns one fixed, documented rule chain (ontology validity ->
+# minimum trust score -> escalation-requires-approval -> known-action
+# allow-list -> fail-closed default Deny) rather than accepting
+# arbitrary rule code over a wire boundary.
+engine: policy
+description: "Centralized Action Gate — OPA-style allow/deny/require_approval over (action, subject, trust, risk, ontology) with a hash-chained, fail-closed audit trail."
+methods:
+  - name: evaluate
+    description: "Gate one action; ontology_valid is \"true\"/\"false\". Returns ALLOW, DENY, or REQUIRE_APPROVAL."
+    params:
+      - name: action
+        type: string
+      - name: subject
+        type: string
+      - name: risk_action
+        type: string
+      - name: trust_score
+        type: float
+      - name: ontology_valid
+        type: string
+    returns: string
+  - name: ledger
+    description: "Return the full hash-chained gating decision log."
+    params: []
+    returns: PolicyLedger
+  - name: verify_chain
+    description: "Re-derive every logged decision's hash and confirm chain linkage (tamper detection)."
+    params: []
+    returns: string
