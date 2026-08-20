@@ -1,0 +1,104 @@
+{
+  "generated_from": "docs/governance/production-blockers.json (contract) cross-referenced against the real evidence/ directory at this run",
+  "blockers": {
+    "hsm_kms": {
+      "blocker_id": "hsm_kms",
+      "name": "HSM/KMS production key custody",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": null,
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "live_data": {
+      "blocker_id": "live_data",
+      "name": "Live commercial data feed integration (SWIFT/AIS/SAR/BoL)",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": null,
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "multi_region_dr": {
+      "blocker_id": "multi_region_dr",
+      "name": "Multi-region disaster recovery qualification",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": [
+        "multi_region_dr-multi-container-drill.txt"
+      ],
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "pentest": {
+      "blocker_id": "pentest",
+      "name": "Independent penetration test",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": null,
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "scale_qualification": {
+      "blocker_id": "scale_qualification",
+      "name": "100-node / 1M-evidence-record scale qualification",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": [
+        "scale_qualification-multi-container-drill.txt"
+      ],
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "soak_72h": {
+      "blocker_id": "soak_72h",
+      "name": "72-hour continuous soak test",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": null,
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "spire_mtls": {
+      "blocker_id": "spire_mtls",
+      "name": "Production SPIRE/mTLS workload identity",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": [
+        "spire_mtls-local-integration.txt",
+        "spire_mtls-multi-container-integration.txt"
+      ],
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    },
+    "supply_chain_scan": {
+      "blocker_id": "supply_chain_scan",
+      "name": "Supply-chain security scan (SAST + dependency vulnerability DB)",
+      "gate_status": "BLOCKED",
+      "satisfied": false,
+      "evidence_artifacts": [
+        "supply_chain_scan-gosec-full.txt",
+        "supply_chain_scan-gosec.txt",
+        "supply_chain_scan-staticcheck.txt"
+      ],
+      "shared_cross_blocker_artifacts": [
+        "blockers-qualification-report.json",
+        "external-qualification.json"
+      ]
+    }
+  }
+}

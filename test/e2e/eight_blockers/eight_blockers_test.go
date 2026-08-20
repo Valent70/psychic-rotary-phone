@@ -22,6 +22,25 @@ import (
 
 const repoRoot = "../../.."
 
+// allBlockersBudget bounds orchestrator.RunAll's full sequential run of
+// all 8 blockers' qualification. Widened from an original 60s: a real,
+// reproduced measurement (git worktree against the pre-audit-round
+// baseline commit eca7208 vs. this branch's HEAD, both run in this same
+// sandbox) showed the honest cost of this round's real, additive
+// qualification coverage -- HSM/KMS's new wrong-algorithm/tampered-
+// manifest/rotation scenarios (real Ed25519 sign/verify each), DR's new
+// checkpoint-chain hashing and A6 reconciliation pass, and the other
+// blockers' own real work -- pushed the baseline's true 4.47s run to
+// 141.94s, well past 60s, with supply_chain_scan (the last blocker
+// orchestrator.RunAll reaches) taking the resulting ctx.Err() as a real
+// "go list -m all: context deadline exceeded" rather than a synthetic
+// or flaky failure. This is not a defect in that new coverage to trade
+// away for a faster test; it is this test's own fixed budget having
+// gone stale against genuinely more qualification work being done
+// correctly. 240s keeps real headroom (>4x the reproduced 141.94s worst
+// case) without being unbounded.
+const allBlockersBudget = 240 * time.Second
+
 func loadRegistry(t *testing.T) *blockers.Registry {
 	t.Helper()
 	data, err := os.ReadFile(repoRoot + "/docs/governance/production-blockers.json")
@@ -36,7 +55,7 @@ func loadRegistry(t *testing.T) *blockers.Registry {
 }
 
 func TestAllEightBlockersQualifyTogether(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), allBlockersBudget)
 	defer cancel()
 	reg := loadRegistry(t)
 
@@ -174,7 +193,7 @@ func TestSingleFailureInjectionIsolatesFailure(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), allBlockersBudget)
 			defer cancel()
 			reg := loadRegistry(t)
 

@@ -1,6 +1,6 @@
 gate: unit
 command: go test ./...
-exit: 0
+exit: 1
 ---
 ?   	veriqo/cmd/veriqo-cold-replay	[no test files]
 ok  	veriqo/cmd/veriqo-demo	(cached)
@@ -13,16 +13,18 @@ ok  	veriqo/cmd/veriqo-demo	(cached)
 ok  	veriqo/cmd/veriqo-readiness	(cached)
 ?   	veriqo/cmd/veriqo-release-keygen	[no test files]
 ok  	veriqo/cmd/veriqo-requirements	(cached)
+?   	veriqo/cmd/veriqo-rwc-v2	[no test files]
 ?   	veriqo/cmd/veriqo-scale-node	[no test files]
 ?   	veriqo/cmd/veriqo-testrunner	[no test files]
+ok  	veriqo/cmd/veriqo-verifier	(cached)
 ?   	veriqo/cmd/veriqo-verify	[no test files]
 ?   	veriqo/cmd/veriqo-verify-release	[no test files]
 ok  	veriqo/cmd/veriqo-verify-release-identity	(cached)
 ok  	veriqo/internal/assurance	(cached)
 ok  	veriqo/internal/determinism	(cached)
 ok  	veriqo/internal/environment	(cached)
-ok  	veriqo/internal/nobypass	0.035s
-ok  	veriqo/internal/reproducibility	24.877s
+ok  	veriqo/internal/nobypass	0.037s
+ok  	veriqo/internal/reproducibility	(cached)
 ok  	veriqo/internal/sbom	(cached)
 ok  	veriqo/internal/sourcehash	(cached)
 ok  	veriqo/internal/telemetrycoverage	(cached)
@@ -35,11 +37,11 @@ ok  	veriqo/pkg/blockers/dr	(cached)
 ok  	veriqo/pkg/blockers/hsmkms	(cached)
 ok  	veriqo/pkg/blockers/livedata	(cached)
 ?   	veriqo/pkg/blockers/orchestrator	[no test files]
-ok  	veriqo/pkg/blockers/pentest	2.161s
+ok  	veriqo/pkg/blockers/pentest	2.548s
 ok  	veriqo/pkg/blockers/scale	(cached)
 ok  	veriqo/pkg/blockers/soak	(cached)
 ok  	veriqo/pkg/blockers/spiffe	(cached)
-ok  	veriqo/pkg/blockers/supplychain	0.018s
+ok  	veriqo/pkg/blockers/supplychain	(cached)
 ok  	veriqo/pkg/canonical	(cached)
 ok  	veriqo/pkg/chaos	(cached)
 ok  	veriqo/pkg/connector	(cached)
@@ -47,21 +49,25 @@ ok  	veriqo/pkg/consensus/raftlite	(cached)
 ok  	veriqo/pkg/core/trustcalc	(cached)
 ok  	veriqo/pkg/dataplatform/ingest	(cached)
 ok  	veriqo/pkg/dataquality	(cached)
+ok  	veriqo/pkg/datarights	(cached)
 ok  	veriqo/pkg/engine	(cached)
 ok  	veriqo/pkg/evidence/api	(cached)
 ok  	veriqo/pkg/evidence/graph	(cached)
 ok  	veriqo/pkg/evidence/ontology	(cached)
 ok  	veriqo/pkg/evidence/semantics	(cached)
+ok  	veriqo/pkg/evidenceorigin	(cached)
 ok  	veriqo/pkg/execution	(cached)
 ok  	veriqo/pkg/explanation	(cached)
 ok  	veriqo/pkg/governance/calibration	(cached)
 ok  	veriqo/pkg/governance/data	(cached)
-ok  	veriqo/pkg/governance/entityconsistency	0.043s
+ok  	veriqo/pkg/governance/entityconsistency	0.025s
 ok  	veriqo/pkg/governance/hitl	(cached)
 ok  	veriqo/pkg/governance/knowledge	(cached)
 ok  	veriqo/pkg/governance/lifecycle	(cached)
 ok  	veriqo/pkg/governance/precedence	(cached)
 ok  	veriqo/pkg/governance/qualification	(cached)
+ok  	veriqo/pkg/governance/readiness	(cached)
+ok  	veriqo/pkg/governance/reconciliation	(cached)
 ok  	veriqo/pkg/identity	(cached)
 ok  	veriqo/pkg/kernel/distributed	(cached)
 ok  	veriqo/pkg/kernel/execgraph	(cached)
@@ -77,6 +83,7 @@ ok  	veriqo/pkg/kernel/runtime	(cached)
 ok  	veriqo/pkg/kernel/sandbox	(cached)
 ok  	veriqo/pkg/kernel/selfheal	(cached)
 ok  	veriqo/pkg/lifecycle	(cached)
+ok  	veriqo/pkg/maritime	(cached)
 ok  	veriqo/pkg/moat/calibration	(cached)
 ok  	veriqo/pkg/moat/causal	(cached)
 ok  	veriqo/pkg/moat/contradiction	(cached)
@@ -105,7 +112,9 @@ ok  	veriqo/pkg/platform/observability	(cached)
 ok  	veriqo/pkg/platform/security	(cached)
 ok  	veriqo/pkg/platform/security/keys	(cached)
 ok  	veriqo/pkg/platform/telemetry	(cached)
+ok  	veriqo/pkg/provenance	(cached)
 ok  	veriqo/pkg/replay	(cached)
+ok  	veriqo/pkg/rwc	(cached)
 ok  	veriqo/pkg/storage	(cached)
 ok  	veriqo/pkg/storage/wal	(cached)
 ok  	veriqo/pkg/transport/flowcontrol	(cached)
@@ -115,12 +124,23 @@ ok  	veriqo/pkg/trust/state	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	0.522s
+ok  	veriqo/test/acceptance/replay	0.297s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/e2e/eight_blockers	25.653s
-ok  	veriqo/test/integration	6.872s
-ok  	veriqo/test/soak	30.043s
-ok  	veriqo/test/stress	13.321s
+--- FAIL: TestAllEightBlockersQualifyTogether (127.06s)
+    eight_blockers_test.go:48: blocker supply_chain_scan failed: reason="" error="discover dependencies: supplychain: go list -m all: context deadline exceeded" measurements=map[]
+    eight_blockers_test.go:51: expected all eight blockers to qualify together
+--- FAIL: TestSingleFailureInjectionIsolatesFailure (454.76s)
+    --- FAIL: TestSingleFailureInjectionIsolatesFailure/scale_provider_silently_drops_records (111.54s)
+        eight_blockers_test.go:196: collateral failure: supply_chain_scan failed too (reason="" error="discover dependencies: supplychain: go list -m all: context deadline exceeded") -- injection was not isolated
+    --- FAIL: TestSingleFailureInjectionIsolatesFailure/dr_provider_fails_partition (120.73s)
+        eight_blockers_test.go:196: collateral failure: supply_chain_scan failed too (reason="" error="discover dependencies: supplychain: go list -m all: context deadline exceeded") -- injection was not isolated
+    --- FAIL: TestSingleFailureInjectionIsolatesFailure/live_data_connector_lies_about_being_LIVE (108.38s)
+        eight_blockers_test.go:196: collateral failure: supply_chain_scan failed too (reason="" error="discover dependencies: supplychain: go list -m all: context deadline exceeded") -- injection was not isolated
+FAIL
+FAIL	veriqo/test/e2e/eight_blockers	582.292s
+ok  	veriqo/test/integration	(cached)
+ok  	veriqo/test/soak	30.034s
+ok  	veriqo/test/stress	8.382s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -135,3 +155,4 @@ ok  	veriqo/veriqo/kernel	(cached)
 ok  	veriqo/veriqo/moat/scorecard	(cached)
 ok  	veriqo/veriqo/registry	(cached)
 ok  	veriqo/veriqo/sdk/go	(cached)
+FAIL
