@@ -553,6 +553,15 @@ func main() {
 		cert = cert.WithEnvironmentIdentity(envHash)
 	}
 
+	// A17/A18 (second audit round): render the gate registry into the
+	// audit's required per-gate table shape and the blocker->evidence
+	// map, from the SAME reg every verdict below is computed from. Done
+	// here, after every check/blocked-gate loop above has already run
+	// and reg reflects each gate's final real status, and before
+	// BuildReadinessManifest so a reader sees the table before the
+	// summary that follows it.
+	writeReadinessTableAndBlockerMap(reg, *evidenceDir)
+
 	manifest := assurance.BuildReadinessManifest(reg, acc, cert)
 	if *signingKey != "" {
 		priv, keyID, err := loadSigningKey(*signingKey)

@@ -1,0 +1,7 @@
+{
+  "provider_id": "PROVIDER-EXAMPLE-AIS-001",
+  "name": "Example AIS Data Provider (fixture only, not a real company)",
+  "contract_reference": null,
+  "status": "ACCESS_PENDING",
+  "note": "Illustrative pkg/provenance.Provider fixture -- no real commercial relationship exists. contract_reference stays null until a real contracts/ file is added and referenced here."
+}

@@ -1,0 +1,6 @@
+{
+  "algorithm": "Ed25519",
+  "key_id": "testdata-test-key-001",
+  "signature": "8dba92adb3ad761cde0089ea905bcc47652f9d28d979b8003457883ec2cdcffacb64af5faa7d69f5e34ccbde3498ed2faadda433dec1f013cedc6f1b78deb305",
+  "signed_file": "test-manifest.json"
+}

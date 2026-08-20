@@ -1,0 +1,18 @@
+{
+  "data_quality_level": "LEVEL1_REPLAY",
+  "data_origin": "REPLAY",
+  "replayed_from": "rwc001-candidateA.level0.json",
+  "source_id": "testdata-fixture-ais-001",
+  "source_type": "AIS",
+  "provider_id": "SYNTHETIC_FIXTURE",
+  "license_reference": null,
+  "rights_status": "PUBLICLY_DOCUMENTED",
+  "vessel_name": "RWC-001-CANDIDATE-A",
+  "port": "AKONIKIEN",
+  "event_type": "arrival",
+  "collection_tick": 1000,
+  "received_tick": 1001,
+  "content_hash": null,
+  "canonical_hash": null,
+  "note": "Byte-identical replay of the LEVEL0 fixture in this same directory -- proves a REPLAY-tagged record is never silently reclassified as LIVE (external audit item 1's fail-closed rule)."
+}

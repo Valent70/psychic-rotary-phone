@@ -1,0 +1,17 @@
+{
+  "data_quality_level": "LEVEL0_SYNTHETIC",
+  "data_origin": "SYNTHETIC",
+  "source_id": "testdata-fixture-nor-001",
+  "source_type": "NOTICE_OF_READINESS",
+  "provider_id": "SYNTHETIC_FIXTURE",
+  "license_reference": null,
+  "rights_status": "PUBLICLY_DOCUMENTED",
+  "vessel_name": "RWC-001-CANDIDATE-A",
+  "port": "AKONIKIEN",
+  "event_type": "nor_tendered",
+  "collection_tick": 998,
+  "received_tick": 999,
+  "content_hash": null,
+  "canonical_hash": null,
+  "note": "Deliberately tendered 2 ticks before the AIS arrival fixture's collection_tick (1000) -- a real NOR is routinely tendered ahead of a vessel's own AIS-confirmed arrival, giving a truth-arbitration consumer a genuine, non-trivial multi-source timestamp disagreement to resolve, per external audit item 4's own worked example (AIS 10:02, port system 09:58, NOR 09:51, SOF 10:07)."
+}

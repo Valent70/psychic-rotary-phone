@@ -1,0 +1,18 @@
+{
+  "data_quality_level": "LEVEL0_SYNTHETIC",
+  "data_origin": "SYNTHETIC",
+  "source_id": "testdata-fixture-claim-001",
+  "source_type": "CUSTOMER_CLAIM",
+  "provider_id": "SYNTHETIC_FIXTURE",
+  "license_reference": null,
+  "rights_status": "PUBLICLY_DOCUMENTED",
+  "vessel_name": "RWC-001-CANDIDATE-A",
+  "port": "AKONIKIEN",
+  "event_type": "claimed_arrival",
+  "claimed_tick": 1000,
+  "collection_tick": 1010,
+  "received_tick": 1011,
+  "content_hash": null,
+  "canonical_hash": null,
+  "note": "A customer's own self-reported claim, lowest a-priori source authority per external audit item 5's authority table -- included so a MaritimeEvidenceSource CustomerClaimsAdapter has a genuine low-trust input to reconcile against the higher-authority AIS/NOR/SOF/port-system sources above."
+}

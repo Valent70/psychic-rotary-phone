@@ -1,0 +1,17 @@
+{
+  "data_quality_level": "LEVEL0_SYNTHETIC",
+  "data_origin": "SYNTHETIC",
+  "source_id": "testdata-fixture-sof-001",
+  "source_type": "STATEMENT_OF_FACTS",
+  "provider_id": "SYNTHETIC_FIXTURE",
+  "license_reference": null,
+  "rights_status": "PUBLICLY_DOCUMENTED",
+  "vessel_name": "RWC-001-CANDIDATE-A",
+  "port": "AKONIKIEN",
+  "event_type": "arrival_confirmed",
+  "collection_tick": 1007,
+  "received_tick": 1008,
+  "content_hash": null,
+  "canonical_hash": null,
+  "note": "Deliberately 7 ticks after the AIS fixture's collection_tick (1000) -- SOF is typically the LAST of the four sources to be finalized, matching external audit item 4's worked example ordering (AIS < NOR < port-system... SOF last)."
+}

@@ -1,0 +1,5 @@
+{
+  "content": "this manifest content is signed by the accompanying TEST-ONLY key",
+  "fixture": "testdata-security-qualification-manifest-v1",
+  "subject": "testdata/security fixture signing demonstration"
+}

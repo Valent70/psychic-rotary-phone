@@ -1,0 +1,17 @@
+{
+  "data_quality_level": "LEVEL0_SYNTHETIC",
+  "data_origin": "SYNTHETIC",
+  "source_id": "testdata-fixture-portcall-001",
+  "source_type": "PORT_CALL_SYSTEM",
+  "provider_id": "SYNTHETIC_FIXTURE",
+  "license_reference": null,
+  "rights_status": "PUBLICLY_DOCUMENTED",
+  "vessel_name": "RWC-001-CANDIDATE-A",
+  "port": "AKONIKIEN",
+  "event_type": "berth_allocation",
+  "collection_tick": 1002,
+  "received_tick": 1003,
+  "content_hash": null,
+  "canonical_hash": null,
+  "note": "Synthetic port-call-system fixture for the same RWC-001 candidate A / AKONIKIEN pairing as the AIS fixture, so the two can be cross-referenced by a truth-arbitration test (pkg/moat/contradiction) the way external audit item 4 describes."
+}

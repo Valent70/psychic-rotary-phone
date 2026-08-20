@@ -1,0 +1,52 @@
+[
+  {
+    "Envelope": {
+      "ID": "env-00000000",
+      "Sequence": 0,
+      "Hash": "d2502ddbe61911ee4692ccac293de23c3757f76b1462427484dd67b27ddabe1f",
+      "Payload": "seed=42|idx=0|entropy=13679457532755275413",
+      "Authorized": true
+    },
+    "DataOrigin": "REAL_DERIVED_BENCHMARK"
+  },
+  {
+    "Envelope": {
+      "ID": "env-00000001",
+      "Sequence": 1,
+      "Hash": "b9ebb30c5727b2d7c82f6e5ca63968757db465754b71917884281de929f50768",
+      "Payload": "seed=42|idx=1|entropy=2949826092126892291",
+      "Authorized": true
+    },
+    "DataOrigin": "REAL_DERIVED_BENCHMARK"
+  },
+  {
+    "Envelope": {
+      "ID": "env-00000002",
+      "Sequence": 2,
+      "Hash": "0a5fa15d0be2510e9a5a44df53111a8a60fa34c1b3ec2d499d4f239f349eaed4",
+      "Payload": "seed=42|idx=2|entropy=5139283748462763858",
+      "Authorized": true
+    },
+    "DataOrigin": "REAL_DERIVED_BENCHMARK"
+  },
+  {
+    "Envelope": {
+      "ID": "env-00000003",
+      "Sequence": 3,
+      "Hash": "cef197b12cff512e5d38ea14b194fb532bd471bd0f463d47009cdfd4ee21ab0e",
+      "Payload": "seed=42|idx=3|entropy=6349198060258255764",
+      "Authorized": true
+    },
+    "DataOrigin": "REAL_DERIVED_BENCHMARK"
+  },
+  {
+    "Envelope": {
+      "ID": "env-00000004",
+      "Sequence": 4,
+      "Hash": "2584b7db1ff2dd990c60ae0d4a8c9daa30bd5204ae8dcf5a4e06311f48cae207",
+      "Payload": "seed=42|idx=4|entropy=701532786141963250",
+      "Authorized": true
+    },
+    "DataOrigin": "REAL_DERIVED_BENCHMARK"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "algorithm": "Ed25519",
+  "key_id": "testdata-test-key-001",
+  "public_key": "fe485ac513c9a77512d87e4bb699ea9f29ebfb28cfad23eaf267974596f50a29",
+  "purpose": "TEST_ONLY -- generated fresh for this testdata pack, never used by any production signing path"
+}

@@ -1,0 +1,18 @@
+{
+  "record_id": "RIGHTS-EXAMPLE-AIS-001",
+  "provider_id": "PROVIDER-EXAMPLE-AIS-001",
+  "rights_status": "ACCESS_PENDING",
+  "data_rights": {
+    "receive_raw_data": false,
+    "store_raw_data": false,
+    "retain_hash": true,
+    "create_derived_data": false,
+    "customer_display": false,
+    "customer_export": false,
+    "dispute_use": false,
+    "calibration_use": false,
+    "training_use": false,
+    "audit_use": true
+  },
+  "note": "Illustrative pkg/datarights.Record fixture at the ACCESS_PENDING stage -- deliberately NOT at CONTRACT_PENDING or beyond, since this session has no real contract to legitimately advance it. Demonstrates the audit's own critical rule: a record this early in the chain grants almost no capabilities (only retain_hash and audit_use), and pkg/datarights.Advance refuses any attempt to skip straight from here to QUALIFIED."
+}

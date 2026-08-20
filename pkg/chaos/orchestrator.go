@@ -61,6 +61,26 @@ const (
 	FaultLeaderLoss      FaultKind = "LEADER_LOSS"
 	FaultMinorityIsolate FaultKind = "MINORITY_ISOLATION"
 	FaultHeal            FaultKind = "HEAL"
+	// FaultRetryStorm is external audit item A8's named scenario: a
+	// client that believes a proposal was lost (e.g. because of a
+	// preceding NETWORK_LATENCY/PACKET_LOSS fault) resubmits the SAME
+	// logical value Magnitude extra times in immediate succession. It
+	// differs from ordinary repeated Propose calls only in that the
+	// orchestrator's Run loop fires all Magnitude retries back-to-back
+	// within one tick, which is exactly the burst pattern a real retry
+	// storm produces — see Cluster.Apply and Run.
+	FaultRetryStorm FaultKind = "RETRY_STORM"
+	// FaultControllerRestart is external audit item A8's other named
+	// scenario: the cluster's current leader (this model's stand-in for
+	// a "controller" process — the one coordinating commits) crashes and
+	// restarts within the SAME fault event, with no intervening tick of
+	// downtime. This is deliberately distinct from FaultLeaderLoss
+	// (leader stays down until an explicit, later FaultHeal) and from
+	// separately-scheduled FaultNodeCrash+FaultNodeRestart (which can
+	// land ticks apart): it specifically tests a controller restart with
+	// zero observable downtime window, the case most likely to race with
+	// an in-flight commit.
+	FaultControllerRestart FaultKind = "CONTROLLER_RESTART"
 )
 
 // Fault is one scheduled event.
@@ -226,6 +246,10 @@ type Cluster struct {
 	nextIndex uint64
 	events    []string
 	pending   map[string][]string // isolated node -> undelivered values
+	// retryStorm is how many extra, immediate repeat Propose calls Run
+	// should fire for the current tick's value after a FaultRetryStorm
+	// event — set by Apply, consumed and reset to 0 by Run.
+	retryStorm int
 }
 
 // NewCluster builds the model.
@@ -354,6 +378,25 @@ func (c *Cluster) Apply(f Fault) {
 				n.isolated = false
 				n.alive = true
 				n.diskFull = false
+			}
+		}
+	case FaultRetryStorm:
+		// Recorded for Run to consume this same tick — see FaultRetryStorm's
+		// doc comment for why the burst must land within one tick to be a
+		// genuine retry storm rather than ordinary spaced-out retries.
+		c.retryStorm = f.Magnitude
+	case FaultControllerRestart:
+		for _, id := range f.Nodes {
+			if n, ok := c.nodes[id]; ok && n.leader {
+				// A real process restart forgets its in-memory leadership
+				// state — clearing `leader` here (rather than leaving it
+				// true) is what makes the post-Apply "is the leader still
+				// valid" check below correctly detect no leader and force
+				// a fresh election, even though alive flips back to true
+				// within this same event.
+				n.alive = false
+				n.leader = false
+				n.alive = true
 			}
 		}
 	}
@@ -541,12 +584,29 @@ func Run(p FaultPlan) (Report, error) {
 			c.Apply(f)
 			rep.FaultsApplied++
 		}
+		value := "v" + strconv.FormatUint(tick, 10)
 		rep.Proposals++
-		if c.Propose("v" + strconv.FormatUint(tick, 10)) {
+		if c.Propose(value) {
 			rep.Commits++
 		} else {
 			rep.Refusals++
 		}
+		// A FaultRetryStorm applied this tick fires its extra, immediate
+		// repeat proposals of the SAME value right here, before the tick
+		// advances — the burst that makes it a storm rather than ordinary
+		// spaced retries. Each repeat is a genuine Propose call subject to
+		// the same quorum/diskFull refusal logic as any other; the
+		// invariant checks below then confirm the burst caused no
+		// divergence or committed-value loss.
+		for i := 0; i < c.retryStorm; i++ {
+			rep.Proposals++
+			if c.Propose(value) {
+				rep.Commits++
+			} else {
+				rep.Refusals++
+			}
+		}
+		c.retryStorm = 0
 		rep.Violations = append(rep.Violations, c.CheckInvariants(tick)...)
 	}
 	// Full heal, then convergence must restore a single consistent view.

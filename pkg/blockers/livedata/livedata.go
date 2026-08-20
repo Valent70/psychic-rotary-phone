@@ -22,6 +22,17 @@ import (
 )
 
 // DataMode is the provenance tag every record must carry honestly.
+//
+// External audit item A2 ("Data Origin Enforcement") requires the
+// canonical 5-value enum LIVE_LICENSED / LIVE_CUSTOMER_OWNED /
+// REAL_DERIVED_BENCHMARK / REPLAY / SYNTHETIC, with SYNTHETIC and REPLAY
+// and REAL_DERIVED_BENCHMARK never silently promotable to LIVE, and
+// REAL_DERIVED_BENCHMARK never silently promotable to "an independent
+// real-world observation". ModeLive (the original 3-value enum's single
+// LIVE tag) is kept, unmodified, as a backward-compatible alias so
+// existing callers (test/e2e/eight_blockers's "lying connector" fixture)
+// keep working unchanged — IsLive treats it as equivalent to the two new,
+// more specific live variants.
 type DataMode string
 
 const (
@@ -30,10 +41,50 @@ const (
 	// ModeReplay is a previously-seen real or synthetic record fed back
 	// in, used specifically to exercise anti-replay defenses.
 	ModeReplay DataMode = "REPLAY"
-	// ModeLive is a genuine record from a live commercial feed. Only a
-	// REAL-mode connector may produce it; the pipeline enforces this.
+	// ModeRealDerivedBenchmark is real data that was resampled, seeded,
+	// or otherwise mechanically derived from a genuine observation (e.g.
+	// the A7 100-node workload generator's seeded envelopes) — real in
+	// origin, but NOT itself an independent real-world observation. See
+	// IsIndependentRealObservation.
+	ModeRealDerivedBenchmark DataMode = "REAL_DERIVED_BENCHMARK"
+	// ModeLiveLicensed is a genuine record from a live, licensed
+	// commercial feed (e.g. a paid AIS/SWIFT data contract).
+	ModeLiveLicensed DataMode = "LIVE_LICENSED"
+	// ModeLiveCustomerOwned is a genuine record supplied directly by a
+	// customer from their own operational systems (not a third-party
+	// commercial feed).
+	ModeLiveCustomerOwned DataMode = "LIVE_CUSTOMER_OWNED"
+	// ModeLive is the original, less specific "genuine live record" tag,
+	// kept only for backward compatibility with existing callers. New
+	// code should use ModeLiveLicensed or ModeLiveCustomerOwned.
 	ModeLive DataMode = "LIVE"
 )
+
+// IsLive reports whether m is any live-family tag (ModeLive,
+// ModeLiveLicensed, or ModeLiveCustomerOwned) — the set of tags that
+// assert "this record genuinely came from a real, currently-connected
+// source", as opposed to SYNTHETIC/REPLAY/REAL_DERIVED_BENCHMARK, none
+// of which may ever be treated as live (audit item A2's core rule:
+// SYNTHETIC != LIVE, REPLAY != LIVE).
+func IsLive(m DataMode) bool {
+	switch m {
+	case ModeLive, ModeLiveLicensed, ModeLiveCustomerOwned:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsIndependentRealObservation reports whether m asserts a genuinely
+// independent real-world observation — true only for the live-family
+// tags. REAL_DERIVED_BENCHMARK is real in origin but mechanically
+// derived/reseeded, so it is deliberately NOT independent (audit item
+// A2's second rule: REAL_DERIVED_BENCHMARK != INDEPENDENT_REAL_OBSERVATION)
+// — a benchmark run over 1,000,000 seeded envelopes must never be
+// reported as "1,000,000 independent real-world observations".
+func IsIndependentRealObservation(m DataMode) bool {
+	return IsLive(m)
+}
 
 // Record is one unit of data from a feed, already carrying its
 // provenance tag and a content hash computed by the connector that
@@ -215,8 +266,8 @@ func (p *Pipeline) Ingest(rec Record, connectorMode string) (accepted bool, reas
 	if rec.DataMode == "" {
 		return p.reject(rec, "missing data_mode provenance tag")
 	}
-	if rec.DataMode == ModeLive && connectorMode != "REAL" {
-		return p.reject(rec, "a SIMULATED-mode connector must never produce a record tagged LIVE")
+	if IsLive(rec.DataMode) && connectorMode != "REAL" {
+		return p.reject(rec, "a SIMULATED-mode connector must never produce a record tagged "+string(rec.DataMode))
 	}
 	wantHash := ComputeHash(rec.Source, rec.Payload, rec.Timestamp)
 	if rec.Hash != wantHash {
@@ -285,7 +336,7 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, connecto
 
 	everyAccepted := true
 	for _, rec := range pipeline.Accepted[:firstPassAccepted] {
-		if rec.DataMode == ModeLive {
+		if IsLive(rec.DataMode) {
 			everyAccepted = false
 		}
 	}

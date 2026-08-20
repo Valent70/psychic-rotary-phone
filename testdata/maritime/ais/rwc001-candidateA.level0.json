@@ -1,0 +1,17 @@
+{
+  "data_quality_level": "LEVEL0_SYNTHETIC",
+  "data_origin": "SYNTHETIC",
+  "source_id": "testdata-fixture-ais-001",
+  "source_type": "AIS",
+  "provider_id": "SYNTHETIC_FIXTURE",
+  "license_reference": null,
+  "rights_status": "PUBLICLY_DOCUMENTED",
+  "vessel_name": "RWC-001-CANDIDATE-A",
+  "port": "AKONIKIEN",
+  "event_type": "arrival",
+  "collection_tick": 1000,
+  "received_tick": 1001,
+  "content_hash": null,
+  "canonical_hash": null,
+  "note": "Synthetic AIS-shaped fixture matching pkg/rwc/rwc001.go's RWC001BaselineVessel (candidate A) and its AKONIKIEN port assignment, so this fixture is usable as real test input for the RWC-001 case rather than disconnected sample data. Ticks are logical, not wall-clock, per this repo's determinism discipline (no time.Now() in a deterministic evidence path)."
+}

@@ -9,6 +9,8 @@
 /veriqo-testrunner
 /veriqo-verify
 /veriqo-verify-release
+/veriqo-verifier
 *.key
 *.test
 *.prof
+/.claude/worktrees/

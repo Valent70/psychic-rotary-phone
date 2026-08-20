@@ -189,6 +189,23 @@ type TruthVersion struct {
 	ConflictingEdges  []ConflictEdge
 	Tick              uint64
 
+	// Reason is external audit item A5's required named output: a
+	// deterministic, human-readable explanation of WHY this value won —
+	// synthesized purely from this same TruthVersion's own fields
+	// (never a separate judgment call), so it can never disagree with
+	// the numbers it describes. See reasonForArbitration.
+	Reason string
+	// WinningAuthority and HighestAuthoritySource are audit item A5's
+	// "source authority" output: the highest fixed priority (see
+	// ArbitrationEngine.RegisterAuthority) among the winning value's
+	// supporting sources, and which source holds it. Authority is
+	// REPORTED here, not used to override the weighted-score decision
+	// above — see RegisterAuthority's doc comment for why arbitration's
+	// existing, already-tested decay/weight/lexicographic-tiebreak
+	// mechanism is left unchanged.
+	WinningAuthority        int
+	HighestAuthoritySource string
+
 	PrevHash string
 	Hash     string
 }
@@ -232,17 +249,50 @@ func containsStr(list []string, item string) bool {
 type ArbitrationEngine struct {
 	mu sync.Mutex
 
-	pending map[string][]RawObservation // Stage 1/3: observations grouped by ClaimKey
-	ledger  map[string][]TruthVersion   // per-claim TruthVersion chain
-	heads   map[string]string           // per-claim chain head hash
+	pending   map[string][]RawObservation // Stage 1/3: observations grouped by ClaimKey
+	ledger    map[string][]TruthVersion   // per-claim TruthVersion chain
+	heads     map[string]string           // per-claim chain head hash
+	authority map[string]int              // audit item A5: fixed per-source priority, see RegisterAuthority
 }
 
 func NewArbitrationEngine() *ArbitrationEngine {
 	return &ArbitrationEngine{
-		pending: make(map[string][]RawObservation),
-		ledger:  make(map[string][]TruthVersion),
-		heads:   make(map[string]string),
+		pending:   make(map[string][]RawObservation),
+		ledger:    make(map[string][]TruthVersion),
+		heads:     make(map[string]string),
+		authority: make(map[string]int),
 	}
+}
+
+// RegisterAuthority declares a fixed priority level for a source ID —
+// external audit item A5's "source authority" concept, distinct from
+// SourceReliability (a dynamic, per-observation trust scalar that
+// already exists and already decides ArbitrateClaim's winner). Authority
+// answers a different, static question: "regardless of today's decayed
+// reliability, does this source's TYPE outrank that one by policy" (e.g.
+// "a customs Port Call record always outranks an AIS ping, by
+// organizational mandate"). Unregistered sources default to authority 0.
+//
+// Deliberately NOT wired into winner selection: ArbitrateClaim's
+// weighted-score-then-lexicographic-tiebreak decision (Stage 8, already
+// extensively tested) is left untouched here — Authority is surfaced on
+// the resulting TruthVersion (WinningAuthority/HighestAuthoritySource)
+// as an auditable REPORTING signal a caller's own policy can act on
+// (e.g. "flag for human review whenever the arbitration winner's highest
+// authority is lower than the runner-up's"), rather than silently
+// overriding a mechanism this codebase's own tests already depend on.
+func (a *ArbitrationEngine) RegisterAuthority(sourceID string, level int) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.authority[sourceID] = level
+}
+
+// Authority returns sourceID's registered priority level, or 0 if never
+// registered.
+func (a *ArbitrationEngine) Authority(sourceID string) int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.authority[sourceID]
 }
 
 // Observe is Stage 1+3: record a raw observation under its claim,
@@ -337,6 +387,18 @@ func (a *ArbitrationEngine) ArbitrateClaim(claimKey string, arbitrationTick uint
 	}
 	sort.Strings(supporting)
 
+	// supporting is already lexicographically sorted (above), so ties in
+	// authority level deterministically keep the first source seen.
+	winningAuthority, highestAuthoritySource := 0, ""
+	for _, s := range supporting {
+		if highestAuthoritySource == "" {
+			highestAuthoritySource = s
+		}
+		if lvl := a.authority[s]; lvl > winningAuthority {
+			winningAuthority, highestAuthoritySource = lvl, s
+		}
+	}
+
 	// Stage 9: Truth Version — hash-chained per claim.
 	idx := uint64(len(a.ledger[claimKey])) + 1
 	prev := a.heads[claimKey]
@@ -344,8 +406,10 @@ func (a *ArbitrationEngine) ArbitrateClaim(claimKey string, arbitrationTick uint
 		Index: idx, ClaimKey: claimKey, Value: winner, Confidence: confidence,
 		RunnerUpValue: runnerUp, RunnerUpConfidence: runnerUpConf,
 		SupportingSources: supporting, ConflictingEdges: conflicts, Tick: arbitrationTick,
+		WinningAuthority: winningAuthority, HighestAuthoritySource: highestAuthoritySource,
 		PrevHash: prev,
 	}
+	tv.Reason = reasonForArbitration(tv, len(values))
 	tv.Hash = hashTruthVersion(tv)
 
 	a.ledger[claimKey] = append(a.ledger[claimKey], tv)
@@ -358,11 +422,32 @@ func hashTruthVersion(tv TruthVersion) string {
 	for _, e := range tv.ConflictingEdges {
 		edgeStr += fmt.Sprintf("%s=%s|%s=%s;", e.SourceA, e.ValueA, e.SourceB, e.ValueB)
 	}
-	b := []byte(fmt.Sprintf("idx=%d|claim=%s|value=%s|conf=%.10f|runnerup=%s|rconf=%.10f|support=%v|edges=%s|tick=%d|prev=%s|",
+	b := []byte(fmt.Sprintf("idx=%d|claim=%s|value=%s|conf=%.10f|runnerup=%s|rconf=%.10f|support=%v|edges=%s|tick=%d|prev=%s|reason=%s|authority=%d|authsrc=%s|",
 		tv.Index, tv.ClaimKey, tv.Value, tv.Confidence, tv.RunnerUpValue, tv.RunnerUpConfidence,
-		tv.SupportingSources, edgeStr, tv.Tick, tv.PrevHash))
+		tv.SupportingSources, edgeStr, tv.Tick, tv.PrevHash, tv.Reason, tv.WinningAuthority, tv.HighestAuthoritySource))
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// reasonForArbitration synthesizes TruthVersion.Reason purely from
+// fields already computed on tv plus candidateCount (how many distinct
+// values were considered) — a pure, deterministic function of the
+// arbitration's own output, so Reason can never assert something the
+// numbers don't already show.
+func reasonForArbitration(tv TruthVersion, candidateCount int) string {
+	if candidateCount <= 1 {
+		return fmt.Sprintf("single value %q asserted by %d source(s), no contradiction", tv.Value, len(tv.SupportingSources))
+	}
+	if len(tv.ConflictingEdges) == 0 {
+		return fmt.Sprintf("%d candidate values considered but no pairwise conflict detected; %q won with confidence %.4f", candidateCount, tv.Value, tv.Confidence)
+	}
+	margin := tv.Confidence - tv.RunnerUpConfidence
+	base := fmt.Sprintf("%q won over %d conflicting candidate(s) with %d supporting source(s), confidence %.4f vs runner-up %q at %.4f (margin %.4f)",
+		tv.Value, candidateCount-1, len(tv.SupportingSources), tv.Confidence, tv.RunnerUpValue, tv.RunnerUpConfidence, margin)
+	if tv.HighestAuthoritySource != "" && tv.WinningAuthority > 0 {
+		base += fmt.Sprintf("; highest-authority supporting source %q at level %d", tv.HighestAuthoritySource, tv.WinningAuthority)
+	}
+	return base
 }
 
 // TruthLedger returns the full versioned arbitration history for a
