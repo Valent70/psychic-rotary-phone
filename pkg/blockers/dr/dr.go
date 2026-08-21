@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"veriqo/pkg/blockers"
+	"veriqo/pkg/blockers/pentest"
 	"veriqo/pkg/consensus/raftlite"
 )
 
@@ -378,28 +379,45 @@ func (p *LocalRegionProvider) Destroy(ctx context.Context) error {
 
 // RunQualification fails the current leader region, measures how long
 // recovery takes (RTO) and whether any acknowledged write is lost
-// (RPO), confirms the surviving majority keeps serving writes, heals
-// the failed region, and confirms it converges. It refuses to run
-// against a REAL-mode provider -- that evidence belongs in
+// (RPO -- measured from a real, multi-key acknowledged ledger read back
+// after failover, never assumed to be 0 by configuration), confirms the
+// surviving majority keeps serving writes, heals the failed region,
+// confirms it converges, and then confirms EXPLICIT failback: a
+// brand-new write made AFTER healing also reaches the recovered
+// region, proving it rejoined as an actively participating follower
+// rather than merely having the network partition lifted. It refuses
+// to run against a REAL-mode provider -- that evidence belongs in
 // pkg/governance/qualification.
 func RunQualification(ctx context.Context, contract *blockers.Contract, provider RegionProvider, regionCount int) (blockers.RunResult, error) {
 	if provider.Mode() == "REAL" {
 		return blockers.RunResult{}, errors.New("dr: RunQualification refuses a REAL-mode provider; submit that evidence through pkg/governance/qualification instead")
 	}
 
-	if _, err := provider.CreateRegions(ctx, regionCount); err != nil {
+	regions, err := provider.CreateRegions(ctx, regionCount)
+	if err != nil {
 		return blockers.RunResult{}, fmt.Errorf("dr: create regions: %w", err)
 	}
 	defer func() { _ = provider.Destroy(ctx) }()
 
-	if err := provider.Write(ctx, "k1", "before-failure"); err != nil {
-		return blockers.RunResult{}, fmt.Errorf("dr: baseline write: %w", err)
+	// Build a real, multi-entry acknowledged ledger BEFORE the failure --
+	// every key here is only added once provider.Write itself confirms
+	// the entry genuinely committed (see LocalRegionProvider.Write's own
+	// doc comment for what that guarantee actually rests on).
+	acked := AcknowledgedLedgerState{}
+	for _, k := range []string{"k1a", "k1b", "k1c"} {
+		v := "pre-failure-" + k
+		if err := provider.Write(ctx, k, v); err != nil {
+			return blockers.RunResult{}, fmt.Errorf("dr: baseline write %s: %w", k, err)
+		}
+		acked[k] = v
 	}
 
 	failedRegion, err := provider.CurrentLeader(ctx)
 	if err != nil {
 		return blockers.RunResult{}, fmt.Errorf("dr: find leader: %w", err)
 	}
+	topologyBefore := snapshotTopology(regions, failedRegion)
+
 	rtoStart := time.Now()
 	if err := provider.Partition(failedRegion.ID); err != nil {
 		return blockers.RunResult{}, fmt.Errorf("dr: partition: %w", err)
@@ -415,7 +433,6 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 		}
 		return result, errors.New(result.FailureReason)
 	}
-	_ = newLeader
 
 	if err := provider.Write(ctx, "k2", "after-failure"); err != nil {
 		result.FailureReason = fmt.Sprintf("majority did not keep serving writes after region failure: %v", err)
@@ -425,31 +442,58 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 		return result, errors.New(result.FailureReason)
 	}
 
-	v1, ok1 := provider.Read(newLeader.ID, "k1")
-	rpoLost := 0
-	if !ok1 || v1 != "before-failure" {
-		rpoLost = 1
-	}
+	rpo := measureRPO(acked, func(key string) (string, bool) { return provider.Read(newLeader.ID, key) })
 
 	if err := provider.Heal(failedRegion.ID); err != nil {
 		return blockers.RunResult{}, fmt.Errorf("dr: heal: %w", err)
 	}
 	converged := waitForConvergence(failedRegion.ID, provider, "k2", "after-failure", 5*time.Second)
 
-	result.Pass = rpoLost == 0 && converged
+	// Explicit failback: healing the network partition is not, by
+	// itself, proof the recovered region rejoined as a WORKING follower
+	// -- a brand-new write made AFTER healing must also converge to it.
+	failbackConverged := false
+	if converged {
+		if err := provider.Write(ctx, "k3", "after-failback"); err == nil {
+			failbackConverged = waitForConvergence(failedRegion.ID, provider, "k3", "after-failback", 5*time.Second)
+		}
+	}
+
+	replication := measureReplication(failedRegion.ID, acked, provider)
+	topologyAfter := snapshotTopology(regions, newLeader)
+	release, releaseErr := pentest.Preflight(ctx, ".")
+
+	result.Pass = rpo.Zero() && converged && failbackConverged
 	result.Measurements = map[string]string{
-		"region_count":       fmt.Sprintf("%d", regionCount),
-		"failed_region":      failedRegion.ID,
-		"recovered_leader":   newLeader.ID,
-		"rto":                rto.String(),
-		"rpo_lost_writes":    fmt.Sprintf("%d", rpoLost),
-		"healed_convergence": fmt.Sprintf("%v", converged),
+		"region_count":                fmt.Sprintf("%d", regionCount),
+		"failed_region":               failedRegion.ID,
+		"recovered_leader":            newLeader.ID,
+		"rto":                         rto.String(),
+		"acknowledged_writes":         fmt.Sprintf("%d", rpo.AcknowledgedWrites),
+		"rpo_lost_writes":             fmt.Sprintf("%d", rpo.LostWrites),
+		"healed_convergence":          fmt.Sprintf("%v", converged),
+		"failback_converged":          fmt.Sprintf("%v", failbackConverged),
+		"topology_before_leader":      topologyBefore.Leader,
+		"topology_after_leader":       topologyAfter.Leader,
+		"replication_matched_entries": fmt.Sprintf("%d", replication.MatchedEntries),
+		"replication_total_entries":   fmt.Sprintf("%d", replication.TotalEntries),
+		"replication_caught_up":       fmt.Sprintf("%v", replication.CaughtUp),
+	}
+	if releaseErr == nil {
+		result.Measurements["release_commit"] = release.Commit
+		result.Measurements["release_source_hash"] = release.SourceHash
+		result.Measurements["release_identity_source"] = release.IdentitySource
+	} else {
+		result.Measurements["release_identity_error"] = releaseErr.Error()
 	}
 	if !result.Pass {
-		if rpoLost != 0 {
-			result.FailureReason = "acknowledged write lost across region failure (RPO > 0)"
-		} else {
+		switch {
+		case rpo.LostWrites != 0:
+			result.FailureReason = fmt.Sprintf("acknowledged writes lost across region failure (RPO > 0): %v", rpo.LostKeys)
+		case !converged:
 			result.FailureReason = "healed region did not converge with the surviving majority"
+		default:
+			result.FailureReason = "recovered region did not receive a NEW write made after failback (not an active follower)"
 		}
 	}
 

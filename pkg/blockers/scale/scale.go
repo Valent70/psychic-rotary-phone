@@ -18,6 +18,8 @@ package scale
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +30,7 @@ import (
 	"time"
 
 	"veriqo/pkg/blockers"
+	"veriqo/pkg/blockers/pentest"
 )
 
 // Node identifies one participant in a scale run.
@@ -37,10 +40,16 @@ type Node struct {
 
 // EvidenceRecord is one unit of work distributed to a node. In a real
 // deployment this is a genuine evidence record; here it is a synthetic
-// stand-in with the same shape.
+// stand-in with the same shape. Origin names the workload's real
+// submitter/source (PART 11's "workload origin" requirement) -- e.g.
+// which upstream feed or generator produced this record. It is
+// optional: a zero-value Origin is a real, honest "not recorded" fact
+// for callers (like RunQualification's own synthetic workload) that
+// have no meaningful origin to report, not a fabricated placeholder.
 type EvidenceRecord struct {
 	ID      string
 	Payload string
+	Origin  string
 }
 
 // NodeProvider provisions nodes, accepts evidence submissions addressed
@@ -77,10 +86,24 @@ type ProcessedRecord struct {
 // goroutines and really can race -- but it runs on one process, so it
 // qualifies the *distribution and integrity-checking logic*, not real
 // multi-machine network/failure behavior.
+//
+// Processed records accumulate directly into a mutex-protected slice
+// (collected) rather than a second channel: an earlier version funneled
+// every node's completions through one shared, fixed-capacity
+// (1<<16) `processed` channel that nothing drained until Collect ran --
+// which only happens AFTER every Submit call in a large run has
+// already returned. Past that channel's capacity, every node's send to
+// it blocked, which stalled that node's inbox drain, which in turn
+// blocked Submit once the (also fixed-capacity) inboxes filled --  a
+// real deadlock, not a slow path: reproduced directly via
+// TestScaleQualification100Nodes1MEnvelopes, which hung for the
+// entirety of its 5-minute test timeout with near-zero CPU time
+// (blocked, not working) before this fix. An unbounded slice under one
+// mutex has no such capacity ceiling to exceed.
 type SimulatedNodeProvider struct {
 	mu        sync.Mutex
 	inboxes   map[string]chan EvidenceRecord
-	processed chan ProcessedRecord
+	collected []ProcessedRecord
 	wg        sync.WaitGroup
 }
 
@@ -88,8 +111,7 @@ type SimulatedNodeProvider struct {
 // before submitting work.
 func NewSimulatedNodeProvider() *SimulatedNodeProvider {
 	return &SimulatedNodeProvider{
-		inboxes:   make(map[string]chan EvidenceRecord),
-		processed: make(chan ProcessedRecord, 1<<16),
+		inboxes: make(map[string]chan EvidenceRecord),
 	}
 }
 
@@ -122,7 +144,9 @@ func (p *SimulatedNodeProvider) runNode(ctx context.Context, id string, inbox ch
 			if !ok {
 				return
 			}
-			p.processed <- ProcessedRecord{NodeID: id, RecordID: rec.ID, ReceivedAt: time.Now()}
+			p.mu.Lock()
+			p.collected = append(p.collected, ProcessedRecord{NodeID: id, RecordID: rec.ID, ReceivedAt: time.Now()})
+			p.mu.Unlock()
 		case <-ctx.Done():
 			return
 		}
@@ -164,12 +188,10 @@ func (p *SimulatedNodeProvider) Collect(ctx context.Context) ([]ProcessedRecord,
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-	close(p.processed)
 
-	var out []ProcessedRecord
-	for rec := range p.processed {
-		out = append(out, rec)
-	}
+	p.mu.Lock()
+	out := append([]ProcessedRecord(nil), p.collected...)
+	p.mu.Unlock()
 	return out, nil
 }
 
@@ -237,7 +259,7 @@ func (p *HTTPNodeProvider) Submit(ctx context.Context, node Node, rec EvidenceRe
 	if !ok {
 		return fmt.Errorf("scale: unknown node %q", node.ID)
 	}
-	body, err := json.Marshal(EvidenceRecord{ID: rec.ID, Payload: rec.Payload})
+	body, err := json.Marshal(EvidenceRecord{ID: rec.ID, Payload: rec.Payload, Origin: rec.Origin})
 	if err != nil {
 		return err
 	}
@@ -292,6 +314,22 @@ func (p *HTTPNodeProvider) Collect(ctx context.Context) ([]ProcessedRecord, erro
 // Destroy is a no-op: this provider never owned the processes' lifecycle.
 func (p *HTTPNodeProvider) Destroy(ctx context.Context, nodes []Node) error { return nil }
 
+// DuplicatePolicy names this package's explicit, tested behavior when a
+// record is processed more than once. PolicyReject -- the only policy
+// this package currently implements -- fails the run: a duplicate
+// almost always signals a real correctness bug (a queue's at-least-once
+// redelivery the processing layer failed to deduplicate, or two nodes
+// racing to claim the same record), not a benign event to silently
+// paper over. Naming the policy explicitly, even with one member, keeps
+// "we reject duplicates" a stated design decision rather than an
+// accident of checkIntegrity's original loop structure.
+type DuplicatePolicy string
+
+// PolicyReject is this package's implemented DuplicatePolicy: any
+// record seen more times than it was submitted fails the run's
+// integrity check (see IntegrityReport.Clean and RunQualification).
+const PolicyReject DuplicatePolicy = "REJECT"
+
 // IntegrityReport is the result of comparing what was submitted against
 // what was actually processed.
 type IntegrityReport struct {
@@ -299,11 +337,42 @@ type IntegrityReport struct {
 	Processed  int
 	Lost       []string
 	Duplicated []string
+	// Unauthorized lists any NodeID processed records were attributed to
+	// that was never among the nodes this run actually provisioned --
+	// PART 11's "zero unauthorized acceptance" requirement. checkIntegrity
+	// itself never populates this (it has no registered-node list to
+	// check against); RunQualification fills it in via checkAuthorization
+	// once it has both the provisioned node set and the processed
+	// records.
+	Unauthorized []string
+	// Policy names the duplicate-handling policy Clean()'s Duplicated
+	// check enforces -- always PolicyReject today (see DuplicatePolicy's
+	// own doc comment).
+	Policy DuplicatePolicy
+	// MerkleRoot is a deterministic aggregate hash over the reconciled
+	// (RecordID, NodeID) processed-record set, sorted by RecordID so the
+	// result depends only on WHAT was processed, not the order Collect
+	// happened to return it in. Changes whenever the underlying data
+	// changes -- see merkleRoot's own doc comment.
+	MerkleRoot string
+	// InputLedgerHash is a hash-chained, append-only ledger over every
+	// record ID submitted, in submission order.
+	InputLedgerHash string
+	// OutputLedgerHash is a hash-chained, append-only ledger over every
+	// processed record actually collected, in collection order.
+	OutputLedgerHash string
 }
 
-func (r IntegrityReport) Clean() bool { return len(r.Lost) == 0 && len(r.Duplicated) == 0 }
+func (r IntegrityReport) Clean() bool {
+	return len(r.Lost) == 0 && len(r.Duplicated) == 0 && len(r.Unauthorized) == 0
+}
 
-// checkIntegrity compares submitted record IDs against processed ones.
+// checkIntegrity compares submitted record IDs against processed ones,
+// and builds the Merkle root and both hash-chained ledgers required by
+// PART 11's evidence requirements over that same submitted/processed
+// data. It does not check node authorization -- see checkAuthorization,
+// which RunQualification runs separately once it has the provisioned
+// node set.
 func checkIntegrity(submittedIDs []string, processed []ProcessedRecord) IntegrityReport {
 	want := make(map[string]int, len(submittedIDs))
 	for _, id := range submittedIDs {
@@ -313,7 +382,11 @@ func checkIntegrity(submittedIDs []string, processed []ProcessedRecord) Integrit
 	for _, p := range processed {
 		seen[p.RecordID]++
 	}
-	report := IntegrityReport{Submitted: len(submittedIDs), Processed: len(processed)}
+	report := IntegrityReport{
+		Submitted: len(submittedIDs), Processed: len(processed), Policy: PolicyReject,
+		MerkleRoot: merkleRoot(processed), InputLedgerHash: ledgerHash(submittedIDs),
+		OutputLedgerHash: ledgerHash(outputLedgerEntries(processed)),
+	}
 	for id, wantCount := range want {
 		gotCount := seen[id]
 		if gotCount == 0 {
@@ -325,12 +398,148 @@ func checkIntegrity(submittedIDs []string, processed []ProcessedRecord) Integrit
 	return report
 }
 
+// checkAuthorization scans processed against the set of node IDs
+// provider.Provision actually returned for this run -- the ONLY nodes
+// authorized to submit evidence -- and reports any processed record
+// whose NodeID is not among them. A NodeProvider that lets an
+// unregistered node's submission through (or misreports which node
+// processed a record) is caught here even though checkIntegrity's own
+// lost/duplicate accounting, which only tracks RecordID, would not
+// otherwise notice.
+func checkAuthorization(nodes []Node, processed []ProcessedRecord) []string {
+	registered := make(map[string]bool, len(nodes))
+	for _, n := range nodes {
+		registered[n.ID] = true
+	}
+	seen := make(map[string]bool)
+	var unauthorized []string
+	for _, p := range processed {
+		if !registered[p.NodeID] && !seen[p.NodeID] {
+			seen[p.NodeID] = true
+			unauthorized = append(unauthorized, p.NodeID)
+		}
+	}
+	return unauthorized
+}
+
+// merkleRoot computes a real Merkle tree root (stdlib crypto/sha256
+// only) over recs, sorted by RecordID first so the result is a pure
+// function of WHAT was processed rather than the order Collect
+// happened to return it -- which, for the goroutine-based simulated
+// provider especially, is itself a genuine concurrent race and
+// therefore not meaningful evidence to hash order-sensitively. An odd
+// node at any level is promoted unchanged to the next level rather than
+// duplicated, so the root is well-defined for any non-empty input size.
+func merkleRoot(recs []ProcessedRecord) string {
+	if len(recs) == 0 {
+		return ""
+	}
+	sorted := append([]ProcessedRecord(nil), recs...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].RecordID < sorted[j].RecordID })
+
+	leaves := make([][]byte, len(sorted))
+	for i, r := range sorted {
+		h := sha256.Sum256([]byte(fmt.Sprintf("veriqo.scale.merkle-leaf/v1|%s|%s", r.RecordID, r.NodeID)))
+		leaves[i] = h[:]
+	}
+	for len(leaves) > 1 {
+		next := make([][]byte, 0, (len(leaves)+1)/2)
+		for i := 0; i < len(leaves); i += 2 {
+			if i+1 < len(leaves) {
+				pair := append(append([]byte{}, leaves[i]...), leaves[i+1]...)
+				sum := sha256.Sum256(pair)
+				next = append(next, sum[:])
+			} else {
+				next = append(next, leaves[i])
+			}
+		}
+		leaves = next
+	}
+	return hex.EncodeToString(leaves[0])
+}
+
+// ledgerHash builds a hash-chained, append-only ledger over entries in
+// the given order and returns the final chain hash -- the same
+// technique pkg/blockers/soak's checkpoint chain uses: altering or
+// reordering any entry changes the final hash.
+func ledgerHash(entries []string) string {
+	prev := ""
+	for _, e := range entries {
+		sum := sha256.Sum256([]byte(prev + "|" + e))
+		prev = hex.EncodeToString(sum[:])
+	}
+	return prev
+}
+
+// outputLedgerEntries renders each processed record as one ledger
+// entry, in the order Collect returned them -- a real, if racy across
+// providers, record of collection EVENTS (as opposed to merkleRoot's
+// order-independent fingerprint of the reconciled DATA).
+func outputLedgerEntries(processed []ProcessedRecord) []string {
+	out := make([]string, len(processed))
+	for i, p := range processed {
+		out[i] = fmt.Sprintf("%s|%s|%d", p.RecordID, p.NodeID, p.ReceivedAt.UnixNano())
+	}
+	return out
+}
+
+// Reconciliation is scale's final cross-check over one qualification
+// run: does every provisioned node show up in the processed set, and
+// is the run's integrity report clean end to end.
+type Reconciliation struct {
+	NodeCount          int
+	NodesWithNoTraffic []string
+	RecordsReconciled  int
+	MerkleRoot         string
+	Consistent         bool
+	Detail             string
+}
+
+func reconcile(nodes []Node, submittedIDs []string, processed []ProcessedRecord, report IntegrityReport) Reconciliation {
+	sawTraffic := make(map[string]bool, len(nodes))
+	for _, p := range processed {
+		sawTraffic[p.NodeID] = true
+	}
+	var idle []string
+	for _, n := range nodes {
+		if !sawTraffic[n.ID] {
+			idle = append(idle, n.ID)
+		}
+	}
+
+	consistent := report.Clean() && report.Processed == len(submittedIDs)
+	detail := "reconciled: every submitted record accounted for exactly once by an authorized node"
+	if !consistent {
+		detail = fmt.Sprintf("reconciliation failed: submitted=%d processed=%d lost=%d duplicated=%d unauthorized=%d",
+			len(submittedIDs), report.Processed, len(report.Lost), len(report.Duplicated), len(report.Unauthorized))
+	}
+	return Reconciliation{
+		NodeCount: len(nodes), NodesWithNoTraffic: idle, RecordsReconciled: report.Processed,
+		MerkleRoot: report.MerkleRoot, Consistent: consistent, Detail: detail,
+	}
+}
+
 // RunQualification distributes recordCount evidence records round-robin
 // across nodeCount nodes provisioned from provider, waits for
-// processing, checks integrity, measures throughput, and records the
-// outcome on contract via RecordFixtureRun. It refuses to run against a
-// provider whose Mode() is "REAL" -- that evidence belongs in
-// pkg/governance/qualification, not here.
+// processing, checks integrity (loss, duplication, and unauthorized
+// acceptance), computes a Merkle root and both ledgers over the
+// reconciled dataset, reconciles per-node coverage, resolves this
+// build's release identity (via pkg/blockers/pentest's already-audited
+// Preflight, not a second copy of that git/source-hash resolution
+// logic), measures throughput, and records the outcome on contract via
+// RecordFixtureRun. It refuses to run against a provider whose Mode()
+// is "REAL" -- that evidence belongs in pkg/governance/qualification,
+// not here.
+//
+// Honest scope: nodeCount/recordCount are the CALLER's own acceptance
+// parameters -- this function will run at nodeCount=100,
+// recordCount=1_000_000 against SimulatedNodeProvider exactly as
+// readily as it runs at 8/2000 (see TestScaleQualification100Nodes1MEnvelopes),
+// but doing so exercises this package's OWN distribution and
+// integrity-checking logic on one process's goroutines, not real
+// 100-node infrastructure. That remains open; a provider whose Mode()
+// reports "REAL" is refused above specifically so this simulated path
+// can never be mistaken for it.
 func RunQualification(ctx context.Context, contract *blockers.Contract, provider NodeProvider, nodeCount, recordCount int) (blockers.RunResult, error) {
 	if provider.Mode() == "REAL" {
 		return blockers.RunResult{}, errors.New("scale: RunQualification refuses a REAL-mode provider; submit that evidence through pkg/governance/qualification instead")
@@ -347,7 +556,8 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 	for i := 0; i < recordCount; i++ {
 		id := fmt.Sprintf("ev-%08d", i)
 		node := nodes[i%len(nodes)]
-		if err := provider.Submit(ctx, node, EvidenceRecord{ID: id, Payload: "synthetic"}); err != nil {
+		rec := EvidenceRecord{ID: id, Payload: "synthetic", Origin: "scale.RunQualification.synthetic-workload"}
+		if err := provider.Submit(ctx, node, rec); err != nil {
 			return blockers.RunResult{}, fmt.Errorf("scale: submit %s: %w", id, err)
 		}
 		submittedIDs = append(submittedIDs, id)
@@ -360,20 +570,40 @@ func RunQualification(ctx context.Context, contract *blockers.Contract, provider
 	elapsed := time.Since(start)
 
 	report := checkIntegrity(submittedIDs, processed)
+	report.Unauthorized = checkAuthorization(nodes, processed)
+	reconciliation := reconcile(nodes, submittedIDs, processed, report)
+
+	release, releaseErr := pentest.Preflight(ctx, ".")
+
 	result := blockers.RunResult{
 		BlockerID: contract.ID,
 		Mode:      provider.Mode(),
-		Pass:      report.Clean(),
+		Pass:      report.Clean() && reconciliation.Consistent,
 		Measurements: map[string]string{
-			"node_count":        fmt.Sprintf("%d", nodeCount),
-			"records_submitted": fmt.Sprintf("%d", report.Submitted),
-			"records_processed": fmt.Sprintf("%d", report.Processed),
-			"elapsed":           elapsed.String(),
-			"throughput_per_s":  fmt.Sprintf("%.2f", float64(recordCount)/elapsed.Seconds()),
+			"node_count":                  fmt.Sprintf("%d", nodeCount),
+			"records_submitted":           fmt.Sprintf("%d", report.Submitted),
+			"records_processed":           fmt.Sprintf("%d", report.Processed),
+			"elapsed":                     elapsed.String(),
+			"throughput_per_s":            fmt.Sprintf("%.2f", float64(recordCount)/elapsed.Seconds()),
+			"unauthorized_count":          fmt.Sprintf("%d", len(report.Unauthorized)),
+			"duplicate_policy":            string(report.Policy),
+			"merkle_root":                 report.MerkleRoot,
+			"input_ledger_hash":           report.InputLedgerHash,
+			"output_ledger_hash":          report.OutputLedgerHash,
+			"reconciliation_consistent":   fmt.Sprintf("%v", reconciliation.Consistent),
+			"nodes_with_no_traffic_count": fmt.Sprintf("%d", len(reconciliation.NodesWithNoTraffic)),
 		},
 	}
-	if !report.Clean() {
-		result.FailureReason = fmt.Sprintf("lost=%d duplicated=%d", len(report.Lost), len(report.Duplicated))
+	if releaseErr == nil {
+		result.Measurements["release_commit"] = release.Commit
+		result.Measurements["release_source_hash"] = release.SourceHash
+		result.Measurements["release_identity_source"] = release.IdentitySource
+	} else {
+		result.Measurements["release_identity_error"] = releaseErr.Error()
+	}
+	if !result.Pass {
+		result.FailureReason = fmt.Sprintf("lost=%d duplicated=%d unauthorized=%d reconciled=%v",
+			len(report.Lost), len(report.Duplicated), len(report.Unauthorized), reconciliation.Consistent)
 	}
 
 	if err := contract.RecordFixtureRun(result); err != nil {
