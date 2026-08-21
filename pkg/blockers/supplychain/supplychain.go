@@ -42,12 +42,18 @@ type Dependency struct {
 	Version string
 }
 
-// Vulnerability is one finding against a dependency.
+// Vulnerability is one finding against a dependency. AffectedRange and
+// Description are optional (zero value is fine for the pre-existing
+// HTTP/fixture provider tests, which predate PART 7's
+// VulnerabilityDatabase and never set them) but populated by the
+// offline snapshot fixture in vulndb.go.
 type Vulnerability struct {
-	ID       string
-	Package  string
-	Severity Severity
-	FixedIn  string
+	ID            string   `json:"id"`
+	Package       string   `json:"module"` // module path; the audit mandate's "module" field
+	Severity      Severity `json:"severity"`
+	FixedIn       string   `json:"fixed_in"`
+	AffectedRange string   `json:"affected_range,omitempty"`
+	Description   string   `json:"description,omitempty"`
 }
 
 // VulnerabilityProvider queries a vulnerability database for a set of

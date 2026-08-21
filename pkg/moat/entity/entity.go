@@ -51,7 +51,7 @@ var ErrTamperDetected = errors.New("entity: hash chain verification failed")
 // Alias identifies one real-world entity by one external system's
 // naming convention.
 type Alias struct {
-	Kind  string // e.g. "IMO", "CALLSIGN", "NAME", "MMSI", "LEI"
+	Kind  string // e.g. "IMO", "CALLSIGN", "NAME", "MMSI", "DUNS"
 	Value string
 }
 

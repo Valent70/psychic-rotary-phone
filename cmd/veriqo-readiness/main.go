@@ -615,6 +615,7 @@ func main() {
 	for _, r := range a.Reasons {
 		fmt.Println("  -", r)
 	}
+	printClosureMatrix()
 	switch a.Verdict {
 	case assurance.VerdictProductionReady:
 		os.Exit(0)
@@ -1017,4 +1018,58 @@ func binaryIdentity() (binaryHash, buildID string) {
 		buildID = strings.TrimSpace(out)
 	}
 	return binaryHash, buildID
+}
+
+// closureMatrixSource is this binary's own copy of the eight blockers'
+// six-dimension breakdown -- PART 14 of the "Final Audit result" audit
+// ("extend veriqo-readiness so every blocker reports CODE_STATUS,
+// DATA_STATUS, CONTRACT_STATUS, EXECUTION_STATUS, EXTERNAL_REVIEW_STATUS,
+// EVIDENCE_STATUS, FINAL_STATUS"). Kept identical, by hand, to
+// docs/qualification/VERIQO_EXTERNAL_CLOSURE_MATRIX.md's own table --
+// see that document for the full reasoning behind each value; this is
+// the same judgment, expressed as data qualification.Compute can run
+// fail-closed over, not a second independent opinion.
+func closureMatrixSource() []qualification.ClosureMatrixEntry {
+	return []qualification.ClosureMatrixEntry{
+		{GateID: "pentest", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimWaitingContract, ExecutionStatus: qualification.DimNotStarted,
+			ExternalReviewStatus: qualification.DimNotStarted, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "scale_qualification", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimCodeComplete, ExecutionStatus: qualification.DimWaitingCloudExecution,
+			ExternalReviewStatus: qualification.DimCodeComplete, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "multi_region_dr", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimCodeComplete, ExecutionStatus: qualification.DimWaitingCloudExecution,
+			ExternalReviewStatus: qualification.DimCodeComplete, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "hsm_kms", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimWaitingContract, ExecutionStatus: qualification.DimNotStarted,
+			ExternalReviewStatus: qualification.DimCodeComplete, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "live_data", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimWaitingData,
+			ContractStatus: qualification.DimWaitingContract, ExecutionStatus: qualification.DimNotStarted,
+			ExternalReviewStatus: qualification.DimCodeComplete, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "soak_72h", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimCodeComplete, ExecutionStatus: qualification.DimWaitingCloudExecution,
+			ExternalReviewStatus: qualification.DimCodeComplete, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "spire_mtls", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimCodeComplete, ExecutionStatus: qualification.DimWaitingCloudExecution,
+			ExternalReviewStatus: qualification.DimWaitingExternalReview, EvidenceStatus: qualification.DimEvidencePending},
+		{GateID: "supply_chain_scan", CodeStatus: qualification.DimCodeComplete, DataStatus: qualification.DimCodeComplete,
+			ContractStatus: qualification.DimCodeComplete, ExecutionStatus: qualification.DimWaitingCloudExecution,
+			ExternalReviewStatus: qualification.DimCodeComplete, EvidenceStatus: qualification.DimEvidencePending},
+	}
+}
+
+// printClosureMatrix runs qualification.Compute (fail-closed, never
+// trusting a caller-supplied FinalStatus) over closureMatrixSource and
+// prints the result -- the live, binary-produced counterpart to the
+// static markdown table.
+func printClosureMatrix() {
+	fmt.Printf("\n===== EXTERNAL CLOSURE MATRIX (PART 14) =====\n")
+	for _, entry := range closureMatrixSource() {
+		computed, err := qualification.Compute(entry)
+		if err != nil {
+			fmt.Printf("  %-20s ERROR: %v\n", entry.GateID, err)
+			continue
+		}
+		fmt.Printf("  %-20s final=%-24s (%s)\n", computed.GateID, computed.FinalStatus, computed.FinalReason)
+	}
 }

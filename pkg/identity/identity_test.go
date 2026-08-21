@@ -346,9 +346,10 @@ func TestHistoryReturnsEveryTouchingEvent(t *testing.T) {
 }
 
 func TestKnownKindsCoversTheAuditList(t *testing.T) {
-	if len(KnownKinds()) != 20 {
-		t.Fatalf("expected 20 identifier kinds (13 original + 7 added for audit item P0-03: Charterer, "+
-			"Terminal, Refinery, Trade, Shipment, BillOfLading, GeographicEntity), got %d", len(KnownKinds()))
+	if len(KnownKinds()) != 21 {
+		t.Fatalf("expected 21 identifier kinds (13 original + 7 added for audit item P0-03: Charterer, "+
+			"Terminal, Refinery, Trade, Shipment, BillOfLading, GeographicEntity + 1 added for P0-B's named "+
+			"residual example, LEI), got %d", len(KnownKinds()))
 	}
 }
 

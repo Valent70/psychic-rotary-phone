@@ -268,17 +268,22 @@ func TestRunUnifiedResolvesEntityThroughIdentityNotUnionFind(t *testing.T) {
 }
 
 // TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind proves the
-// fail-safe: an alias Kind identity.Kind does not model ("LEI" -- named
-// in pkg/moat/entity.Alias's own doc comment as an example, but never
-// added to identity.Kind's fixed vocabulary) must NOT be forced through
-// identity via a fabricated Kind mapping. RunUnified must still
-// succeed, using the legacy union-find for this one call, exactly as it
-// did before P0-B's change.
+// fail-safe: an alias Kind identity.Kind does not model ("DUNS" -- the
+// Dun & Bradstreet D-U-N-S Number, a real, well-known business
+// identifier convention, but one this codebase has not modeled) must
+// NOT be forced through identity via a fabricated Kind mapping.
+// RunUnified must still succeed, using the legacy union-find for this
+// one call, exactly as it did before P0-B's change. This test formerly
+// used "LEI" as its unmodeled example; LEI is now a real, modeled
+// identity.Kind (see identity.KindLEI's own doc comment) — the
+// fallback mechanism this test proves is still real and still needed
+// for whatever kind is NOT modeled, so the example was swapped rather
+// than the test deleted.
 func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
 	o := NewOrchestrator(nil, nil)
 	in := testIntent()
 	in.EntityAliases = []entity.Alias{
-		{Kind: "LEI", Value: "LEI-CORP-1"},
+		{Kind: "DUNS", Value: "DUNS-CORP-1"},
 		{Kind: "NAME", Value: "SHELLCORP HOLDINGS"},
 	}
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
@@ -287,8 +292,57 @@ func TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected an unmodeled alias Kind to fall back, not fail: %v", err)
 	}
-	if got, ok := o.Entities.Resolve(entity.Alias{Kind: "LEI", Value: "LEI-CORP-1"}); !ok || got != res.EntityID {
+	if got, ok := o.Entities.Resolve(entity.Alias{Kind: "DUNS", Value: "DUNS-CORP-1"}); !ok || got != res.EntityID {
 		t.Fatalf("expected the legacy union-find to have actually resolved this call, got ok=%v id=%s want=%s", ok, got, res.EntityID)
+	}
+}
+
+// TestRunUnifiedResolvesLEIThroughIdentityNotUnionFindFallback closes
+// the specific residual gap a follow-up audit named for P0-B: LEI
+// ("pkg/moat/entity.Registry not deleted because alias Kind LEI is
+// unmodeled") is now a real identity.Kind (identity.KindLEI), so an LEI
+// alias must resolve through Identity like IMO/CALLSIGN/MMSI/... do —
+// NOT fall back to the legacy union-find. This does not eliminate the
+// fallback mechanism itself (entity.Alias.Kind remains a free-form
+// string; some future, still-unmodeled kind will always need it — see
+// TestRunUnifiedFallsBackToUnionFindForUnknownAliasKind, now using
+// DUNS as its example instead), but it does mean pkg/moat/entity.Registry
+// is never consulted for THIS specific, previously-named example again.
+func TestRunUnifiedResolvesLEIThroughIdentityNotUnionFindFallback(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	in := testIntent()
+	in.EntityAliases = []entity.Alias{
+		{Kind: "LEI", Value: "529900T8BM49AURSDO55"},
+		{Kind: "NAME", Value: "SHELLCORP HOLDINGS"},
+	}
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))
+	if err != nil {
+		t.Fatalf("expected LEI, now a modeled identity.Kind, to resolve through Identity: %v", err)
+	}
+	resolved, err := o.Identity.EntityIDAt(identity.Identifier{Kind: identity.KindLEI, Value: "529900T8BM49AURSDO55"}, in.Tick)
+	if err != nil {
+		t.Fatalf("expected Identity to have actually resolved this LEI alias: %v", err)
+	}
+	if string(resolved) != string(res.EntityID) {
+		t.Fatalf("Identity's own resolution (%s) must match RunUnified's reported EntityID (%s)", resolved, res.EntityID)
+	}
+	if _, ok := o.Entities.Resolve(entity.Alias{Kind: "LEI", Value: "529900T8BM49AURSDO55"}); ok {
+		t.Fatal("LEI must no longer be written into the legacy union-find fallback now that it is a modeled identity.Kind")
+	}
+	var idNode execution.Node
+	found := false
+	for _, n := range res.Execution.Trace.Nodes {
+		if n.StageID == execution.StageIdentityResolution {
+			idNode, found = n, true
+		}
+	}
+	if !found {
+		t.Fatal("expected an IDENTITY_RESOLUTION node")
+	}
+	if !strings.Contains(idNode.Detail, "independently re-resolved") {
+		t.Fatalf("expected LEI resolution (now through Identity) to be independently re-verified by pkg/execution, got detail: %q", idNode.Detail)
 	}
 }
 
@@ -332,11 +386,12 @@ func TestRunUnifiedThreadsARealIdentityKeyIntoTheExecutionDAG(t *testing.T) {
 // the fallback path (unmodeled alias Kind) correctly leaves
 // IdentityAliases empty -- attempting to re-resolve a Kind identity.Kind
 // does not model would be a guaranteed, misleading mismatch, not a
-// real check.
+// real check. Uses DUNS, not LEI, as its unmodeled example -- see
+// TestRunUnifiedResolvesLEIThroughIdentityNotUnionFindFallback for why.
 func TestRunUnifiedDoesNotThreadAnIdentityKeyOnUnionFindFallback(t *testing.T) {
 	o := NewOrchestrator(nil, nil)
 	in := testIntent()
-	in.EntityAliases = []entity.Alias{{Kind: "LEI", Value: "LEI-CORP-2"}}
+	in.EntityAliases = []entity.Alias{{Kind: "DUNS", Value: "DUNS-CORP-2"}}
 	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
 
 	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("x"))

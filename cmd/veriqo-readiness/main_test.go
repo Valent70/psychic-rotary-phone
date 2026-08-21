@@ -11,6 +11,7 @@ import (
 	"veriqo/internal/assurance"
 	"veriqo/internal/timestamp"
 	"veriqo/pkg/execution"
+	"veriqo/pkg/governance/qualification"
 )
 
 // TestCategoryHashChangesWhenAMemberGateEvidenceChanges is the
@@ -275,5 +276,24 @@ func TestAttestTimestampChainDetectsTamperingOfAPersistedEntry(t *testing.T) {
 	chain[0].Timestamp = 1 // attacker backdates near-epoch without the private key
 	if err := timestamp.VerifyChain(chain, pub); err == nil {
 		t.Fatal("a tampered persisted entry must fail VerifyChain")
+	}
+}
+
+func TestClosureMatrixSourceComputesWithoutErrorForEveryBlocker(t *testing.T) {
+	entries := closureMatrixSource()
+	if len(entries) != 8 {
+		t.Fatalf("expected 8 blockers in the closure matrix, got %d", len(entries))
+	}
+	for _, e := range entries {
+		computed, err := qualification.Compute(e)
+		if err != nil {
+			t.Fatalf("gate %s: unexpected error: %v", e.GateID, err)
+		}
+		if computed.FinalStatus == qualification.DimVerified {
+			t.Fatalf("gate %s: no blocker in this sandbox can honestly compute as VERIFIED, got FinalStatus=VERIFIED", e.GateID)
+		}
+		if computed.FinalReason == "" {
+			t.Fatalf("gate %s: expected a non-empty final_reason", e.GateID)
+		}
 	}
 }

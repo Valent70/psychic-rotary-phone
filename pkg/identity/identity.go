@@ -74,6 +74,18 @@ const (
 	KindShipment         Kind = "SHIPMENT"
 	KindBillOfLading     Kind = "BILL_OF_LADING"
 	KindGeographicEntity Kind = "GEOGRAPHIC_ENTITY"
+	// KindLEI closes the specific residual example an external audit
+	// named for P0-B ("pkg/moat/entity.Registry not deleted because
+	// alias Kind LEI is unmodeled"): a Legal Entity Identifier
+	// (ISO 17442) is a 20-character alphanumeric code assigned exactly
+	// once per legal entity by an accredited Local Operating Unit under
+	// GLEIF's global registry, and is never reassigned to a different
+	// entity -- the same structural guarantee that gives KindIMO its
+	// 1.00 discriminating power. It is modeled here, not left to fall
+	// back to pkg/moat/entity's union-find, for real: see
+	// discriminatingPower's own comment for why it is not placed at the
+	// absolute 1.00 ceiling alongside KindIMO.
+	KindLEI Kind = "LEI"
 )
 
 // discriminatingPower is how much a shared identifier of this kind
@@ -115,6 +127,17 @@ var discriminatingPower = map[Kind]float64{
 	// reused kind of all -- ranked at FLAG's level, the existing
 	// broadest-geography kind.
 	KindGeographicEntity: 0.10,
+	// LEI (ISO 17442) is assigned exactly once per legal entity by an
+	// accredited Local Operating Unit under GLEIF's global registry and
+	// is never reassigned to a different entity -- the same one-issuance
+	// guarantee that gives IMO its 1.00. It is ranked fractionally below
+	// IMO, not at the same ceiling, for one real, documented difference:
+	// GLEIF's own Level 1/2 relationship data models LEI "lapse" and
+	// successor-entity relationships (an LEI can go LAPSED on a merger
+	// or corporate restructuring, with the surviving entity holding a
+	// DIFFERENT LEI), a real-world discontinuity IMO's one-vessel,
+	// one-number-for-life model does not have.
+	KindLEI: 0.95,
 }
 
 // KnownKinds returns every modelled identifier kind, deterministically.

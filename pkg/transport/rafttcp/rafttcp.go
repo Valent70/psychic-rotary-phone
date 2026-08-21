@@ -200,10 +200,11 @@ type envelope struct {
 // ---- PeerVerifier: authorize by SPIFFE identity + membership, not DNS ----
 
 type PeerVerifier struct {
-	ca      *CA
-	members map[string]bool
-	crl     *RevocationList
-	mu      sync.RWMutex
+	ca        *CA
+	members   map[string]bool
+	crl       *RevocationList
+	rootsFunc func() (*x509.CertPool, error)
+	mu        sync.RWMutex
 }
 
 func NewPeerVerifier(ca *CA, members []string) *PeerVerifier {
@@ -212,6 +213,32 @@ func NewPeerVerifier(ca *CA, members []string) *PeerVerifier {
 		m[id] = true
 	}
 	return &PeerVerifier{ca: ca, members: m}
+}
+
+// NewPeerVerifierFromTrustSource builds a PeerVerifier whose trust
+// roots come ENTIRELY from rootsFunc (e.g. a SPIRE Workload API trust
+// bundle, see workloadapi.go), with no self-hosted CA at all -- ca
+// stays nil and Verify never dereferences it because SetTrustSource's
+// rootsFunc path is exercised for every call.
+func NewPeerVerifierFromTrustSource(rootsFunc func() (*x509.CertPool, error), members []string) *PeerVerifier {
+	v := NewPeerVerifier(nil, members)
+	v.SetTrustSource(rootsFunc)
+	return v
+}
+
+// SetTrustSource wires a dynamic root-of-trust provider into this
+// verifier (PART 9's "revocation/failure handling" closed for real):
+// once set, Verify's chain check uses rootsFunc() instead of the
+// static ca.Pool() every call -- so a trust bundle rotated out from
+// under a live verifier (e.g. a SPIRE Workload API bundle update, see
+// workloadapi.go's FileCertSource.CurrentRoots) is honored on the very
+// next Verify, with no restart and no window where a since-untrusted
+// root is still accepted. A nil rootsFunc (the default) preserves
+// every pre-existing caller's exact ca.Pool()-based behavior.
+func (v *PeerVerifier) SetTrustSource(rootsFunc func() (*x509.CertPool, error)) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.rootsFunc = rootsFunc
 }
 
 func (v *PeerVerifier) SetMembers(members []string) {
@@ -246,7 +273,20 @@ func (v *PeerVerifier) Verify(cert *x509.Certificate) (string, error) {
 	_, span := telemetry.StartSpan(context.Background(), "rafttcp.PeerVerifier.Verify")
 	defer span.End()
 
-	opts := x509.VerifyOptions{Roots: v.ca.Pool(), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}
+	v.mu.RLock()
+	rootsFunc := v.rootsFunc
+	v.mu.RUnlock()
+	var roots *x509.CertPool
+	if rootsFunc != nil {
+		r, err := rootsFunc()
+		if err != nil {
+			return "", fmt.Errorf("rafttcp: dynamic trust source unavailable, failing closed: %w", err)
+		}
+		roots = r
+	} else {
+		roots = v.ca.Pool()
+	}
+	opts := x509.VerifyOptions{Roots: roots, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}
 	if _, err := cert.Verify(opts); err != nil {
 		return "", fmt.Errorf("rafttcp: chain verification failed: %w", err)
 	}
@@ -301,6 +341,41 @@ func NewServer(id string, node *raftlite.Node, ca *CA, leafCert tls.Certificate,
 		// session tickets are disabled rather than trusted to always
 		// invoke the verification callback (gosec G123).
 		SessionTicketsDisabled: true,
+	}
+	return &Server{id: id, node: node, verifier: verifier, tlsConf: tlsConf}
+}
+
+// NewServerFromSource builds a Server whose leaf certificate AND
+// client-trust bundle come from source on EVERY inbound connection
+// (via tls.Config.GetConfigForClient, the exact hook Go's crypto/tls
+// provides for per-handshake config), instead of the static values
+// NewServer bakes in once. This is PART 9's "certificate rotation"
+// closed for real at the transport layer: a rotated SVID or an
+// updated trust bundle (e.g. from workloadapi.FileCertSource) takes
+// effect on the very next inbound handshake, with the server process
+// never restarted and no static tls.Config ever holding a stale value.
+func NewServerFromSource(id string, node *raftlite.Node, source CertSource, verifier *PeerVerifier) *Server {
+	tlsConf := &tls.Config{
+		ClientAuth:             tls.RequireAndVerifyClientCert,
+		MinVersion:             tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
+			cert, err := source.Current()
+			if err != nil {
+				return nil, fmt.Errorf("rafttcp: cert source unavailable, refusing inbound connection: %w", err)
+			}
+			roots, err := source.CurrentRoots()
+			if err != nil {
+				return nil, fmt.Errorf("rafttcp: trust bundle unavailable, refusing inbound connection: %w", err)
+			}
+			return &tls.Config{
+				Certificates:           []tls.Certificate{cert},
+				ClientAuth:             tls.RequireAndVerifyClientCert,
+				ClientCAs:              roots,
+				MinVersion:             tls.VersionTLS12,
+				SessionTicketsDisabled: true,
+			}, nil
+		},
 	}
 	return &Server{id: id, node: node, verifier: verifier, tlsConf: tlsConf}
 }
@@ -398,11 +473,26 @@ func (s *Server) Close() error {
 
 // ---- Client / Transport: dials peers, pools connections ----
 
+// CertSource is a pluggable leaf-identity + trust-bundle provider —
+// the abstraction PART 9's Workload API integration implements (see
+// workloadapi.go's FileCertSource). Current and CurrentRoots are
+// called fresh on every new outbound dial (Client) or inbound
+// handshake (Server), never cached beyond a single already-established
+// connection, so rotation and revocation are real, not advisory.
+type CertSource interface {
+	Current() (tls.Certificate, error)
+	CurrentRoots() (*x509.CertPool, error)
+}
+
 type Client struct {
 	selfID   string
 	ca       *CA
 	leafCert tls.Certificate
 	addrs    map[string]string // peer ID -> "host:port"
+
+	// certSource, when set, is used INSTEAD of ca/leafCert for every
+	// new dial in getConn -- see NewClientFromSource.
+	certSource CertSource
 
 	mu    sync.Mutex
 	conns map[string]*peerConn
@@ -427,6 +517,19 @@ func NewClient(selfID string, ca *CA, leafCert tls.Certificate, addrs map[string
 		owned[k] = v
 	}
 	return &Client{selfID: selfID, ca: ca, leafCert: leafCert, addrs: owned, conns: make(map[string]*peerConn)}
+}
+
+// NewClientFromSource builds a Client whose leaf certificate AND trust
+// bundle come from source on EVERY new outbound dial (existing pooled
+// connections are unaffected until they are dropped/redialed) — the
+// client-side counterpart to NewServerFromSource; see CertSource's own
+// doc comment.
+func NewClientFromSource(selfID string, source CertSource, addrs map[string]string) *Client {
+	owned := make(map[string]string, len(addrs))
+	for k, v := range addrs {
+		owned[k] = v
+	}
+	return &Client{selfID: selfID, certSource: source, addrs: owned, conns: make(map[string]*peerConn)}
 }
 
 // SetAddr re-points a peer ID at a new address — used when a peer
@@ -463,9 +566,23 @@ func (c *Client) getConn(target string) (*peerConn, error) {
 	// AND that its SPIFFE SAN matches the specific peer we dialed, which is
 	// strictly stronger than hostname matching for this identity model.
 	wantSPIFFE := fmt.Sprintf("spiffe://veriqo.global/node/%s", target)
+	leafCert := c.leafCert
+	rootsForDial := func() (*x509.CertPool, error) { return c.ca.Pool(), nil }
+	if c.certSource != nil {
+		cert, err := c.certSource.Current()
+		if err != nil {
+			return nil, fmt.Errorf("rafttcp: cert source unavailable, refusing outbound connection: %w", err)
+		}
+		leafCert = cert
+		rootsForDial = c.certSource.CurrentRoots
+	}
+	roots, err := rootsForDial()
+	if err != nil {
+		return nil, fmt.Errorf("rafttcp: trust bundle unavailable, refusing outbound connection: %w", err)
+	}
 	tlsConf := &tls.Config{
-		Certificates:       []tls.Certificate{c.leafCert},
-		RootCAs:            c.ca.Pool(),
+		Certificates:       []tls.Certificate{leafCert},
+		RootCAs:            roots,
 		InsecureSkipVerify: true, // #nosec G402 -- intentional -- VerifyPeerCertificate below performs real chain + SPIFFE-identity verification in its place; see comment above
 		MinVersion:         tls.VersionTLS12,
 		// A resumed session must still hit VerifyPeerCertificate; do not
@@ -480,7 +597,14 @@ func (c *Client) getConn(target string) (*peerConn, error) {
 			if err != nil {
 				return err
 			}
-			opts := x509.VerifyOptions{Roots: c.ca.Pool(), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}
+			// Re-fetch roots at verification time (not the roots
+			// variable captured above) so a bundle rotated mid-dial is
+			// still honored by the check that actually matters.
+			verifyRoots, err := rootsForDial()
+			if err != nil {
+				return fmt.Errorf("rafttcp: trust bundle unavailable during verification: %w", err)
+			}
+			opts := x509.VerifyOptions{Roots: verifyRoots, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}
 			if _, err := leaf.Verify(opts); err != nil {
 				return fmt.Errorf("rafttcp: server chain verification failed: %w", err)
 			}

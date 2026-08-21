@@ -132,6 +132,56 @@ type KeyProvider interface {
 	PublicKey(ctx context.Context, keyID string) ([]byte, error)
 }
 
+// RemoteKeyState is a provider's own live description of a key: its
+// lifecycle state and the signing algorithm(s) it actually supports,
+// exactly as the provider reports them. It exists so a caller reads
+// the algorithm and enabled/disabled state OFF THE KEY, never assumes
+// or hardcodes either -- see AWSKeyProvider.DescribeKey.
+type RemoteKeyState struct {
+	KeyID string
+	// Enabled is the provider's own answer to "can this key sign right
+	// now" (e.g. AWS KMS's KeyState == "Enabled"). A disabled key must
+	// fail signing closed; it is never inferred from anything but this
+	// field.
+	Enabled bool
+	// State is the provider's raw state string (e.g. "Enabled",
+	// "Disabled", "PendingDeletion"), kept for diagnostics even though
+	// Enabled is what callers should branch on.
+	State string
+	// SigningAlgorithms is the exhaustive list of algorithms this key
+	// actually supports, as the provider reports it. A configured
+	// algorithm not present in this list must be rejected before any
+	// signing is attempted -- never silently substituted.
+	SigningAlgorithms []string
+}
+
+// AWSKeyProvider is a strictly wider KeyProvider for adapters that
+// expose live key-state introspection and rotation detection beyond
+// the bare Sign/PublicKey pair -- what a real cloud KMS/HSM adapter
+// needs and a purely local software provider does not. It embeds
+// KeyProvider additively: every AWSKeyProvider already satisfies
+// KeyProvider, and no existing KeyProvider implementation (Memory,
+// File, or anything in pkg/blockers/hsmkms) needs to change to keep
+// compiling -- this type only widens what a NEW adapter may offer.
+type AWSKeyProvider interface {
+	KeyProvider
+
+	// DescribeKey returns the provider's live view of a key's state
+	// and its real supported signing algorithms. Callers use this to
+	// verify key state and to confirm a configured algorithm is one
+	// the key actually supports -- never to assume either.
+	DescribeKey(ctx context.Context, keyID string) (RemoteKeyState, error)
+
+	// RefreshPublicKey re-fetches a key's current public key from the
+	// provider, bypassing any local cache, and reports whether it
+	// differs from the cached bytes supplied by the caller. This is
+	// the rotation-detection primitive: a cloud KMS's automatic
+	// rotation keeps the key ID stable but replaces the key material,
+	// so "same key ID" is not proof "same public key" -- only a fresh
+	// fetch and a byte comparison is.
+	RefreshPublicKey(ctx context.Context, keyID string, cached []byte) (pub []byte, rotated bool, err error)
+}
+
 // Manager owns key lifecycle on top of any KeyProvider.
 type Manager struct {
 	mu       sync.RWMutex
