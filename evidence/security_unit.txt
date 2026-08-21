@@ -4,4 +4,5 @@ exit: 0
 ---
 ok  	veriqo/pkg/platform/security	(cached)
 ok  	veriqo/pkg/platform/security/keys	(cached)
+ok  	veriqo/pkg/platform/security/keys/awskms	(cached)
 ok  	veriqo/pkg/authz	(cached)
