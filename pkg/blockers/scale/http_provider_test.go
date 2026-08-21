@@ -145,6 +145,12 @@ func TestHTTPNodeProvider_ProvisionRefusesMoreThanConfigured(t *testing.T) {
 // Point it at real Docker containers running cmd/veriqo-scale-node to
 // produce the real evidence backing
 // evidence/scale_qualification-multi-container-drill.txt.
+// VERIQO_SCALE_DOCKER_TIMEOUT (a time.ParseDuration string, default
+// "2m") overrides the Provision+Submit+Collect deadline -- the default
+// is enough for the harness's own small default recordCount, but a
+// drill run at real target volumes (e.g. 1,000,000 envelopes) needs
+// more wall-clock time than 2 minutes on a resource-shared single host,
+// which is a real throughput fact this test surfaced, not a defect.
 func TestHTTPNodeProvider_RealDockerContainers(t *testing.T) {
 	spec := os.Getenv("VERIQO_SCALE_DOCKER_ADDRS")
 	if spec == "" {
@@ -171,8 +177,17 @@ func TestHTTPNodeProvider_RealDockerContainers(t *testing.T) {
 		}
 	}
 
+	timeout := 2 * time.Minute
+	if v := os.Getenv("VERIQO_SCALE_DOCKER_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			t.Fatalf("VERIQO_SCALE_DOCKER_TIMEOUT=%q: %v", v, err)
+		}
+		timeout = d
+	}
+
 	provider := &HTTPNodeProvider{NodeAddrs: addrs, Token: token}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	nodes, err := provider.Provision(ctx, len(addrs))

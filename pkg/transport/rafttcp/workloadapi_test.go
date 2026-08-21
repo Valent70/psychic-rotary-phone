@@ -393,3 +393,59 @@ func TestClientFromSource_RejectsServerPresentingWrongIdentity(t *testing.T) {
 		t.Fatal("expected the client to reject a server presenting a SPIFFE identity different from the one it dialed")
 	}
 }
+
+// TestServerAndClientFromSource_RealSPIREIssuedSVIDs is
+// TestServerAndClientFromSource_RealHandshakeOverFileBackedWorkloadAPI's
+// real-infrastructure counterpart: instead of a leaf minted in-process
+// by this package's own test CA (mintLeaf), it loads SVID/key/bundle
+// files actually written to disk by `spire-agent api fetch x509
+// -write`, from a REAL, separately-running open-source SPIRE server +
+// agent (real node attestation over a real join token, real workload
+// registration, real X.509-SVID issuance) -- the literal
+// spire-agent-in-the-loop drill the closure matrix names as the
+// remaining gap after this package's own FileCertSource/CertSource
+// machinery was proven against synthetic certs.
+//
+// Gated behind VERIQO_SPIRE_LIVE_SVID_DIR (a directory containing
+// node-a/{svid.pem,svid_key.pem,bundle.pem} and node-b/{...}, produced
+// by a real SPIRE deployment -- see
+// evidence/spire_mtls-rafttcp-live-integration.txt for exactly how).
+// Unset by default, so ordinary `go test ./...` and CI skip it exactly
+// like VERIQO_SCALE_DOCKER_ADDRS and VERIQO_AWS_KMS_INTEGRATION_TEST:
+// this is the harness, not a fabricated pass, and a live SPIRE SVID's
+// short TTL (minutes, not the years a self-hosted CA can choose) makes
+// it unsuitable for CI's own long-lived synthetic-cert tests above.
+func TestServerAndClientFromSource_RealSPIREIssuedSVIDs(t *testing.T) {
+	dir := os.Getenv("VERIQO_SPIRE_LIVE_SVID_DIR")
+	if dir == "" {
+		t.Skip("VERIQO_SPIRE_LIVE_SVID_DIR not set -- skipping the real SPIRE-issued-SVID drill (see this test's doc comment)")
+	}
+
+	srcA := NewFileCertSource(filepath.Join(dir, "node-a", "svid.pem"), filepath.Join(dir, "node-a", "svid_key.pem"), filepath.Join(dir, "node-a", "bundle.pem"))
+	srcB := NewFileCertSource(filepath.Join(dir, "node-b", "svid.pem"), filepath.Join(dir, "node-b", "svid_key.pem"), filepath.Join(dir, "node-b", "bundle.pem"))
+	if err := srcA.Reload(); err != nil {
+		t.Fatalf("loading real SPIRE-issued SVID for node-a (check VERIQO_SPIRE_LIVE_SVID_DIR is fresh -- real SVIDs expire in minutes): %v", err)
+	}
+	if err := srcB.Reload(); err != nil {
+		t.Fatalf("loading real SPIRE-issued SVID for node-b (check VERIQO_SPIRE_LIVE_SVID_DIR is fresh -- real SVIDs expire in minutes): %v", err)
+	}
+
+	members := []string{"node-a", "node-b"}
+	verifierA := NewPeerVerifierFromTrustSource(srcA.CurrentRoots, members)
+
+	node := raftlite.NewNode(raftlite.Config{ID: "node-a", FSM: nullFSM{}})
+	srv := NewServerFromSource("node-a", node, srcA, verifierA)
+	addr, err := srv.Listen("127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+
+	client := NewClientFromSource("node-b", srcB, map[string]string{"node-a": addr})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := client.SendRequestVote(ctx, "node-a", raftlite.RequestVoteArgs{Term: 1, CandidateID: "node-b"}); err != nil {
+		t.Fatalf("expected a real TLS handshake + RPC using REAL SPIRE-issued Workload API identities to succeed: %v", err)
+	}
+	t.Logf("real mTLS handshake + RequestVote RPC succeeded using SVIDs issued by a live, separately-running SPIRE server")
+}
