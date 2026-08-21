@@ -1,0 +1,76 @@
+gate: internal (full-repo cross-package/cross-artifact integration sweep, this round's own
+      mandate: "pastikan semua package dan repo sudah terintegrasi tanpa hambatan sedikit pun")
+timestamp: 2026-08-21T13:38Z
+
+This is not one of the 8 named external blockers. It is a direct response to this round's
+explicit instruction to run every integration test across the whole repo and confirm every
+package and artifact is actually integrated, not just individually passing in isolation.
+
+=== 1. Cross-process integration suite (test/integration/), run WITHOUT -short ===
+
+  go test ./test/integration/... -v -timeout 10m
+
+15/15 tests PASS, 0 FAIL, 0 SKIP, 3.966s. This package deliberately does NOT use in-process
+fakes for its most important cases -- it compiles real binaries and drives them as separate OS
+processes:
+
+  - TestLiveRaftCluster_ElectsLeaderReplicatesAndFailsOver: compiles cmd/veriqo-node, launches
+    THREE SEPARATE OS PROCESSES with real listening TCP sockets on 127.0.0.1, and drives the
+    cluster only through each process's HTTP admin surface (the same interface a real operator
+    would use). Confirmed over the real network: the three processes elect exactly one leader
+    (elected: C), a command proposed to the leader is visible via GET /state on a FOLLOWER
+    process across real OS-process boundaries (not shared memory), and killing the leader
+    process causes real failover to a newly elected leader (new leader: A) with the
+    previously-committed state intact.
+  - TestColdReplay_CrossProcess_* (4 tests): drives the real cmd/veriqo-cold-replay binary
+    against on-disk evidence, confirming evidence root, decision, explanation, verification
+    certificate, and identity-ledger state all reproduce from cold-restored history alone --
+    and that a tampered identity ledger is independently detected and rejected
+    ("IDENTITY VERDICT: FAILED (identity: identity ledger hash chain is broken at index 0)").
+  - TestIVFCrossProcess_* (2 tests): drives the real cmd/veriqo-verify binary as an external,
+    independent verifier -- confirms a genuine claim reproduces (VERDICT: PASSED) and a
+    tampered bundle is independently caught (VERDICT: FAILED).
+  - TestDarkVesselEndToEndScenario, TestIntelligenceLayerEndToEnd, TestIVFLive_*,
+    TestKernelOSBootsRealEnginesEndToEnd, TestWowDemoFullIntelligenceChain: real end-to-end
+    scenario tests exercising the full decision/evidence/explanation chain from real inputs.
+
+=== 2. Contract-to-artifact drift check: every generated SDK/CLI/gateway regenerated and diffed ===
+
+  cp veriqo/sdk/{go,python,ts}/generated_client.{go,py,ts} veriqo/cli/generated_commands.go \
+     veriqo/gateway/rest/generated_routes.go  /tmp/before_*
+  go run ./veriqo/generator/cmd/gen
+  diff /tmp/before_* <checked-in files>
+
+Result: "gen: generated 5 artifact(s) from 7 contract(s)" and every single diff was empty --
+IDENTICAL. The Go SDK, Python SDK, TypeScript SDK, CLI dispatch table, and REST gateway route
+table checked into this repo are all byte-for-byte exactly what the current
+veriqo/contracts/*.yaml source-of-truth produces right now. There is zero drift between the API
+contract and any of its five derived artifacts -- the generator's own documented guarantee
+("regenerating is idempotent and deterministic") was independently exercised, not just read.
+
+The two non-Go generated clients were additionally sanity-checked directly:
+  python3 -m py_compile veriqo/sdk/python/generated_client.py   -> syntactically valid
+  tsc --noEmit --skipLibCheck veriqo/sdk/ts/generated_client.ts -> type-checks clean (exit 0)
+
+=== 3. Environment-assumption re-test: cgroup v1 is actually writable in this session ===
+
+See evidence/sandbox-cgroup-real-enforcement-retest.txt for full detail. Summary: 16
+t.Skip("cgroup v1 ... not writable") sites across pkg/kernel/resource and pkg/kernel/plugin,
+written honestly in an earlier round when this was genuinely true, were re-tested this round
+and found to now be writable. Re-running those exact test suites produced 0 SKIPs -- every
+previously-conditional real-enforcement test (real kernel OOM-kill, real fork-bomb protection,
+real seccomp-BPF denial, real namespace isolation) now executes and passes for real.
+
+=== 4. Whole-module build/vet/format, one more time, after all of the above ===
+
+  gofmt -l .        -> clean (no output)
+  go build ./...    -> exit 0
+  go vet ./...      -> exit 0
+
+verdict: every package in this repository builds together, every generated artifact matches its
+source contract exactly, and the cross-process integration suite -- the one test package in this
+repo that deliberately does NOT trust in-process fakes for its most consequential claims (leader
+election, failover, cold-restart replay, independent tamper detection) -- passes in full, without
+-short, with zero skips. This is the strongest evidence this project can produce, from inside this
+sandbox, that "semua package dan repo sudah terintegrasi tanpa hambatan": every piece was actually
+run together, over real processes and real regeneration, not just imported together.
