@@ -610,6 +610,8 @@ func main() {
 	fmt.Printf("verdict            : %s\n", a.Verdict)
 	fmt.Printf("mandatory gates    : %d/%d passing\n", a.MandatoryPassing, a.MandatoryTotal)
 	fmt.Printf("blocked (external) : %v\n", a.BlockedMandatory)
+	fmt.Printf("internal failures  : %d (gate exit-code and acceptance-manifest failures counted during this run; "+
+		"the verdict above is the authority, this is a diagnostic count)\n", failures)
 	fmt.Printf("failing            : %v\n", a.FailingMandatory)
 	fmt.Printf("manifest           : %s\n", *out)
 	for _, r := range a.Reasons {

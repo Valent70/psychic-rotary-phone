@@ -7,7 +7,6 @@ package verification
 import (
 	"crypto/rand"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -65,17 +64,17 @@ func (r *RevocationList) IsRevoked(serial *big.Int) bool {
 // private in-process map.
 func (r *RevocationList) ExportCRL() ([]byte, error) {
 	r.mu.RLock()
-	entries := make([]pkix.RevokedCertificate, 0, len(r.revoked))
+	entries := make([]x509.RevocationListEntry, 0, len(r.revoked))
 	for _, e := range r.revoked {
-		entries = append(entries, pkix.RevokedCertificate{SerialNumber: e.SerialNumber, RevocationTime: e.RevokedAt})
+		entries = append(entries, x509.RevocationListEntry{SerialNumber: e.SerialNumber, RevocationTime: e.RevokedAt})
 	}
 	r.mu.RUnlock()
 
 	tmpl := &x509.RevocationList{
-		Number:              big.NewInt(time.Now().Unix()),
-		ThisUpdate:          time.Now(),
-		NextUpdate:          time.Now().Add(24 * time.Hour),
-		RevokedCertificates: entries,
+		Number:                    big.NewInt(time.Now().Unix()),
+		ThisUpdate:                time.Now(),
+		NextUpdate:                time.Now().Add(24 * time.Hour),
+		RevokedCertificateEntries: entries,
 	}
 	return x509.CreateRevocationList(rand.Reader, tmpl, r.ca.cert, r.ca.key)
 }
