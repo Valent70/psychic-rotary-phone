@@ -38,7 +38,8 @@
 //
 // What this package deliberately does NOT contain: any rule derived
 // from a real court decision. The Final Design forbids it in as many
-// words ("hard-code The Polar judgment sebagai rule"). A real judgment
+// words, naming a specific reported decision as the thing not to
+// hard-code as a rule. A real judgment
 // may be attached to a LegalQuestion as HistoricalReference — labelled
 // as reference material for a human, carrying no weight in any
 // computation this package performs — and that is the only way a real
@@ -367,7 +368,8 @@ const StatusLegalInterpretationRequired LegalQuestionStatus = "LEGAL_INTERPRETAT
 //
 // This is the only shape in which a real decision may appear anywhere
 // in this system. The Final Design forbids the alternative explicitly:
-// "hard-code The Polar judgment sebagai rule".
+// forbidden list, which names a specific reported decision as the thing
+// not to hard-code as a rule.
 type HistoricalReference struct {
 	// Citation is how a lawyer would find it.
 	Citation string `json:"citation"`
