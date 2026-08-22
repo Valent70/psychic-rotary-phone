@@ -185,6 +185,25 @@ func main() {
 			true, assurance.StatusVerified, "./pkg/execution, ./pkg/governance/calibration",
 			"required-but-absent fails closed, required-and-supplied genuinely consumes the observations, optional skip is still a recorded node",
 			[]string{"go", "test", "-run", "TemporalCalibrationUsageCoverage", "./pkg/execution/"}, false},
+		// PHASE H (P1-12): the leakage boundary. Mandatory, because the
+		// consequence of failing it is not a degraded dashboard -- it is
+		// a credential or a customer's confidential data leaving the
+		// process in a trace. The gate's acceptance criterion is the
+		// program's own three zeros.
+		{"telemetry_leakage_zero",
+			"no secret, PII, restricted payload, commercial or customer-confidential value crosses the telemetry export boundary under the default redaction posture",
+			true, assurance.StatusVerified, "./pkg/platform/telemetry",
+			"secret leakage = 0, PII leakage = 0, restricted payload leakage = 0, proved by searching everything the collector holds for the exact canary values",
+			[]string{"go", "test", "-run", "Leak|Redact|Sensitive|Confidential", "./pkg/platform/telemetry/"}, false},
+		// PHASE H (P1-11): the export pipeline itself. Its honest ceiling
+		// is INTERNAL_QUALIFIED (see telemetry.PipelineQualification);
+		// this gate proves the pipeline's semantics, NOT that any
+		// production collector deployment exists.
+		{"telemetry_export_pipeline_internal",
+			"spans convert to an OpenTelemetry-shaped payload, are delivered to a sink, persisted, and retrievable by trace and by execution id -- INTERNAL_QUALIFIED only, never a production-observability claim",
+			true, assurance.StatusVerified, "./pkg/platform/telemetry",
+			"exporter -> collector -> store -> query round-trips in-process, and a nil sink or closed exporter fails loudly rather than discarding",
+			[]string{"go", "test", "-run", "ExportPipeline|Exporter|Payload|TraceID|PipelineQualification", "./pkg/platform/telemetry/"}, false},
 		{"correlation_propagation_coverage",
 			"one operation's identity is locked start to end: every correlation identifier is populated, mutually distinct, and reproduced identically by an independent cold replay",
 			true, assurance.StatusVerified, "./pkg/platform/correlation",

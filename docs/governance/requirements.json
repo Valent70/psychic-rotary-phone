@@ -547,5 +547,32 @@
     "tests": "`TestPolicyRegistryUsageCoverageEveryDecisionCommitsToItsPolicy`, `TestPolicyRegistryUsageCoverageRefusesAMismatchedPolicy`, `TestTemporalCalibrationUsageCoverageFailsClosedWhenRequiredAndAbsent`, `TestCorrelationPropagationCoverageEveryIdentifierIsPopulated`, `TestCorrelationPropagationCoverageSurvivesAnIndependentReplay`",
     "status": "VERIFIED",
     "note": "PHASE E5 / P1-17. All six gates are registered mandatory in `cmd/veriqo-readiness`. Four are whole-tree source scans (`canonical_evidence_production_coverage`, `canonical_identity_authority_coverage`, `canonical_execution_entrypoint_coverage`, plus the pre-existing `truth_arbitration_no_bypass`/`canonical_entity_authority_coverage`). Two -- `policy_registry_usage_coverage` and `temporal_calibration_usage_coverage` -- are deliberately RUNTIME tests rather than scans: \"every governed decision commits to the policy that governed it\" is a fact about the DAG, and grepping for it would prove only that certain text appears in certain files, which is exactly the evidence standard this project refuses elsewhere. `correlation_propagation_coverage` additionally proves the identifiers are mutually distinct, catching the degenerate case where a correlation key carries one bit instead of eight."
+  },
+  {
+    "id": "R-061",
+    "phase": "PRE-INS",
+    "title": "Real-world calibration interface: deterministic holdout, held-out evaluation, and a status that stays EXTERNAL_DATA_REQUIRED until a real corpus arrives",
+    "owner_package": "`pkg/governance/calibration`",
+    "tests": "`TestFixtureCorpusAlwaysReportsExternalDataRequired`, `TestNoAmountOfRunningTheMachineryRaisesTheStatus`, `TestHoldoutIsDeterministicAndDisjoint`, `TestFitHappensOnTheTrainingHalfOnly`, `TestAnUndeclaredCorpusIsRefused`",
+    "status": "VERIFIED",
+    "note": "PHASE F2 / P1-10, explicitly infrastructure-only (\"do not go looking for real data\"). Five of the nine named stages already existed in `corpus.go` and are NOT rebuilt (Real Event, Ground Truth, Label, Dataset, Fit); Evaluation reuses `pkg/moat/reliability`'s existing LogLoss/Brier/ECE rather than a second metric implementation. Genuinely new: a deterministic hash-based Holdout (so a table is never scored on its own training data, and inserting one event does not reshuffle the split), a CalibratedModel binding corpus+fit+evaluation so none can be quoted without the others, and CorpusStatus. Status is derived from the operator's DECLARATION, not from performance -- `TestNoAmountOfRunningTheMachineryRaisesTheStatus` proves 10x more, perfectly-separable fixture data still reports EXTERNAL_DATA_REQUIRED. No code can declare a corpus REAL_INVESTIGATED; that is an operator action with a named owner."
+  },
+  {
+    "id": "R-062",
+    "phase": "PRE-INS",
+    "title": "Telemetry export pipeline (OTel-compatible) and the data-leakage boundary",
+    "owner_package": "`pkg/platform/telemetry`",
+    "tests": "`TestNoSensitiveValueLeavesTheProcessInATraceAttribute`, `TestSecretsInErrorMessagesDoNotLeak`, `TestCorrelationIdentifiersSurviveRedaction`, `TestDefaultPostureIsDenyNotAllow`, `TestExportPipelineDeliversPersistsAndQueries`, `TestPipelineQualificationIsHonestlyCapped`",
+    "status": "VERIFIED",
+    "note": "PHASE H / P1-11 + P1-12. Instrumentation already existed and is NOT rebuilt; this is the transport adapter `veriqo_telemetry.go`'s own comment anticipated. OTel-COMPATIBLE, not OTel: the wire shape is hand-built because the `zero_dependency` gate is a real enforced property. **VERIFIED covers the pipeline SEMANTICS only; the operational ceiling is INTERNAL_QUALIFIED** -- `telemetry.PipelineQualification()` states what is proven (conversion, redaction at the boundary, delivery, persistence, query-by-trace and by-execution, loud failure on a nil sink or closed exporter) and what is NOT (conformance against a real collector, real network delivery/backpressure/retry, production-volume retention and cardinality, and that any collector deployment exists at all -- it does not). Leakage: redaction is applied at the exporter, default-deny by allow-list, with value patterns as defence-in-depth for sensitive content arriving under an allow-listed key. The suite asserts the canary does not appear ANYWHERE in the collector, not merely that one field was redacted, and `TestCorrelationIdentifiersSurviveRedaction` is the counterweight that stops a redact-everything implementation passing trivially."
+  },
+  {
+    "id": "R-063",
+    "phase": "PRE-INS",
+    "title": "Replay completeness: thirteen named identities identical across a real Process A -> destroy -> Process B replay",
+    "owner_package": "`cmd/veriqo-cold-replay`, `test/integration`",
+    "tests": "`TestColdReplay_CrossProcess_AllThirteenIdentitiesMatch`, `TestColdReplay_CrossProcess_IdentityBlockAbsentOnDivergence`",
+    "status": "VERIFIED",
+    "note": "PHASE F3 / P1-13. No second replay engine is built: the test launches the SAME `cmd/veriqo-cold-replay` binary the pre-existing cross-process tests already use, and parses the machine-readable identity block that binary now emits alongside its unchanged human-readable report. All thirteen (IntentID, ExecutionID, EvidencePackageID, EntityID, IdentityLedgerHead, PolicyHash, TemporalModelHash, InferenceTraceHash, DecisionID, ExplanationHash, DigitalTwinConsequenceHash, VerificationCertificateID, ReplayPackageID) are asserted NON-EMPTY in the originating process before being compared, so the comparison cannot pass vacuously. Two derivations are documented in the source rather than left to inference: `temporal_model_hash` is the TEMPORAL_BAYESIAN node's own committed hash (there is no separate model-hash artifact), and `inference_trace_hash` is the ExecutionRootHash (naming it separately would imply a second commitment that does not exist). The identity block is deliberately NOT emitted on a diverged replay: those values describe a run that did not reproduce."
   }
 ]

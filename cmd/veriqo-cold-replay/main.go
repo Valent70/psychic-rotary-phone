@@ -201,6 +201,21 @@ func run(args []string, stdout, stderr *os.File) int {
 			fmt.Fprintf(stdout, "    Decision              : %s\n", out.Decision)
 			fmt.Fprintf(stdout, "    TwinHead              : %s\n", out.Canonical.Certificate.TwinHead)
 			fmt.Fprintf(stdout, "    VerificationCertID    : %s\n", out.Certificate.VerificationCertificateID)
+
+			// PHASE F3 (P1-13): the same values again, machine-readable,
+			// so an assertion set can COMPARE them against the
+			// originating process's own values rather than an operator
+			// eyeballing the block above. The human-readable lines stay
+			// exactly as they were -- every existing consumer of this
+			// output is unaffected.
+			//
+			// This is deliberately emitted only on a PASSED verdict: a
+			// diverged replay's field values are the values of a run
+			// that did not reproduce, and printing them as if they were
+			// comparable would invite exactly the wrong conclusion.
+			if raw, err := json.MarshalIndent(replayIdentities(out, engine, policyHash), "", "  "); err == nil {
+				fmt.Fprintf(stdout, "%s%s\n%s\n", identitiesBeginMarker, string(raw), identitiesEndMarker)
+			}
 		}
 	} else {
 		fmt.Fprintf(stdout, "  divergent stage        : %s\n", verdict.DivergentStage)
@@ -238,4 +253,127 @@ func run(args []string, stdout, stderr *os.File) int {
 		return 0
 	}
 	return 1
+}
+
+// --- PHASE F3 (P1-13): the replay identity set ------------------------
+
+// identitiesBeginMarker and identitiesEndMarker delimit the
+// machine-readable identity block in this binary's stdout. Markers
+// rather than a separate file so the block travels with the report a
+// human already reads, and so nothing has to agree on a second path.
+const (
+	identitiesBeginMarker = "\n--- BEGIN REPLAY IDENTITIES (JSON) ---\n"
+	identitiesEndMarker   = "--- END REPLAY IDENTITIES (JSON) ---"
+)
+
+// ReplayIdentities is the thirteen named identities PHASE F3 requires
+// to be identical across a genuine Process A -> destroy -> Process B
+// replay. Each field is read from the rebuilt Result; none is
+// recomputed by a second implementation, because the point is to
+// compare what the replay ACTUALLY produced against what the original
+// run produced.
+type ReplayIdentities struct {
+	IntentID                   string `json:"intent_id"`
+	ExecutionID                string `json:"execution_id"`
+	EvidencePackageID          string `json:"evidence_package_id"`
+	EntityID                   string `json:"entity_id"`
+	IdentityLedgerHead         string `json:"identity_ledger_head"`
+	PolicyHash                 string `json:"policy_hash"`
+	TemporalModelHash          string `json:"temporal_model_hash"`
+	InferenceTraceHash         string `json:"inference_trace_hash"`
+	DecisionID                 string `json:"decision_id"`
+	ExplanationHash            string `json:"explanation_hash"`
+	DigitalTwinConsequenceHash string `json:"digital_twin_consequence_hash"`
+	VerificationCertificateID  string `json:"verification_certificate_id"`
+	ReplayPackageID            string `json:"replay_package_id"`
+}
+
+// Names returns every field name in a fixed order, so a comparison can
+// enumerate the set rather than hardcoding it in two places.
+func (ReplayIdentities) Names() []string {
+	return []string{
+		"intent_id", "execution_id", "evidence_package_id", "entity_id",
+		"identity_ledger_head", "policy_hash", "temporal_model_hash",
+		"inference_trace_hash", "decision_id", "explanation_hash",
+		"digital_twin_consequence_hash", "verification_certificate_id",
+		"replay_package_id",
+	}
+}
+
+// Values returns the identities as a name -> value map, in the same
+// vocabulary Names uses.
+func (r ReplayIdentities) Values() map[string]string {
+	return map[string]string{
+		"intent_id": r.IntentID, "execution_id": r.ExecutionID,
+		"evidence_package_id": r.EvidencePackageID, "entity_id": r.EntityID,
+		"identity_ledger_head": r.IdentityLedgerHead, "policy_hash": r.PolicyHash,
+		"temporal_model_hash": r.TemporalModelHash, "inference_trace_hash": r.InferenceTraceHash,
+		"decision_id": r.DecisionID, "explanation_hash": r.ExplanationHash,
+		"digital_twin_consequence_hash": r.DigitalTwinConsequenceHash,
+		"verification_certificate_id":   r.VerificationCertificateID,
+		"replay_package_id":             r.ReplayPackageID,
+	}
+}
+
+// replayIdentities extracts the thirteen identities from a Result.
+//
+// Two of the thirteen deserve their derivation stated explicitly rather
+// than left to a reader to infer:
+//
+//   - temporal_model_hash is the TEMPORAL_BAYESIAN DAG node's own hash.
+//     There is no separate "model hash" artifact; the node hash is what
+//     the execution actually committed to for that stage, so it is the
+//     honest value to compare. When the stage was skipped, the node
+//     hash still exists and still differs from an executed one.
+//   - inference_trace_hash is the ExecutionRootHash: the single value
+//     the whole DAG folds every node fingerprint into. Naming it
+//     separately would imply a second, independent commitment that does
+//     not exist.
+func replayIdentities(out *execution.Result, engine *execution.Engine, policyHash string) ReplayIdentities {
+	r := ReplayIdentities{
+		IntentID:                  out.Trace.Context.CaseID,
+		ExecutionID:               out.Trace.Context.ExecutionID,
+		EvidencePackageID:         out.Trace.Context.EvidencePackageID,
+		DecisionID:                out.Explanation.DecisionID,
+		PolicyHash:                policyHash,
+		InferenceTraceHash:        out.ExecutionRootHash,
+		ExplanationHash:           out.Explanation.Hash,
+		VerificationCertificateID: out.Certificate.VerificationCertificateID,
+		ReplayPackageID:           out.ReplayPackage.ReplayPackageID,
+	}
+	if engine.Identity != nil {
+		r.IdentityLedgerHead = engine.Identity.Head()
+	}
+	if out.Canonical != nil {
+		r.EntityID = string(out.Canonical.Twin.Entity)
+		r.DigitalTwinConsequenceHash = out.Canonical.Certificate.TwinHead
+	}
+	for _, n := range out.Trace.Nodes {
+		if n.StageID == execution.StageTemporal {
+			r.TemporalModelHash = n.Hash
+		}
+	}
+	return r
+}
+
+// ParseReplayIdentities extracts the machine-readable identity block
+// from this binary's stdout. Exported so an integration test in another
+// package can parse a real subprocess's real output rather than
+// re-deriving the values in-process, which would defeat the entire
+// point of a cross-process proof.
+func ParseReplayIdentities(stdout string) (ReplayIdentities, error) {
+	start := strings.Index(stdout, strings.TrimPrefix(identitiesBeginMarker, "\n"))
+	if start < 0 {
+		return ReplayIdentities{}, fmt.Errorf("cold-replay output carries no replay-identity block")
+	}
+	start += len(strings.TrimPrefix(identitiesBeginMarker, "\n"))
+	end := strings.Index(stdout[start:], identitiesEndMarker)
+	if end < 0 {
+		return ReplayIdentities{}, fmt.Errorf("cold-replay identity block is not terminated")
+	}
+	var out ReplayIdentities
+	if err := json.Unmarshal([]byte(stdout[start:start+end]), &out); err != nil {
+		return ReplayIdentities{}, fmt.Errorf("cold-replay identity block is not valid JSON: %w", err)
+	}
+	return out, nil
 }

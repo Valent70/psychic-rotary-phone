@@ -25,6 +25,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"testing"
 
 	"veriqo/pkg/canonical"
@@ -300,5 +302,259 @@ func TestColdReplay_CrossProcess_TamperedIdentityLedgerFails(t *testing.T) {
 	}
 	if !contains(string(out), "IDENTITY VERDICT       : FAILED") {
 		t.Fatalf("expected the tampered identity ledger to be refused, got:\n%s", out)
+	}
+}
+
+// --- PHASE F3 (P1-13): replay completeness ---------------------------
+//
+// The existing tests above prove a cold, cross-process replay
+// reproduces the evidence root, the decision, the explanation and the
+// verification certificate. PHASE F3 asks for something stricter and
+// enumerated: that THIRTEEN specifically-named identities are identical
+// across a real Process A -> destroy -> Process B replay.
+//
+// This does NOT build a second replay engine. It runs the same
+// veriqo-cold-replay binary the tests above already launch, and parses
+// the machine-readable identity block that binary now emits, so the
+// comparison is against what a genuinely separate OS process actually
+// produced rather than against anything recomputed in this process.
+
+// coldReplayIdentities mirrors cmd/veriqo-cold-replay's own
+// ReplayIdentities. It is duplicated here rather than imported because
+// Go cannot import a main package -- the same constraint every
+// cross-process test in this repository works around, and the reason
+// the binary emits JSON in the first place.
+type coldReplayIdentities struct {
+	IntentID                   string `json:"intent_id"`
+	ExecutionID                string `json:"execution_id"`
+	EvidencePackageID          string `json:"evidence_package_id"`
+	EntityID                   string `json:"entity_id"`
+	IdentityLedgerHead         string `json:"identity_ledger_head"`
+	PolicyHash                 string `json:"policy_hash"`
+	TemporalModelHash          string `json:"temporal_model_hash"`
+	InferenceTraceHash         string `json:"inference_trace_hash"`
+	DecisionID                 string `json:"decision_id"`
+	ExplanationHash            string `json:"explanation_hash"`
+	DigitalTwinConsequenceHash string `json:"digital_twin_consequence_hash"`
+	VerificationCertificateID  string `json:"verification_certificate_id"`
+	ReplayPackageID            string `json:"replay_package_id"`
+}
+
+func (r coldReplayIdentities) values() map[string]string {
+	return map[string]string{
+		"intent_id": r.IntentID, "execution_id": r.ExecutionID,
+		"evidence_package_id": r.EvidencePackageID, "entity_id": r.EntityID,
+		"identity_ledger_head": r.IdentityLedgerHead, "policy_hash": r.PolicyHash,
+		"temporal_model_hash": r.TemporalModelHash, "inference_trace_hash": r.InferenceTraceHash,
+		"decision_id": r.DecisionID, "explanation_hash": r.ExplanationHash,
+		"digital_twin_consequence_hash": r.DigitalTwinConsequenceHash,
+		"verification_certificate_id":   r.VerificationCertificateID,
+		"replay_package_id":             r.ReplayPackageID,
+	}
+}
+
+// identitiesOf extracts the same thirteen values from an in-process
+// Result, using exactly the derivations cmd/veriqo-cold-replay uses.
+func identitiesOf(res *execution.Result, resolver *identity.Resolver) coldReplayIdentities {
+	out := coldReplayIdentities{
+		IntentID:                  res.Trace.Context.CaseID,
+		ExecutionID:               res.Trace.Context.ExecutionID,
+		EvidencePackageID:         res.Trace.Context.EvidencePackageID,
+		DecisionID:                res.Explanation.DecisionID,
+		InferenceTraceHash:        res.ExecutionRootHash,
+		ExplanationHash:           res.Explanation.Hash,
+		VerificationCertificateID: res.Certificate.VerificationCertificateID,
+		ReplayPackageID:           res.ReplayPackage.ReplayPackageID,
+	}
+	out.PolicyHash = res.ExpectedPolicyHash
+	if out.PolicyHash == "" {
+		out.PolicyHash = res.Case.Policy.Hash()
+	}
+	if resolver != nil {
+		out.IdentityLedgerHead = resolver.Head()
+	}
+	if res.Canonical != nil {
+		out.EntityID = string(res.Canonical.Twin.Entity)
+		out.DigitalTwinConsequenceHash = res.Canonical.Certificate.TwinHead
+	}
+	for _, n := range res.Trace.Nodes {
+		if n.StageID == execution.StageTemporal {
+			out.TemporalModelHash = n.Hash
+		}
+	}
+	return out
+}
+
+func parseColdReplayIdentities(t *testing.T, stdout string) coldReplayIdentities {
+	t.Helper()
+	const begin = "--- BEGIN REPLAY IDENTITIES (JSON) ---\n"
+	const end = "--- END REPLAY IDENTITIES (JSON) ---"
+	i := strings.Index(stdout, begin)
+	if i < 0 {
+		t.Fatalf("cold-replay output carries no identity block:\n%s", stdout)
+	}
+	i += len(begin)
+	j := strings.Index(stdout[i:], end)
+	if j < 0 {
+		t.Fatalf("cold-replay identity block is not terminated:\n%s", stdout)
+	}
+	var out coldReplayIdentities
+	if err := json.Unmarshal([]byte(stdout[i:i+j]), &out); err != nil {
+		t.Fatalf("cold-replay identity block is not valid JSON: %v\n%s", err, stdout[i:i+j])
+	}
+	return out
+}
+
+// TestColdReplay_CrossProcess_AllThirteenIdentitiesMatch is PHASE F3's
+// acceptance criterion, stated exactly: Process A runs, its state is
+// destroyed, Process B replays from the exported file alone, and all
+// thirteen named identities compare equal.
+func TestColdReplay_CrossProcess_AllThirteenIdentitiesMatch(t *testing.T) {
+	bin := buildVeriqoColdReplay(t)
+
+	// --- Process A: the original execution -------------------------
+	resolver := identity.NewResolver()
+	if err := resolver.RegisterAuthority(identity.Authority{SourceID: "cold-replay-authority", Weight: 1}); err != nil {
+		t.Fatalf("RegisterAuthority: %v", err)
+	}
+	if _, err := resolver.Merge("cold-replay-test", "cold-replay-authority",
+		identity.Identifier{Kind: identity.KindIMO, Value: "7778889"},
+		identity.Identifier{Kind: identity.KindCallsign, Value: "COLD1"}, 12, "cold replay identity fixture"); err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+
+	engine := execution.NewEngine(nil)
+	engine.Identity = resolver
+	original, err := engine.Run(context.Background(), execution.Input{
+		Context: coldReplayExecContext(), Case: coldReplayCaseInput(),
+	})
+	if err != nil {
+		t.Fatalf("original execution: %v", err)
+	}
+	before := identitiesOf(original, resolver)
+
+	// Every identity must be non-empty before the comparison means
+	// anything: comparing "" to "" thirteen times would pass and prove
+	// nothing at all. This assertion is what makes the comparison below
+	// load-bearing rather than vacuous.
+	for name, v := range before.values() {
+		if v == "" {
+			t.Errorf("identity %q is empty in the ORIGINAL run -- comparing it across processes would be vacuous", name)
+		}
+	}
+
+	exportPath := filepath.Join(t.TempDir(), "execution.json")
+	raw, err := original.ExportReplay()
+	if err != nil {
+		t.Fatalf("ExportReplay: %v", err)
+	}
+	if err := os.WriteFile(exportPath, raw, 0o600); err != nil {
+		t.Fatalf("write export: %v", err)
+	}
+
+	idExportPath := filepath.Join(filepath.Dir(exportPath), "identity.json")
+	imoAlias := identity.Identifier{Kind: identity.KindIMO, Value: "7778889"}
+	csAlias := identity.Identifier{Kind: identity.KindCallsign, Value: "COLD1"}
+	originalEntityID, err := resolver.EntityIDAt(imoAlias, 12)
+	if err != nil {
+		t.Fatalf("EntityIDAt: %v", err)
+	}
+	idExport := identity.ColdReplayExport{
+		Ledger:      resolver.Ledger(),
+		Authorities: []identity.Authority{{SourceID: "cold-replay-authority", Weight: 1}},
+		Queries: []identity.ColdReplayQuery{
+			{Alias: imoAlias, AsOfTick: 12, ExpectedEntityID: originalEntityID},
+			{Alias: csAlias, AsOfTick: 12, ExpectedEntityID: originalEntityID},
+		},
+	}
+	idRaw, err := json.Marshal(idExport)
+	if err != nil {
+		t.Fatalf("marshal identity export: %v", err)
+	}
+	if err := os.WriteFile(idExportPath, idRaw, 0o600); err != nil {
+		t.Fatalf("write identity export: %v", err)
+	}
+
+	// --- destroy: every in-process handle to the original run -------
+	engine = nil
+	resolver = nil
+	original = nil
+	_ = engine
+	_ = resolver
+	_ = original
+
+	// --- Process B: a genuinely separate OS process -----------------
+	cmd := exec.Command(bin, "-export", exportPath, "-identity-export", idExportPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("cold replay process failed: %v\n%s", err, out)
+	}
+	after := parseColdReplayIdentities(t, string(out))
+
+	// --- compare all thirteen ---------------------------------------
+	beforeValues, afterValues := before.values(), after.values()
+	if len(beforeValues) != 13 || len(afterValues) != 13 {
+		t.Fatalf("expected 13 identities on each side, got %d and %d", len(beforeValues), len(afterValues))
+	}
+	names := make([]string, 0, len(beforeValues))
+	for n := range beforeValues {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if beforeValues[name] != afterValues[name] {
+			t.Errorf("identity %q did not survive the cross-process replay:\n  process A: %q\n  process B: %q",
+				name, beforeValues[name], afterValues[name])
+		}
+	}
+}
+
+// TestColdReplay_CrossProcess_IdentityBlockAbsentOnDivergence records a
+// deliberate decision: a diverged replay's field values are the values
+// of a run that did NOT reproduce, so emitting them as if they were
+// comparable would invite exactly the wrong conclusion.
+func TestColdReplay_CrossProcess_IdentityBlockAbsentOnDivergence(t *testing.T) {
+	bin := buildVeriqoColdReplay(t)
+
+	engine := execution.NewEngine(nil)
+	original, err := engine.Run(context.Background(), execution.Input{
+		Context: coldReplayExecContext(), Case: coldReplayCaseInput(),
+	})
+	if err != nil {
+		t.Fatalf("original execution: %v", err)
+	}
+	raw, err := original.ExportReplay()
+	if err != nil {
+		t.Fatalf("ExportReplay: %v", err)
+	}
+
+	// Tamper with the committed trace so the replay must diverge.
+	var req map[string]any
+	if err := json.Unmarshal(raw, &req); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	committed, _ := req["committed_trace"].(map[string]any)
+	nodes, _ := committed["nodes"].([]any)
+	if len(nodes) == 0 {
+		t.Fatal("exported trace has no nodes to tamper with")
+	}
+	first, _ := nodes[0].(map[string]any)
+	first["hash"] = "0000000000000000000000000000000000000000000000000000000000000000"
+	tampered, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	exportPath := filepath.Join(t.TempDir(), "tampered.json")
+	if err := os.WriteFile(exportPath, tampered, 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	cmd := exec.Command(bin, "-export", exportPath)
+	out, _ := cmd.CombinedOutput()
+	if strings.Contains(string(out), "BEGIN REPLAY IDENTITIES") {
+		t.Fatal("a diverged replay emitted a comparable identity block -- those values describe a run that did not reproduce")
+	}
+	if !strings.Contains(string(out), "FAILED") {
+		t.Fatalf("a tampered export did not produce a FAILED verdict:\n%s", out)
 	}
 }
