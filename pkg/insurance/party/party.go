@@ -49,6 +49,36 @@ const (
 	RoleLegalCounsel          Role = "LEGAL_COUNSEL"
 	RolePortAuthority         Role = "PORT_AUTHORITY"
 	RoleOtherResponsibleParty Role = "OTHER_RESPONSIBLE_PARTY"
+
+	// The roles below were added when the synthetic case pack
+	// (pkg/insurance/casepack) needed them. Each is named explicitly by
+	// one of the two frozen design documents, so adding them is the
+	// deliberate, auditable act this type's doc comment describes rather
+	// than an ad-hoc widening:
+	//
+	//   - Warehouse, Stevedore, ShipManager, Manufacturer,
+	//     LogisticsProvider and Counterparty are all named in the
+	//     functional spec §30's own list of potential responsible parties
+	//     for recovery, and none of them existed here.
+	//   - Respondent is the counterpart to the existing RoleClaimant once
+	//     a claim becomes a dispute (I-08). Without it, a respondent had
+	//     to be recorded as OTHER_RESPONSIBLE_PARTY, which reads as a
+	//     recovery target rather than a party to a dispute.
+	//   - Regulator and Auditor are required by I-08's regulatory half
+	//     and by the functional spec §77's independent-review model. A
+	//     supervisory authority recorded as a PORT_AUTHORITY would be a
+	//     mislabel, and mislabelling a party to fit an existing enum is
+	//     exactly the kind of quiet inaccuracy this codebase's governance
+	//     exists to prevent.
+	RoleWarehouse         Role = "WAREHOUSE"
+	RoleStevedore         Role = "STEVEDORE"
+	RoleShipManager       Role = "SHIP_MANAGER"
+	RoleManufacturer      Role = "MANUFACTURER"
+	RoleLogisticsProvider Role = "LOGISTICS_PROVIDER"
+	RoleCounterparty      Role = "COUNTERPARTY"
+	RoleRespondent        Role = "RESPONDENT"
+	RoleRegulator         Role = "REGULATOR"
+	RoleAuditor           Role = "AUDITOR"
 )
 
 var knownRoles = map[Role]bool{
@@ -58,6 +88,9 @@ var knownRoles = map[Role]bool{
 	RolePAndIClub: true, RoleHullInsurer: true, RoleCargoInsurer: true, RoleSurveyor: true,
 	RoleLossAdjuster: true, RoleReinsurer: true, RoleLegalCounsel: true,
 	RolePortAuthority: true, RoleOtherResponsibleParty: true,
+	RoleWarehouse: true, RoleStevedore: true, RoleShipManager: true,
+	RoleManufacturer: true, RoleLogisticsProvider: true, RoleCounterparty: true,
+	RoleRespondent: true, RoleRegulator: true, RoleAuditor: true,
 }
 
 // KnownRoles returns every modelled role in deterministic order.

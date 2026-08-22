@@ -57,6 +57,7 @@ import (
 
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/evidence/ontology"
+	"veriqo/pkg/evidence/provenance"
 	"veriqo/pkg/identity"
 	"veriqo/pkg/moat/contradiction"
 	"veriqo/pkg/moat/decision"
@@ -472,4 +473,59 @@ func reliabilityOf(e ontology.Evidence) float64 {
 		return 1
 	}
 	return r
+}
+
+// ---- Synthetic fixture evidence -------------------------------------
+
+// ErrSyntheticMarkerConflict is returned by SyntheticDocument when the
+// caller supplies an attribute that would contradict the synthetic
+// origin this constructor stamps. A fixture that can claim a
+// non-synthetic origin is exactly the "mixing synthetic with live data"
+// failure the insurance design documents forbid.
+var ErrSyntheticMarkerConflict = errors.New(
+	"evidence/api: a synthetic fixture record may not declare a non-synthetic origin_class")
+
+// SyntheticOriginClass is the origin every SyntheticDocument record
+// carries, stamped into the hashed attributes so a record's synthetic
+// provenance cannot be separated from the record.
+const SyntheticOriginClass = string(provenance.OriginSynthetic)
+
+// SyntheticDocument mints one FIXTURE document evidence record through
+// the canonical evidence contract.
+//
+// It exists so that fixture producers -- pkg/insurance/casepack is the
+// first -- never write an ontology.Evidence literal of their own. That
+// matters for a specific, machine-checked reason: internal/nobypass's
+// canonical_evidence_production_coverage gate counts every file that
+// constructs canonical evidence outside the audited source -> adapter
+// -> contract chain, and a fixture producer minting its own records
+// would be exactly such a second ingestion path. Rather than widen that
+// allowlist -- which would weaken a real gate to accommodate test data
+// -- the construction lives HERE, inside the canonical contract, where
+// it already belongs.
+//
+// What this is NOT: a way to get evidence into a case without going
+// through the contract. The returned record is a fully normalized,
+// content-addressed ontology.Evidence exactly like any other, and it is
+// stamped SYNTHETIC in its own hashed attributes so no consumer can
+// mistake it for a real observation.
+func SyntheticDocument(subject, predicate, object, source string, observedAt uint64, confidence float64, attrs map[string]string) (ontology.Evidence, error) {
+	if oc, ok := attrs["origin_class"]; ok && oc != SyntheticOriginClass {
+		return ontology.Evidence{}, fmt.Errorf("%w: got %q", ErrSyntheticMarkerConflict, oc)
+	}
+	merged := make(map[string]string, len(attrs)+1)
+	for k, v := range attrs {
+		merged[k] = v
+	}
+	merged["origin_class"] = SyntheticOriginClass
+	return ontology.New(ontology.Evidence{
+		Type:       ontology.TypeDocument,
+		Subject:    subject,
+		Predicate:  predicate,
+		Object:     object,
+		Source:     source,
+		ObservedAt: observedAt,
+		Confidence: confidence,
+		Attributes: merged,
+	})
 }

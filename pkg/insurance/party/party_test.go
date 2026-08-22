@@ -146,9 +146,35 @@ func TestAllPreservesRegistrationOrder(t *testing.T) {
 }
 
 func TestKnownRolesCoversTheBlueprintList(t *testing.T) {
-	// The blueprint (§3) enumerates exactly 21 roles.
-	if got := len(KnownRoles()); got != 21 {
-		t.Fatalf("expected 21 known roles per VICE blueprint §3, got %d", got)
+	// The earlier blueprint (§3) enumerated exactly 21 roles, and this
+	// test asserted that count. Round R21 added nine more, each named
+	// explicitly by one of the two frozen Insurance design documents:
+	//
+	//   - WAREHOUSE, STEVEDORE, SHIP_MANAGER, MANUFACTURER,
+	//     LOGISTICS_PROVIDER and COUNTERPARTY are in the functional
+	//     spec §30's own list of potential responsible parties for
+	//     recovery;
+	//   - RESPONDENT is the counterpart to CLAIMANT once a claim becomes
+	//     a dispute (I-08);
+	//   - REGULATOR and AUDITOR are required by I-08's regulatory half
+	//     and the functional spec §77 independent-review model.
+	//
+	// The count is asserted rather than dropped, so adding a role stays
+	// the deliberate, auditable act this package's own doc comment
+	// describes.
+	const blueprintRoles, r21AddedRoles = 21, 9
+	if got := len(KnownRoles()); got != blueprintRoles+r21AddedRoles {
+		t.Fatalf("expected %d known roles (%d from VICE blueprint §3 plus %d added in R21), got %d",
+			blueprintRoles+r21AddedRoles, blueprintRoles, r21AddedRoles, got)
+	}
+	// Each added role must genuinely be recognised, not merely counted.
+	for _, r := range []Role{
+		RoleWarehouse, RoleStevedore, RoleShipManager, RoleManufacturer,
+		RoleLogisticsProvider, RoleCounterparty, RoleRespondent, RoleRegulator, RoleAuditor,
+	} {
+		if !IsKnownRole(r) {
+			t.Fatalf("role %q is declared but not registered as known", r)
+		}
 	}
 }
 
