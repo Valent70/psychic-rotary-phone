@@ -1,4 +1,4 @@
-# Auditor Priority-Phase Reconciliation (R18)
+# Auditor Priority-Phase Reconciliation (R18, R19)
 
 This document reconciles a fresh auditor document ("Fase Prioritas menurut
 Auditor harus diselesaikan") against this repository's actual, current
@@ -26,8 +26,11 @@ coding session can substitute for without fabricating evidence.
 ## PRIORITY 1 — Real data acquisition (AIS, BoL/customs, SAR,
 commodity/trade, historical outcome data)
 
-**Status: BLOCKED_EXTERNAL, unchanged, explicitly excluded from this
-round's scope by standing operator directive.**
+**Status: BLOCKED_EXTERNAL for the live feeds themselves, unchanged and
+explicitly excluded from scope by standing operator directive — but the
+adjacent, genuinely OPEN *engineering* gap this priority also implied
+(R-050: "real-world ingestion contracts" for all five named source
+types, not just AIS) is now closed, R19, real code and real tests.**
 
 This is the `live_data` blocker (`pkg/blockers/livedata`), which the
 operator directing this entire multi-round effort explicitly excluded
@@ -39,7 +42,33 @@ production-shaped `FeedConnector`/`Pipeline` with content-hash dedup and
 a proven anti-replay defense across all four source types, which refuses
 any `SIMULATED`-mode connector's record tagged `LIVE` (see
 `evidence/blockers-qualification-report.json`,
-`READY_FOR_REAL_QUALIFICATION`). No further engineering work narrows
+`READY_FOR_REAL_QUALIFICATION`).
+
+R19 addendum: before this round, `pkg/connector` only had a real
+ingestion-contract treatment for ONE of the five source types the
+requirement traceability matrix's R-050 row named (AIS, via
+`pkg/connector/aisstream` — a full wire-schema parser, structural
+validator, and canonicalizer into `pkg/evidence/ontology.Evidence`); the
+other four (SAR, BoL, insurance, payment) simply did not exist, making
+R-050 the one genuinely OPEN, non-infrastructure-blocked row in the
+entire 51-row matrix. R19 closes it for real: `pkg/connector/{sar,bol,
+insurance,payment}` each now parse a raw wire schema, structurally
+validate it (malformed/truncated/wrong-schema/missing-field all fail
+closed before any semantic check runs), semantically validate it, and
+canonicalize into `pkg/evidence/ontology.Evidence` (`TypeSARObservation`,
+`TypeTradeRecord`, `TypeDocument`, `TypeFinancialRecord` respectively).
+`pkg/connector.Drain` composes `pkg/blockers/livedata`'s existing
+`FeedConnector`/`Pipeline` (content-hash dedup, anti-replay, LIVE-
+refusal) with each source's new `Decoder`, rather than duplicating any
+of that machinery — the SAME discipline this priority's own paragraph
+above already describes for the four original sources. Every new
+connector is SIMULATED-mode only, deterministic and seeded, exactly like
+before; `TestSimulatedNeverAcceptedAsLive` (one per new package) proves a
+SIMULATED connector's record tagged LIVE is still refused. None of this
+narrows the actual `live_data` blocker above by one inch — it still
+needs real commercial data contracts, unchanged — it only closes the
+separate, genuine engineering gap that sat next to it in the matrix. No
+further engineering work narrows
 this without a real data contract; none was attempted this round, per
 standing scope.
 
@@ -200,11 +229,63 @@ is not a technical gap this repository's code can close, and claiming
 otherwise would require fabricating a customer relationship that does
 not exist. Nothing was attempted here, and nothing honestly could be.
 
+## R19 addendum — two pure-engineering gaps outside the auditor's five
+priorities, closed this round; one investigated and confirmed NOT stale
+
+The auditor's five priorities above are all, by design, about resources
+a coding session cannot fabricate (commercial data, a labeled historical
+corpus, physical/cloud infrastructure, an independent vendor, a paying
+customer). R19's other work was two items the requirement traceability
+matrix tracks separately, both pure engineering with no such external
+dependency:
+
+- **R-050** (real-world ingestion contracts) — the one genuinely OPEN
+  row in the entire 51-row matrix, closed for real. See the R19 addendum
+  under PRIORITY 1 above for the detail; it does not change PRIORITY 1's
+  own BLOCKED_EXTERNAL status, since the live feeds themselves are still
+  unavailable — it closes the adjacent engineering gap next to it.
+- **R-029** (`pkg/consensus/raftlite` membership/reconfiguration) — VERIFIED
+  since an earlier round but carrying an inline caveat naming three
+  specific missing pieces: an explicit learner/voter role distinction,
+  adversarial corrupted/truncated/stale-snapshot tests, and a named
+  leader-during-reconfiguration scenario. All three closed this round
+  with real code and real tests — see `docs/governance/requirements.json`'s
+  R-029 entry for the precise detail, including the one honest narrowing
+  that remains (true two-phase joint consensus does not yet compose with
+  learners) and the one honest scoping note (the leader-during-
+  reconfiguration test is a direct, deterministic mechanism-level test,
+  not a live multi-node cluster race, after several cluster-level
+  attempts proved unreliable to make deterministic in this sandbox for
+  reasons that turned out to be about Raft's own liveness properties,
+  not about the fix).
+
+A third item was investigated per explicit instruction, NOT attempted:
+whether **R-028**'s "OS-level seccomp/namespace enforcement remains
+BLOCKED" note might be stale, given that this branch's own history
+already contains real seccomp-BPF work (`de646c0`: a hand-encoded
+classic-BPF denylist installed via `PR_SET_SECCOMP`) and real
+`PR_SET_NO_NEW_PRIVS` hardening (`09823ac`). Checked directly rather
+than assumed: both of those live in `cmd/veriqo-plugin-shim`, a separate
+command with its own hand-rolled enforcement for its own specific
+plugin-execution use case. `pkg/kernel/sandbox` — R-028's actual owner
+package — still has exactly two `Enforcer` implementations,
+`InProcessEnforcer` (which explicitly REFUSES policies requiring process
+spawning or syscall filtering rather than pretending to enforce them —
+see its own doc comment) and `UnenforceableEnforcer` (no enforcement at
+all). Neither is a real OS-level seccomp/namespace enforcer, and neither
+wires in `cmd/veriqo-plugin-shim`'s BPF work as a pluggable `Enforcer`.
+**Conclusion: R-028's note is accurate, not stale.** The real seccomp
+work is real, but it is a parallel, narrower piece of machinery serving
+a different package, not integrated into the one this requirement
+actually tracks — closing that integration gap would be legitimate
+future engineering work, but per this round's explicit instruction, it
+was investigated only, not attempted.
+
 ## Summary
 
 | Priority | What's real & closed this round or before | What remains, and why it's categorically external |
 |---|---|---|
-| 1. Real data acquisition | Real connector/pipeline/anti-replay machinery | Commercial data contracts (excluded from scope by standing directive) |
+| 1. Real data acquisition | Real connector/pipeline/anti-replay machinery; **all 5 named source-type ingestion contracts now real (new, R19)** | Commercial data contracts (excluded from scope by standing directive) |
 | 2. Calibration corpus | Contract + wiring + **real fitting process (new, R18)** | A real labeled historical dataset (data acquisition, same category as #1) |
 | 3. Infrastructure qualification | Real multi-container drills for SPIRE/DR/scale; fail-closed KMS guard | Real cloud/physical procurement at literal production scale; zero-dependency architecture rules out adding cloud SDKs for a partial, still-unqualifiable step |
 | 4. Independent assurance | Real SAST; real adversarial pentest harness; **real cross-runner independent build (new, R18)** | A real vendor's signed report; a blocked vulnerability-DB feed (org policy); a build on a genuinely separate CI provider/OS lineage |
