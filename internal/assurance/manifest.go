@@ -321,6 +321,13 @@ type ReadinessManifest struct {
 	Acceptance    AcceptanceManifest `json:"acceptance"`
 	Gates         []Gate             `json:"gates"`
 	Assessment    Assessment         `json:"assessment"`
+	// Axes is PHASE E3 (P0-8)'s four-axis readiness separation, derived
+	// from the same gates above. It is additive reporting only: it is
+	// computed from Gates, it feeds nothing back into Assessment, and
+	// it is deliberately NOT part of ReleaseCertificate.canonical(), so
+	// adding it leaves every historically-signed certificate verifiable
+	// byte-for-byte (the same discipline EnvironmentHash documents).
+	Axes AxesReport `json:"axes"`
 }
 
 // ManifestSchemaVersion identifies the readiness manifest contract.
@@ -334,7 +341,7 @@ func BuildReadinessManifest(r *Registry, acc AcceptanceManifest, cert ReleaseCer
 	cert = cert.Finalize(a)
 	return ReadinessManifest{
 		SchemaVersion: ManifestSchemaVersion, Release: cert,
-		Acceptance: acc, Gates: r.Gates(), Assessment: a,
+		Acceptance: acc, Gates: r.Gates(), Assessment: a, Axes: r.Axes(),
 	}
 }
 

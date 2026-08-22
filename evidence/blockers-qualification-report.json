@@ -5,11 +5,21 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
-        "elapsed": "2.734226ms",
+        "duplicate_policy": "REJECT",
+        "elapsed": "2.603311ms",
+        "input_ledger_hash": "be848467a51ea9dab7fa09395e531590e08989204f21ecaa3d215fe6635392dd",
+        "merkle_root": "4dd79a4a6d08b3cc4f75cd23a1b31a33bef094aed68680499ae0dbb955ba6330",
         "node_count": "8",
+        "nodes_with_no_traffic_count": "0",
+        "output_ledger_hash": "53df4e360fe70268ddcbbad7fb8667ca0ac55d8a7055be365c3773347439a4c7",
+        "reconciliation_consistent": "true",
         "records_processed": "2000",
         "records_submitted": "2000",
-        "throughput_per_s": "731468.43"
+        "release_commit": "8a085c721a3c92255e4235d04418d2d9ddd86d5b",
+        "release_identity_source": "git",
+        "release_source_hash": "ad77b7ea5b26a5cc0693e861ce3d8e6675c4ecf922ae59dd5a871f90f0a4918b",
+        "throughput_per_s": "768252.43",
+        "unauthorized_count": "0"
       }
     },
     {
@@ -17,12 +27,22 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
+        "acknowledged_writes": "3",
+        "failback_converged": "true",
         "failed_region": "region-2",
         "healed_convergence": "true",
-        "recovered_leader": "region-1",
+        "recovered_leader": "region-0",
         "region_count": "3",
+        "release_commit": "8a085c721a3c92255e4235d04418d2d9ddd86d5b",
+        "release_identity_source": "git",
+        "release_source_hash": "ad77b7ea5b26a5cc0693e861ce3d8e6675c4ecf922ae59dd5a871f90f0a4918b",
+        "replication_caught_up": "true",
+        "replication_matched_entries": "3",
+        "replication_total_entries": "3",
         "rpo_lost_writes": "0",
-        "rto": "52.02145ms"
+        "rto": "176.056391ms",
+        "topology_after_leader": "region-0",
+        "topology_before_leader": "region-2"
       }
     },
     {
@@ -55,13 +75,23 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
-        "actual_duration": "3.00145452s",
+        "actual_duration": "3.022647371s",
+        "binary_hash": "9e3a6d6bc8c02895930e29618a7190b54d4ecc157a1b6aeb7f3a3f85e05bdee9",
         "chain_verified": "true",
-        "checkpoints": "11",
+        "checkpoints": "12",
         "drift_detected": "false",
+        "dropped_events": "0",
+        "end_time": "2026-08-22T04:48:53Z",
+        "host_identity": "c9676dcb69b49679ce14a401e4fd93df5afe93e0b22ade33554c4e8ce0ea5ed4",
+        "hostname": "vm",
         "is_full_72h": "false",
-        "iterations": "23966627",
-        "leak_detected": "false"
+        "iterations": "23371877",
+        "leak_detected": "false",
+        "reconciliation": "true",
+        "restart_count": "0",
+        "run_id": "soak-run-63ce0b6a781d8e6948f376fca8e2fe7d",
+        "source_hash": "ad77b7ea5b26a5cc0693e861ce3d8e6675c4ecf922ae59dd5a871f90f0a4918b",
+        "start_time": "2026-08-22T04:48:50Z"
       }
     },
     {
@@ -95,16 +125,16 @@
       "status": "READY_FOR_REAL_QUALIFICATION",
       "pass": true,
       "measurements": {
-        "clean_tree": "true",
-        "commit": "6c0fb41a410036c0b0aadf7a783bb550ea316dbc",
+        "clean_tree": "false",
+        "commit": "8a085c721a3c92255e4235d04418d2d9ddd86d5b",
         "critical_findings": "0",
         "high_findings": "0",
         "low_findings": "0",
         "medium_findings": "0",
-        "probes_ran_at": "2026-08-15T04:20:58Z",
+        "probes_ran_at": "2026-08-22T04:48:54Z",
         "probes_run": "4",
         "retest_status": "PASS",
-        "source_hash": "00ac50e347773e7ad0c5c4e619f94b5f91a5750f065e1429408317d3e84d7d0c"
+        "source_hash": "ad77b7ea5b26a5cc0693e861ce3d8e6675c4ecf922ae59dd5a871f90f0a4918b"
       }
     }
   ],

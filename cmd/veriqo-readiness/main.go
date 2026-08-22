@@ -21,6 +21,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
@@ -44,6 +45,8 @@ import (
 	"veriqo/internal/telemetrycoverage"
 	"veriqo/internal/timestamp"
 	"veriqo/internal/version"
+	"veriqo/pkg/blockers"
+	"veriqo/pkg/blockers/orchestrator"
 	"veriqo/pkg/execution"
 	"veriqo/pkg/governance/entityconsistency"
 	"veriqo/pkg/governance/qualification"
@@ -442,14 +445,31 @@ func main() {
 	// state transition instead of dead code with a passing unit test.
 	qreg.ExpireStale(now)
 
+	// PHASE E3 (P0-8): every blocked gate's fixture-qualification
+	// pipeline is really executed here, in-process, so the ENGINEERING
+	// axis of each of the eight gates is backed by a real run of that
+	// gate's own machinery rather than being reported as NOT_RUN. This
+	// is the SAME orchestrator cmd/veriqo-qualification already drives
+	// (no second harness); the result is attached to the axis only, and
+	// deliberately never to Status -- READY_FOR_REAL_QUALIFICATION is a
+	// statement about a fixture, and a fixture never closes a gate.
+	blockerOutcome := map[string]orchestrator.Outcome{}
+	if breg := blockerRegistry(); breg != nil {
+		for _, o := range orchestrator.RunAll(context.Background(), ".", breg, orchestrator.Overrides{}).Outcomes {
+			blockerOutcome[o.ID] = o
+		}
+	}
+
 	for _, b := range blocked {
 		if err := reg.Register(assurance.Gate{
 			ID: b.gateID, Description: b.description, Mandatory: true,
 			RequiredStatus: b.required, OwnerPackage: b.owner, ExitCriteria: b.exit,
+			ExternalDependency: b.blocker,
 		}); err != nil {
 			fmt.Fprintln(os.Stderr, "readiness: register blocked:", err)
 			os.Exit(3)
 		}
+		attachBlockerAxes(reg, b.gateID, blockerOutcome[b.gateID], now)
 		qrec, _ := qreg.Get(b.gateID)
 		if qrec.Status == qualification.StatusVerified && qrec.Satisfied(now) {
 			raw, _ := json.Marshal(qrec)
@@ -1073,5 +1093,83 @@ func printClosureMatrix() {
 			continue
 		}
 		fmt.Printf("  %-20s final=%-24s (%s)\n", computed.GateID, computed.FinalStatus, computed.FinalReason)
+	}
+}
+
+// --- PHASE E3 (P0-8): per-gate readiness axis evidence ---------------
+
+// blockerRegistry loads the same docs/governance/production-blockers.json
+// registry cmd/veriqo-qualification reads. On any failure it returns
+// nil, and the caller skips the run entirely -- the ENGINEERING axis
+// then honestly reports NOT_RUN rather than this program inventing a
+// result.
+func blockerRegistry() *blockers.Registry {
+	raw, err := os.ReadFile(filepath.Join("docs", "governance", "production-blockers.json"))
+	if err != nil {
+		return nil
+	}
+	reg, err := blockers.LoadRegistry(raw)
+	if err != nil {
+		return nil
+	}
+	return reg
+}
+
+// internalDrillArtifacts maps each externally-blocked gate to the real,
+// committed drill logs this repository already produced for it inside
+// this environment. These back the INTERNAL axis and nothing else: an
+// in-sandbox drill's honest ceiling is INTERNAL_QUALIFIED, never
+// EXTERNAL_QUALIFIED, and internal/assurance enforces that structurally
+// (see axes.go -- no internal evidence can move the EXTERNAL axis).
+//
+// A gate absent from this map, or naming a file that does not exist,
+// reports INTERNAL as NOT_RUN. That is the correct, fail-closed answer:
+// three of the eight (live_data, pentest, hsm_kms) have no in-sandbox
+// drill that would mean anything, because what they need is a
+// commercial contract, an independent vendor, and a paid tenancy
+// respectively -- none of which has an internal analogue to run.
+var internalDrillArtifacts = map[string][]string{
+	"scale_qualification": {"evidence/scale_qualification-multi-container-drill.txt"},
+	"multi_region_dr":     {"evidence/multi_region_dr-multi-container-drill.txt"},
+	"spire_mtls": {
+		"evidence/spire_mtls-multi-container-integration.txt",
+		"evidence/spire_mtls-rafttcp-live-integration.txt",
+	},
+	"soak_72h":          {"evidence/soak-60min-run-log.txt"},
+	"supply_chain_scan": {"evidence/supply_chain_scan-gosec-full.txt"},
+}
+
+// attachBlockerAxes records one blocked gate's ENGINEERING and INTERNAL
+// axis evidence. It never calls Attach or Block: a gate's Status is
+// decided entirely by the existing blocked/qualified logic above, and
+// this function is incapable of changing it.
+func attachBlockerAxes(reg *assurance.Registry, gateID string, out orchestrator.Outcome, now uint64) {
+	if out.ID == gateID {
+		code := 1
+		if out.Pass {
+			code = 0
+		}
+		body, _ := json.MarshalIndent(out, "", "  ")
+		ev := assurance.NewEvidence(gateID, "internal:blockers/orchestrator.RunAll", string(body), code, now)
+		if err := reg.AttachEngineering(gateID, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach engineering axis:", err)
+			os.Exit(3)
+		}
+	}
+	for _, path := range internalDrillArtifacts[gateID] {
+		raw, err := os.ReadFile(path) // #nosec G304 -- path comes from this file's own hardcoded map, not external input
+		if err != nil {
+			// Fail-closed and silent by design: a missing drill log means
+			// the INTERNAL axis reports NOT_RUN, which is the truth.
+			continue
+		}
+		ev := assurance.NewEvidence(gateID,
+			"internal:in-sandbox qualification drill log "+path+
+				" (real run inside THIS environment; ceiling is INTERNAL_QUALIFIED, never external)",
+			string(raw), 0, now)
+		if err := reg.AttachInternal(gateID, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach internal axis:", err)
+			os.Exit(3)
+		}
 	}
 }

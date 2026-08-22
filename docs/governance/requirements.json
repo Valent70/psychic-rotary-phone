@@ -457,5 +457,32 @@
     "tests": "`TestDrainAcrossAllFiveR050Sources`, `TestQualityVectorReflectsRejections` (pkg/connector); per-source `TestDecode_ValidFixtureRoundtrips`, `TestDecode_MalformedJSONFailsClosed`, `TestDecode_TruncatedJSONFailsClosed`, `TestDecode_WrongSchemaFailsClosed`, `TestDecode_MissingRequiredFieldFailsClosed`, `TestDecode_SemanticallyInvalidFailsClosed`, `TestSimulatedConnector_ContentHashDedup`, `TestSimulatedNeverAcceptedAsLive` (sar, bol, insurance, payment); `TestNormalizedEvent_ToOntologyEvidence_ValidAISObservation`, `TestConnector_MalformedMessages_RejectedAndCounted` (aisstream, pre-existing AIS contract)",
     "status": "VERIFIED",
     "note": "was genuinely OPEN (pkg/connector did not exist for 4 of the 5 named source types; only AIS had prior treatment via pkg/connector/aisstream). Closed for real: pkg/connector/{sar,bol,insurance,payment} each parse raw payloads, structurally validate them (malformed/truncated/wrong-schema/missing-field all fail closed before any semantic check runs), semantically validate them, and canonicalize into pkg/evidence/ontology.Evidence (TypeSARObservation, TypeTradeRecord, TypeDocument, TypeFinancialRecord respectively; AIS already used TypeAISObservation). pkg/connector.Drain composes pkg/blockers/livedata's existing FeedConnector/Pipeline (content-hash dedup, anti-replay, LIVE-refusal) with each source's new Decoder rather than duplicating any of that machinery. No live provider access exists in this sandbox for any of the five sources: every connector is SIMULATED-mode only, and TestSimulatedNeverAcceptedAsLive (one per new source package) plus TestDrainAcrossAllFiveR050Sources prove a SIMULATED connector's record tagged LIVE is refused, exactly mirroring livedata's own invariant. LIVE mode is structurally supported (Drain does not special-case FeedConnector.Mode(), only livedata.Pipeline's own check does) but never fabricated."
+  },
+  {
+    "id": "R-051",
+    "phase": "PRE-INS",
+    "title": "Evidence envelope: one format for external and internal qualification evidence, with explicit FIXTURE/LIVE classification",
+    "owner_package": "`pkg/governance/envelope`",
+    "tests": "`TestValidatorRejectsEveryNamedFailureMode`, `TestFixtureCanNeverSelfPromote`, `TestEnvelopeIDIsContentAddressedAndDetectsEveryFieldChange`",
+    "status": "VERIFIED",
+    "note": "PHASE E / P0-6. Reuses `pkg/governance/qualification.TrustRegistry` for providers/reviewers and `pkg/evidence/provenance`'s OriginClass/RightsState/AttestationState verbatim rather than defining second vocabularies. New here: release-identity quadruple (commit, source_hash, binary_hash, sbom_hash) carried together with the artifact set + root hash, validity window, declared limitations, and a FIXTURE/LIVE classification checked against OriginKind rather than believed."
+  },
+  {
+    "id": "R-052",
+    "phase": "PRE-INS",
+    "title": "Qualification evidence freshness gate reporting BLOCKED_STALE_EVIDENCE by name",
+    "owner_package": "`pkg/governance/envelope`",
+    "tests": "`TestFreshnessReportsBlockedStaleEvidenceByName`, `TestFreshnessReportsEveryDivergenceAtOnce`, `TestFreshnessRefusesAReleaseThatDeclaresNothingToCompareAgainst`",
+    "status": "VERIFIED",
+    "note": "PHASE E2 / P0-7. PASS requires report.commit == release.commit, source_hash, artifact_root and binary_hash all matching, and valid_until >= qualification time; anything else is the named BLOCKED_STALE_EVIDENCE, never a generic failure. A release that declares no value to compare against fails closed rather than silently passing."
+  },
+  {
+    "id": "R-053",
+    "phase": "PRE-INS",
+    "title": "Readiness engine separation: ENGINEERING / INTERNAL / EXTERNAL / FINAL as four distinct axes per gate",
+    "owner_package": "`internal/assurance`, `cmd/veriqo-readiness`",
+    "tests": "`TestBlockedGateReportsEngineeringAndInternalSeparatelyFromExternal`, `TestAxisSeparationNeverAdvancesTheGateItself`, `TestInternalQualifiedIsNeverExternalQualified`, `TestReadinessManifestCarriesTheAxes`",
+    "status": "VERIFIED",
+    "note": "PHASE E3 / P0-8. Axes are DERIVED from the same evidence artifacts `EffectiveStatus` reads; there is no setter that writes PASS into an axis. Retrofitted onto all 8 externally-blocked mandatory gates: their ENGINEERING axis is backed by a real in-process `pkg/blockers/orchestrator.RunAll` execution and their INTERNAL axis by the committed in-sandbox drill logs, while Status, Satisfied, Assess and the release Verdict are provably untouched (`TestAxisSeparationNeverAdvancesTheGateItself`). No amount of internal evidence can move the EXTERNAL axis."
   }
 ]

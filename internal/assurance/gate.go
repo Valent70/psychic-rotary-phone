@@ -157,6 +157,27 @@ type Gate struct {
 	// Blocker names the external dependency when Status is BLOCKED —
 	// mandatory, so "blocked" can never be a vague shrug.
 	Blocker string `json:"blocker,omitempty"`
+
+	// --- PHASE E3 (P0-8): readiness axis separation ------------------
+	// The three fields below feed Gate.Axes (see axes.go) and are
+	// deliberately inert everywhere else: EffectiveStatus, Satisfied and
+	// Assess do not read them, so nothing here can advance a gate.
+
+	// ExternalDependency names the real-world resource — money, a
+	// contract, physical infrastructure, an independent third party —
+	// that this gate cannot be closed without. Non-empty means the
+	// EXTERNAL axis is meaningful for this gate; empty means it is
+	// NOT_APPLICABLE.
+	ExternalDependency string `json:"external_dependency,omitempty"`
+	// EngineeringEvidence backs the ENGINEERING axis specifically:
+	// "does the code exist and does its own harness pass". A BLOCKED
+	// gate can carry passing engineering evidence and still be BLOCKED,
+	// which is the entire point of separating the axes.
+	EngineeringEvidence []Evidence `json:"engineering_evidence,omitempty"`
+	// InternalEvidence backs the INTERNAL axis: a qualification drill
+	// run as far as THIS environment honestly allows. Its ceiling is
+	// INTERNAL_QUALIFIED and it never implies the EXTERNAL axis.
+	InternalEvidence []Evidence `json:"internal_evidence,omitempty"`
 }
 
 // EffectiveStatus derives a gate's real status from its evidence,
@@ -198,6 +219,12 @@ type Registry struct {
 // NewRegistry constructs an empty gate registry.
 func NewRegistry() *Registry { return &Registry{gates: map[string]*Gate{}} }
 
+// unknownGate is the one place ErrUnknownGate is wrapped with the gate
+// ID, shared by every registry method that looks a gate up.
+func unknownGate(gateID string) error {
+	return fmt.Errorf("%w: %s", ErrUnknownGate, gateID)
+}
+
 // Register adds a gate definition.
 func (r *Registry) Register(g Gate) error {
 	if _, dup := r.gates[g.ID]; dup {
@@ -221,7 +248,7 @@ func (r *Registry) Register(g Gate) error {
 func (r *Registry) Attach(gateID string, status Status, ev Evidence) error {
 	g, ok := r.gates[gateID]
 	if !ok {
-		return fmt.Errorf("%w: %s", ErrUnknownGate, gateID)
+		return unknownGate(gateID)
 	}
 	if err := ev.Verify(); err != nil {
 		return err
