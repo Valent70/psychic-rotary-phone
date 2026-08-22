@@ -124,6 +124,30 @@ func (f *Facade) BindCanonical(b *canonical.Binding) error {
 // case is being driven without one.
 func (f *Facade) Canonical() *canonical.Binding { return f.binding }
 
+// Status returns the case's externally-reported position: the derived
+// nine-value Stage from the Final Design's frozen vocabulary plus any
+// exception states currently holding. Wholly derived — see
+// pkg/insurance/case/stage.go.
+func (f *Facade) Status() insurancecase.Status { return f.c.Status() }
+
+// Stage returns just the derived external stage.
+func (f *Facade) Stage() insurancecase.Stage { return f.c.Stage() }
+
+// RaiseException records an exception state (DISPUTED, CONTRADICTED,
+// INSUFFICIENT, ON_LEGAL_HOLD, SUPERSEDED) against this case. It is
+// deliberately NOT a lifecycle operation: it cannot move the case
+// forward or backward, and raisedBy must name the real artifact that
+// caused it.
+func (f *Facade) RaiseException(e insurancecase.Exception, reason, raisedBy string, tick uint64) error {
+	return f.c.RaiseException(e, reason, raisedBy, tick)
+}
+
+// ClearException records that a previously-raised exception no longer
+// holds. The original raising survives as history.
+func (f *Facade) ClearException(e insurancecase.Exception, clearedBy, reason string, tick uint64) error {
+	return f.c.ClearException(e, clearedBy, reason, tick)
+}
+
 // New constructs a Facade around a brand-new case in CASE_CREATED,
 // with every sub-engine wired and ready. claimTypes may be nil (claim
 // registration then skips type validation, mirroring

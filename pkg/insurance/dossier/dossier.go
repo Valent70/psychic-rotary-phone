@@ -61,6 +61,14 @@ type Dossier struct {
 	CaseID  string `json:"case_id"`
 	ClaimID string `json:"claim_id,omitempty"`
 
+	// Status is the externally-reported lifecycle position: the derived
+	// nine-value Stage from the Final Design's frozen vocabulary, the
+	// fine-grained internal state it was derived from, and any exception
+	// states currently holding. Every field of it is derived from the
+	// case; nothing here can be asserted. See pkg/insurance/case/stage.go
+	// for the reconciliation between the two vocabularies.
+	Status insurancecase.Status `json:"status"`
+
 	// Section 19: Audit Trail.
 	LifecycleAuditTrail []AuditEntry `json:"lifecycle_audit_trail"`
 
@@ -92,6 +100,7 @@ func Generate(c *insurancecase.Case, in Inputs) (*Dossier, error) {
 	d := &Dossier{
 		CaseID:  c.CaseID,
 		ClaimID: in.ClaimID,
+		Status:  c.Status(),
 	}
 
 	for _, t := range c.StateLog() {

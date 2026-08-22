@@ -95,6 +95,12 @@ type Case struct {
 	Evidence *evidence.Registry
 
 	stateLog []stateTransition
+
+	// exceptions is the case's append-only exception-state overlay —
+	// see stage.go. Deliberately guarded by its OWN mutex, so raising an
+	// exception can never take the lifecycle lock and therefore can
+	// never interact with Advance.
+	exceptions exceptionLog
 }
 
 type stateTransition struct {
