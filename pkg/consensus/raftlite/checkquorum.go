@@ -21,10 +21,15 @@ func (n *Node) checkQuorumTick() {
 		n.mu.Unlock()
 		return
 	}
-	quorumNeeded := (len(n.peers)+1)/2 + 1 // total membership incl. self
-	contacted := 1                         // self always counts
+	// Only voters count toward the majority CheckQuorum needs -- a
+	// leader that has heard from nothing but learners (non-voting by
+	// definition) is exactly as isolated from real decision-making
+	// authority as one that has heard from no one at all.
+	voters := n.votingPeersLocked()
+	quorumNeeded := (len(voters)+1)/2 + 1 // total voting membership incl. self
+	contacted := 1                        // self always counts
 	now := time.Now()
-	for _, p := range n.peers {
+	for _, p := range voters {
 		if last, ok := n.lastContact[p]; ok && now.Sub(last) <= n.checkQuorumTimeout {
 			contacted++
 		}

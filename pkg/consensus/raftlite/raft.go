@@ -127,10 +127,18 @@ type Node struct {
 	mu sync.Mutex
 
 	id    string
-	peers []string // other member IDs, excludes self
+	peers []string // other member IDs (voters AND learners), excludes self
 	trans Transport
 	fsm   FSM
 	sink  ClusterEventSink
+
+	// learners is the subset of peers that are non-voting: they receive
+	// log replication (so they can catch up before ever being promoted)
+	// exactly like any other peer, but never count toward vote tallies
+	// or commit-index majorities, and are never asked for a vote in the
+	// first place. See confchange.go's ConfChangeAddLearner and
+	// votingPeersLocked.
+	learners map[string]bool
 
 	state persistentState
 	role  Role
@@ -289,6 +297,7 @@ func NewNode(cfg Config) *Node {
 	n := &Node{
 		id:                 cfg.ID,
 		peers:              cfg.Peers,
+		learners:           make(map[string]bool),
 		trans:              cfg.Transport,
 		fsm:                cfg.FSM,
 		sink:               cfg.Sink,
@@ -510,14 +519,16 @@ func (n *Node) runPreVote(ctx context.Context) bool {
 	n.mu.Lock()
 	nextTerm := n.state.currentTerm + 1
 	lastIdx, lastTerm := n.lastLogInfoLocked()
-	peers := append([]string{}, n.peers...)
+	// Learners are never asked for a vote -- they are non-voting by
+	// definition (see votingPeersLocked).
+	peers := n.votingPeersLocked()
 	n.mu.Unlock()
 
 	if len(peers) == 0 {
 		return true
 	}
 	n.mu.Lock()
-	currentMembers := append([]string{n.id}, n.peers...)
+	currentMembers := append([]string{n.id}, peers...)
 	n.mu.Unlock()
 
 	type result struct {
@@ -583,8 +594,9 @@ func (n *Node) startElection(ctx context.Context) {
 	n.mu.Unlock()
 
 	n.mu.Lock()
-	currentMembers := append([]string{n.id}, n.peers...)
-	peersSnapshot := append([]string{}, n.peers...)
+	// Learners are never asked for a vote (see votingPeersLocked).
+	peersSnapshot := n.votingPeersLocked()
+	currentMembers := append([]string{n.id}, peersSnapshot...)
 	n.mu.Unlock()
 
 	granted := map[string]bool{}
@@ -671,6 +683,42 @@ func (n *Node) becomeLeader(term uint64) {
 	// do — is to append a no-op entry in the new term immediately.
 	noOpIndex := n.logBase + uint64(len(n.state.log))
 	n.state.log = append(n.state.log, LogEntry{Term: term, Index: noOpIndex, Command: noOpCommand})
+
+	// Resume an in-flight joint-consensus transition left stranded by a
+	// leader failure. applyCommitted's own comment on this named the gap
+	// honestly: proposing LEAVE_JOINT once ENTER_JOINT commits was
+	// "best-effort: if leadership is lost mid-transition, the new leader
+	// must re-drive LEAVE_JOINT itself" -- and nothing did that. Without
+	// this, a leader that fails (crash, partition, timeout) after
+	// ENTER_JOINT commits but before LEAVE_JOINT does leaves EVERY
+	// subsequent leader owning n.joint.active forever: InJointConsensus()
+	// never clears, and the cluster is permanently held to the stricter
+	// dual-majority (old AND new) quorum rule instead of completing the
+	// transition to the new config alone. A freshly elected leader that
+	// finds itself already in a joint config (necessarily true here: it
+	// won its election with an up-to-date log, so if ENTER_JOINT
+	// committed anywhere, this node's log already carries it via
+	// refreshJointFromLogLocked) now appends its own LEAVE_JOINT entry in
+	// its OWN new term -- exactly the §5.4.2 pattern the no-op entry two
+	// lines up already relies on to make prior-term entries committable.
+	// Idempotent and safe even when nothing was actually stuck: if this
+	// IS the same leader that already committed LEAVE_JOINT via
+	// applyCommitted's hook, n.joint.active is already false by the time
+	// becomeLeader runs (that hook only fires from applyCommitted, never
+	// from here), so this code path is simply skipped.
+	if n.joint.active {
+		leaveEnv := jointEnvelope{Magic: jointMagic, Phase: jointLeave, New: n.joint.new}
+		if cmd, err := json.Marshal(leaveEnv); err == nil {
+			leaveIndex := n.logBase + uint64(len(n.state.log))
+			n.state.log = append(n.state.log, LogEntry{Term: term, Index: leaveIndex, Command: cmd})
+			// Config takes effect at append time, matching Propose's own
+			// handling of ENTER_JOINT (see applyJointStateOnlyLocked's doc
+			// comment on why append-time application is required, not
+			// merely commit-time).
+			n.applyJointStateOnlyLocked(leaveEnv)
+		}
+	}
+
 	n.persistLocked()
 	if n.sink != nil {
 		n.sink.OnLeaderChange(term, n.id)
@@ -687,6 +735,27 @@ func (n *Node) becomeFollowerLocked(term uint64) {
 func (n *Node) lastLogInfoLocked() (uint64, uint64) {
 	last := n.state.log[len(n.state.log)-1]
 	return last.Index, last.Term
+}
+
+// votingPeersLocked returns n.peers filtered to exclude learners -- the
+// only peers ever asked for a vote (PreVote/RequestVote), and the only
+// peers whose matchIndex counts toward a commit-index majority.
+// Learners still appear in n.peers itself (so they keep receiving log
+// replication via replicateToAll, exactly like any other peer) and
+// still get nextIndex/matchIndex tracking in becomeLeader -- only
+// vote-quorum arithmetic treats them as absent. Must be called with
+// n.mu held.
+func (n *Node) votingPeersLocked() []string {
+	if len(n.learners) == 0 {
+		return append([]string(nil), n.peers...)
+	}
+	out := make([]string, 0, len(n.peers))
+	for _, p := range n.peers {
+		if !n.learners[p] {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func (n *Node) leaderLoop(ctx context.Context) {

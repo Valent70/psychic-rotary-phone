@@ -61,17 +61,27 @@ func (n *Node) ReadIndex(ctx context.Context) (uint64, error) {
 	}
 	term := n.state.currentTerm
 	readIdx := n.commitIndex
+	// Learners are never part of the read-index quorum count (they
+	// don't vote, so confirming leadership through them proves
+	// nothing about the VOTING majority) -- but they are still sent
+	// the same heartbeat-shaped AppendEntries below, keeping them
+	// replicated exactly like any other peer.
 	peers := append([]string{}, n.peers...)
+	voters := n.votingPeersLocked()
 	n.mu.Unlock()
 
-	if len(peers) == 0 {
-		// Single-node cluster: this node IS the only quorum member.
+	if len(voters) == 0 {
+		// Single-voter cluster: this node IS the only quorum member.
 		n.incMetric("readindex_success")
 		return readIdx, nil
 	}
 
-	quorumNeeded := (len(peers)+1)/2 + 1 // total membership incl. self
-	confirmed := 1                       // self
+	isVoter := make(map[string]bool, len(voters))
+	for _, v := range voters {
+		isVoter[v] = true
+	}
+	quorumNeeded := (len(voters)+1)/2 + 1 // total voting membership incl. self
+	confirmed := 1                        // self
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	for _, p := range peers {
@@ -112,6 +122,9 @@ func (n *Node) ReadIndex(ctx context.Context) (uint64, error) {
 			n.mu.Unlock()
 			if reply.Term > term {
 				return // this specific round is stale; do not count it
+			}
+			if !isVoter[p] {
+				return // a learner's confirmation proves nothing about the voting majority
 			}
 			mu.Lock()
 			confirmed++

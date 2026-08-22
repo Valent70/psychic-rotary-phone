@@ -243,8 +243,17 @@ func (n *Node) hasQuorumBoolLocked(currentMembers []string, grantedSet map[strin
 // advancement.
 func (n *Node) hasQuorumIndexLocked(idx uint64) bool {
 	if n.joint.active {
+		// Known limitation, honestly left so rather than silently
+		// assumed away: joint.old/joint.new are caller-supplied member
+		// lists (see EnterJointConsensus) that do not yet model learners
+		// at all -- a learner present during a joint-consensus
+		// transition would be treated as a voter for THIS calculation.
+		// Learner/voter awareness in THIS round only covers the simpler
+		// atomic-batch ConfChange path (confchange.go); composing it
+		// with true two-phase joint consensus is a distinct, separate
+		// piece of work.
 		return quorumIndex(n.joint.old, n.id, n.matchIndex, idx) && quorumIndex(n.joint.new, n.id, n.matchIndex, idx)
 	}
-	currentMembers := append([]string{n.id}, n.peers...)
+	currentMembers := append([]string{n.id}, n.votingPeersLocked()...)
 	return quorumIndex(currentMembers, n.id, n.matchIndex, idx)
 }
