@@ -177,9 +177,18 @@ type Report struct {
 // TestFusionEngineIsOnlyConstructedThroughTheFacade convert a non-empty
 // Report.Violations into a build-breaking failure.
 func Check(repoRoot string) (Report, error) {
+	return checkSet(repoRoot, checkedConstructors)
+}
+
+// checkSet is Check's body, parameterised over WHICH constructor set to
+// guard. Extracted (PHASE A / P0-1) so the ingestion-path scan reuses
+// the identical walk, the identical skipDirs, the identical
+// comment-aware matcher and the identical deterministic ordering,
+// rather than a second copy of the same code that could drift.
+func checkSet(repoRoot string, constructors []constructor) (Report, error) {
 	rep := Report{}
-	allowedByMarker := make([]map[string]bool, len(checkedConstructors))
-	for i, c := range checkedConstructors {
+	allowedByMarker := make([]map[string]bool, len(constructors))
+	for i, c := range constructors {
 		m := map[string]bool{}
 		for _, f := range c.allowedFiles {
 			m[f] = true
@@ -215,7 +224,7 @@ func Check(repoRoot string) (Report, error) {
 		}
 		rep.ScannedFiles++
 		content := string(raw)
-		for i, c := range checkedConstructors {
+		for i, c := range constructors {
 			if hasRealCall(content, c.marker) && !allowedByMarker[i][rel] {
 				rep.Violations = append(rep.Violations, filepath.ToSlash(rel)+": "+c.name)
 			}
@@ -242,4 +251,116 @@ func hasRealCall(raw, marker string) bool {
 		}
 	}
 	return false
+}
+
+// --- PHASE A (P0-1): canonical evidence production coverage ----------
+
+// ingestionConstructors are the calls that turn raw external bytes into
+// a canonical evidence record. They are guarded separately from
+// checkedConstructors above because they answer a DIFFERENT question:
+// checkedConstructors asks "does a second evidence AUTHORITY exist",
+// this asks "does a second INGESTION PATH exist" -- a caller that never
+// touches an engine but mints canonical evidence records of its own
+// still bypasses the contract.
+//
+// The program's own required chain is source -> adapter -> canonical
+// evidence contract -> facade -> subsystem. ontology.New IS the
+// contract hop, so the exhaustive list of files permitted to call it is
+// exactly the set of audited adapters plus the facade.
+var ingestionConstructors = []constructor{
+	{
+		name:   "ontology.Evidence (canonical evidence contract)",
+		marker: "ontology.New(",
+		// - pkg/evidence/api/api.go is the facade's own Submit: every
+		//   record entering the facade is re-normalized through the
+		//   contract, which is the contract hop working, not a bypass of
+		//   it.
+		// - pkg/connector/{aisstream,sar,bol,insurance,payment} are the
+		//   five audited ingestion adapters (R-050). Each parses a real
+		//   wire schema, structurally validates it (malformed/truncated/
+		//   wrong-schema/missing-field all fail closed before any
+		//   semantic check runs), then canonicalizes. They are the
+		//   "adapter" hop the chain names, and there is nowhere else for
+		//   that hop to legitimately live.
+		// - internal/nobypass/nobypass.go: the same string-literal
+		//   self-reference every other constructor here needs.
+		allowedFiles: []string{
+			filepath.FromSlash("pkg/evidence/api/api.go"),
+			filepath.FromSlash("pkg/connector/aisstream/normalize.go"),
+			filepath.FromSlash("pkg/connector/sar/sar.go"),
+			filepath.FromSlash("pkg/connector/bol/bol.go"),
+			filepath.FromSlash("pkg/connector/insurance/insurance.go"),
+			filepath.FromSlash("pkg/connector/payment/payment.go"),
+			filepath.FromSlash("internal/nobypass/nobypass.go"),
+		},
+	},
+}
+
+// EvidenceCoverage is the machine-readable evidence the
+// canonical_evidence_production_coverage gate attaches. Every count is
+// a number the program's acceptance criterion names explicitly, so the
+// gate's PASS condition is a direct reading of this struct rather than
+// an interpretation of it.
+type EvidenceCoverage struct {
+	ScannedFiles int `json:"scanned_files"`
+	// UnauthorizedEvidenceWriters is checkedConstructors' violation
+	// count: a second arbitration/fusion/pipeline authority.
+	UnauthorizedEvidenceWriters int      `json:"unauthorized_evidence_writers"`
+	WriterViolations            []string `json:"writer_violations,omitempty"`
+	// UnauthorizedIngestionPaths is ingestionConstructors' violation
+	// count: a second way for raw data to become canonical evidence.
+	UnauthorizedIngestionPaths int      `json:"unauthorized_ingestion_paths"`
+	IngestionViolations        []string `json:"ingestion_violations,omitempty"`
+	// ContractVersion and ContractHash are the declared canonical
+	// evidence contract (pkg/evidence/api.Contract). An empty
+	// ContractVersion is itself a failure: the program requires the
+	// contract version to be DECLARED, and an undeclared contract
+	// cannot be honoured.
+	ContractVersion string `json:"contract_version"`
+	ContractHash    string `json:"contract_hash"`
+	// AuditedAdapters is the exhaustive list of files permitted to
+	// perform the adapter hop, recorded in the artifact so a future
+	// widening of that list is visible in a diff of the evidence, not
+	// only in a diff of the source.
+	AuditedAdapters []string `json:"audited_adapters"`
+}
+
+// Pass is the gate's condition, stated once: unauthorized evidence
+// writers = 0, unauthorized ingestion paths = 0, and a declared
+// contract version. Deliberately not a threshold.
+func (c EvidenceCoverage) Pass() bool {
+	return c.UnauthorizedEvidenceWriters == 0 &&
+		c.UnauthorizedIngestionPaths == 0 &&
+		c.ContractVersion != "" && c.ContractHash != ""
+}
+
+// EvidenceProductionCoverage runs both scans over the real source tree
+// and pairs them with the declared contract. contractVersion and
+// contractHash are passed in rather than imported so this package stays
+// dependency-free of pkg/* (it is scanned BY the readiness binary,
+// which already imports pkg/evidence/api transitively) -- the same
+// layering internal/telemetrycoverage and internal/sourcehash keep.
+func EvidenceProductionCoverage(repoRoot, contractVersion, contractHash string) (EvidenceCoverage, error) {
+	writers, err := Check(repoRoot)
+	if err != nil {
+		return EvidenceCoverage{}, err
+	}
+	ingestion, err := checkSet(repoRoot, ingestionConstructors)
+	if err != nil {
+		return EvidenceCoverage{}, err
+	}
+	cov := EvidenceCoverage{
+		ScannedFiles:                writers.ScannedFiles,
+		UnauthorizedEvidenceWriters: len(writers.Violations),
+		WriterViolations:            writers.Violations,
+		UnauthorizedIngestionPaths:  len(ingestion.Violations),
+		IngestionViolations:         ingestion.Violations,
+		ContractVersion:             contractVersion,
+		ContractHash:                contractHash,
+	}
+	for _, f := range ingestionConstructors[0].allowedFiles {
+		cov.AuditedAdapters = append(cov.AuditedAdapters, filepath.ToSlash(f))
+	}
+	sort.Strings(cov.AuditedAdapters)
+	return cov, nil
 }

@@ -294,3 +294,94 @@ func TestAdversarialUntamperedBaselineVerifiesClean(t *testing.T) {
 func unmarshalRequest(data []byte, out *execution.ReplayRequest) error {
 	return json.Unmarshal(data, out)
 }
+
+// --- PHASE E5 (P1-17): correlation_propagation_coverage --------------
+//
+// The gate cmd/veriqo-readiness runs by name. It measures the property
+// PHASE D states positively: one operation's identity is locked from
+// start to end, and every consumer downstream sees the SAME identifiers
+// rather than its own reconstruction of them.
+
+// TestCorrelationPropagationCoverageEveryIdentifierIsPopulated proves
+// the key a real execution produces has no empty fields that a
+// downstream consumer would then have to invent.
+func TestCorrelationPropagationCoverageEveryIdentifierIsPopulated(t *testing.T) {
+	original, _, res := adversarialRun(t)
+	key := FromExecutionResult(original).WithIdentityLedgerHead(res.Head())
+
+	for name, value := range map[string]string{
+		"ExecutionID":               key.ExecutionID,
+		"EvidencePackageID":         key.EvidencePackageID,
+		"EntityID":                  key.EntityID,
+		"DecisionID":                key.DecisionID,
+		"VerificationCertificateID": key.VerificationCertificateID,
+		"ReplayPackageID":           key.ReplayPackageID,
+		"EntityIdentityLedgerHead":  key.EntityIdentityLedgerHead,
+	} {
+		if value == "" {
+			t.Errorf("%s is empty on a real execution -- a downstream consumer would have to invent it", name)
+		}
+	}
+	// IntentID is deliberately empty from FromExecutionResult and is
+	// filled by pkg/lifecycle, which is the only layer that holds an
+	// Intent. Asserting it non-empty HERE would be asserting a
+	// fabrication; asserting it empty records the real contract.
+	if key.IntentID != "" {
+		t.Errorf("IntentID = %q from a bare execution.Result -- pkg/execution has no Intent to derive it from", key.IntentID)
+	}
+}
+
+// TestCorrelationPropagationCoverageIdentifiersAreDistinct catches the
+// degenerate failure where several "different" identifiers are actually
+// aliases of one value, which would make the whole correlation key
+// carry one bit of information instead of eight.
+func TestCorrelationPropagationCoverageIdentifiersAreDistinct(t *testing.T) {
+	original, _, res := adversarialRun(t)
+	key := FromExecutionResult(original).WithIdentityLedgerHead(res.Head())
+
+	values := map[string]string{
+		"ExecutionID":               key.ExecutionID,
+		"EvidencePackageID":         key.EvidencePackageID,
+		"EntityID":                  key.EntityID,
+		"DecisionID":                key.DecisionID,
+		"VerificationCertificateID": key.VerificationCertificateID,
+		"ReplayPackageID":           key.ReplayPackageID,
+		"EntityIdentityLedgerHead":  key.EntityIdentityLedgerHead,
+	}
+	seen := map[string]string{}
+	for name, v := range values {
+		if prev, dup := seen[v]; dup {
+			t.Errorf("%s and %s are the same value (%q) -- they are supposed to be independent identities", prev, name, v)
+		}
+		seen[v] = name
+	}
+}
+
+// TestCorrelationPropagationCoverageSurvivesAnIndependentReplay is the
+// end-to-end propagation property: the identifiers a cold, independent
+// replay derives must equal the originals, so a consumer joining on
+// them across process boundaries joins the same operation.
+func TestCorrelationPropagationCoverageSurvivesAnIndependentReplay(t *testing.T) {
+	original, req, res := adversarialRun(t)
+	before := FromExecutionResult(original)
+
+	verdict, rebuilt, err := replayTampered(t, req, res)
+	if err != nil {
+		t.Fatalf("independent replay: %v", err)
+	}
+	if err := verdict.Assert(); err != nil {
+		t.Fatalf("independent replay did not verify: %v", err)
+	}
+	after := FromExecutionResult(*rebuilt)
+
+	for name, pair := range map[string][2]string{
+		"ExecutionID":       {before.ExecutionID, after.ExecutionID},
+		"EvidencePackageID": {before.EvidencePackageID, after.EvidencePackageID},
+		"EntityID":          {before.EntityID, after.EntityID},
+		"DecisionID":        {before.DecisionID, after.DecisionID},
+	} {
+		if pair[0] != pair[1] {
+			t.Errorf("%s did not survive an independent replay: %q -> %q", name, pair[0], pair[1])
+		}
+	}
+}

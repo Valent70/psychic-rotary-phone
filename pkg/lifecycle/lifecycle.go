@@ -39,6 +39,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	"veriqo/internal/version"
@@ -236,6 +237,23 @@ type Result struct {
 	// for the same thing would create exactly the kind of parallel
 	// identity this program exists to close.
 	CaseID lineage.CaseID
+	// LegacyIdentityFallbackUsed is true when entity resolution could NOT
+	// go through pkg/identity -- the canonical identity authority -- for
+	// this run, because an alias Kind is outside identity.Kind's modelled
+	// vocabulary, and the pre-canonical union-find was used instead. It
+	// is never true for a canonically-resolved run.
+	LegacyIdentityFallbackUsed bool
+	// HumanReviewRequired is set whenever LegacyIdentityFallbackUsed is:
+	// an entity resolved outside the canonical authority is a real
+	// answer, but not one this system is willing to treat as settled
+	// without a person looking at it. It is a separate field rather than
+	// a derived property so a future condition can also set it.
+	HumanReviewRequired bool
+	// UnmappedAliasKinds names exactly which alias Kinds forced the
+	// fallback -- the UNMAPPED marker made specific, so "we do not model
+	// this identifier type yet" is a checkable statement about named
+	// kinds rather than an unexplained degradation.
+	UnmappedAliasKinds []string
 }
 
 func hashLifecycleCert(c LifecycleCertificate) string {
@@ -479,10 +497,32 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	// ledger, instead of only trusting caseIn.Entity as given.
 	var identityKey identity.Identifier
 	var identityKeySet bool
+	// PHASE B (P0-2): legacyFallbackUsed and unmappedKinds record whether
+	// this run had to fall back to the pre-canonical union-find because
+	// an alias Kind is not modelled by pkg/identity, and which Kinds
+	// those were. They are surfaced on Result (LegacyIdentityFallbackUsed
+	// / HumanReviewRequired / UnmappedAliasKinds) so a downstream consumer
+	// can never mistake a fallback-resolved entity for a canonically
+	// resolved one.
+	var legacyFallbackUsed bool
+	var unmappedKinds []string
 	if len(in.EntityAliases) > 0 {
 		if resolved, key, ok := o.resolveCanonicalEntity(in.ActorID, in.EntityAliases, in.Tick); ok {
 			canonEntity, identityKey, identityKeySet = resolved, key, true
 		} else {
+			// PHASE B (P0-2): the legacy fallback is permitted ONLY for an
+			// identifier type pkg/identity does not model yet, and when it
+			// is taken it must SAY SO -- loudly, on the result, and in the
+			// trace -- rather than producing an entity ID that looks
+			// exactly like a canonically-resolved one. It also never
+			// writes canonical identity itself: the union-find below is a
+			// separate store, and o.Identity is deliberately untouched on
+			// this branch.
+			legacyFallbackUsed = true
+			unmappedKinds = unmappedAliasKinds(in.EntityAliases)
+			span.SetAttribute(telemetry.Attribute{Key: "legacy_identity_fallback_used", Value: "true"})
+			span.SetAttribute(telemetry.Attribute{Key: "human_review_required", Value: "true"})
+			span.SetAttribute(telemetry.Attribute{Key: "unmapped_alias_kinds", Value: strings.Join(unmappedKinds, ",")})
 			first := in.EntityAliases[0]
 			var err error
 			canonEntity, err = o.Entities.Register(in.ActorID, first, in.Tick)
@@ -655,6 +695,9 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 		Intent: in, Plan: plan, EntityID: canonEntity, SourceIDs: canonical.SortedSourceIDs(caseIn.Submissions),
 		Canonical: canonRes, Execution: execRes, IVFResult: ivfResult, Certificate: cert,
 		Correlation: corr, CaseID: lineage.CaseID(in.ID()),
+		LegacyIdentityFallbackUsed: legacyFallbackUsed,
+		HumanReviewRequired:        legacyFallbackUsed,
+		UnmappedAliasKinds:         unmappedKinds,
 	}
 	if o.Lineage != nil {
 		if err := o.recordLineage(res, caseIn); err != nil {
@@ -847,4 +890,26 @@ func (o *Orchestrator) RecordOutcome(res *Result, actualValue, groundTruthSource
 		}
 	}
 	return rec, nil
+}
+
+// unmappedAliasKinds returns, deterministically, every alias Kind in
+// the supplied set that pkg/identity does not model -- the concrete
+// content of PHASE B (P0-2)'s UNMAPPED marker. A Kind appearing here is
+// a statement that this system has not yet decided how to resolve that
+// identifier type, never a guess about it.
+func unmappedAliasKinds(aliases []entity.Alias) []string {
+	modelled := map[string]bool{}
+	for _, k := range identity.KnownKinds() {
+		modelled[string(k)] = true
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, a := range aliases {
+		if !modelled[a.Kind] && !seen[a.Kind] {
+			seen[a.Kind] = true
+			out = append(out, a.Kind)
+		}
+	}
+	sort.Strings(out)
+	return out
 }

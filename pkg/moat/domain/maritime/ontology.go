@@ -64,6 +64,25 @@ const (
 	KindInsurer       EntityKind = "INSURER"
 )
 
+// KnownEntityKinds returns every entity kind this ontology models, in
+// a stable order.
+//
+// Added for PHASE B (P0-2) of the pre-insurance closure program, which
+// requires maritime identity mappings to be EXPLICIT and any unknown
+// mapping to be marked UNMAPPED rather than silently guessed. That
+// check (pkg/governance/entityconsistency.MaritimeMapping) is only
+// meaningful if it can enumerate what it must cover -- otherwise a kind
+// added here later would be silently unmapped, which is exactly the
+// failure mode the requirement names. It is a pure enumeration of the
+// constants above; it introduces no new vocabulary.
+func KnownEntityKinds() []EntityKind {
+	return []EntityKind{
+		KindVessel, KindVoyage, KindPort, KindCargo, KindCommodity,
+		KindBroker, KindSanctionEntry, KindInsurance, KindOwnership,
+		KindCountry, KindInsurer,
+	}
+}
+
 // RelationKind enumerates the ontology's typed edges — the multi-hop
 // vocabulary the audit asks for explicitly: Ship->Company->Broker->
 // Insurance->Country->Sanction.

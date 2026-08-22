@@ -788,3 +788,64 @@ func TestTwoCasesDoNotShareALineage(t *testing.T) {
 		}
 	}
 }
+
+// --- PHASE B (P0-2): legacy identity fallback is never silent --------
+
+// TestLegacyIdentityFallbackIsLoudlyMarked proves the fallback path
+// announces itself. An entity resolved outside the canonical identity
+// authority is a real answer, but it must never be indistinguishable
+// from a canonically-resolved one.
+func TestLegacyIdentityFallbackIsLoudlyMarked(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	in := testIntent()
+	// A Kind pkg/identity deliberately does not model. Using an alias
+	// vocabulary identity.Kind covers would take the canonical path and
+	// prove nothing.
+	in.EntityAliases = []entity.Alias{{Kind: "TERMINAL_CRANE_SERIAL", Value: "TC-88"}}
+
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("placeholder"))
+	if err != nil {
+		t.Fatalf("RunUnified: %v", err)
+	}
+
+	if !res.LegacyIdentityFallbackUsed {
+		t.Fatal("an unmodelled alias Kind resolved through the fallback without LegacyIdentityFallbackUsed being set")
+	}
+	if !res.HumanReviewRequired {
+		t.Fatal("the fallback was used but HumanReviewRequired is false")
+	}
+	if len(res.UnmappedAliasKinds) != 1 || res.UnmappedAliasKinds[0] != "TERMINAL_CRANE_SERIAL" {
+		t.Fatalf("UnmappedAliasKinds = %v, want [TERMINAL_CRANE_SERIAL]", res.UnmappedAliasKinds)
+	}
+	// The fallback must NOT have written canonical identity: the ledger
+	// head is unchanged from an untouched resolver's.
+	if o.Identity.Head() != identity.NewResolver().Head() {
+		t.Fatal("the legacy fallback wrote to the canonical identity ledger -- it must never do that")
+	}
+}
+
+// TestCanonicalIdentityPathIsNeverMarkedAsAFallback is the control: a
+// run whose aliases pkg/identity does model must report no fallback and
+// no review requirement, so the markers above mean something.
+func TestCanonicalIdentityPathIsNeverMarkedAsAFallback(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	in := testIntent() // IMO + CALLSIGN, both modelled
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("placeholder"))
+	if err != nil {
+		t.Fatalf("RunUnified: %v", err)
+	}
+	if res.LegacyIdentityFallbackUsed {
+		t.Fatal("a canonically-resolved run was marked as a legacy fallback")
+	}
+	if res.HumanReviewRequired {
+		t.Fatal("a canonically-resolved run demanded human review")
+	}
+	if len(res.UnmappedAliasKinds) != 0 {
+		t.Fatalf("UnmappedAliasKinds = %v on a fully-modelled run", res.UnmappedAliasKinds)
+	}
+	if o.Identity.Head() == "" {
+		t.Fatal("the canonical path did not write the identity ledger at all")
+	}
+}

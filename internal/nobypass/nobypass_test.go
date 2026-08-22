@@ -186,3 +186,76 @@ func repoRoot(t *testing.T) string {
 		dir = parent
 	}
 }
+
+// --- PHASE A (P0-1): canonical evidence production coverage ----------
+
+// TestEvidenceProductionCoverageIsCleanOnTheRealTree is the gate's own
+// assertion, run as a test so a violation breaks the build rather than
+// waiting for the next readiness run.
+func TestEvidenceProductionCoverageIsCleanOnTheRealTree(t *testing.T) {
+	cov, err := EvidenceProductionCoverage(repoRoot(t), "veriqo.evidence.contract/v1", "sha256:test")
+	if err != nil {
+		t.Fatalf("EvidenceProductionCoverage: %v", err)
+	}
+	if cov.ScannedFiles < 100 {
+		t.Fatalf("scanned only %d files -- a pass would be meaningless", cov.ScannedFiles)
+	}
+	if cov.UnauthorizedEvidenceWriters != 0 {
+		t.Errorf("unauthorized evidence writers = %d: %v", cov.UnauthorizedEvidenceWriters, cov.WriterViolations)
+	}
+	if cov.UnauthorizedIngestionPaths != 0 {
+		t.Errorf("unauthorized ingestion paths = %d: %v", cov.UnauthorizedIngestionPaths, cov.IngestionViolations)
+	}
+	if !cov.Pass() {
+		t.Fatal("coverage does not pass its own condition")
+	}
+	if len(cov.AuditedAdapters) < 6 {
+		t.Errorf("audited adapters = %v; the five connector adapters plus the facade is six", cov.AuditedAdapters)
+	}
+}
+
+// TestEvidenceProductionCoverageFailsWithoutADeclaredContract is the
+// fail-closed half: the program requires the contract version to be
+// DECLARED, and an undeclared contract cannot be honoured.
+func TestEvidenceProductionCoverageFailsWithoutADeclaredContract(t *testing.T) {
+	root := repoRoot(t)
+	for _, tc := range []struct{ version, hash string }{
+		{"", "sha256:test"},
+		{"veriqo.evidence.contract/v1", ""},
+		{"", ""},
+	} {
+		cov, err := EvidenceProductionCoverage(root, tc.version, tc.hash)
+		if err != nil {
+			t.Fatalf("EvidenceProductionCoverage: %v", err)
+		}
+		if cov.Pass() {
+			t.Errorf("coverage passed with version=%q hash=%q", tc.version, tc.hash)
+		}
+	}
+}
+
+// TestEvidenceProductionCoverageDetectsAnInjectedIngestionPath proves
+// the ingestion scan actually scans, rather than passing because it
+// never finds anything.
+func TestEvidenceProductionCoverageDetectsAnInjectedIngestionPath(t *testing.T) {
+	dir := t.TempDir()
+	pkgDir := filepath.Join(dir, "pkg", "rogue")
+	if err := os.MkdirAll(pkgDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	src := "package rogue\n\nimport \"veriqo/pkg/evidence/ontology\"\n\n" +
+		"func Ingest() { _, _ = ontology.New(ontology.Evidence{}) }\n"
+	if err := os.WriteFile(filepath.Join(pkgDir, "rogue.go"), []byte(src), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	cov, err := EvidenceProductionCoverage(dir, "v1", "sha256:x")
+	if err != nil {
+		t.Fatalf("EvidenceProductionCoverage: %v", err)
+	}
+	if cov.UnauthorizedIngestionPaths == 0 {
+		t.Fatal("an injected ingestion path was not detected")
+	}
+	if cov.Pass() {
+		t.Fatal("coverage passed with a detected unauthorized ingestion path")
+	}
+}

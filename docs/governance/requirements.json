@@ -511,5 +511,41 @@
     "tests": "`TestNoGovernedDecisionOutsideCanonicalExecution`, `TestAuditDetectsAnInjectedBackDoor`, `TestAuditDetectsAMatrixRowThatLiesAboutItsPath`, `TestExactlyOneEntrypointProducesGovernedDecisions`",
     "status": "VERIFIED",
     "note": "PHASE C / P0-3. Extends, rather than duplicates, the two things that already existed: `internal/nobypass` (the evidence half) and `veriqo/gateway/rest.TestRegistryNeverProducesGovernedDecisionArtifacts` (a real test scanning exactly two files). This is the whole-tree version plus the entrypoint matrix covering all nine entrypoint kinds. `TestAuditDetectsAnInjectedBackDoor` proves the scanner actually detects rather than passing by never finding anything. Wired as the mandatory readiness gate `canonical_execution_entrypoint_coverage`. Honest limitation stated in the source: the ExecutionRootHash marker is assignment-shaped and cannot textually distinguish minting from copying, so each allowlisted file was read and classified individually -- its value is forcing that classification to recur in review for any new file."
+  },
+  {
+    "id": "R-057",
+    "phase": "PRE-INS",
+    "title": "Canonical evidence write authority: declared contract, lossless projection, and zero unauthorized ingestion paths",
+    "owner_package": "`pkg/evidence/api`, `internal/nobypass`, `cmd/veriqo-readiness`",
+    "tests": "`TestCanonicalContractVersionIsDeclared`, `TestCrossSubsystemRoundTrip`, `TestLosslessProjection`, `TestSourceHashPreservation`, `TestRightsPreservation`, `TestProvenancePreservation`, `TestCorrectionPreservation`, `TestContradictionMetadataPreservation`, `TestReplayEquality`, `TestCrossFacadeIdentityEquality`, `TestEvidenceProductionCoverageDetectsAnInjectedIngestionPath`",
+    "status": "VERIFIED",
+    "note": "PHASE A / P0-1. The facade, the five ingestion adapters and the single canonical pipeline all already existed and are NOT rebuilt. Two things did not exist. (1) The CONTRACT hop was never declared: `pkg/evidence/api.Contract()` now composes the versions the owning packages already publish, so a gate can report a contract version instead of inferring one, and its hash changes when any component does. (2) A second scan: `truth_arbitration_no_bypass` proved no second evidence AUTHORITY exists; `canonical_evidence_production_coverage` proves no second INGESTION PATH exists -- a caller that never touches an engine but mints canonical records still bypasses the contract. Both scans share one walk (`nobypass.checkSet`), not a second copy. Honest scoping on the rights property: `provenance.RightsState` is deliberately outside `ontology.Evidence`'s content hash (that package documents why), so `TestRightsPreservation` asserts what is actually true -- projection never UPGRADES rights and a REVOKED envelope permits nothing -- rather than a field-equality that would be false."
+  },
+  {
+    "id": "R-058",
+    "phase": "PRE-INS",
+    "title": "Canonical identity authority: one production identity writer, no independent legacy merges, explicit maritime mappings, UNMAPPED never guessed",
+    "owner_package": "`pkg/governance/entityconsistency`, `pkg/lifecycle`, `pkg/moat/domain/maritime`",
+    "tests": "`TestIdentityAuthorityCoverageOnTheRealTree`, `TestEveryMaritimeKindIsExplicitlyMappedOrExplicitlyUnmapped`, `TestScanIdentityAuthorityDetectsAnInjectedIdentityWriter`, `TestScanIdentityAuthorityDetectsAnIndependentLegacyMerge`, `TestLegacyIdentityFallbackIsLoudlyMarked`, `TestCanonicalIdentityPathIsNeverMarkedAsAFallback`",
+    "status": "VERIFIED",
+    "note": "PHASE B / P0-2. `ScanProductionAuthority` already proved no second entity REGISTRY is constructed; three stricter clauses were unproven and are now counted by `ScanIdentityAuthority`: production identity WRITERS = 1 (a registry built once can still be written from many places, and a write is what merges identities), independent legacy merges = 0, and every maritime entity kind explicitly mapped to an `identity.Kind` or explicitly marked UNMAPPED with a stated reason -- a kind with no row at all is a FAILURE, because \"we forgot\" and \"we decided not to model this\" must not look identical. Four of eleven maritime kinds are honestly UNMAPPED (VOYAGE, CARGO, SANCTION_ENTRY, OWNERSHIP), each with its reason recorded in the source. The legacy fallback in `RunUnified` now sets `LegacyIdentityFallbackUsed`/`HumanReviewRequired`/`UnmappedAliasKinds` on the Result and on the trace, and `TestLegacyIdentityFallbackIsLoudlyMarked` additionally proves it never writes the canonical identity ledger."
+  },
+  {
+    "id": "R-059",
+    "phase": "PRE-INS",
+    "title": "Temporal Bayesian production contract: model-risk metadata plus an explicit execution-state enum that cannot record a required calibration as a skip",
+    "owner_package": "`pkg/governance/calibration`",
+    "tests": "`TestRequiredCalibrationCanNeverBeRecordedAsASkip`, `TestMissingModelUnderARequiringPolicyFailsClosed`, `TestEveryContractMetadataFieldIsIndividuallyRequired`, `TestMislabelledObligationsAreRefused`, `TestContractHashDetectsEveryMeaningfulChange`",
+    "status": "VERIFIED",
+    "note": "PHASE F / P1-9. The Bayesian mechanism (`pkg/moat/hbayes`), the five-field `CalibrationRecord` contract and `corpus.go`'s real frequentist `Fit` all already existed and are NOT rebuilt. What was missing was the governance wrapper: fifteen model-risk metadata fields, each individually required (a defaulted governance field is indistinguishable from a real one once written down), and an `ExecutionState` enum that keeps REQUIRED_BUT_MISSING distinct from OPTIONAL_AND_SKIPPED. Before this, \"skipped because no model exists\" and \"skipped because the policy did not need one\" were the same observable outcome. `NewContract` refuses every combination that would let a required calibration be recorded as a skip, and `ContractFor` derives the state from what is genuinely registered rather than from a caller's claim."
+  },
+  {
+    "id": "R-060",
+    "phase": "PRE-INS",
+    "title": "Architecture coverage gates: six machine-readable gates over evidence, identity, execution entrypoints, policy usage, temporal calibration usage and correlation propagation",
+    "owner_package": "`cmd/veriqo-readiness`, `internal/nobypass`, `internal/entrypoints`, `pkg/governance/entityconsistency`, `pkg/execution`, `pkg/platform/correlation`",
+    "tests": "`TestPolicyRegistryUsageCoverageEveryDecisionCommitsToItsPolicy`, `TestPolicyRegistryUsageCoverageRefusesAMismatchedPolicy`, `TestTemporalCalibrationUsageCoverageFailsClosedWhenRequiredAndAbsent`, `TestCorrelationPropagationCoverageEveryIdentifierIsPopulated`, `TestCorrelationPropagationCoverageSurvivesAnIndependentReplay`",
+    "status": "VERIFIED",
+    "note": "PHASE E5 / P1-17. All six gates are registered mandatory in `cmd/veriqo-readiness`. Four are whole-tree source scans (`canonical_evidence_production_coverage`, `canonical_identity_authority_coverage`, `canonical_execution_entrypoint_coverage`, plus the pre-existing `truth_arbitration_no_bypass`/`canonical_entity_authority_coverage`). Two -- `policy_registry_usage_coverage` and `temporal_calibration_usage_coverage` -- are deliberately RUNTIME tests rather than scans: \"every governed decision commits to the policy that governed it\" is a fact about the DAG, and grepping for it would prove only that certain text appears in certain files, which is exactly the evidence standard this project refuses elsewhere. `correlation_propagation_coverage` additionally proves the identifiers are mutually distinct, catching the degenerate case where a correlation key carries one bit instead of eight."
   }
 ]

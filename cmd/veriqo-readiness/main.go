@@ -46,6 +46,8 @@ import (
 	"veriqo/internal/telemetrycoverage"
 	"veriqo/internal/timestamp"
 	"veriqo/internal/version"
+	evidenceapi "veriqo/pkg/evidence/api"
+
 	"veriqo/pkg/blockers"
 	"veriqo/pkg/blockers/orchestrator"
 	"veriqo/pkg/execution"
@@ -162,6 +164,32 @@ func main() {
 
 		// ---- P0-04: one authoritative requirement state --------------
 		{"traceability_matrix", "the requirement matrix is generated from requirements.json, never hand-edited", true, assurance.StatusVerified, "./cmd/veriqo-requirements", "REQUIREMENT_TRACEABILITY_MATRIX.md matches what requirements.json generates", []string{"go", "run", "./cmd/veriqo-requirements", "-check"}, false},
+
+		// ---- PHASE E5 (P1-17): architecture coverage gates -----------
+		// Four of the six are whole-tree source scans and are registered
+		// separately below, in-process, alongside the other scan-backed
+		// gates. The two here are RUNTIME properties of the execution
+		// DAG -- "every governed decision commits to the policy that
+		// governed it" and "a policy requiring temporal calibration
+		// never gets a decision without it" -- which a source scan
+		// cannot honestly establish. They use the same `go test -run`
+		// gate mechanism dependency_integration above already uses,
+		// rather than a third gate mechanism.
+		{"policy_registry_usage_coverage",
+			"every governed decision attributes and commits to the exact policy that governed it, and an execution declaring a policy hash that does not match the policy actually carried is refused",
+			true, assurance.StatusVerified, "./pkg/execution",
+			"POLICY node precedes DECISION, is genuinely policy-dependent, and a mismatched ExpectedPolicyHash fails closed",
+			[]string{"go", "test", "-run", "PolicyRegistryUsageCoverage", "./pkg/execution/"}, false},
+		{"temporal_calibration_usage_coverage",
+			"a policy declaring temporal reasoning load-bearing never yields a decision reached without it; an optional skip stays an honestly-recorded node rather than an omission",
+			true, assurance.StatusVerified, "./pkg/execution, ./pkg/governance/calibration",
+			"required-but-absent fails closed, required-and-supplied genuinely consumes the observations, optional skip is still a recorded node",
+			[]string{"go", "test", "-run", "TemporalCalibrationUsageCoverage", "./pkg/execution/"}, false},
+		{"correlation_propagation_coverage",
+			"one operation's identity is locked start to end: every correlation identifier is populated, mutually distinct, and reproduced identically by an independent cold replay",
+			true, assurance.StatusVerified, "./pkg/platform/correlation",
+			"no empty identifier a consumer would have to invent, no two identifiers aliasing one value, and identical identifiers after independent replay",
+			[]string{"go", "test", "-run", "CorrelationPropagationCoverage", "./pkg/platform/correlation/"}, false},
 	}
 	if !*skipRace {
 		checks = append(checks, check{"race", "the suite passes under the race detector", true,
@@ -385,6 +413,119 @@ func main() {
 		}
 		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d violations=%d)\n",
 			"canonical_entity_authority_coverage", "internal:entityconsistency.ScanProductionAuthority", code, ev.ArtifactID, auth.ScannedFiles, len(auth.Violations))
+	}
+
+	// canonical_identity_authority_coverage (pre-insurance closure
+	// program, PHASE B / P0-2 "Canonical Identity Authority"). The
+	// established canonical_entity_authority_coverage gate above proves
+	// no second entity REGISTRY is constructed. This gate answers the
+	// stricter question the program actually asks: how many production
+	// files WRITE canonical identity (must be exactly 1), how many do so
+	// without authorization (0), how many write the pre-canonical
+	// union-find outside the one documented fallback branch (0), and is
+	// every maritime entity kind either explicitly mapped to an
+	// identity.Kind or explicitly marked UNMAPPED with a stated reason.
+	{
+		idCov, idErr := entityconsistency.ScanIdentityAuthority(".")
+		idOut, _ := json.MarshalIndent(idCov, "", "  ")
+		code := 0
+		if idErr != nil {
+			code = 1
+			idOut = []byte(idErr.Error())
+		} else if !idCov.Pass() {
+			code = 1
+		}
+		if err := reg.Register(assurance.Gate{
+			ID: "canonical_identity_authority_coverage",
+			Description: "pkg/identity is the SINGLE production identity write authority: production identity " +
+				"writers = 1, unauthorized writers = 0, independent legacy merges = 0, and every maritime " +
+				"entity kind is explicitly mapped or explicitly marked UNMAPPED with a stated reason",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./pkg/governance/entityconsistency",
+			ExitCriteria: "identity writers = 1, unauthorized writers = 0, independent legacy merges = 0, zero maritime kinds without an explicit mapping",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("canonical_identity_authority_coverage",
+			"internal:entityconsistency.ScanIdentityAuthority", string(idOut), code, now)
+		writeArtifact(*evidenceDir, "canonical_identity_authority_coverage",
+			"internal:entityconsistency.ScanIdentityAuthority", code, string(idOut))
+		_ = os.WriteFile("evidence/canonical_identity_authority_coverage.json", idOut, 0o600)
+		gateHashes["canonical_identity_authority_coverage"] = ev.Hash
+		gatePassed["canonical_identity_authority_coverage"] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("canonical_identity_authority_coverage", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (writers=%d unauthorized=%d legacy_merges=%d unmapped=%d)\n",
+			"canonical_identity_authority_coverage", "internal:entityconsistency.ScanIdentityAuthority",
+			code, ev.ArtifactID, idCov.ProductionIdentityWriters, idCov.UnauthorizedIdentityWriters,
+			idCov.IndependentLegacyMerges, idCov.UnmappedMaritimeKinds)
+	}
+
+	// canonical_evidence_production_coverage (pre-insurance closure
+	// program, PHASE A / P0-1 "Canonical Evidence Write Authority").
+	// The established truth_arbitration_no_bypass gate above already
+	// proves no second evidence AUTHORITY exists. This gate is the
+	// second, different question: does a second INGESTION PATH exist --
+	// a caller that never touches an engine but mints canonical
+	// evidence records of its own -- and is the canonical contract
+	// version actually DECLARED rather than merely implied by four
+	// separately-versioned schemas. It PASSes only with unauthorized
+	// evidence writers = 0, unauthorized ingestion paths = 0, and a
+	// declared, content-addressed contract.
+	{
+		contract := evidenceapi.Contract()
+		cov, covErr := nobypass.EvidenceProductionCoverage(".", contract.Version, contract.Hash)
+		type coverageArtifact struct {
+			nobypass.EvidenceCoverage
+			Contract evidenceapi.ContractDescriptor `json:"contract"`
+		}
+		covOut, _ := json.MarshalIndent(coverageArtifact{EvidenceCoverage: cov, Contract: contract}, "", "  ")
+		code := 0
+		if covErr != nil {
+			code = 1
+			covOut = []byte(covErr.Error())
+		} else if !cov.Pass() {
+			code = 1
+		}
+		if err := reg.Register(assurance.Gate{
+			ID: "canonical_evidence_production_coverage",
+			Description: "every production evidence write travels source -> adapter -> canonical evidence contract -> " +
+				"facade -> pipeline -> subsystem: zero unauthorized evidence writers, zero unauthorized ingestion " +
+				"paths, and a declared, content-addressed canonical contract version",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./internal/nobypass, ./pkg/evidence/api",
+			ExitCriteria: "unauthorized evidence writers = 0, unauthorized ingestion paths = 0, contract version declared",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("canonical_evidence_production_coverage",
+			"internal:nobypass.EvidenceProductionCoverage", string(covOut), code, now)
+		writeArtifact(*evidenceDir, "canonical_evidence_production_coverage",
+			"internal:nobypass.EvidenceProductionCoverage", code, string(covOut))
+		_ = os.WriteFile("evidence/canonical_evidence_production_coverage.json", covOut, 0o600)
+		gateHashes["canonical_evidence_production_coverage"] = ev.Hash
+		gatePassed["canonical_evidence_production_coverage"] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("canonical_evidence_production_coverage", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (writers=%d ingestion=%d contract=%s)\n",
+			"canonical_evidence_production_coverage", "internal:nobypass.EvidenceProductionCoverage",
+			code, ev.ArtifactID, cov.UnauthorizedEvidenceWriters, cov.UnauthorizedIngestionPaths, cov.ContractVersion)
 	}
 
 	// canonical_execution_entrypoint_coverage (pre-insurance closure

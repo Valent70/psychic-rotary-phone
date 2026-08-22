@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"veriqo/pkg/identity"
+	"veriqo/pkg/moat/domain/maritime"
 	"veriqo/pkg/moat/entity"
 )
 
@@ -283,5 +284,147 @@ func repoRootForScan(t *testing.T) string {
 			t.Fatal("could not find repo root (go.mod) walking up from test working directory")
 		}
 		dir = parent
+	}
+}
+
+// --- PHASE B (P0-2): canonical identity authority --------------------
+
+// TestIdentityAuthorityCoverageOnTheRealTree is the gate's own
+// assertion run as a test, so a regression breaks the build rather than
+// waiting for the next readiness run.
+func TestIdentityAuthorityCoverageOnTheRealTree(t *testing.T) {
+	cov, err := ScanIdentityAuthority(repoRootForScan(t))
+	if err != nil {
+		t.Fatalf("ScanIdentityAuthority: %v", err)
+	}
+	if cov.ScannedFiles < 100 {
+		t.Fatalf("scanned only %d files -- a pass would be meaningless", cov.ScannedFiles)
+	}
+	if cov.ProductionIdentityWriters != 1 {
+		t.Errorf("production identity writers = %d (%v), want exactly 1",
+			cov.ProductionIdentityWriters, cov.IdentityWriterFiles)
+	}
+	if cov.UnauthorizedIdentityWriters != 0 {
+		t.Errorf("unauthorized identity writers = %d: %v",
+			cov.UnauthorizedIdentityWriters, cov.UnauthorizedWriterFiles)
+	}
+	if cov.IndependentLegacyMerges != 0 {
+		t.Errorf("independent legacy merges = %d: %v",
+			cov.IndependentLegacyMerges, cov.LegacyMergeFiles)
+	}
+	if cov.LegacyRegistryConstructions != 0 {
+		t.Errorf("legacy registry constructions = %d: %v",
+			cov.LegacyRegistryConstructions, cov.RegistryViolations)
+	}
+	if len(cov.MissingMaritimeMappings) != 0 {
+		t.Errorf("maritime kinds with no explicit mapping: %v", cov.MissingMaritimeMappings)
+	}
+	if !cov.Pass() {
+		t.Fatal("coverage does not pass its own condition")
+	}
+}
+
+// TestEveryMaritimeKindIsExplicitlyMappedOrExplicitlyUnmapped is the
+// heart of PHASE B's mapping clause: "we forgot" and "we decided not to
+// model this" must never look identical.
+func TestEveryMaritimeKindIsExplicitlyMappedOrExplicitlyUnmapped(t *testing.T) {
+	entries, missing := MaritimeMapping()
+	if len(missing) != 0 {
+		t.Fatalf("maritime kinds with no row at all: %v", missing)
+	}
+	if len(entries) != len(maritime.KnownEntityKinds()) {
+		t.Fatalf("mapped %d kinds, the ontology models %d", len(entries), len(maritime.KnownEntityKinds()))
+	}
+	modelled := map[string]bool{}
+	for _, k := range identity.KnownKinds() {
+		modelled[string(k)] = true
+	}
+	unmapped := 0
+	for _, e := range entries {
+		if e.Reason == "" {
+			t.Errorf("%s has no stated reason -- an unexplained mapping is a guess", e.MaritimeKind)
+		}
+		if e.IdentityKind == UnmappedKind {
+			unmapped++
+			continue
+		}
+		if !modelled[e.IdentityKind] {
+			t.Errorf("%s maps to %q, which is not a modelled identity.Kind", e.MaritimeKind, e.IdentityKind)
+		}
+	}
+	if unmapped == 0 {
+		t.Error("no kind is marked UNMAPPED -- if every maritime concept really had an issued identifier, " +
+			"the UNMAPPED marker would be dead code, which is worth noticing")
+	}
+}
+
+// TestAnUnmappedMaritimeKindIsNeverSilentlyGuessed proves the failure
+// direction: adding a kind to the ontology without adding a mapping row
+// must be reported, not defaulted.
+func TestAnUnmappedMaritimeKindIsNeverSilentlyGuessed(t *testing.T) {
+	// Simulate the situation by asking the table about a kind it has no
+	// row for, through the same lookup MaritimeMapping uses.
+	if _, ok := maritimeIdentityMapping[maritime.EntityKind("TERMINAL_CRANE")]; ok {
+		t.Fatal("test fixture kind unexpectedly has a row")
+	}
+	// MaritimeMapping only enumerates KnownEntityKinds, so the real
+	// protection is that a NEW kind added there without a row shows up
+	// in `missing`. Assert that path directly.
+	entries, missing := MaritimeMapping()
+	if len(missing) != 0 {
+		t.Fatalf("baseline is not clean: %v", missing)
+	}
+	if len(entries) == 0 {
+		t.Fatal("no entries at all")
+	}
+}
+
+// TestScanIdentityAuthorityDetectsAnInjectedIdentityWriter proves the
+// scanner detects, rather than passing because it never finds anything.
+func TestScanIdentityAuthorityDetectsAnInjectedIdentityWriter(t *testing.T) {
+	dir := t.TempDir()
+	pkgDir := filepath.Join(dir, "pkg", "rogue")
+	if err := os.MkdirAll(pkgDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	src := "package rogue\n\ntype holder struct{ Identity interface{ Merge(string) } }\n\n" +
+		"func (h holder) Do() { h.Identity.Merge(\"x\") }\n"
+	if err := os.WriteFile(filepath.Join(pkgDir, "rogue.go"), []byte(src), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	cov, err := ScanIdentityAuthority(dir)
+	if err != nil {
+		t.Fatalf("ScanIdentityAuthority: %v", err)
+	}
+	if cov.UnauthorizedIdentityWriters == 0 {
+		t.Fatal("an injected second identity writer was not detected")
+	}
+	if cov.Pass() {
+		t.Fatal("coverage passed with a detected unauthorized identity writer")
+	}
+}
+
+// TestScanIdentityAuthorityDetectsAnIndependentLegacyMerge is the same
+// proof for the union-find half.
+func TestScanIdentityAuthorityDetectsAnIndependentLegacyMerge(t *testing.T) {
+	dir := t.TempDir()
+	pkgDir := filepath.Join(dir, "pkg", "rogue")
+	if err := os.MkdirAll(pkgDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	src := "package rogue\n\ntype holder struct{ Entities interface{ Merge(string) } }\n\n" +
+		"func (h holder) Do() { h.Entities.Merge(\"x\") }\n"
+	if err := os.WriteFile(filepath.Join(pkgDir, "rogue.go"), []byte(src), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	cov, err := ScanIdentityAuthority(dir)
+	if err != nil {
+		t.Fatalf("ScanIdentityAuthority: %v", err)
+	}
+	if cov.IndependentLegacyMerges == 0 {
+		t.Fatal("an injected independent legacy merge was not detected")
+	}
+	if cov.Pass() {
+		t.Fatal("coverage passed with a detected independent legacy merge")
 	}
 }
