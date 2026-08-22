@@ -44,11 +44,25 @@ all about production.
 | **spire_mtls** | PASS — `pkg/blockers/spiffe` qualifies client-side validation with real X.509 chain verification and a full negative matrix (expired, revoked, untrusted CA, claimed-vs-actual mismatch) | INTERNAL_QUALIFIED — a real 3-container SPIRE cluster with node-scoped isolation and live per-node revocation (`evidence/spire_mtls-multi-container-integration.txt`), plus real SVIDs loaded by `pkg/transport/rafttcp` for a real end-to-end mTLS handshake (`evidence/spire_mtls-rafttcp-live-integration.txt`) | A **production node attestor** — cloud-instance-identity, k8s-PSAT or TPM. `join_token` is a test/demo attestor. Also open: `rafttcp`'s hard-coded `veriqo.global` trust domain, recorded as configurable-trust-domain follow-on work. | Node A and node B attesting, rotating and revoking identities under a production attestor | Platform / infrastructure |
 | **pentest** | PASS — `pkg/blockers/pentest` runs real adversarial probes (JWT alg=none, unknown kid, sandbox path traversal, authz wildcard escalation) against this codebase's own production `pkg/api` / `pkg/kernel/sandbox` / `pkg/authz`, with a real release-identity preflight | NOT_RUN — independence is the requirement; no self-run probe can satisfy it by construction | An independent security vendor. This is categorically unsatisfiable from inside the repository. | A signed report from an external security vendor, validated through `pkg/governance/qualification` against a registered provider | Security |
 | **supply_chain_scan** | PASS — real `go list -m all` dependency discovery, a policy engine, and a real HTTP-backed `VulnerabilityProvider`. SAST is fully closed: `gosec` and `staticcheck` both run clean, 0 findings (`evidence/supply_chain_scan-gosec-full.txt`) | INTERNAL_QUALIFIED — the pipeline is proven against a local server, since the real endpoints are network-blocked here | A reachable vulnerability database. `vuln.go.dev`, `osv.dev` and the GitHub advisory API all return **403** under this environment's explicit organization egress policy — re-probed directly and via the proxy's own status endpoint (`evidence/supply_chain_scan-vulndb-network-retest.txt`). A policy denial, not a code gap. | `govulncheck` against a reachable feed, reporting clean | Security / IT policy |
-| **live_data** | PASS — `pkg/connector/{aisstream,sar,bol,insurance,payment}` each parse a real wire schema, structurally validate, and canonicalize into `ontology.Evidence`; `pkg/blockers/livedata` adds content-hash dedup and a proven anti-replay defence across all four source types, refusing any SIMULATED connector's record tagged LIVE | INTERNAL_QUALIFIED — full pipeline proven end to end against SIMULATED-mode connectors, all deterministic and seeded | Commercial data contracts with AIS/BoL/SAR/commodity-trade providers. A procurement and legal action. **Explicitly excluded from this programme's scope by standing operator directive.** | Ingest qualified against contracted live feeds, with a rights state above `UNKNOWN_PENDING_CONTRACT` granted through a real `GrantTrust` call | Commercial / legal |
+| **live_data** | PASS — `pkg/connector/{aisstream,sar,bol,insurance,payment}` each parse a real wire schema, structurally validate, and canonicalize into `ontology.Evidence`; `pkg/blockers/livedata` adds content-hash dedup and a proven anti-replay defence across all four source types, refusing any SIMULATED connector's record tagged LIVE | NOT_RUN — deliberately. The pipeline IS proven end to end against SIMULATED-mode connectors, but that is ENGINEERING evidence and is already counted on that axis. There is no in-sandbox *qualification drill* for this gate, because a drill against a simulated feed would establish nothing about a real one | Commercial data contracts with AIS/BoL/SAR/commodity-trade providers. A procurement and legal action. **Explicitly excluded from this programme's scope by standing operator directive.** | Ingest qualified against contracted live feeds, with a rights state above `UNKNOWN_PENDING_CONTRACT` granted through a real `GrantTrust` call | Commercial / legal |
 
 **Final axis for all eight: `BLOCKED_EXTERNAL`.**
 **Release verdict: `NOT_PRODUCTION_READY`**, and correctly so — a single
 blocked mandatory gate makes the whole verdict not-ready, by design.
+
+As regenerated for this round (`READINESS_MANIFEST.json`, `axes`):
+
+- 54 gates carry a four-axis row
+- **engineering: 54 / 54 PASS** — including all eight blocked gates,
+  which is precisely the fact the single-status model was hiding
+- **internal: 5 INTERNAL_QUALIFIED** (`scale_qualification`,
+  `multi_region_dr`, `soak_72h`, `spire_mtls`, `supply_chain_scan`)
+- **internal: NOT_RUN for 3** (`hsm_kms`, `live_data`, `pentest`) —
+  correctly, because none of the three has an in-sandbox drill that
+  would establish anything: what they need is a paid tenancy, a
+  commercial contract, and an independent vendor respectively
+- **external: 0 EXTERNAL_QUALIFIED, 8 BLOCKED_EXTERNAL**
+- mandatory gates passing: **46 / 54**, with 8 blocked and **0 failing**
 
 ---
 

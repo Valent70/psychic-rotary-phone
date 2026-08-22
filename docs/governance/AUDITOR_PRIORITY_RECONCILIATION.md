@@ -297,3 +297,62 @@ reproducible artifact in this repository or its evidence directory. Every
 a contract, physical infrastructure, an independent third party, or a
 real customer — that no coding session can substitute for without
 fabricating evidence, which this project has consistently refused to do.
+
+## R20 addendum — the pre-insurance closure program, and one note above
+## that is now stale
+
+R20 executed a separate mandate ("VERIQO PRE-INSURANCE CLOSURE
+PROGRAM", phases A-K / P0-1..P2-18). Its full accounting lives in three
+documents rather than being restated here:
+
+- `PRE_INSURANCE_IMPLEMENTATION_REPORT.md` — the Step 0 reconciliation
+  (4 items already closed, 10 partial, 4 genuinely missing), what
+  changed per phase, and what was deliberately left alone.
+- `PRE_INSURANCE_VERIFICATION_MATRIX.md` — Requirement | Implementation
+  | Test | Result | Evidence | Status for every item, plus the
+  mandate's own hard-gate checklist answered line by line.
+- `PRE_INSURANCE_RESIDUAL_EXTERNAL_GATE_REGISTER.md` — the eight
+  blockers under a new four-axis (engineering / internal / external /
+  final) separation, plus eight non-gate residuals recorded in code as
+  honest ceilings.
+
+**Nothing in R20 narrowed any of the five priorities above.** The five
+are, by design, about resources a coding session cannot fabricate, and
+R20 attempted none of them. What it did change is how the eight
+blockers are REPORTED: their engineering and internal-qualification
+progress is now a separate, machine-readable axis instead of being
+hidden behind the single word BLOCKED. Their status strings and blocker
+reasons are byte-for-byte unchanged, and
+`TestAxisSeparationNeverAdvancesTheGateItself` proves the change moves
+no gate, no assessment and no release verdict.
+
+### The R19 addendum's R-028 note is now stale, and R20 closed it
+
+The R19 addendum above records that `pkg/kernel/sandbox` had exactly two
+`Enforcer` implementations, neither of which wired in
+`cmd/veriqo-plugin-shim`'s real seccomp-BPF and `PR_SET_NO_NEW_PRIVS`
+work, and states that closing that integration gap "would be legitimate
+future engineering work, but per this round's explicit instruction, it
+was investigated only, not attempted."
+
+R20's PHASE J attempted it and closed it. `pkg/kernel/sandbox.OSEnforcer`
+is the missing third implementation. It reimplements no confinement
+primitive — the namespaces still come from `pkg/kernel/plugin`, seccomp
+and no-new-privs still from the shim, cgroup v2 still from
+`pkg/kernel/resource` — and adds the honest mapping from a `Policy`
+clause to the primitive that must be present, with `Probe()` reading
+`/proc` and `/sys` rather than inferring anything from GOOS.
+
+Seven negative tests cover the seven named escape vectors. The
+important one is `TestSupportedButUnappliedPrimitiveIsNotTreatedAsClosed`:
+a kernel that SUPPORTS `PR_SET_NO_NEW_PRIVS` confines nothing if the
+shim that applies it is not deployed, and the enforcer reports that
+vector as NOT closed rather than green.
+
+The honest ceiling is unchanged in kind from what R19 described, and is
+now stated in code (`sandbox.Qualification()`) rather than in prose:
+INTERNAL_QUALIFIED, never VERIFIED. Proving a genuinely hostile binary
+is contained requires an adversarial drill on a production kernel.
+`pivot_root` filesystem confinement, user-namespace remapping and an
+allowlist-style seccomp profile all remain genuinely open, and are
+listed in that function's own `NotProven` field rather than omitted.

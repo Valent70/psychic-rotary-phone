@@ -1,0 +1,54 @@
+gate: canonical_evidence_production_coverage
+command: internal:nobypass.EvidenceProductionCoverage
+exit: 0
+---
+{
+  "scanned_files": 250,
+  "unauthorized_evidence_writers": 0,
+  "unauthorized_ingestion_paths": 0,
+  "contract_version": "veriqo.evidence.contract/v1",
+  "contract_hash": "sha256:4becd3a0fbe7470a581955ffb3f0867a741669a9cdf7c7af03115d29bba8720f",
+  "audited_adapters": [
+    "internal/nobypass/nobypass.go",
+    "pkg/connector/aisstream/normalize.go",
+    "pkg/connector/bol/bol.go",
+    "pkg/connector/insurance/insurance.go",
+    "pkg/connector/payment/payment.go",
+    "pkg/connector/sar/sar.go",
+    "pkg/evidence/api/api.go"
+  ],
+  "contract": {
+    "version": "veriqo.evidence.contract/v1",
+    "components": {
+      "ontology": "veriqo.evidence/v1",
+      "provenance": "veriqo.provenance/v1"
+    },
+    "path": [
+      "source",
+      "adapter (pkg/connector/*: parse, structurally validate, canonicalize)",
+      "canonical evidence contract (pkg/evidence/ontology.New: content-address, validate, type-check)",
+      "evidence facade (pkg/evidence/api.Facade.Submit)",
+      "canonical pipeline (pkg/canonical.Pipeline)",
+      "subsystem (fusion / contradiction / dependency graph / decision / twin)"
+    ],
+    "evidence_types": [
+      "AISObservation",
+      "Correction",
+      "DerivedInference",
+      "Document",
+      "FinancialRecord",
+      "IdentityAssertion",
+      "Measurement",
+      "Observation",
+      "OpticalObservation",
+      "Outcome",
+      "Prediction",
+      "RegistryRecord",
+      "SARObservation",
+      "SensorObservation",
+      "Statement",
+      "TradeRecord"
+    ],
+    "hash": "sha256:4becd3a0fbe7470a581955ffb3f0867a741669a9cdf7c7af03115d29bba8720f"
+  }
+}

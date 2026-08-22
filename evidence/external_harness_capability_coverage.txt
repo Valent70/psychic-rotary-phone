@@ -1,0 +1,345 @@
+gate: external_harness_capability_coverage
+command: internal:blockers.CapabilityRegister
+exit: 0
+---
+{
+  "capabilities": [
+    {
+      "gate_id": "hsm_kms",
+      "name": "a real HSM or cloud-KMS tenancy",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/hsmkms",
+      "symbol": "FailingKeyProvider",
+      "gap": "requires paid cloud credentials; freshly re-tested against real AWS KMS and rejected with UnrecognizedClientException (evidence/hsm_kms-real-credential-retest.txt). Also constrained by the zero_dependency gate, which rules out adding a cloud SDK"
+    },
+    {
+      "gate_id": "hsm_kms",
+      "name": "failure matrix (unavailable, timeout, permission-denied, wrong-key)",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/hsmkms",
+      "symbol": "FailingKeyProvider"
+    },
+    {
+      "gate_id": "hsm_kms",
+      "name": "key rotation without re-encryption",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/platform/security/keys",
+      "symbol": "Manager"
+    },
+    {
+      "gate_id": "hsm_kms",
+      "name": "revocation refuses before the provider is ever touched",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/hsmkms",
+      "symbol": "RunFailureMatrix"
+    },
+    {
+      "gate_id": "hsm_kms",
+      "name": "sign and verify through a KeyProvider",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/hsmkms",
+      "symbol": "RunFailureMatrix"
+    },
+    {
+      "gate_id": "live_data",
+      "name": "anti-replay defence",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/livedata",
+      "symbol": "RunQualification"
+    },
+    {
+      "gate_id": "live_data",
+      "name": "contracted commercial feeds",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/livedata",
+      "symbol": "FeedConnector",
+      "gap": "requires commercial data contracts with AIS/BoL/SAR/trade providers -- a procurement and legal action, and one explicitly excluded from this programme's scope"
+    },
+    {
+      "gate_id": "live_data",
+      "name": "feed connector lifecycle and content-hash dedup",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/livedata",
+      "symbol": "FeedConnector"
+    },
+    {
+      "gate_id": "live_data",
+      "name": "refusal of a SIMULATED connector's record tagged LIVE",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/livedata",
+      "symbol": "DataMode"
+    },
+    {
+      "gate_id": "multi_region_dr",
+      "name": "create regions",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/dr",
+      "symbol": "RegionProvider"
+    },
+    {
+      "gate_id": "multi_region_dr",
+      "name": "failback: heal the partition and confirm convergence",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/dr",
+      "symbol": "Heal"
+    },
+    {
+      "gate_id": "multi_region_dr",
+      "name": "measure RTO and RPO",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/dr",
+      "symbol": "RunQualification"
+    },
+    {
+      "gate_id": "multi_region_dr",
+      "name": "partition/fail the leader region",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/dr",
+      "symbol": "RunQualification"
+    },
+    {
+      "gate_id": "multi_region_dr",
+      "name": "real cross-datacenter WAN behaviour",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/dr",
+      "symbol": "RegionProvider",
+      "gap": "an in-process or single-host transport cannot reproduce WAN latency, partial partitions or traffic-manager cutover; real cloud regions are a procurement action"
+    },
+    {
+      "gate_id": "pentest",
+      "name": "adversarial probes against real production code",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/pentest",
+      "symbol": "RunAll"
+    },
+    {
+      "gate_id": "pentest",
+      "name": "an independent security vendor's signed report",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/pentest",
+      "symbol": "RunQualification",
+      "gap": "independence is the requirement; no self-run probe can satisfy it by construction"
+    },
+    {
+      "gate_id": "pentest",
+      "name": "release-identity preflight",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/pentest",
+      "symbol": "Preflight"
+    },
+    {
+      "gate_id": "scale_qualification",
+      "name": "exactly-once delivery integrity (loss and duplication detection)",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/scale",
+      "symbol": "FaultInjectingNodeProvider"
+    },
+    {
+      "gate_id": "scale_qualification",
+      "name": "execution on genuinely distinct physical infrastructure",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/scale",
+      "symbol": "NodeProvider",
+      "gap": "the HTTP provider ran 100 real containers, but all on one physical host; multi-host/multi-datacenter execution is an infrastructure-procurement action no harness can perform"
+    },
+    {
+      "gate_id": "scale_qualification",
+      "name": "provision N nodes",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/scale",
+      "symbol": "NodeProvider"
+    },
+    {
+      "gate_id": "scale_qualification",
+      "name": "submit and collect 1M evidence envelopes",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/scale",
+      "symbol": "RunQualification"
+    },
+    {
+      "gate_id": "soak_72h",
+      "name": "a genuinely continuous 72-hour window",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/soak",
+      "symbol": "RunQualificationAt",
+      "gap": "the harness accepts any target duration; this environment's session lifecycle cannot honestly stay up for 72 continuous hours, which is a property of the host, not of the harness"
+    },
+    {
+      "gate_id": "soak_72h",
+      "name": "long-running workload with hash-chained checkpoints",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/soak",
+      "symbol": "RunQualification"
+    },
+    {
+      "gate_id": "soak_72h",
+      "name": "memory and CPU sampling",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/soak",
+      "symbol": "ResourceUsage"
+    },
+    {
+      "gate_id": "soak_72h",
+      "name": "restart/resume across process restart",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/soak",
+      "symbol": "LoadState"
+    },
+    {
+      "gate_id": "soak_72h",
+      "name": "run identity binding (host, binary, source)",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/soak",
+      "symbol": "RunIdentity"
+    },
+    {
+      "gate_id": "spire_mtls",
+      "name": "SVID issuance",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/spiffe",
+      "symbol": "IdentityProvider"
+    },
+    {
+      "gate_id": "spire_mtls",
+      "name": "SVID rotation and watch",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/spiffe",
+      "symbol": "WatchRotation"
+    },
+    {
+      "gate_id": "spire_mtls",
+      "name": "a production node attestor (cloud-instance-identity / k8s-PSAT / TPM)",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/spiffe",
+      "symbol": "IdentityProvider",
+      "gap": "join_token is a test/demo attestor; a production attestor requires real cloud or TPM infrastructure"
+    },
+    {
+      "gate_id": "spire_mtls",
+      "name": "negative identity-binding matrix (expired, revoked, untrusted CA, mismatch)",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/spiffe",
+      "symbol": "RunQualification"
+    },
+    {
+      "gate_id": "spire_mtls",
+      "name": "trust bundle verification",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/spiffe",
+      "symbol": "TrustBundle"
+    },
+    {
+      "gate_id": "supply_chain_scan",
+      "name": "a reachable vulnerability database",
+      "status": "EXTERNAL_ENVIRONMENT_ONLY",
+      "package": "pkg/blockers/supplychain",
+      "symbol": "VulnerabilityProvider",
+      "gap": "vuln.go.dev, osv.dev and the GitHub advisory API all return 403 under this environment's egress policy (evidence/supply_chain_scan-vulndb-network-retest.txt) -- a policy denial, not a code gap"
+    },
+    {
+      "gate_id": "supply_chain_scan",
+      "name": "dependency discovery",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/supplychain",
+      "symbol": "DiscoverDependencies"
+    },
+    {
+      "gate_id": "supply_chain_scan",
+      "name": "vulnerability query pipeline and policy evaluation",
+      "status": "EXERCISED_BY_HARNESS",
+      "package": "pkg/blockers/supplychain",
+      "symbol": "HTTPVulnerabilityProvider"
+    }
+  ],
+  "summary": [
+    {
+      "gate_id": "hsm_kms",
+      "exercised": 4,
+      "partial": 0,
+      "external_only": 1,
+      "total": 5,
+      "harness_complete": true,
+      "still_external": [
+        "a real HSM or cloud-KMS tenancy"
+      ]
+    },
+    {
+      "gate_id": "live_data",
+      "exercised": 3,
+      "partial": 0,
+      "external_only": 1,
+      "total": 4,
+      "harness_complete": true,
+      "still_external": [
+        "contracted commercial feeds"
+      ]
+    },
+    {
+      "gate_id": "multi_region_dr",
+      "exercised": 4,
+      "partial": 0,
+      "external_only": 1,
+      "total": 5,
+      "harness_complete": true,
+      "still_external": [
+        "real cross-datacenter WAN behaviour"
+      ]
+    },
+    {
+      "gate_id": "pentest",
+      "exercised": 2,
+      "partial": 0,
+      "external_only": 1,
+      "total": 3,
+      "harness_complete": true,
+      "still_external": [
+        "an independent security vendor's signed report"
+      ]
+    },
+    {
+      "gate_id": "scale_qualification",
+      "exercised": 3,
+      "partial": 0,
+      "external_only": 1,
+      "total": 4,
+      "harness_complete": true,
+      "still_external": [
+        "execution on genuinely distinct physical infrastructure"
+      ]
+    },
+    {
+      "gate_id": "soak_72h",
+      "exercised": 4,
+      "partial": 0,
+      "external_only": 1,
+      "total": 5,
+      "harness_complete": true,
+      "still_external": [
+        "a genuinely continuous 72-hour window"
+      ]
+    },
+    {
+      "gate_id": "spire_mtls",
+      "exercised": 4,
+      "partial": 0,
+      "external_only": 1,
+      "total": 5,
+      "harness_complete": true,
+      "still_external": [
+        "a production node attestor (cloud-instance-identity / k8s-PSAT / TPM)"
+      ]
+    },
+    {
+      "gate_id": "supply_chain_scan",
+      "exercised": 2,
+      "partial": 0,
+      "external_only": 1,
+      "total": 3,
+      "harness_complete": true,
+      "still_external": [
+        "a reachable vulnerability database"
+      ]
+    }
+  ],
+  "invariant": "a harness exercises machinery; it never qualifies a gate. Advancing any of the eight blockers requires real external evidence validated by pkg/governance/qualification against a registered provider and reviewer, bound to this exact release. No value in this package participates in that."
+}

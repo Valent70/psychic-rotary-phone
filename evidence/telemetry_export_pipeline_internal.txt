@@ -1,0 +1,5 @@
+gate: telemetry_export_pipeline_internal
+command: go test -run ExportPipeline|Exporter|Payload|TraceID|PipelineQualification ./pkg/platform/telemetry/
+exit: 0
+---
+ok  	veriqo/pkg/platform/telemetry	(cached)

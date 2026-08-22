@@ -308,7 +308,7 @@ rebuilt. What did not exist is per-**capability** honesty: the
 orchestrator reports READY_FOR_REAL_QUALIFICATION per *blocker*, which
 answers "does a harness exist for DR" but not "does the DR harness
 exercise failback, or only failover". `blockers.CapabilityRegister` has
-33 rows, each naming the Go symbol that implements it, with
+34 rows, each naming the Go symbol that implements it, with
 `TestEveryCapabilityCitesRealCode` verifying the symbol is genuinely
 *declared* in that package's non-test source.
 

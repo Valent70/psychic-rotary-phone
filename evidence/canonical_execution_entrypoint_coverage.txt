@@ -1,0 +1,82 @@
+gate: canonical_execution_entrypoint_coverage
+command: internal:entrypoints.Audit
+exit: 0
+---
+{
+  "scanned_files": 250,
+  "parallel_governed_execution_paths": 0,
+  "entrypoints": [
+    {
+      "kind": "HTTP",
+      "name": "POST /lifecycle/run_unified",
+      "file": "veriqo/gateway/rest/lifecycle_route.go",
+      "governed_decisions": true,
+      "canonical_path": "HTTP -\u003e Lifecycle.RunUnified -\u003e execution.Engine -\u003e Policy -\u003e Evidence -\u003e Decision -\u003e Verification",
+      "reaches": "RunUnified("
+    },
+    {
+      "kind": "COMPATIBILITY_API",
+      "name": "veriqo/registry engine routes",
+      "file": "veriqo/gateway/rest/generated_routes.go",
+      "governed_decisions": false,
+      "canonical_path": "compatibility/control surface only -- fine-grained component operations; enforced by TestRegistryNeverProducesGovernedDecisionArtifacts and by this package's artifact markers"
+    },
+    {
+      "kind": "CLI",
+      "name": "veriqo/cli generated commands",
+      "file": "veriqo/cli/generated_commands.go",
+      "governed_decisions": false,
+      "canonical_path": "compatibility/control surface only -- same registry engines as the HTTP compatibility routes"
+    },
+    {
+      "kind": "REPLAY",
+      "name": "cmd/veriqo-cold-replay",
+      "file": "cmd/veriqo-cold-replay/main.go",
+      "governed_decisions": false,
+      "canonical_path": "independent verification only: rebuilds a COMMITTED trace with a deliberately isolated fresh engine and compares. It reproduces a decision, it never originates one"
+    },
+    {
+      "kind": "INTERNAL_JOB",
+      "name": "cmd/veriqo-readiness",
+      "file": "cmd/veriqo-readiness/main.go",
+      "governed_decisions": false,
+      "canonical_path": "release gating only: runs gates and writes a manifest; produces no case decision"
+    },
+    {
+      "kind": "BATCH",
+      "name": "cmd/veriqo-qualification",
+      "file": "cmd/veriqo-qualification/main.go",
+      "governed_decisions": false,
+      "canonical_path": "blocker fixture qualification only; produces no case decision"
+    },
+    {
+      "kind": "WORKER",
+      "name": "cmd/veriqo-node",
+      "file": "cmd/veriqo-node/main.go",
+      "governed_decisions": false,
+      "canonical_path": "consensus/transport node: replicates state, does not originate governed decisions"
+    },
+    {
+      "kind": "WORKER",
+      "name": "cmd/veriqo-scale-node",
+      "file": "cmd/veriqo-scale-node/main.go",
+      "governed_decisions": false,
+      "canonical_path": "scale-harness worker: counts records, produces no decision"
+    },
+    {
+      "kind": "SCHEDULER",
+      "name": "cmd/veriqo-soak-run",
+      "file": "cmd/veriqo-soak-run/main.go",
+      "governed_decisions": false,
+      "canonical_path": "soak harness driver: exercises the system on a schedule, originates no governed decision"
+    },
+    {
+      "kind": "ADMIN_API",
+      "name": "cmd/veriqo-gateway",
+      "file": "cmd/veriqo-gateway/main.go",
+      "governed_decisions": false,
+      "canonical_path": "serves the REST surface above; the governed path is the lifecycle route's, not its own"
+    }
+  ],
+  "governed_entrypoints": 1
+}

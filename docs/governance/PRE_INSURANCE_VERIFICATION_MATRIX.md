@@ -99,7 +99,7 @@ Reproduce any row with `go test -run <TestName> ./<package>/`.
 | Requirement | Implementation | Test | Result | Evidence | Status |
 |---|---|---|---|---|---|
 | One envelope for external and internal evidence | `pkg/governance/envelope.Envelope` | `TestWellFormedLiveEnvelopeIsAccepted` | PASS | `pkg/governance/envelope/envelope_test.go` | VERIFIED |
-| Rejects: wrong commit / source hash / artifact hash / environment / expired / revoked provider / unauthorized provider / missing reviewer / fixture-labelled-LIVE | `Validator.Check` | `TestValidatorRejectsEveryNamedFailureMode` (14 subtests) | PASS | same | VERIFIED |
+| Rejects: wrong commit / source hash / artifact hash / environment / expired / revoked provider / unauthorized provider / missing reviewer / fixture-labelled-LIVE | `Validator.Check` | `TestValidatorRejectsEveryNamedFailureMode` (15 subtests) | PASS | same | VERIFIED |
 | A fixture can never self-promote | `IsFixture()` reads OriginKind, not the claim | `TestFixtureCanNeverSelfPromote` | PASS | same | VERIFIED |
 | Fixture must declare limitations | `Validate` | `TestFixtureEnvelopeMustDeclareLimitations` | PASS | same | VERIFIED |
 | Artifact root is order-independent and tamper-evident | `ArtifactRoot` | `TestArtifactRootIsOrderIndependentAndTamperEvident` | PASS | same | VERIFIED |
@@ -251,7 +251,7 @@ Reproduce any row with `go test -run <TestName> ./<package>/`.
 | Requirement | Implementation | Test | Result | Evidence | Status |
 |---|---|---|---|---|---|
 | Scale / DR / soak / KMS / SPIRE harnesses exist | `pkg/blockers/*` (pre-existing) | package suites + `orchestrator.RunAll` | PASS | `evidence/blockers-qualification-report.json` | VERIFIED (harness) |
-| Per-capability coverage declared | `blockers.CapabilityRegister` (33 rows) | `TestRegisterIsInternallyConsistent` | PASS | `evidence/external_harness_capability_coverage.json` | VERIFIED |
+| Per-capability coverage declared | `blockers.CapabilityRegister` (34 rows) | `TestRegisterIsInternallyConsistent` | PASS | `evidence/external_harness_capability_coverage.json` | VERIFIED |
 | Register cannot drift into fiction | symbol-declaration check against real source | `TestEveryCapabilityCitesRealCode` | PASS | same | VERIFIED |
 | Every gate still names something external | — | `TestEveryGateStillNamesSomethingExternal` | PASS | same | VERIFIED |
 | Harness completeness ≠ gate status | — | `TestHarnessCompletenessIsNotGateStatus` | PASS | same | VERIFIED |

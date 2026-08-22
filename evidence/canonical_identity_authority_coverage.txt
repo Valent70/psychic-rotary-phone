@@ -1,0 +1,72 @@
+gate: canonical_identity_authority_coverage
+command: internal:entityconsistency.ScanIdentityAuthority
+exit: 0
+---
+{
+  "scanned_files": 250,
+  "production_identity_writers": 1,
+  "identity_writer_files": [
+    "pkg/lifecycle/lifecycle.go"
+  ],
+  "unauthorized_identity_writers": 0,
+  "independent_legacy_merges": 0,
+  "legacy_registry_constructions": 0,
+  "maritime_mappings": [
+    {
+      "maritime_kind": "BROKER",
+      "identity_kind": "ORGANIZATION",
+      "reason": "a broker is a legal organization; its identity is the organization's, not a broker-specific scheme"
+    },
+    {
+      "maritime_kind": "CARGO",
+      "identity_kind": "UNMAPPED",
+      "reason": "a cargo parcel's identity in practice IS its bill of lading, and that is modelled as KindBillOfLading on the BoL itself. Giving the cargo node its own identity kind would create two identities for one thing"
+    },
+    {
+      "maritime_kind": "COMMODITY",
+      "identity_kind": "COMMODITY",
+      "reason": "a commodity is identified by its classification code, modelled directly"
+    },
+    {
+      "maritime_kind": "COUNTRY",
+      "identity_kind": "GEOGRAPHIC_ENTITY",
+      "reason": "a country is the broadest geographic entity kind, which pkg/identity models"
+    },
+    {
+      "maritime_kind": "INSURANCE_POLICY",
+      "identity_kind": "REGISTRY_ID",
+      "reason": "an insurance policy is identified by the policy number its issuing registry assigned"
+    },
+    {
+      "maritime_kind": "INSURER",
+      "identity_kind": "ORGANIZATION",
+      "reason": "an insurer is a legal organization, same reasoning as a broker; an LEI-bearing insurer resolves through KindLEI via the organization"
+    },
+    {
+      "maritime_kind": "OWNERSHIP_RECORD",
+      "identity_kind": "UNMAPPED",
+      "reason": "an ownership record is a relationship between a vessel and an organization, both of which are already identified; the relationship itself is not separately issued an identifier by anyone"
+    },
+    {
+      "maritime_kind": "PORT",
+      "identity_kind": "PORT",
+      "reason": "a port is identified by its UN/LOCODE-style shared location code, which pkg/identity models directly"
+    },
+    {
+      "maritime_kind": "SANCTION_ENTRY",
+      "identity_kind": "UNMAPPED",
+      "reason": "a sanctions listing is a statement ABOUT an entity, not an entity with an identity of its own; its identity is the listing authority's record ID, which belongs to that authority's registry, not here"
+    },
+    {
+      "maritime_kind": "VESSEL",
+      "identity_kind": "IMO",
+      "reason": "a vessel's IMO number is issued once and never reused -- the highest-discriminating identifier this system models"
+    },
+    {
+      "maritime_kind": "VOYAGE",
+      "identity_kind": "UNMAPPED",
+      "reason": "a voyage has no globally-issued identifier: it is a derived span between two port calls, identified differently by every operator. Mapping it to KindShipment would assert an equivalence that is not true"
+    }
+  ],
+  "unmapped_maritime_kinds": 4
+}
