@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"veriqo/internal/assurance"
+	"veriqo/internal/entrypoints"
 	"veriqo/internal/environment"
 	"veriqo/internal/nobypass"
 	"veriqo/internal/sbom"
@@ -384,6 +385,58 @@ func main() {
 		}
 		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d violations=%d)\n",
 			"canonical_entity_authority_coverage", "internal:entityconsistency.ScanProductionAuthority", code, ev.ArtifactID, auth.ScannedFiles, len(auth.Violations))
+	}
+
+	// canonical_execution_entrypoint_coverage (pre-insurance closure
+	// program, PHASE C / P0-3 "Canonical Execution Path"): a real,
+	// mandatory, in-process whole-tree scan proving no production file
+	// opens a SECOND path to a governed decision -- no second
+	// execution.Engine, no directly-constructed verification
+	// certificate -- and that every row of the audited entrypoint matrix
+	// (HTTP, CLI, batch, worker, scheduler, admin API, replay,
+	// compatibility API, internal job) still says something the source
+	// actually supports. The pre-existing
+	// TestRegistryNeverProducesGovernedDecisionArtifacts covered two
+	// files; this covers the tree.
+	{
+		epRep, epErr := entrypoints.Audit(".")
+		epOut, _ := json.MarshalIndent(epRep, "", "  ")
+		code := 0
+		if epErr != nil {
+			code = 1
+			epOut = []byte(epErr.Error())
+		} else if !epRep.Clean() {
+			code = 1
+		}
+		if err := reg.Register(assurance.Gate{
+			ID: "canonical_execution_entrypoint_coverage",
+			Description: "every governed decision flows Entrypoint -> Lifecycle -> Execution Engine -> Policy -> " +
+				"Evidence -> Decision -> Verification through the ONE execution engine; parallel governed " +
+				"execution paths = 0 and no entrypoint-matrix row claims a canonical path its own source does not take",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./internal/entrypoints",
+			ExitCriteria: "parallel governed execution paths = 0 and zero matrix rows contradicted by a real whole-tree source scan",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("canonical_execution_entrypoint_coverage", "internal:entrypoints.Audit", string(epOut), code, now)
+		writeArtifact(*evidenceDir, "canonical_execution_entrypoint_coverage", "internal:entrypoints.Audit", code, string(epOut))
+		_ = os.WriteFile("evidence/canonical_execution_entrypoint_coverage.json", epOut, 0o600)
+		gateHashes["canonical_execution_entrypoint_coverage"] = ev.Hash
+		gatePassed["canonical_execution_entrypoint_coverage"] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("canonical_execution_entrypoint_coverage", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d parallel_paths=%d matrix_errors=%d)\n",
+			"canonical_execution_entrypoint_coverage", "internal:entrypoints.Audit", code, ev.ArtifactID,
+			epRep.ScannedFiles, epRep.ParallelGovernedExecutionPaths, len(epRep.MatrixErrors))
 	}
 
 	// Regenerate SBOM.json from THIS release's actual identity, and

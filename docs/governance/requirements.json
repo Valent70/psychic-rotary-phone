@@ -493,5 +493,23 @@
     "tests": "`TestFullCaseWalksEndToEndFromASingleCaseID`, `TestCaseLineageWalksARealRunEndToEndFromOneCaseID`, `TestCaseLineageIsTamperEvident`, `TestFromCorrelationAloneIsHonestlyIncomplete`",
     "status": "VERIFIED",
     "note": "PHASE D2 / P0-5, genuinely net-new (nothing here previously had a CaseID aggregating a whole investigation: `pkg/governance/hitl.Case` is a human-review workflow, `telemetry.Correlation.CaseID` is a span attribute nothing walks, `correlation.Key` joins ONE execution, and `pkg/insurance/*` is business logic this program excludes). CaseID is deliberately the Intent's own content-addressed ID, never a second identity. `Completeness` is derived, never declared: Complete requires all 8 structural kinds present, every declared upstream resolving, and a verifying hash chain. `pkg/lifecycle.Orchestrator.Lineage` is the real production caller (opt-in, nil-safe); the OUTCOME node is attached by `RecordOutcome`, not `RunUnified`, because ground truth does not exist at case-run time -- so a case honestly reports Complete=false until it does. NO insurance/claim/coverage/dispute concept is implemented here (program rule 8)."
+  },
+  {
+    "id": "R-055",
+    "phase": "PRE-INS",
+    "title": "Correlation context is locked start-to-end: dropping, replacing, swapping or altering an identifier fails verification and is never silently regenerated",
+    "owner_package": "`pkg/platform/correlation`, `pkg/execution`",
+    "tests": "`TestAdversarialDropEvidencePackageID`, `TestAdversarialAlterExecutionID`, `TestAdversarialSwapEntityID`, `TestAdversarialReplaceDecisionID`, `TestAdversarialAlterIdentityLedgerHead`, `TestAdversarialUntamperedBaselineVerifiesClean`",
+    "status": "VERIFIED",
+    "note": "PHASE D / P0-4. `correlation.Key` already carried all eight identifiers and already had a real production caller; what was missing was proof that tampering FAILS rather than being silently repaired. The suite runs through the real verification paths (`execution.Run`'s Context validation, `execution.ReplayDAGWithResult`'s node-by-node comparison, `pkg/replay.Engine.Replay`'s fingerprint chain), not on the struct in isolation, and every case asserts BOTH that the tampered run fails AND that the identifier was not rewritten. It found a real gap: `execution.Context.validate` did not require `EvidencePackageID`, so a governed execution could produce a decision with an empty evidence-package identity -- the one join tying a decision to its evidence. Now mandatory."
+  },
+  {
+    "id": "R-056",
+    "phase": "PRE-INS",
+    "title": "Canonical execution path: no governed decision outside the one execution engine; audited entrypoint matrix checked against the source",
+    "owner_package": "`internal/entrypoints`, `cmd/veriqo-readiness`",
+    "tests": "`TestNoGovernedDecisionOutsideCanonicalExecution`, `TestAuditDetectsAnInjectedBackDoor`, `TestAuditDetectsAMatrixRowThatLiesAboutItsPath`, `TestExactlyOneEntrypointProducesGovernedDecisions`",
+    "status": "VERIFIED",
+    "note": "PHASE C / P0-3. Extends, rather than duplicates, the two things that already existed: `internal/nobypass` (the evidence half) and `veriqo/gateway/rest.TestRegistryNeverProducesGovernedDecisionArtifacts` (a real test scanning exactly two files). This is the whole-tree version plus the entrypoint matrix covering all nine entrypoint kinds. `TestAuditDetectsAnInjectedBackDoor` proves the scanner actually detects rather than passing by never finding anything. Wired as the mandatory readiness gate `canonical_execution_entrypoint_coverage`. Honest limitation stated in the source: the ExecutionRootHash marker is assignment-shaped and cannot textually distinguish minting from copying, so each allowlisted file was read and classified individually -- its value is forcing that classification to recur in review for any new file."
   }
 ]

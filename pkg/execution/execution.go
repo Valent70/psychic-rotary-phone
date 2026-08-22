@@ -222,6 +222,23 @@ func (c Context) validate() error {
 	if c.IdentityResolutionVersion == "" {
 		missing = append(missing, "identity_resolution_version")
 	}
+	// EvidencePackageID became mandatory in the pre-insurance closure
+	// program's PHASE D (P0-4, "Correlation Context"), and its absence
+	// from this list until then was a real, previously-undetected gap
+	// found by that phase's own adversarial suite
+	// (TestAdversarialDropEvidencePackageID): a governed execution
+	// could run, produce a decision, and emit a correlation key with an
+	// EMPTY evidence-package identity -- which means the one join that
+	// ties a decision back to the evidence it was made from did not
+	// exist for that run. pkg/platform/correlation's own Key doc
+	// comment already described this field as one Context.validate
+	// makes mandatory; that description was aspirational, and this
+	// makes it true. Every production caller already sets it
+	// (pkg/lifecycle.RunUnified binds it to the EvidencePlan's hash),
+	// so nothing that was correct before is affected.
+	if c.EvidencePackageID == "" {
+		missing = append(missing, "evidence_package_id")
+	}
 	if len(missing) > 0 {
 		return fmt.Errorf("%w: %s", ErrContextIncomplete, strings.Join(missing, ", "))
 	}
