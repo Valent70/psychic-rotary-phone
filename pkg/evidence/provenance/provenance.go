@@ -223,6 +223,27 @@ func (e ExternalEvidence) Validate() error {
 	return nil
 }
 
+// IsKnownRightsState reports whether s is a modelled rights state. An
+// unrecognised value is never treated as a permissive default -- see
+// Permits, which denies every Use for it.
+func IsKnownRightsState(s RightsState) bool { return knownRightsStates[s] }
+
+// Permits reports whether this rights state, on its own, allows use.
+// It is the exported view of permittedUses -- the single table in this
+// package -- so that any other layer needing the same gate (e.g.
+// pkg/insurance/evidence, whose records carry a RightsState but are
+// NOT provenance.ExternalEvidence values) consults THIS table rather
+// than restating it. Fail-closed: an unrecognised or unlisted state
+// permits nothing, including UseInternalOnly.
+func (s RightsState) Permits(use Use) bool {
+	for _, u := range permittedUses[s] {
+		if u == use {
+			return true
+		}
+	}
+	return false
+}
+
 // Permits is the single fail-closed gate: true only when this
 // evidence's CURRENT RightsState explicitly lists use. A
 // CorrectionState of SUPERSEDED or RETRACTED always denies every Use
@@ -232,12 +253,7 @@ func (e ExternalEvidence) Permits(use Use) bool {
 	if e.CorrectionState == CorrectionSuperseded || e.CorrectionState == CorrectionRetracted {
 		return false
 	}
-	for _, u := range permittedUses[e.RightsState] {
-		if u == use {
-			return true
-		}
-	}
-	return false
+	return e.RightsState.Permits(use)
 }
 
 // ID is the content-addressed identifier for this provenance envelope

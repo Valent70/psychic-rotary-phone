@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"veriqo/pkg/evidence/ontology"
+	"veriqo/pkg/evidence/provenance"
 	"veriqo/pkg/insurance/party"
 )
 
@@ -278,7 +279,54 @@ type Record struct {
 	Strength       Strength       `json:"strength"`
 	SourceInterest SourceInterest `json:"source_interest"`
 
+	// Rights is what VERIQO is legally permitted to do with this
+	// evidence right now. It is deliberately pkg/evidence/provenance's
+	// OWN RightsState -- the canonical rights vocabulary already used by
+	// the connector layer, the evidence envelope and the qualification
+	// registry -- not a second, insurance-local rights model. The
+	// functional spec's §22 list (UNKNOWN / AUTHORIZED / RESTRICTED /
+	// CUSTOMER_ONLY / ... / EXPIRED / REVOKED) is that same vocabulary
+	// under different words; adopting a parallel enum here would be
+	// exactly the duplication §3 forbids.
+	//
+	// New() sets this to provenance.RightsUnknownPendingContract, which
+	// permits internal use only. It is never left as the empty string on
+	// a constructed Record, because an unrecognised state permits
+	// NOTHING (see Permits) and a silently-empty field would therefore
+	// read as a hard denial rather than as "not yet contracted".
+	Rights provenance.RightsState `json:"rights"`
+
+	// CorrectionSuperseded marks this record as replaced by a later one.
+	// A superseded record permits no use at all, whatever Rights says --
+	// the same rule provenance.ExternalEvidence.Permits applies. The
+	// superseding record is a NEW Record with its own content-addressed
+	// EvidenceID; nothing here ever edits the original (spec §72: "a
+	// future correction cannot rewrite historical truth").
+	CorrectionSuperseded bool `json:"correction_superseded,omitempty"`
+
+	// SupersededBy names the EvidenceID of the record that replaced this
+	// one, when CorrectionSuperseded is set.
+	SupersededBy string `json:"superseded_by,omitempty"`
+
 	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+// Permits is the fail-closed rights gate for one insurance evidence
+// record: true only when this record's CURRENT rights state explicitly
+// allows use, and never for a superseded record. It delegates the
+// decision to provenance.RightsState.Permits -- the single permitted-use
+// table in the repository -- so REVOKED and EXPIRED permit nothing here
+// for exactly the same reason they permit nothing anywhere else, and an
+// unset/unrecognised state permits nothing either.
+//
+// Possession is never permission: a Record sitting in a Registry says
+// only that VERIQO HAS the evidence, never that it may show, derive
+// from, or submit it into a dispute.
+func (r Record) Permits(use provenance.Use) bool {
+	if r.CorrectionSuperseded {
+		return false
+	}
+	return r.Rights.Permits(use)
 }
 
 // EvidenceID returns the identity of the underlying ontology evidence
@@ -316,6 +364,7 @@ func New(caseID string, underlying ontology.Evidence, sourcePartyID party.PartyI
 		SourcePartyID: sourcePartyID,
 		Origin:        origin,
 		Status:        StatusUnverified,
+		Rights:        provenance.RightsUnknownPendingContract,
 	}, nil
 }
 
@@ -402,6 +451,100 @@ func (reg *Registry) SetStrength(evidenceID string, s Strength) error {
 	r.Strength = s
 	reg.records[evidenceID] = r
 	return nil
+}
+
+// ErrUnknownRightsState is returned by SetRights for a value
+// pkg/evidence/provenance does not model. Never coerced to a default:
+// an unmodelled rights state is a fact about a broken ingest, not a
+// reason to guess.
+var ErrUnknownRightsState = errors.New("evidence: unknown provenance.RightsState")
+
+// ErrRightsPermitNothing is returned by PermittedFor's strict sibling
+// RequirePermitted when a record's rights do not allow the requested
+// use. Naming it separately (rather than returning a bare false) lets
+// callers that MUST fail closed -- dossier export, dispute submission --
+// surface WHY.
+var ErrRightsPermitNothing = errors.New("evidence: this record's rights state does not permit the requested use")
+
+// SetRights updates a Record's rights state in place. This is a
+// recording operation, exactly like SetStatus: rights are granted or
+// revoked by a legal/commercial act elsewhere (see
+// provenance.Registry.GrantTrust/RevokeTrust), and this package only
+// carries the result. It never derives a rights state from anything --
+// not from Origin, not from Status, not from possession.
+func (reg *Registry) SetRights(evidenceID string, state provenance.RightsState) error {
+	if !provenance.IsKnownRightsState(state) {
+		return fmt.Errorf("%w: %q", ErrUnknownRightsState, state)
+	}
+	reg.mu.Lock()
+	defer reg.mu.Unlock()
+	r, ok := reg.records[evidenceID]
+	if !ok {
+		return fmt.Errorf("%w: %s", ErrEvidenceNotFound, evidenceID)
+	}
+	r.Rights = state
+	reg.records[evidenceID] = r
+	return nil
+}
+
+// MarkSuperseded records that supersededID has been replaced by
+// bySupersedingID. It does NOT delete, edit or overwrite the superseded
+// record's content -- the original Record and its content-addressed
+// EvidenceID stay exactly as submitted, which is what makes the earlier
+// state still replayable. Only the two correction markers change, and
+// from that moment Permits denies every use of the superseded record.
+func (reg *Registry) MarkSuperseded(supersededID, bySupersedingID string) error {
+	if supersededID == bySupersedingID {
+		return errors.New("evidence: a record cannot supersede itself")
+	}
+	reg.mu.Lock()
+	defer reg.mu.Unlock()
+	old, ok := reg.records[supersededID]
+	if !ok {
+		return fmt.Errorf("%w: %s", ErrEvidenceNotFound, supersededID)
+	}
+	if _, ok := reg.records[bySupersedingID]; !ok {
+		return fmt.Errorf("%w: superseding record %s", ErrEvidenceNotFound, bySupersedingID)
+	}
+	old.CorrectionSuperseded = true
+	old.SupersededBy = bySupersedingID
+	reg.records[supersededID] = old
+	return nil
+}
+
+// RequirePermitted is the fail-closed accessor every export-shaped
+// caller must use instead of Get: it returns the record only when its
+// rights genuinely permit use, and a named error otherwise.
+func (reg *Registry) RequirePermitted(evidenceID string, use provenance.Use) (Record, error) {
+	reg.mu.RLock()
+	r, ok := reg.records[evidenceID]
+	reg.mu.RUnlock()
+	if !ok {
+		return Record{}, fmt.Errorf("%w: %s", ErrEvidenceNotFound, evidenceID)
+	}
+	if !r.Permits(use) {
+		return Record{}, fmt.Errorf("%w: %s rights=%s superseded=%t use=%s",
+			ErrRightsPermitNothing, evidenceID, r.Rights, r.CorrectionSuperseded, use)
+	}
+	return r, nil
+}
+
+// PermittedFor returns every Record whose rights permit use, in
+// submission order. The complement is deliberately NOT returned as
+// "denied evidence" -- a caller that wants to know what it may not use
+// asks per record via Permits, so no code path can accidentally iterate
+// a denied set and then use it.
+func (reg *Registry) PermittedFor(use provenance.Use) []Record {
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
+	var out []Record
+	for _, id := range reg.order {
+		r := reg.records[id]
+		if r.Permits(use) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // All returns every Record in submission order.

@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 
+	"veriqo/pkg/insurance/canonical"
 	insurancecase "veriqo/pkg/insurance/case"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/claim"
@@ -47,6 +48,14 @@ type PartySpec struct {
 	ID    party.PartyID
 	Name  string
 	Roles []party.Role
+
+	// EntityRef is the canonical pkg/identity entity this party has
+	// already been resolved to, when it has. Empty means "not yet
+	// resolved" and is never treated as "resolved to nothing": a party
+	// with no EntityRef simply produces no ENTITY node in the case
+	// lineage, rather than a node naming an insurance-local PartyID as
+	// if it were a canonical identity.
+	EntityRef string
 }
 
 // Facade is VICE's single entry point for driving one case through its
@@ -81,7 +90,39 @@ type Facade struct {
 	coverageAnalysis *coverage.CoverageAnalysis
 
 	activeClaimID string
+
+	// binding is the OPTIONAL canonical-foundation binding (nil when
+	// this case is being driven without a lineage ledger, e.g. in a
+	// focused unit test). When present, every lifecycle step below also
+	// registers the artifact it produced as a node on the ONE canonical
+	// lineage.CaseID — see pkg/insurance/canonical. Every attach failure
+	// is returned to the caller rather than swallowed: a case whose
+	// lineage cannot be recorded is not a case that quietly proceeds.
+	binding *canonical.Binding
 }
+
+// BindCanonical attaches this facade to the canonical case-lineage
+// foundation. Call it before driving the lifecycle; from that point
+// each step also registers its real artifact identifiers on the case's
+// lineage under the same CaseID.
+//
+// This is deliberately a binding, not a construction: the ledger is
+// owned by the deployment (there is exactly one), and the Facade never
+// creates its own.
+func (f *Facade) BindCanonical(b *canonical.Binding) error {
+	if b == nil {
+		return canonical.ErrNilLedger
+	}
+	if string(b.CaseID()) != f.c.CaseID {
+		return fmt.Errorf("%w: facade case=%s binding case=%s", canonical.ErrCaseMismatch, f.c.CaseID, b.CaseID())
+	}
+	f.binding = b
+	return nil
+}
+
+// Canonical returns this facade's canonical binding, or nil when the
+// case is being driven without one.
+func (f *Facade) Canonical() *canonical.Binding { return f.binding }
 
 // New constructs a Facade around a brand-new case in CASE_CREATED,
 // with every sub-engine wired and ready. claimTypes may be nil (claim
@@ -131,6 +172,17 @@ func (f *Facade) IdentifyParties(tick uint64, specs []PartySpec) error {
 		if _, err := f.c.Parties.Register(s.ID, s.Name, s.Roles...); err != nil {
 			return fmt.Errorf("api: registering party %s: %w", s.ID, err)
 		}
+		if s.EntityRef != "" {
+			if err := f.c.Parties.SetEntityRef(s.ID, s.EntityRef); err != nil {
+				return fmt.Errorf("api: setting entity ref for party %s: %w", s.ID, err)
+			}
+			if f.binding != nil {
+				p, _ := f.c.Parties.Get(s.ID)
+				if _, err := f.binding.AttachParty(p, tick); err != nil {
+					return fmt.Errorf("api: attaching party %s to case lineage: %w", s.ID, err)
+				}
+			}
+		}
 	}
 	return f.c.Advance(insurancecase.StatePartiesIdentified, tick)
 }
@@ -172,6 +224,15 @@ func (f *Facade) IngestEvidence(tick uint64, records []evidence.Record, dependen
 		if err := f.c.Evidence.Submit(r); err != nil {
 			return fmt.Errorf("api: submitting evidence %s: %w", r.EvidenceID(), err)
 		}
+		if f.binding != nil {
+			upstream := f.binding.ResolvedUpstream(string(r.SourcePartyID))
+			if p, ok := f.c.Parties.Get(r.SourcePartyID); ok && p.EntityRef != "" {
+				upstream = f.binding.ResolvedUpstream(p.EntityRef)
+			}
+			if _, err := f.binding.AttachEvidence(r, tick, upstream...); err != nil {
+				return fmt.Errorf("api: attaching evidence %s to case lineage: %w", r.EvidenceID(), err)
+			}
+		}
 	}
 	for _, e := range dependencies {
 		if err := f.evDeps.AddDependency(e.Child, e.Parent); err != nil {
@@ -210,6 +271,12 @@ func (f *Facade) ReconstructTimeline(tick uint64, events []timeline.Event) ([]ti
 		if err := f.tl.AddEvent(e); err != nil {
 			return nil, fmt.Errorf("api: adding timeline event %s: %w", e.EventID, err)
 		}
+		if f.binding != nil {
+			upstream := f.binding.ResolvedUpstream(e.SourceEvidence...)
+			if _, err := f.binding.AttachEvent(e.EventID, tick, upstream...); err != nil {
+				return nil, fmt.Errorf("api: attaching event %s to case lineage: %w", e.EventID, err)
+			}
+		}
 	}
 	detector := timeline.NewDetector().WithEvidence(f.c.Evidence)
 	f.timelineConflicts = detector.DetectConflicts(f.tl)
@@ -237,6 +304,11 @@ func (f *Facade) MapPolicy(tick, incidentTick uint64, policyID string) (policy.V
 	}
 	cl.PolicyVersionID = v.VersionID
 	f.c.Claims[f.activeClaimID] = cl
+	if f.binding != nil {
+		if _, err := f.binding.AttachPolicyVersion(v, tick); err != nil {
+			return policy.Version{}, fmt.Errorf("api: attaching policy version %s to case lineage: %w", v.VersionID, err)
+		}
+	}
 	return v, f.c.Advance(insurancecase.StatePolicyMapped, tick)
 }
 
@@ -253,6 +325,14 @@ func (f *Facade) AnalyzeContradictions(tick uint64, claimKey string, category co
 		return nil, err
 	}
 	f.contradictions = append(f.contradictions, recs...)
+	if f.binding != nil {
+		for _, r := range recs {
+			upstream := f.binding.ResolvedUpstream(r.EvidenceA, r.EvidenceB)
+			if _, err := f.binding.AttachContradiction(r.ContradictionID, tick, upstream...); err != nil {
+				return nil, fmt.Errorf("api: attaching contradiction %s to case lineage: %w", r.ContradictionID, err)
+			}
+		}
+	}
 	if err := f.c.Advance(insurancecase.StateContradictionsAnalyzed, tick); err != nil {
 		return nil, err
 	}
@@ -278,6 +358,14 @@ func (f *Facade) AnalyzeCausation(tick uint64, hs *causation.HypothesisSet) (cau
 		return causation.Explanation{}, err
 	}
 	f.causationExplanation = &explanation
+	if f.binding != nil {
+		for _, h := range hs.All() {
+			upstream := f.binding.ResolvedUpstream(h.SupportingEvidence...)
+			if _, err := f.binding.AttachHypothesis(string(h.ID), tick, upstream...); err != nil {
+				return causation.Explanation{}, fmt.Errorf("api: attaching hypothesis %s to case lineage: %w", h.ID, err)
+			}
+		}
+	}
 	if err := f.c.Advance(insurancecase.StateCausationAnalyzed, tick); err != nil {
 		return causation.Explanation{}, err
 	}
@@ -430,6 +518,17 @@ func (f *Facade) GenerateDossier(tick uint64) (*dossier.Dossier, verification.Ma
 	manifest, err := verification.Generate(f.c.Evidence, f.c.CaseID, tick)
 	if err != nil {
 		return nil, verification.Manifest{}, err
+	}
+
+	if f.binding != nil {
+		// The VERIFICATION node's Ref is the manifest's own evidence root
+		// hash: a value any holder of the case's evidence set can
+		// independently recompute, which is what makes the node checkable
+		// rather than a declaration.
+		upstream := f.binding.ResolvedUpstream(manifest.EvidenceIDs...)
+		if _, err := f.binding.AttachVerification(manifest.EvidenceRootHash, tick, upstream...); err != nil {
+			return nil, verification.Manifest{}, fmt.Errorf("api: attaching verification manifest to case lineage: %w", err)
+		}
 	}
 
 	if err := f.c.Advance(insurancecase.StateDossierGenerated, tick); err != nil {
