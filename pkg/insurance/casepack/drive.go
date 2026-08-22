@@ -12,6 +12,7 @@ import (
 	"veriqo/pkg/insurance/coverage"
 	"veriqo/pkg/insurance/deadline"
 	"veriqo/pkg/insurance/dossier"
+	"veriqo/pkg/insurance/mitigation"
 	"veriqo/pkg/insurance/obligation"
 	"veriqo/pkg/insurance/policy"
 	"veriqo/pkg/insurance/preservation"
@@ -52,6 +53,7 @@ type Result struct {
 	QuantumInput     quantum.ComputeInput
 	Discrepancy      *quantum.QuantumDiscrepancy
 	Coverage         coverage.CoverageAnalysis
+	MitigationImpact mitigation.Impact
 	NoticeAssessment obligation.Assessment
 	Dossier          *dossier.Dossier
 	Manifest         verification.Manifest
@@ -290,6 +292,20 @@ func Drive(c Case, ledger *lineage.Ledger) (*Result, error) {
 	if _, err := f.ComputeGapAssessment("required_evidence", typeDef, len(recs) > 0); err != nil {
 		return nil, fmt.Errorf("%s: ComputeGapAssessment: %w", c.ID, err)
 	}
+	// A mitigation action, so I-06 is exercised end to end rather than
+	// only unit-tested. Every case records one: the actor is a real
+	// party on the case and the supporting evidence is a real
+	// content-addressed record from its own set.
+	mitAction, mitErr := mitigationActionFor(c, built)
+	if mitErr != nil {
+		return nil, mitErr
+	}
+	impact, err := f.RegisterMitigationAction(mitAction)
+	if err != nil {
+		return nil, fmt.Errorf("%s: RegisterMitigationAction: %w", c.ID, err)
+	}
+	res.MitigationImpact = impact
+
 	dr, err := deadline.New("DR-"+string(c.ID), deadline.SourceTypePolicy, "cl. 7.2",
 		policyID, "V1", "DAMAGE_DISCOVERY", 24, deadline.CalendarRuleCalendarDays, "UTC")
 	if err != nil {

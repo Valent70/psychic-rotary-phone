@@ -8,6 +8,7 @@ import (
 	"veriqo/pkg/insurance/deadline"
 	"veriqo/pkg/insurance/dossier"
 	insevidence "veriqo/pkg/insurance/evidence"
+	"veriqo/pkg/insurance/mitigation"
 	"veriqo/pkg/insurance/obligation"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/quantum"
@@ -536,4 +537,66 @@ func AuthorizationsSatisfying(d *dossier.Dossier, reviewerID, caseRef string, ti
 		AuthorizedTick:     tick,
 		AddressedQuestions: append([]string(nil), d.HumanReviewQuestions...),
 	}}
+}
+
+// mitigationActionFor is each case's recorded mitigation action. The
+// design documents are explicit that VERIQO computes an action's
+// IMPACT but never decides whether it was legally reasonable, and
+// pkg/insurance/mitigation enforces that structurally -- this function
+// only supplies real, case-appropriate inputs.
+func mitigationActionFor(c Case, built BuiltEvidence) (mitigation.Action, error) {
+	type spec struct {
+		description string
+		actor       party.PartyID
+		costMinor   int64
+		avoidedMin  int64
+		evidenceKey string
+	}
+	var sp spec
+	switch c.ID {
+	case CasePortCallDemurrage:
+		sp = spec{"Terminal operational record formally requested to resolve the readiness chronology",
+			"PTY-001-AGENT", 150000, 0, "TERMINAL_LOG"}
+	case CaseCargoDamageReefer:
+		sp = spec{"Cargo quarantined at the cold store and the temperature logger preserved",
+			"PTY-002-WAREHOUSE", 4200000, 3100000, "SURVEYOR_REPORT"}
+	case CaseCommodityDocuments:
+		sp = spec{"Release held pending surveyor review of the quantity discrepancy",
+			"PTY-003-BUYER", 90000, 0, "DRAUGHT_SURVEY"}
+	case CaseGeneralAverage:
+		sp = spec{"General-average security requested from the cargo interest pending adjustment",
+			"PTY-004-ADJUSTER", 260000, 0, "GA_ADJUSTMENT"}
+	case CaseBriberyRisk:
+		sp = spec{"Payment suspended pending enhanced due diligence and compliance review",
+			"PTY-005-COMPLIANCE", 0, 0, "FEE_BENCHMARK"}
+	case CaseRegulatorySettlement:
+		sp = spec{"Record-keeping remediation programme commenced under the settlement order",
+			"PTY-006-RESPONDENT", 18000000, 0, "SETTLEMENT_ORDER"}
+	case CaseCrossBorderDispute:
+		sp = spec{"Evidence hold placed over all voyage and cargo documentation",
+			"PTY-007-COUNSEL", 75000, 0, "HOLD_INSTRUCTION"}
+	default:
+		sp = spec{"Evidence preserved pending review", c.Parties[0].ID, 0, 0, ""}
+	}
+
+	cost, err := mitigation.NewAmount(sp.costMinor, "USD")
+	if err != nil {
+		return mitigation.Action{}, fmt.Errorf("%s: mitigation cost: %w", c.ID, err)
+	}
+	var avoided *mitigation.Amount
+	if sp.avoidedMin > 0 {
+		a, err := mitigation.NewAmount(sp.avoidedMin, "USD")
+		if err != nil {
+			return mitigation.Action{}, fmt.Errorf("%s: mitigation avoided loss: %w", c.ID, err)
+		}
+		avoided = &a
+	}
+	var supporting []string
+	if sp.evidenceKey != "" {
+		if rec, ok := built.ByKey[sp.evidenceKey]; ok {
+			supporting = []string{rec.EvidenceID()}
+		}
+	}
+	return mitigation.New(string(c.ID), "MIT-"+string(c.ID), sp.description,
+		EpochSeconds(1300), sp.actor, &cost, avoided, supporting, "")
 }

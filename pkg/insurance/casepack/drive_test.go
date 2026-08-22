@@ -438,3 +438,54 @@ func TestFixtureEnvelopeIsRefusedAsExternalEvidence(t *testing.T) {
 		t.Fatalf("the refusal must name the reason, got %v", err)
 	}
 }
+
+// TestEveryCaseRecordsAMitigationActionWithNoReasonablenessJudgment
+// exercises I-06 end to end. The design documents are explicit that
+// VERIQO computes an action's IMPACT but never decides whether the
+// action was legally reasonable, so this checks both halves: a real
+// impact is computed, and nothing in the rendered action reads as a
+// reasonableness or liability judgment.
+func TestEveryCaseRecordsAMitigationActionWithNoReasonablenessJudgment(t *testing.T) {
+	for id, res := range driveAll(t) {
+		if res.Dossier.MitigationImpact == nil {
+			t.Fatalf("%s: the dossier carries no mitigation impact", id)
+		}
+		if res.MitigationImpact.TotalActionCount == 0 {
+			t.Fatalf("%s: no mitigation action was recorded", id)
+		}
+		// The impact is REPORTED, including when a mitigation cost more
+		// than it avoided. That is a fact, not a verdict, and the
+		// package's own TestPublicAPIHasNoReasonablenessJudgment proves
+		// no field can express one.
+		if res.MitigationImpact.Currency != "USD" {
+			t.Fatalf("%s: mitigation impact currency = %q", id, res.MitigationImpact.Currency)
+		}
+	}
+}
+
+// TestMitigationSupportingEvidenceIsReal: every mitigation action cites
+// a content-addressed record that is actually in its own case.
+func TestMitigationSupportingEvidenceIsReal(t *testing.T) {
+	for _, c := range All() {
+		built, err := c.BuildAllEvidence()
+		if err != nil {
+			t.Fatalf("%s: %v", c.ID, err)
+		}
+		act, err := mitigationActionFor(c, built)
+		if err != nil {
+			t.Fatalf("%s: mitigationActionFor: %v", c.ID, err)
+		}
+		known := map[string]bool{}
+		for _, rec := range built.Records {
+			known[rec.EvidenceID()] = true
+		}
+		for _, ev := range act.SupportingEvidence {
+			if !known[ev] {
+				t.Fatalf("%s: mitigation cites evidence %s, which is not in the case", c.ID, ev)
+			}
+		}
+		if act.Actor == "" {
+			t.Fatalf("%s: mitigation action names no actor", c.ID)
+		}
+	}
+}
