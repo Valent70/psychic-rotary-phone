@@ -9,6 +9,7 @@ import (
 	"veriqo/pkg/execution"
 	bayescalibration "veriqo/pkg/governance/calibration"
 	"veriqo/pkg/identity"
+	"veriqo/pkg/lineage"
 	"veriqo/pkg/moat/entity"
 	"veriqo/pkg/moat/fusion"
 	"veriqo/pkg/moat/hbayes"
@@ -641,4 +642,149 @@ func shortHeadFor(h string) string {
 		return h
 	}
 	return h[:12] + "..."
+}
+
+// --- PHASE D2 (P0-5): case lineage ------------------------------------
+
+// TestCaseLineageWalksARealRunEndToEndFromOneCaseID is PHASE D2's
+// acceptance criterion proved against a REAL RunUnified execution, not
+// a hand-built fixture: one CaseID, and Intent, Entity, Evidence,
+// Policy, Decision, Verification, Replay, the identity ledger head and
+// (after RecordOutcome) the Outcome are all reachable from it, in
+// dependency order, with completeness = true and a verifying hash
+// chain.
+func TestCaseLineageWalksARealRunEndToEndFromOneCaseID(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	o.Lineage = lineage.NewLedger()
+
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("placeholder"))
+	if err != nil {
+		t.Fatalf("RunUnified: %v", err)
+	}
+	if res.CaseID == "" {
+		t.Fatal("a real run produced no CaseID")
+	}
+	if string(res.CaseID) != in.ID() {
+		t.Fatalf("CaseID = %q, want the Intent's own ID %q -- a case must not mint a second identity", res.CaseID, in.ID())
+	}
+
+	// Before ground truth exists, the case is honestly incomplete.
+	if comp := o.Lineage.Completeness(res.CaseID); comp.Complete {
+		t.Fatal("a case reported Complete before any Outcome was recorded")
+	} else if len(comp.MissingKinds) != 1 || comp.MissingKinds[0] != lineage.KindOutcome {
+		t.Fatalf("MissingKinds = %v, want exactly [OUTCOME]", comp.MissingKinds)
+	}
+
+	if _, err := o.RecordOutcome(res, "OFF", "port-state-inspection", 100); err != nil {
+		t.Fatalf("RecordOutcome: %v", err)
+	}
+
+	comp := o.Lineage.Completeness(res.CaseID)
+	if !comp.Complete {
+		t.Fatalf("case lineage completeness = false after a full run: missing=%v dangling=%v chain=%v",
+			comp.MissingKinds, comp.Dangling, comp.ChainVerified)
+	}
+
+	nodes, err := o.Lineage.Walk(res.CaseID)
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	seen := map[string]bool{}
+	byKind := map[lineage.Kind]int{}
+	for i, n := range nodes {
+		for _, u := range n.Upstream {
+			if !seen[u] {
+				t.Fatalf("node %d (%s/%s) depends on %s before it appears", i, n.Kind, n.Ref, u)
+			}
+		}
+		seen[n.Ref] = true
+		byKind[n.Kind]++
+	}
+	for _, want := range []lineage.Kind{
+		lineage.KindIntent, lineage.KindEntity, lineage.KindEvidence, lineage.KindEvent,
+		lineage.KindPolicy, lineage.KindDecision, lineage.KindVerification,
+		lineage.KindReplay, lineage.KindOutcome,
+	} {
+		if byKind[want] == 0 {
+			t.Errorf("kind %s is not reachable from the CaseID of a real run", want)
+		}
+	}
+	// One EVIDENCE node per real source submission of this case, plus
+	// the one the execution's own EvidencePackageID contributes.
+	if want := len(testCaseInput("x").Submissions) + 1; byKind[lineage.KindEvidence] != want {
+		t.Errorf("EVIDENCE nodes = %d, want %d (one per source submission plus the evidence package)",
+			byKind[lineage.KindEvidence], want)
+	}
+	if err := o.Lineage.VerifyChain(res.CaseID); err != nil {
+		t.Fatalf("VerifyChain on a real run's lineage: %v", err)
+	}
+
+	// Every identifier in the lineage is one the run genuinely produced.
+	if !seen[res.Correlation.DecisionID] {
+		t.Error("the lineage's DECISION node does not carry this run's real DecisionID")
+	}
+	if !seen[res.Correlation.VerificationCertificateID] {
+		t.Error("the lineage's VERIFICATION node does not carry this run's real certificate ID")
+	}
+	if !seen[res.Correlation.EntityIdentityLedgerHead] {
+		t.Error("the lineage does not carry this run's real identity ledger head")
+	}
+}
+
+// TestCaseLineageIsOptInAndInertWhenUnset records the deliberate
+// design: an Orchestrator with no Lineage ledger behaves exactly as it
+// did before this phase, so nothing about adding case lineage changes
+// any existing caller's results.
+func TestCaseLineageIsOptInAndInertWhenUnset(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	in := testIntent()
+	plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+	res, err := o.RunUnified(context.Background(), in, plan, testCaseInput("placeholder"))
+	if err != nil {
+		t.Fatalf("RunUnified with no lineage ledger: %v", err)
+	}
+	if res.CaseID == "" {
+		t.Fatal("CaseID must still be populated even with no ledger attached")
+	}
+	if _, err := o.RecordOutcome(res, "OFF", "port-state-inspection", 100); err != nil {
+		t.Fatalf("RecordOutcome with no lineage ledger: %v", err)
+	}
+}
+
+// TestTwoCasesDoNotShareALineage proves the CaseID is genuinely the
+// aggregation boundary: two different Intents produce two separate,
+// independently-verifiable lineages.
+func TestTwoCasesDoNotShareALineage(t *testing.T) {
+	o := NewOrchestrator(nil, nil)
+	o.Lineage = lineage.NewLedger()
+
+	first := testIntent()
+	second := testIntent()
+	second.Objective = "assess sanctions-evasion risk"
+	second.Tick = 2
+
+	for i, in := range []Intent{first, second} {
+		plan := PlanEvidence(in, []EvidenceRequirement{{Kind: "AIS_STATUS", Required: true, MinSources: 2}})
+		// Distinct ticks per case: the shared fusion ledger content-
+		// addresses each submission, so replaying byte-identical
+		// submissions is (correctly) refused as a duplicate. That refusal
+		// is pre-existing, load-bearing behaviour of pkg/moat/fusion, not
+		// anything case lineage introduced.
+		caseIn := testCaseInput("placeholder")
+		caseIn.Tick = uint64(i + 1)
+		if _, err := o.RunUnified(context.Background(), in, plan, caseIn); err != nil {
+			t.Fatalf("RunUnified: %v", err)
+		}
+	}
+	ids := o.Lineage.CaseIDs()
+	if len(ids) != 2 {
+		t.Fatalf("got %d cases, want 2 -- two Intents must not collapse into one case", len(ids))
+	}
+	for _, id := range ids {
+		if err := o.Lineage.VerifyChain(id); err != nil {
+			t.Fatalf("VerifyChain(%s): %v", id, err)
+		}
+	}
 }

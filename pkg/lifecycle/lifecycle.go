@@ -46,6 +46,7 @@ import (
 	"veriqo/pkg/execution"
 	bayescalibration "veriqo/pkg/governance/calibration"
 	"veriqo/pkg/identity"
+	"veriqo/pkg/lineage"
 	"veriqo/pkg/moat/calibration"
 	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/entity"
@@ -228,6 +229,13 @@ type Result struct {
 	// Intent, so IntentID below is real, not the permanently-empty
 	// placeholder FromExecutionResult's own doc comment describes.
 	Correlation correlation.Key
+	// CaseID is PHASE D2 (P0-5)'s single identifier every artifact of
+	// this investigation hangs from. It is deliberately the Intent's
+	// own content-addressed ID rather than a new, separately-generated
+	// value: one Intent IS one case, and minting a second identifier
+	// for the same thing would create exactly the kind of parallel
+	// identity this program exists to close.
+	CaseID lineage.CaseID
 }
 
 func hashLifecycleCert(c LifecycleCertificate) string {
@@ -304,6 +312,20 @@ type Orchestrator struct {
 	// bayescalibration to keep the two unmistakably separate at every
 	// call site.
 	TemporalCalibration *bayescalibration.Registry
+	// Lineage, when set, is the case-lineage ledger (PHASE D2 / P0-5)
+	// RunUnified registers this call's whole case into: Intent, Entity,
+	// Evidence, Policy, Decision, Verification, Replay and the identity
+	// ledger head, all under ONE CaseID, in dependency order. Nil by
+	// default, exactly like TemporalCalibration above: a deployment
+	// opts in by assigning a *lineage.Ledger, and every existing caller
+	// and test keeps working unmodified.
+	//
+	// RunUnified deliberately does NOT register an OUTCOME node --
+	// ground truth is not known at case-run time, which is precisely
+	// why RecordOutcome is a separate call. A case therefore reports
+	// Complete=false until RecordOutcome runs, which is the honest
+	// answer, not a gap.
+	Lineage *lineage.Ledger
 }
 
 // NewOrchestrator builds a lifecycle Orchestrator over an existing
@@ -629,11 +651,60 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 	span.SetAttribute(telemetry.Attribute{Key: "replay_package_id", Value: corr.ReplayPackageID})
 	span.SetAttribute(telemetry.Attribute{Key: "entity_identity_ledger_head", Value: corr.EntityIdentityLedgerHead})
 
-	return &Result{
+	res := &Result{
 		Intent: in, Plan: plan, EntityID: canonEntity, SourceIDs: canonical.SortedSourceIDs(caseIn.Submissions),
 		Canonical: canonRes, Execution: execRes, IVFResult: ivfResult, Certificate: cert,
-		Correlation: corr,
-	}, nil
+		Correlation: corr, CaseID: lineage.CaseID(in.ID()),
+	}
+	if o.Lineage != nil {
+		if err := o.recordLineage(res, caseIn); err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+// recordLineage registers this case's whole lineage under ONE CaseID
+// (PHASE D2 / P0-5). Every Ref it attaches is an identifier some
+// subsystem genuinely produced for THIS call -- the Intent's own
+// content-addressed ID, pkg/identity's resolved entity, the execution's
+// evidence-package ID, the policy's own hash, the decision, replay and
+// verification identities -- so the lineage is a join over real values,
+// never a set of labels this function made up.
+//
+// It reuses lineage.Ledger.FromCorrelation for the six identifiers
+// correlation.Key already carries rather than re-listing them, then
+// adds the two a correlation key structurally cannot supply: the
+// per-source evidence submissions of this specific case, and the policy
+// that governed it.
+func (o *Orchestrator) recordLineage(res *Result, caseIn canonical.CaseInput) error {
+	caseID := res.CaseID
+	if _, err := o.Lineage.FromCorrelation(caseID, res.Correlation, caseIn.Tick); err != nil {
+		return fmt.Errorf("lifecycle: case lineage: %w", err)
+	}
+	if h := caseIn.Policy.Hash(); h != "" {
+		if _, err := o.Lineage.Attach(caseID, lineage.Node{
+			Kind: lineage.KindPolicy, Ref: h,
+			Subsystem: "pkg/moat/decision.Policy.Hash", Tick: caseIn.Tick,
+		}); err != nil {
+			return fmt.Errorf("lifecycle: case lineage policy: %w", err)
+		}
+	}
+	// One EVIDENCE node per real source submission, each depending on
+	// the evidence package the execution actually committed to.
+	var upstream []string
+	if res.Correlation.EvidencePackageID != "" {
+		upstream = []string{res.Correlation.EvidencePackageID}
+	}
+	for _, id := range canonical.SortedSourceIDs(caseIn.Submissions) {
+		if _, err := o.Lineage.Attach(caseID, lineage.Node{
+			Kind: lineage.KindEvidence, Ref: caseIn.Subject + "|" + caseIn.Predicate + "|" + id,
+			Subsystem: "pkg/canonical.SourceSubmission", Tick: caseIn.Tick, Upstream: upstream,
+		}); err != nil {
+			return fmt.Errorf("lifecycle: case lineage evidence: %w", err)
+		}
+	}
+	return nil
 }
 
 // executionID is pkg/execution.Context's mandatory ExecutionID, derived
@@ -750,7 +821,30 @@ func (o *Orchestrator) RecordOutcome(res *Result, actualValue, groundTruthSource
 	if !o.Calibration.IsIndependentSource(groundTruthSourceID) {
 		o.Calibration.RegisterIndependentSource(groundTruthSourceID)
 	}
-	return o.Calibration.RecordGroundTruth(calibration.GroundTruth{
+	rec, err := o.Calibration.RecordGroundTruth(calibration.GroundTruth{
 		ClaimKey: claim.Key(), Value: actualValue, SourceID: groundTruthSourceID, Tick: tick,
 	})
+	if err != nil {
+		return rec, err
+	}
+	// PHASE D2 (P0-5): the OUTCOME node is attached HERE, not in
+	// RunUnified, because this is the moment ground truth actually
+	// exists. Until it does, the case honestly reports Complete=false.
+	if o.Lineage != nil && res.CaseID != "" {
+		var upstream []string
+		for _, ref := range []string{res.Correlation.DecisionID, res.Correlation.VerificationCertificateID} {
+			if ref != "" {
+				upstream = append(upstream, ref)
+			}
+		}
+		if _, lerr := o.Lineage.Attach(res.CaseID, lineage.Node{
+			Kind:      lineage.KindOutcome,
+			Ref:       claim.Key() + "|" + actualValue + "|" + groundTruthSourceID,
+			Subsystem: "pkg/moat/calibration.Engine.RecordGroundTruth", Tick: tick,
+			Upstream: upstream,
+		}); lerr != nil {
+			return rec, fmt.Errorf("lifecycle: case lineage outcome: %w", lerr)
+		}
+	}
+	return rec, nil
 }

@@ -484,5 +484,14 @@
     "tests": "`TestBlockedGateReportsEngineeringAndInternalSeparatelyFromExternal`, `TestAxisSeparationNeverAdvancesTheGateItself`, `TestInternalQualifiedIsNeverExternalQualified`, `TestReadinessManifestCarriesTheAxes`",
     "status": "VERIFIED",
     "note": "PHASE E3 / P0-8. Axes are DERIVED from the same evidence artifacts `EffectiveStatus` reads; there is no setter that writes PASS into an axis. Retrofitted onto all 8 externally-blocked mandatory gates: their ENGINEERING axis is backed by a real in-process `pkg/blockers/orchestrator.RunAll` execution and their INTERNAL axis by the committed in-sandbox drill logs, while Status, Satisfied, Assess and the release Verdict are provably untouched (`TestAxisSeparationNeverAdvancesTheGateItself`). No amount of internal evidence can move the EXTERNAL axis."
+  },
+  {
+    "id": "R-054",
+    "phase": "PRE-INS",
+    "title": "Case lineage: ONE CaseID aggregating Intent, Evidence, Entity, Event, Contradiction, Hypothesis, Policy, Decision, Verification, Replay and Outcome",
+    "owner_package": "`pkg/lineage`, `pkg/lifecycle`",
+    "tests": "`TestFullCaseWalksEndToEndFromASingleCaseID`, `TestCaseLineageWalksARealRunEndToEndFromOneCaseID`, `TestCaseLineageIsTamperEvident`, `TestFromCorrelationAloneIsHonestlyIncomplete`",
+    "status": "VERIFIED",
+    "note": "PHASE D2 / P0-5, genuinely net-new (nothing here previously had a CaseID aggregating a whole investigation: `pkg/governance/hitl.Case` is a human-review workflow, `telemetry.Correlation.CaseID` is a span attribute nothing walks, `correlation.Key` joins ONE execution, and `pkg/insurance/*` is business logic this program excludes). CaseID is deliberately the Intent's own content-addressed ID, never a second identity. `Completeness` is derived, never declared: Complete requires all 8 structural kinds present, every declared upstream resolving, and a verifying hash chain. `pkg/lifecycle.Orchestrator.Lineage` is the real production caller (opt-in, nil-safe); the OUTCOME node is attached by `RecordOutcome`, not `RunUnified`, because ground truth does not exist at case-run time -- so a case honestly reports Complete=false until it does. NO insurance/claim/coverage/dispute concept is implemented here (program rule 8)."
   }
 ]
