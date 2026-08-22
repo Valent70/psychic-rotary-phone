@@ -434,6 +434,75 @@ func main() {
 			"canonical_entity_authority_coverage", "internal:entityconsistency.ScanProductionAuthority", code, ev.ArtifactID, auth.ScannedFiles, len(auth.Violations))
 	}
 
+	// external_harness_capability_coverage (pre-insurance closure
+	// program, PHASE K / P2-18). The eight harnesses already existed;
+	// what did not is per-CAPABILITY honesty about them. The
+	// orchestrator answers "does a harness exist for DR"; this answers
+	// "does the DR harness actually exercise failback, or only
+	// failover". It is MANDATORY but deliberately NOT a promotion path:
+	// it PASSes when the register is internally consistent AND every
+	// one of the eight still names at least one capability no harness
+	// can ever supply. A gate that stopped naming something external
+	// would mean a harness had quietly claimed to cover the thing that
+	// makes the gate external -- the exact false green this fails on.
+	{
+		type harnessArtifact struct {
+			Capabilities []blockers.Capability        `json:"capabilities"`
+			Summary      []blockers.CapabilitySummary `json:"summary"`
+			Problems     []string                     `json:"problems,omitempty"`
+			Invariant    string                       `json:"invariant"`
+		}
+		art := harnessArtifact{
+			Capabilities: blockers.CapabilityRegister(),
+			Summary:      blockers.Summarize(),
+			Problems:     blockers.ValidateRegister(),
+			Invariant:    blockers.HarnessCanNeverQualify(),
+		}
+		code := 0
+		if len(art.Problems) > 0 {
+			code = 1
+		}
+		for _, s := range art.Summary {
+			if s.ExternalOnly == 0 {
+				code = 1
+				art.Problems = append(art.Problems, s.GateID+
+					": reports no external-only capability; an externally-blocked gate must always name what no harness can supply")
+			}
+		}
+		harnessOut, _ := json.MarshalIndent(art, "", "  ")
+		if err := reg.Register(assurance.Gate{
+			ID: "external_harness_capability_coverage",
+			Description: "every externally-blocked gate's harness declares, capability by capability, what it " +
+				"exercises and what only a real environment can supply -- and each of the eight still names at " +
+				"least one capability no harness can ever cover",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./pkg/blockers",
+			ExitCriteria: "register internally consistent, every cited symbol real, and no gate claiming zero external-only capabilities",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence("external_harness_capability_coverage",
+			"internal:blockers.CapabilityRegister", string(harnessOut), code, now)
+		writeArtifact(*evidenceDir, "external_harness_capability_coverage",
+			"internal:blockers.CapabilityRegister", code, string(harnessOut))
+		_ = os.WriteFile("evidence/external_harness_capability_coverage.json", harnessOut, 0o600)
+		gateHashes["external_harness_capability_coverage"] = ev.Hash
+		gatePassed["external_harness_capability_coverage"] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach("external_harness_capability_coverage", status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (capabilities=%d gates=%d)\n",
+			"external_harness_capability_coverage", "internal:blockers.CapabilityRegister",
+			code, ev.ArtifactID, len(art.Capabilities), len(art.Summary))
+	}
+
 	// canonical_identity_authority_coverage (pre-insurance closure
 	// program, PHASE B / P0-2 "Canonical Identity Authority"). The
 	// established canonical_entity_authority_coverage gate above proves
