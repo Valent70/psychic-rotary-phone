@@ -2,4 +2,4 @@ gate: stress_slo
 command: go test ./test/stress/
 exit: 0
 ---
-ok  	veriqo/test/stress	4.552s
+ok  	veriqo/test/stress	7.151s

@@ -3,6 +3,6 @@ command: internal:nobypass.Check
 exit: 0
 ---
 {
-  "scanned_files": 228,
+  "scanned_files": 238,
   "violations": null
 }
