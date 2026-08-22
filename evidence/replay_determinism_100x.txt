@@ -2,4 +2,4 @@ gate: replay_determinism_100x
 command: go test ./test/acceptance/replay/
 exit: 0
 ---
-ok  	veriqo/test/acceptance/replay	0.152s
+ok  	veriqo/test/acceptance/replay	0.139s

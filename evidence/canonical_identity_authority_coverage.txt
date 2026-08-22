@@ -3,7 +3,7 @@ command: internal:entityconsistency.ScanIdentityAuthority
 exit: 0
 ---
 {
-  "scanned_files": 250,
+  "scanned_files": 262,
   "production_identity_writers": 1,
   "identity_writer_files": [
     "pkg/lifecycle/lifecycle.go"

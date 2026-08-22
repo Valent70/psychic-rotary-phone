@@ -53,6 +53,7 @@ import (
 	"veriqo/pkg/execution"
 	"veriqo/pkg/governance/entityconsistency"
 	"veriqo/pkg/governance/qualification"
+	insurancecasepack "veriqo/pkg/insurance/casepack"
 )
 
 type check struct {
@@ -666,6 +667,109 @@ func main() {
 		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (scanned=%d parallel_paths=%d matrix_errors=%d)\n",
 			"canonical_execution_entrypoint_coverage", "internal:entrypoints.Audit", code, ev.ArtifactID,
 			epRep.ScannedFiles, epRep.ParallelGovernedExecutionPaths, len(epRep.MatrixErrors))
+	}
+
+	// The four INSURANCE ASSURANCE gates (functional spec SS54-SS57 of
+	// the VERIQO Insurance Intelligence & Assurance System design).
+	//
+	// All four are driven by the synthetic case pack
+	// (pkg/insurance/casepack), which runs all seven CASE-INS-00N cases
+	// end to end through the REAL insurance facade -- there is no
+	// fixture-only code path. Each gate's verdict is DERIVED from a list
+	// of named failures; none can be hand-set.
+	//
+	// Scope, stated honestly and NOT overclaimed: these gates prove the
+	// insurance domain's own traceability, reproducibility, preservation
+	// and human-review ENFORCEMENT hold over synthetic cases. They are
+	// engineering evidence. They establish nothing whatever about live
+	// customer data, which remains the `live_data` blocker's business and
+	// is unaffected by anything below.
+	{
+		summary := insurancecasepack.RunAssurance()
+		out, _ := json.MarshalIndent(summary, "", "  ")
+		_ = os.WriteFile("evidence/insurance_assurance_gates.json", out, 0o600)
+
+		type insuranceGate struct {
+			id       string
+			desc     string
+			exit     string
+			pass     bool
+			failures []string
+		}
+		gates := []insuranceGate{
+			{
+				id: "insurance_coverage_traceability",
+				desc: "every coverage conclusion traces to a policy clause on the version actually in force, to " +
+					"evidence that exists in the case registry, to an effective date, and to a stated reason; " +
+					"an unresolved finding always raises review",
+				exit:     "every fact traceable across all seven synthetic cases, zero cases examined vacuously",
+				pass:     summary.CoverageTraceabilityPass(),
+				failures: summary.CoverageTraceabilityFailures,
+			},
+			{
+				id: "insurance_quantum_reproducibility",
+				desc: "the same inputs, at the same effective tick, under the same calculation version, recompute " +
+					"to a byte-identical quantum result, and every non-zero operand cites real evidence",
+				exit:     "recomputation identical on all seven synthetic cases, every operand evidence-backed",
+				pass:     summary.QuantumReproducibilityPass(),
+				failures: summary.QuantumReproducibilityFailures,
+			},
+			{
+				id: "insurance_preservation_chain_integrity",
+				desc: "every case's evidence sits under a preservation order recording trigger, scope, custodian, " +
+					"hash and a well-formed custody log, and the case lineage hash chain verifies",
+				exit:     "all nine SS56 checks pass per order, every record covered, lineage chain verified",
+				pass:     summary.PreservationPass(),
+				failures: summary.PreservationFailures,
+			},
+			{
+				id: "insurance_human_review_enforcement",
+				desc: "finalization fails closed when mandatory review is outstanding, AND is permitted once a " +
+					"complete, well-formed authorization addresses every review question -- both directions, " +
+					"because a gate that only ever refuses proves nothing",
+				exit:     "refused without authorization and permitted with one, on all seven synthetic cases",
+				pass:     summary.HumanReviewPass(),
+				failures: summary.HumanReviewFailures,
+			},
+		}
+
+		for _, g := range gates {
+			code := 0
+			artifact := out
+			if !g.pass {
+				code = 1
+				detail, _ := json.MarshalIndent(struct {
+					Gate     string   `json:"gate"`
+					Failures []string `json:"failures"`
+					Summary  any      `json:"summary"`
+				}{g.id, g.failures, summary}, "", "  ")
+				artifact = detail
+			}
+			if err := reg.Register(assurance.Gate{
+				ID: g.id, Description: g.desc,
+				Mandatory: true, RequiredStatus: assurance.StatusVerified,
+				OwnerPackage: "./pkg/insurance/verification, ./pkg/insurance/casepack",
+				ExitCriteria: g.exit,
+			}); err != nil {
+				fmt.Fprintln(os.Stderr, "readiness: register:", err)
+				os.Exit(3)
+			}
+			ev := assurance.NewEvidence(g.id, "internal:casepack.RunAssurance", string(artifact), code, now)
+			writeArtifact(*evidenceDir, g.id, "internal:casepack.RunAssurance", code, string(artifact))
+			gateHashes[g.id] = ev.Hash
+			gatePassed[g.id] = code == 0
+			status := assurance.StatusVerified
+			if code != 0 {
+				status = assurance.StatusImplemented
+				failures++
+			}
+			if err := reg.Attach(g.id, status, ev); err != nil {
+				fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+				os.Exit(3)
+			}
+			fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (cases=%d failures=%d)\n",
+				g.id, "internal:casepack.RunAssurance", code, ev.ArtifactID, summary.CaseCount, len(g.failures))
+		}
 	}
 
 	// Regenerate SBOM.json from THIS release's actual identity, and

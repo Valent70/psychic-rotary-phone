@@ -83,7 +83,7 @@
   {
     "id": "R-009",
     "phase": "6",
-    "title": "Causal \u2194 digital twin: SimulateDecision / Counterfactual / CausalIntervention with lineage",
+    "title": "Causal ↔ digital twin: SimulateDecision / Counterfactual / CausalIntervention with lineage",
     "owner_package": "`pkg/moat/simulation`",
     "tests": "`TestEverySimulationCarriesCompleteLineage`, `TestInterventionRaisesAndCounterfactualLowersOutcome`",
     "status": "VERIFIED",
@@ -247,7 +247,7 @@
     "phase": "12/13",
     "title": "Zero-trust controls, real SPIRE deployment, mTLS rotation",
     "owner_package": "`deploy/spire`",
-    "tests": "\u2014",
+    "tests": "—",
     "status": "BLOCKED",
     "note": "a real single-node SPIRE server+agent was run in this session with genuine attestation, SVID issuance and revocation (see evidence/spire_mtls-local-integration.txt); a later session extended this to a real multi-container cluster -- one spire-server and two spire-agent containers on a real Docker bridge network, each agent independently attested with its own join token, node-scoped workload identity isolation confirmed, and per-node revocation proven live (revoking agent-1's entry left agent-2 unaffected) -- see evidence/spire_mtls-multi-container-integration.txt. Narrows but does not close this: still needs a production node attestor (join_token is a test/demo attestor) and a Workload API client wired into pkg/transport/rafttcp"
   },
@@ -308,7 +308,7 @@
   {
     "id": "R-034",
     "phase": "26",
-    "title": "Consolidated DecisionExplanation: 12 sections, source\u2192decision chain, rejected alternatives, generic-rationale refusal, content-addressed",
+    "title": "Consolidated DecisionExplanation: 12 sections, source→decision chain, rejected alternatives, generic-rationale refusal, content-addressed",
     "owner_package": "`pkg/explanation`",
     "tests": "`TestBrokenChainIsRefused`, `TestGenericPolicyRationaleIsRefused`, `TestModifyingOneStageChangesTheExplanationAndItsHash`",
     "status": "VERIFIED",
@@ -328,7 +328,7 @@
     "phase": "29/30",
     "title": "Backup, PITR, cross-region replication, restore drill, measured RPO/RTO",
     "owner_package": "`deploy/`",
-    "tests": "\u2014",
+    "tests": "—",
     "status": "BLOCKED",
     "note": "requires multi-region infrastructure for a real DR drill with measured RPO/RTO"
   },
@@ -336,8 +336,8 @@
     "id": "R-037",
     "phase": "40/41",
     "title": "100-node / 1M-evidence qualification, 72h soak",
-    "owner_package": "\u2014",
-    "tests": "\u2014",
+    "owner_package": "—",
+    "tests": "—",
     "status": "BLOCKED",
     "note": "requires physical multi-node infrastructure (100-node/1M-evidence -- genuinely cannot be produced by any sandbox, per the audit explicit prohibition on synthetic single-process substitution). soak: a real harness now exists (test/soak) and produced real evidence over a 90s smoke run (2188 iterations, 0 errors, goroutines flat) -- see evidence/soak-report.json -- but 72 continuous hours needs a long-lived host beyond this session"
   },
@@ -380,7 +380,7 @@
   {
     "id": "R-042",
     "phase": "47",
-    "title": "Knowledge evolution: propose \u2192 validate \u2192 analyze \u2192 simulate \u2192 approve \u2192 activate, with time-windowed state",
+    "title": "Knowledge evolution: propose → validate → analyze → simulate → approve → activate, with time-windowed state",
     "owner_package": "`pkg/governance/knowledge`",
     "tests": "`TestKnowledgeStateAtT1IsUnchangedByAChangeAtT2`, `TestTwoConcurrentInFlightProposalsConflict`",
     "status": "VERIFIED",
@@ -434,7 +434,7 @@
   {
     "id": "R-048",
     "phase": "V7.11.1 P0-4",
-    "title": "100\u00d7 deterministic replay acceptance over ReplayResultHash, Decision, Explanation and Certificate, plus perturbation sensitivity",
+    "title": "100× deterministic replay acceptance over ReplayResultHash, Decision, Explanation and Certificate, plus perturbation sensitivity",
     "owner_package": "`test/acceptance/replay`",
     "tests": "`TestOneHundredReplaysAgreeOnEveryMaterialField`",
     "status": "VERIFIED",
@@ -445,7 +445,7 @@
     "phase": "V7.11.1 P0-6",
     "title": "Untested security, durability and failure branches in authz, resource, storage and plugin",
     "owner_package": "`pkg/authz`, `pkg/kernel/resource`, `pkg/storage`",
-    "tests": "`*_branches_test.go`; coverage 32.5\u219283.1%, 58.5\u219290.7%, 66.7\u219270.4%",
+    "tests": "`*_branches_test.go`; coverage 32.5→83.1%, 58.5→90.7%, 66.7→70.4%",
     "status": "VERIFIED",
     "note": ""
   },
@@ -610,5 +610,77 @@
     "tests": "`TestEveryCapabilityCitesRealCode`, `TestEveryGateStillNamesSomethingExternal`, `TestNoCapabilityStatusCanExpressQualification`, `TestHarnessCompletenessIsNotGateStatus`, `TestRegisterIsInternallyConsistent`",
     "status": "VERIFIED",
     "note": "PHASE K / P2-18, and reconciliation found it almost entirely ALREADY CLOSED: every harness the programme lists (scale/DR/soak/KMS/SPIRE/supply-chain/pentest/live-data) exists from prior rounds with real code and tests, and `orchestrator.RunAll` already drives all eight. None is rebuilt. What did NOT exist is per-CAPABILITY honesty: the orchestrator reports READY_FOR_REAL_QUALIFICATION per BLOCKER, which answers \"does a harness exist for DR\" but not \"does the DR harness exercise failback, or only failover\". `CapabilityRegister` answers the second question -- 33 rows, each naming the Go symbol that implements it, with `TestEveryCapabilityCitesRealCode` verifying the symbol is genuinely DECLARED in that package's non-test source so the register cannot decay into documentation about deleted code. `TestEveryGateStillNamesSomethingExternal` is the anti-false-green assertion: if any of the eight ever reported zero external-only capabilities, a harness would have quietly claimed to cover the very thing that makes the gate external. `TestNoCapabilityStatusCanExpressQualification` proves the vocabulary itself contains no value confusable with a gate status. Wired as the mandatory gate `external_harness_capability_coverage`, which is explicitly not a promotion path."
+  },
+  {
+    "id": "R-068",
+    "phase": "INS",
+    "title": "Insurance domain bound to the canonical foundation: one lineage CaseID, correlation key, evidence envelope, provenance rights",
+    "owner_package": "`pkg/insurance/canonical`, `pkg/insurance/evidence`, `pkg/insurance/api`",
+    "tests": "`TestFacadeBindsEveryStepToOneCanonicalCaseLineage`, `TestAttachEvidenceUsesTheContentAddressedID`, `TestAttachPartyRequiresACanonicalEntityRef`, `TestFixtureEnvelopeCannotEnterACaseAsExternalEvidence`, `TestNoForbiddenCanonicalDuplicateExists`, `TestInsuranceDeclaresNoSecondRightsVocabulary`, `TestRevokedRightsPermitNothing`, `TestSupersessionDeniesUseWithoutMutatingTheOriginal`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-2, the round's largest genuine gap, and X-3. `pkg/insurance` already OBEYED the non-duplication prohibition -- no second identity, evidence store, replay or decision engine exists anywhere in it -- but was bound to nothing: before this round it imported exactly two non-insurance VERIQO packages (`pkg/evidence/ontology`, `pkg/moat/contradiction`) and referenced `pkg/lineage`, `pkg/platform/correlation`, `pkg/governance/envelope` and `pkg/evidence/provenance` nowhere at all. `canonical.Binding` registers each insurance artifact as a lineage node under the insurance CaseID VERBATIM (one investigation, one CaseID), carrying the REAL ref its owning package produced and minting none. `AttachParty` refuses a PartyID with no `EntityRef`, so an insurance-local label can never become a canonical entity. `AttachExternalEvidence` fails closed three ways in order: envelope required, FIXTURE refused, rights must permit the use. Rights are `provenance.RightsState` -- the canonical vocabulary consulted through the single permitted-use table, not a second enum -- and `RightsState.Permits` was extracted so both `ExternalEvidence.Permits` and insurance consult one table. **Honest scope:** this is a binding, not a replay integration; per-case cold replay through `pkg/replay` is not attempted and is recorded as deferred."
+  },
+  {
+    "id": "R-069",
+    "phase": "INS",
+    "title": "Insurance state-machine reconciliation: the 9-stage vocabulary as a derived external view over the existing 16-state machine, with 5 orthogonal exception states",
+    "owner_package": "`pkg/insurance/case`",
+    "tests": "`TestStageMappingIsTotalAndSingleValued`, `TestEveryStageIsReachable`, `TestStageIsMonotonicAlongTheInternalSequence`, `TestStageIsDerivedNotSettable`, `TestExceptionNeverMovesTheLifecycle`, `TestExceptionsAreOrthogonalToStage`, `TestExceptionRequiresAReasonAndACitedArtifact`, `TestClearingAnExceptionPreservesTheHistory`, `TestStatusHasNoVerdictField`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-5, classified PARTIAL/CONFLICTING: the existing machine has sixteen forward-only states, the Final Design SS41 freezes nine stages plus five exception states, and they do not agree. Resolved deliberately and recorded in the Implementation Report rather than guessed silently: the nine-stage vocabulary becomes the canonical EXTERNALLY REPORTED stage, DERIVED on every call from a total mapping; the sixteen-state sequence stays as the internal step-ordering mechanism. Collapsing sixteen into nine would delete real ordering constraints (no boundary would remain between CONTRADICTIONS_ANALYZED and CAUSATION_ANALYZED) and weaken the one-step-forward-only invariant four existing tests assert -- deleting an enforcement to match a vocabulary is backwards. No existing test was weakened or removed. The five exception states are an append-only overlay, not sequence members, because they genuinely are orthogonal: a case can be ON_LEGAL_HOLD *and* RECONSTRUCTING. `RaiseException` does not touch the lifecycle state, does not call `Advance`, and does not take the lifecycle mutex."
+  },
+  {
+    "id": "R-070",
+    "phase": "INS",
+    "title": "I-08 Dispute / Legal Control: forum, issues, positions, legal holds, recorded outcomes -- metadata and workflow, never automatic legal advice",
+    "owner_package": "`pkg/insurance/dispute`",
+    "tests": "`TestSettlementNeverImpliesAllegationsProven`, `TestWithdrawnAndDiscontinuedAlsoProveNothing`, `TestAwardCanDetermineButOnlyWithACitedAuthority`, `TestLegalQuestionHasExactlyOneStatus`, `TestHistoricalReferenceCannotBecomeARule`, `TestForumRequiresACitedSource`, `TestForumRestatesNoDurations`, `TestIssueStatusVocabularyExpressesNoWinner`, `TestNoOpaqueConfidenceScore`, `TestNoTypeInThisPackageCarriesAVerdictField`",
+    "status": "VERIFIED",
+    "note": "The one domain of the eight classified entirely MISSING: no dispute stage machine, no forum/governing-law model, no legal-hold object existed anywhere. Modelled on the discipline `pkg/insurance/causation` already uses for a structurally identical problem -- a question the system must NOT answer. `LegalQuestionStatus` has exactly ONE value, LEGAL_INTERPRETATION_REQUIRED, so no code path answers a legal question and a caller-supplied status is overwritten. `HistoricalReference` is the ONLY shape in which a real decision may appear anywhere in this system: recorded text a human reads, proven by test to have no binding/weight/applies/rule field and no non-string field, so it cannot act as a rule -- the Final Design SS39 forbids hard-coding a real judgment as one. **Settlement != every allegation proven** is enforced from three directions: the constructor refuses it, `Validate` refuses a hand-built struct carrying it, and the aggregate re-validates. Withdrawal and discontinuance are covered by the same rule. `Forum` has no numeric field at all, so a limitation period must be a `deadline.Rule` reference -- which is how \"all maritime claims = 1 year\" gets hard-coded when it is not."
+  },
+  {
+    "id": "R-071",
+    "phase": "INS",
+    "title": "I-08 Regulatory Control: allegation to completion, with settlement != proven and monitor-requirement != monitor-completed enforced structurally",
+    "owner_package": "`pkg/insurance/regulatory`",
+    "tests": "`TestSettlementProvesNothing`, `TestSettlementOnlyFindingCannotProve`, `TestAPriorRealFindingSurvivesASubsequentSettlement`, `TestMonitorRequirementIsNotMonitorCompletion`, `TestMonitorRequirementHasNoCompletedField`, `TestImposeMonitorRefusesPreAttachedCertifications`, `TestCompletionBlockersNamesEveryUnfinishedObligation`, `TestRealFindingRequiresAuthorityAndSource`",
+    "status": "VERIFIED",
+    "note": "The Final Design SS36 chain, built to carry the two rules that section states as CRITICAL. `MonitorRequirement` has NO `Completed bool` -- `TestMonitorRequirementHasNoCompletedField` proves the type has no boolean field at all -- because a single boolean is exactly what invites the failure: a flag set at imposition time, or defaulted true, silently converts an ongoing obligation into a discharged one. Completion is DERIVED from a real `Certification` naming a certifier and a source document, and `ImposeMonitor` refuses a monitorship that arrives already certified so imposing and completing stay distinct events. `RecordSettlement` leaves every un-adjudicated allegation NOT_DETERMINED; a genuine prior regulatory or tribunal finding SURVIVES a later settlement, because the rule is \"settlement proves nothing\", not \"settlement unproves everything\". The package ships no list of real regulators, no jurisdiction table and no penalty schedule."
+  },
+  {
+    "id": "R-072",
+    "phase": "INS",
+    "title": "I-03 Notice & Obligation engine, with LATE NOTICE != COVERAGE DENIED made structural rather than true-by-absence",
+    "owner_package": "`pkg/insurance/obligation`, `pkg/insurance/coverage`",
+    "tests": "`TestComplianceVocabularyCannotExpressDenial`, `TestCoverageEffectHasExactlyOneValue`, `TestLateNoticeProducesReviewNotDenial`, `TestNoticeNotGivenAlsoProducesOnlyReview`, `TestAssessmentHasNoDenialField`, `TestLateNoticeNeverSetsACoverageOutcome`, `TestUnknownNoticeTimeIsInsufficientNotLate`, `TestNoDeadlineRuleYieldsUndeterminedNotAGuess`, `TestMissingTriggerTimeIsNamedNotAssumed`, `TestClauseBasisIsHonouredNotChosen`, `TestObligationRestatesNoDuration`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item I-03, classified PARTIAL. The DEADLINE half was already real and strong in `pkg/insurance/deadline` and is NOT reimplemented -- every deadline here is a `deadline.Rule` and every computed tick comes from `deadline.ComputeDeadline`. What did not exist: the Notice object (the spec SS11 eleven-field set, absent entirely) and the SS12 obligation graph. Before this round LATE != DENIED held only BY ABSENCE -- the coverage engine has no denial field to set -- which was true but unasserted, and an unasserted invariant is one a future field breaks silently. Now asserted three ways: the `Compliance` vocabulary is scanned by test for DENIED/FORFEIT/COVERAGE/VOID/BARRED; `Assessment.CoverageEffect` is a type with exactly ONE value; and a late notice yields one review requirement naming the policy wording and applicable law, with no denial language anywhere in the output. `TestLateNoticeNeverSetsACoverageOutcome` additionally proves a late notice leaves every OTHER coverage fact byte-identical to the timely run."
+  },
+  {
+    "id": "R-073",
+    "phase": "INS",
+    "title": "Evidence preservation: the fifth core claim question, with a tamper-evident order hash and a fail-closed rights gate",
+    "owner_package": "`pkg/insurance/preservation`",
+    "tests": "`TestHashChangesWhenThePreservedSetChanges`, `TestHashIsIndependentOfPreservationOrder`, `TestVerifyDetectsAHashMismatch`, `TestReleaseIsRefusedWhileAHoldIsInForce`, `TestPermitsUseRequiresBothTheRecordAndTheOrder`, `TestChainReportPassIsDerivedFromFailures`, `TestAnOrderCoveringNothingFails`, `TestAnOrderWithNoAccessEventsStillPasses`, `TestNewRequiresEveryStructuralField`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-4, classified MISSING: chain of custody existed on `evidence.Record`, but no preservation order, trigger, custodian assignment, legal-hold state or release did. Implements the spec SS19 field list verbatim and the SS20 workflow as the order's lifecycle. Three deliberate non-duplications: `RightsState` is provenance's; per-item custody stays on `evidence.Record`; retention and deletion stay with `pkg/governance/data` (an Order deletes nothing and expires nothing). `Order.Hash` is a hash-of-hashes over the sorted content-addressed EvidenceIDs plus the order's own fields, so any change to the preserved set is detectable and the hash is independent of the sequence items arrived in. `PermitsUse` requires BOTH the record's rights and the order's, so a permissive order can never widen a restricted record. `TestAnOrderWithNoAccessEventsStillPasses` is the deliberate non-requirement: an order nobody has touched is intact, and demanding an access event would push a caller to fabricate one."
+  },
+  {
+    "id": "R-074",
+    "phase": "INS",
+    "title": "The four insurance verification gates (spec SS54-SS57), registered as mandatory and driven by real synthetic cases",
+    "owner_package": "`pkg/insurance/verification`, `cmd/veriqo-readiness`",
+    "tests": "`TestThreeGatesPassOnEveryCase`, `TestCoverageTraceabilityActuallyChecked`, `TestQuantumIsGenuinelyRecomputed`, `TestPreservationCoversEveryRecord`, `TestHumanReviewGateFailsClosedOnEveryCase`, `TestHumanReviewGateOpensWithARealAuthorization`, `TestARubberStampAuthorizationIsRefused`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-6, classified PARTIAL: `pkg/insurance/verification` existed but did exactly one thing -- a deterministic evidence-root Manifest, which is reused unchanged. None of the four named gates existed and no insurance gate was registered in the assurance plane. Every report derives `Pass()` from a list of NAMED failures with no settable pass field, and every failure names the specific artifact rather than a count. The SS55 gate is a GENUINE recomputation of `quantum.Compute`, not a hash comparison. The SS57 gate does NOT re-derive whether review was required -- `dossier.Generate` already computed that and a second opinion would be a second authority. Registered as four mandatory gates in `cmd/veriqo-readiness`, each attaching a content-hashed artifact produced by actually running all seven cases; operand comparison and failure emission are order-stable because an artifact whose bytes vary between identical runs is not evidence. **Honest scope, not overclaimed:** these gates are ENGINEERING evidence over synthetic cases. They establish nothing about live customer data, and the eight external blockers are untouched."
+  },
+  {
+    "id": "R-075",
+    "phase": "INS",
+    "title": "Synthetic case pack CASE-INS-001..007: complete engineering coverage with no real-world entity anywhere",
+    "owner_package": "`pkg/insurance/casepack`",
+    "tests": "`TestNoRealWorldEntityAppearsInThePack`, `TestJurisdictionsAreGeneric`, `TestNoCaseOutputIsADetermination`, `TestAFixtureCaseCanNeverReportAsLive`, `TestEverySyntheticRecordCarriesItsOriginInItsContentHash`, `TestCasesAreDeterministicFixtures`, `TestEveryCaseDrivesTheFullFacadePath`, `TestEveryCaseUsesTheHistoricalPolicyVersion`, `TestEveryCaseBindsToOneCanonicalCaseLineage`, `TestCase002ProducesLateNoticeWithNoCoverageOutcome`, `TestCase004ProducesNoSingleAssertedCause`, `TestEveryCaseCausationIsHedged`, `TestFixtureEnvelopeIsRefusedAsExternalEvidence`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-8, classified MISSING: a repository-wide search for `CASE-INS` returned nothing. All seven cases exist and are entirely fictional -- `TestNoRealWorldEntityAppearsInThePack` scans the package's own SOURCE, comments included, against real AIS vendors, commodity traders, carriers, regulators, P&I clubs and reported-judgment citation formats, because a real name in a comment is as much a problem as one in a string. CASE-INS-004 outputs only LEGAL_INTERPRETATION_REQUIRED with no real judgment present in any form; CASE-INS-005 is fully role-designated with four independently-evidenced red flags and NO_BRIBERY_DETERMINATION; CASE-INS-006 carries both SS36 separations. `Drive` runs every case through the REAL facade with no fixture-only code path -- the Final Design SS20 \"one engine, not two\" rule applied to fixtures. `internal/nobypass` correctly flagged the pack as an unauthorized canonical-evidence ingestion path; rather than widen that allowlist to accommodate test data, the construction moved INSIDE the canonical contract as `evidenceapi.SyntheticDocument`, which stamps SYNTHETIC into the hashed attributes so fixture provenance cannot be separated from the record."
   }
 ]
