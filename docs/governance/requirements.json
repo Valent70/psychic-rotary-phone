@@ -453,9 +453,9 @@
     "id": "R-050",
     "phase": "Wave 5",
     "title": "Real-world ingestion contracts (AIS, SAR, BoL, insurance, payment)",
-    "owner_package": "`pkg/connector`",
-    "tests": "\u2014",
-    "status": "OPEN",
-    "note": ""
+    "owner_package": "`pkg/connector`, `pkg/connector/aisstream`, `pkg/connector/sar`, `pkg/connector/bol`, `pkg/connector/insurance`, `pkg/connector/payment`",
+    "tests": "`TestDrainAcrossAllFiveR050Sources`, `TestQualityVectorReflectsRejections` (pkg/connector); per-source `TestDecode_ValidFixtureRoundtrips`, `TestDecode_MalformedJSONFailsClosed`, `TestDecode_TruncatedJSONFailsClosed`, `TestDecode_WrongSchemaFailsClosed`, `TestDecode_MissingRequiredFieldFailsClosed`, `TestDecode_SemanticallyInvalidFailsClosed`, `TestSimulatedConnector_ContentHashDedup`, `TestSimulatedNeverAcceptedAsLive` (sar, bol, insurance, payment); `TestNormalizedEvent_ToOntologyEvidence_ValidAISObservation`, `TestConnector_MalformedMessages_RejectedAndCounted` (aisstream, pre-existing AIS contract)",
+    "status": "VERIFIED",
+    "note": "was genuinely OPEN (pkg/connector did not exist for 4 of the 5 named source types; only AIS had prior treatment via pkg/connector/aisstream). Closed for real: pkg/connector/{sar,bol,insurance,payment} each parse raw payloads, structurally validate them (malformed/truncated/wrong-schema/missing-field all fail closed before any semantic check runs), semantically validate them, and canonicalize into pkg/evidence/ontology.Evidence (TypeSARObservation, TypeTradeRecord, TypeDocument, TypeFinancialRecord respectively; AIS already used TypeAISObservation). pkg/connector.Drain composes pkg/blockers/livedata's existing FeedConnector/Pipeline (content-hash dedup, anti-replay, LIVE-refusal) with each source's new Decoder rather than duplicating any of that machinery. No live provider access exists in this sandbox for any of the five sources: every connector is SIMULATED-mode only, and TestSimulatedNeverAcceptedAsLive (one per new source package) plus TestDrainAcrossAllFiveR050Sources prove a SIMULATED connector's record tagged LIVE is refused, exactly mirroring livedata's own invariant. LIVE mode is structurally supported (Drain does not special-case FeedConnector.Mode(), only livedata.Pipeline's own check does) but never fabricated."
   }
 ]
