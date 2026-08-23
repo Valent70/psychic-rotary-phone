@@ -11,7 +11,7 @@ import (
 // Policy, consumed inside pkg/canonical.Pipeline.RunCanonical). It
 // consumes the ONLY factor RunCanonical ever populates —
 // "tbml_composite_risk_score", the single canonical projection
-// risk.ToDecisionValues emits (pkg/moat/intelligence/risk/risk.go:244).
+// risk.ToDecisionValues emits (pkg/moat/intelligence/risk/risk.go:242).
 // RunCanonical is hard-wired to compute exactly this factor and no
 // other, so any Policy used on this path must declare it under this
 // exact name to be consulted at all.
