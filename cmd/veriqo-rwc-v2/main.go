@@ -49,6 +49,7 @@ import (
 
 	"veriqo/internal/sourcehash"
 	"veriqo/pkg/governance/envelope"
+	"veriqo/pkg/identity"
 	"veriqo/pkg/rwc"
 	"veriqo/veriqo/kernel"
 )
@@ -219,7 +220,7 @@ func run(args []string) error {
 				allPass = false
 			}
 		case rwc.KindProvenanceClaim:
-			status := rwc.ClassifyProvenance(res.Lifecycle.Canonical, len(c.Request.Submissions))
+			status := rwc.ClassifyProvenance(res.Lifecycle.Canonical, c.Request.Submissions)
 			rec.ProvenanceStatus = string(status)
 			rec.RedFlagsMatched = c.RedFlagsMatched
 		}
@@ -307,6 +308,31 @@ func run(args []string) error {
 			_ = k.Shutdown()
 			return err
 		}
+		// The identity half of the same export. Round R23's audit found
+		// that shipping only the DAG export made the bundle's
+		// cold-replayability claim FALSE: every RWC execution goes through
+		// pkg/lifecycle, which binds a live *identity.Resolver to the
+		// engine, so IDENTITY_RESOLUTION's committed node hash carries an
+		// identity-ledger term. cmd/veriqo-cold-replay correctly REFUSES
+		// such an export without -identity-export rather than replaying it
+		// into a guaranteed divergence, so all ten cases exited 2 (usage
+		// error), not 0. This file is what makes the claim true.
+		//
+		// Queries are the real aliases this case resolved, with the exact
+		// entity ID this process got, so the cold replay must reproduce
+		// entity resolution itself and not merely rebuild a ledger.
+		idExport := identity.ColdReplayExport{Ledger: k.Identity.Ledger()}
+		for _, alias := range c.Request.EntityAliases {
+			idExport.Queries = append(idExport.Queries, identity.ColdReplayQuery{
+				Alias:            identity.Identifier{Kind: identity.Kind(alias.Kind), Value: alias.Value},
+				AsOfTick:         c.Request.Tick,
+				ExpectedEntityID: string(res.Lifecycle.EntityID),
+			})
+		}
+		if err := writeJSON(filepath.Join(replayDir, c.ID+".identity.json"), idExport); err != nil {
+			_ = k.Shutdown()
+			return err
+		}
 
 		if err := k.Shutdown(); err != nil {
 			return fmt.Errorf("kernel.Shutdown(%s): %w", c.ID, err)
@@ -324,7 +350,7 @@ func run(args []string) error {
 		"native_path":          "veriqo/kernel.New -> pkg/lifecycle.Orchestrator.RunUnified -> pkg/execution.Engine -> pkg/canonical.Pipeline.RunCanonical -> IVF -> LifecycleCertificate -> pkg/replay.Engine",
 		"kernel_per_case":      true,
 		"replay_kind":          "IN_PROCESS_FRESH_PIPELINE",
-		"cross_process_replay": "NOT RUN BY THIS COMMAND — request bytes exported to replay_requests/ for cmd/veriqo-cold-replay",
+		"cross_process_replay": "NOT RUN BY THIS COMMAND — DAG export (<case>.json) and identity export (<case>.identity.json) written to replay_requests/ for cmd/veriqo-cold-replay -export <case>.json -identity-export <case>.identity.json",
 	}
 
 	files := map[string]any{

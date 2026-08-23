@@ -80,13 +80,21 @@ func TestRWC001MutationChangesDecisionOnlyWhenExpected(t *testing.T) {
 		}
 	})
 
-	t.Run("port_max_LOA_150_to_149_flips_baseline_to_FAIL", func(t *testing.T) {
+	// NAME CORRECTED IN ROUND R23. This subtest was called
+	// "port_max_LOA_150_to_149_flips_baseline_to_FAIL", which was false in
+	// its own terms: the vessel it mutates the port against is NOT the
+	// baseline. The baseline's LOA is 140 m and fits under both 150 m and
+	// 149 m, so mutating the port around it would be unobservable. The
+	// subtest therefore uses a boundary vessel at exactly 150 m — which is
+	// the right way to test a constraint mutation, and was always what the
+	// body did. Only the name claimed otherwise.
+	//
+	// Within the subtest the mutation is still strictly single-field: the
+	// before and after runs share the same boundary vessel and differ only
+	// in Port.MaxLOA.
+	t.Run("port_max_LOA_150_to_149_flips_a_boundary_vessel_to_FAIL", func(t *testing.T) {
 		mutatedPort := akonikien
-		mutatedPort.MaxLOA = 149 // was 150; baseline vessel LOA=140 still fits either way... use a vessel at the boundary instead
-		// The brief's own example mutates the CONSTRAINT (150->149) while
-		// holding the vessel fixed; to make the mutation observable we
-		// hold a vessel whose LOA (150) is exactly the original limit and
-		// no longer the mutated one.
+		mutatedPort.MaxLOA = 149
 		boundaryVessel := baseline
 		boundaryVessel.LOAMeters = 150
 		before := run(t, boundaryVessel, akonikien)

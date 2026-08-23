@@ -77,11 +77,80 @@ const (
 type ProvenanceStatus string
 
 const (
-	StatusClaimed      ProvenanceStatus = "CLAIMED"
+	// StatusClaimed: asserted, with nothing submitted for it at all.
+	StatusClaimed ProvenanceStatus = "CLAIMED"
+	// StatusUnverified: asserted by one or more sources, with no
+	// independent check of any kind performed.
+	StatusUnverified ProvenanceStatus = "UNVERIFIED"
+	// StatusStructurallyValidated: the claim survived a deterministic,
+	// offline check computed FROM THE CLAIM ITSELF — a check digit, a
+	// prefix table, a format rule. Nothing outside the claim was
+	// consulted.
+	//
+	// This constant was added in round R23 by the independent audit,
+	// which found that RWC-002's vessel identity was being reported as
+	// CORROBORATED on the strength of exactly such a check. An IMO check
+	// digit proves the number is well-formed. It cannot prove the vessel
+	// exists, and it cannot prove the number belongs to that vessel. A
+	// forger who wants a valid IMO number computes one; the arithmetic is
+	// published in IMO Resolution A.600(15). Calling that corroboration
+	// overstates it by a full epistemic step, which is why it now has its
+	// own name between UNVERIFIED and CORROBORATED.
+	StatusStructurallyValidated ProvenanceStatus = "STRUCTURALLY_VALIDATED"
+	// StatusCorroborated: two or more sources that genuinely OBSERVED the
+	// world independently agree, and pkg/moat/provenance actually
+	// assessed them as DECLARED_INDEPENDENT — not merely as UNKNOWN,
+	// which is that package's own way of saying "no source declared any
+	// ancestry, so there was nothing to check".
+	//
+	// No case in RWC v2 reaches this status, and none can while this
+	// environment has no path to an independent external source. That is
+	// the honest result, not a missing feature.
 	StatusCorroborated ProvenanceStatus = "CORROBORATED"
-	StatusUnverified   ProvenanceStatus = "UNVERIFIED"
+	// StatusContradicted: the native contradiction engine found sources
+	// in conflict on this claim.
 	StatusContradicted ProvenanceStatus = "CONTRADICTED"
 )
+
+// SourceEpistemicKind distinguishes a source that reports something about
+// the world from one that computes over the claim under examination.
+//
+// The distinction is the whole content of the R23 audit's section 3.
+// pkg/canonical.SourceSubmission has no field for it — and correctly so,
+// since the canonical layer's job is fusion and provenance, not
+// epistemology — so it is declared here, per corpus, by source ID.
+type SourceEpistemicKind string
+
+const (
+	// SourceObservation: a party reporting something it claims to have
+	// observed. A broker's declaration is one of these, however
+	// unreliable; so is an AIS feed.
+	SourceObservation SourceEpistemicKind = "OBSERVATION"
+	// SourceDerivedFromClaim: a deterministic computation whose only
+	// input is the claim itself. It adds no information from outside the
+	// claim, so however many of these are submitted, the claim has still
+	// been checked by nobody.
+	SourceDerivedFromClaim SourceEpistemicKind = "DERIVED_FROM_CLAIM"
+)
+
+// derivedSourceIDs names every source in this corpus whose value is
+// computed from the claim under examination rather than observed. The map
+// is deliberately explicit and small: a source is an observation unless
+// this package says otherwise, so a new source cannot silently acquire
+// corroborating weight by being added elsewhere.
+var derivedSourceIDs = map[string]bool{
+	// identity_checks.go: IMO check-digit arithmetic plus an MMSI MID
+	// prefix lookup, both over the claimed identifiers themselves.
+	"VERIQO_STRUCTURAL_IDENTITY_VALIDATOR": true,
+}
+
+// EpistemicKindOf reports how a source ID's value relates to the claim.
+func EpistemicKindOf(sourceID string) SourceEpistemicKind {
+	if derivedSourceIDs[sourceID] {
+		return SourceDerivedFromClaim
+	}
+	return SourceObservation
+}
 
 // EvidenceCategory encodes the typed-evidence vocabulary the corpus
 // requires (VESSEL_IDENTITY, CARGO_IDENTITY, ...).

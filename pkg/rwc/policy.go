@@ -3,6 +3,7 @@ package rwc
 import (
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/moat/decision"
+	"veriqo/pkg/moat/provenance"
 )
 
 // VesselPortPolicy is the native decision.Policy every RWC case
@@ -80,26 +81,69 @@ func InterpretVerdict(cr ConstraintResult, dec decision.Decision) (verdict Verdi
 	return verdict, consistencyWarning
 }
 
-// ClassifyProvenance derives CLAIMED / CORROBORATED / UNVERIFIED /
-// CONTRADICTED from the REAL outputs of pkg/moat/contradiction
-// (res.Truth.Observation.Contradiction) and pkg/moat/provenance
-// (res.Provenance, computed — never caller-asserted, per pkg/canonical's
-// own "provenance is computed, not given" invariant), plus the raw count
-// of distinct sources submitted. No new belief/trust system is
-// introduced; this is a naming layer over already-computed native
-// fields.
-func ClassifyProvenance(res *canonical.CanonicalResult, distinctSourceCount int) ProvenanceStatus {
+// ClassifyProvenance derives the claim/corroboration status from the REAL
+// outputs of pkg/moat/contradiction (res.Truth.Observation.Contradiction)
+// and pkg/moat/provenance (res.Provenance — computed, never
+// caller-asserted, per pkg/canonical's own "provenance is computed, not
+// given" invariant), together with the epistemic kind of each source that
+// was actually submitted.
+//
+// CORRECTED IN ROUND R23 by the independent audit. The previous rule was:
+//
+//	if distinctSourceCount >= 2 && res.Provenance.Score > 0 {
+//	        return StatusCorroborated
+//	}
+//
+// It was wrong twice over, and both errors pointed the same way — toward
+// overclaiming.
+//
+//  1. It counted sources without asking what a source IS. RWC-002's
+//     second "source" for vessel identity is an IMO check digit computed
+//     from the claimed IMO number. Two submissions were present, so the
+//     claim was labelled CORROBORATED, when in fact nothing outside the
+//     claim had been consulted at all.
+//
+//  2. It read Score without reading Status. In every RWC v2 case the real
+//     assessment is Status=UNKNOWN with Score=1.0, because no source
+//     declares any upstream and pkg/moat/provenance.ComputeIndependence
+//     returns a trivial 1.0 when there is nothing to compare. That
+//     package's own documentation exists precisely to stop a consumer
+//     confusing "we checked and found no shared origin"
+//     (DECLARED_INDEPENDENT) with "we never had data to check" (UNKNOWN).
+//     The old rule confused exactly those two.
+//
+// The corrected rule requires an independent OBSERVATION, and requires
+// the native assessment to have actually reached DECLARED_INDEPENDENT,
+// before it will say CORROBORATED.
+func ClassifyProvenance(res *canonical.CanonicalResult, subs []canonical.SourceSubmission) ProvenanceStatus {
 	if res.Truth.Observation.Contradiction {
 		return StatusContradicted
 	}
-	if distinctSourceCount >= 2 && res.Provenance.Score > 0 {
-		// Two or more distinct sources were actually submitted AND
-		// provenance.Graph computed a non-zero independence score for
-		// them (i.e. at least one pair shares no declared upstream).
+
+	seen := map[string]bool{}
+	observations, derived := 0, 0
+	for _, s := range subs {
+		id := string(s.SourceID)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		switch EpistemicKindOf(id) {
+		case SourceDerivedFromClaim:
+			derived++
+		default:
+			observations++
+		}
+	}
+
+	switch {
+	case observations >= 2 && res.Provenance.Status == provenance.StatusDeclaredIndependent:
 		return StatusCorroborated
-	}
-	if distinctSourceCount >= 1 {
+	case observations >= 1 && derived >= 1:
+		return StatusStructurallyValidated
+	case observations >= 1 || derived >= 1:
 		return StatusUnverified
+	default:
+		return StatusClaimed
 	}
-	return StatusClaimed
 }

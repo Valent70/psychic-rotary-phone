@@ -252,7 +252,7 @@
     "ledger_anchor_in_memory_hash_chain_head": "0506541d858e75536c53088443608464c177ddb4376c0aa820930d06701ca497",
     "decision_action": "MONITOR",
     "risk_score": 0,
-    "provenance_status": "CORROBORATED",
+    "provenance_status": "STRUCTURALLY_VALIDATED",
     "ivf_verified": true,
     "replay_match": true,
     "replay_original_hash": "ce18069f1666542f7fc2cf679756fc73d0a1974961bf1c5d6c76f2d95eae1479",
