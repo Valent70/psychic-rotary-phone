@@ -249,6 +249,12 @@ type Result struct {
 	// without a person looking at it. It is a separate field rather than
 	// a derived property so a future condition can also set it.
 	HumanReviewRequired bool
+	// TrustReviewReasons names, per source, why the trust evaluation
+	// required human review — empty when it did not. It is the
+	// explainable half of HumanReviewRequired: a reviewer must be told
+	// which source's trust posture triggered the escalation, not merely
+	// that one did.
+	TrustReviewReasons []string
 	// UnmappedAliasKinds names exactly which alias Kinds forced the
 	// fallback -- the UNMAPPED marker made specific, so "we do not model
 	// this identifier type yet" is a checkable statement about named
@@ -569,6 +575,20 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 		ReplayMetadata: "lifecycle.RunUnified",
 	}
 	execIn := execution.Input{Context: execCtx, Case: caseIn}
+	// TrustSubject is DERIVED, not left to the caller (canonical-truth-
+	// path mandate, WAVE A item 2: "RunUnified tidak mengisi
+	// TrustSubject"). The case-level trust subject is the resolved
+	// entity under investigation -- the same string pkg/canonical uses
+	// as CaseInput.Subject and the same one pkg/identity resolved above
+	// -- so the DAG's TRUST_STATE stage reports the posture of the thing
+	// the decision is actually about, with no second, caller-supplied
+	// notion of "who is being trusted" that could disagree with it.
+	//
+	// Per-SOURCE trust subjects are not set here: pkg/canonical derives
+	// each one from the submission itself via canonical.TrustSubjectFor,
+	// so there is exactly one rule for that mapping and no way for this
+	// layer to hand the pipeline a different one.
+	execIn.TrustSubject = caseIn.Subject
 	if identityKeySet {
 		execIn.IdentityAliases = []identity.Identifier{identityKey}
 	}
@@ -696,8 +716,16 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 		Canonical: canonRes, Execution: execRes, IVFResult: ivfResult, Certificate: cert,
 		Correlation: corr, CaseID: lineage.CaseID(in.ID()),
 		LegacyIdentityFallbackUsed: legacyFallbackUsed,
-		HumanReviewRequired:        legacyFallbackUsed,
-		UnmappedAliasKinds:         unmappedKinds,
+		// Human review is now required for TWO independent reasons, and
+		// either one alone is sufficient: an entity resolved outside the
+		// canonical identity authority (the pre-existing reason), OR a
+		// trust evaluation that placed any source in a RESTRICTED or
+		// EXCLUDED posture (canonical-truth-path mandate, WAVE A item 2).
+		// HumanReviewRequired's own doc comment already anticipated "a
+		// future condition can also set it"; this is that condition.
+		HumanReviewRequired: legacyFallbackUsed || execRes.HumanReviewRequired,
+		TrustReviewReasons:  execRes.TrustReviewReasons,
+		UnmappedAliasKinds:  unmappedKinds,
 	}
 	if o.Lineage != nil {
 		if err := o.recordLineage(res, caseIn); err != nil {

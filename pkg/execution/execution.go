@@ -314,6 +314,23 @@ type Result struct {
 	// path; closed together here.
 	ExpectedPolicyHash   string                `json:"expected_policy_hash,omitempty"`
 	EvidenceRequirements []EvidenceRequirement `json:"evidence_requirements,omitempty"`
+	// TrustSubject is exactly Input.TrustSubject this Run call used --
+	// captured for the same replay-fidelity reason as IdentityAliases and
+	// ExpectedPolicyHash above. TRUST_STATE's node hash commits to it
+	// (it names the case-level subject whose posture the stage reports),
+	// so a cold replay that dropped it would diverge at that node for
+	// every execution reached through pkg/lifecycle, which now always
+	// sets it.
+	TrustSubject string `json:"trust_subject,omitempty"`
+	// HumanReviewRequired is the release condition the trust evaluation
+	// produced (canonical-truth-path mandate, WAVE A item 2's "UNKNOWN
+	// provider -> restricted / mandatory human review"). It is a
+	// first-class field of the execution result, not something a consumer
+	// has to dig out of the trace, because the whole point is that a
+	// caller cannot act on the decision without seeing it.
+	HumanReviewRequired bool `json:"human_review_required"`
+	// TrustReviewReasons names, per source, why review is required.
+	TrustReviewReasons []string `json:"trust_review_reasons,omitempty"`
 }
 
 // ExportReplay serializes this Result into the exact ReplayRequest
@@ -335,7 +352,8 @@ func (r Result) ExportReplay() ([]byte, error) {
 		Context: r.Trace.Context, Case: r.Case, Scenarios: r.Scenarios,
 		Currency: r.Currency, IdentityAliases: r.IdentityAliases,
 		ExpectedPolicyHash: r.ExpectedPolicyHash, EvidenceRequirements: r.EvidenceRequirements,
-		Committed: r.Trace,
+		TrustSubject: r.TrustSubject,
+		Committed:    r.Trace,
 	}.Marshal()
 }
 
@@ -454,7 +472,17 @@ func NewEngine(p *canonical.Pipeline) *Engine {
 	if p == nil {
 		p = canonical.NewPipeline(nil)
 	}
-	return &Engine{Pipeline: p, Version: "execution/" + version.Current}
+	// TRUST_STATE now reads the SAME trust state machine the canonical
+	// pipeline weighs evidence against (canonical-truth-path mandate,
+	// WAVE A item 2). Before this, Engine.Trust was a separate field no
+	// production constructor ever populated, so the stage recorded
+	// SKIPPED on every real run while pkg/canonical had no trust engine
+	// at all -- two halves of a capability that never met. Sharing the
+	// pointer (not building a second engine) is the same discipline
+	// NewOrchestrator already applies to the Pipeline itself: a second,
+	// independently-stateful trust ledger would let the DAG report a
+	// trust level the decision was not actually made under.
+	return &Engine{Pipeline: p, Trust: p.TrustState, Version: "execution/" + version.Current}
 }
 
 // graph is the declared DAG. Edges are data so the shape can be read,
@@ -466,7 +494,18 @@ var graph = []struct {
 	{StageIntent, nil},
 	{StageEvidenceIngestion, []StageID{StageIntent}},
 	{StageIdentityResolution, []StageID{StageEvidenceIngestion}},
-	{StageDependencyEvaluation, []StageID{StageIdentityResolution}},
+	// TRUST_STATE sits between identity and dependency evaluation, which
+	// is where it belongs now that trust genuinely gates evidence
+	// (canonical-truth-path mandate, WAVE A item 2). It used to depend on
+	// DECISION, i.e. it was recorded AFTER the decision it had no part in
+	// -- an accurate encoding of the old, inert wiring and a false one for
+	// the new causal wiring: pkg/canonical.RunCanonical now evaluates
+	// trust BEFORE fusion sees a single submission, and an excluded
+	// source's evidence never reaches arbitration at all. Declaring the
+	// edge the other way round would have left the DAG asserting a causal
+	// order the engine does not actually have.
+	{StageTrust, []StageID{StageIdentityResolution}},
+	{StageDependencyEvaluation, []StageID{StageIdentityResolution, StageTrust}},
 	{StageTruthArbitration, []StageID{StageDependencyEvaluation}},
 	{StageContradiction, []StageID{StageTruthArbitration}},
 	{StageFusion, []StageID{StageDependencyEvaluation, StageTruthArbitration}},
@@ -475,7 +514,6 @@ var graph = []struct {
 	{StageRisk, []StageID{StageCausal, StageContradiction}},
 	{StagePolicy, []StageID{StageRisk}},
 	{StageDecision, []StageID{StagePolicy}},
-	{StageTrust, []StageID{StageDecision}},
 	{StageDigitalTwin, []StageID{StageDecision, StageCausal}},
 	{StageEconomic, []StageID{StageDigitalTwin}},
 	{StageExplanation, []StageID{StageDecision, StageTrust, StageEconomic, StageDependencyEvaluation}},
@@ -652,7 +690,7 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 
 	res := &Result{Binding: binding, Case: in.Case, Scenarios: in.Scenarios, Currency: in.Currency,
 		IdentityAliases: in.IdentityAliases, ExpectedPolicyHash: in.ExpectedPolicyHash,
-		EvidenceRequirements: in.EvidenceRequirements}
+		EvidenceRequirements: in.EvidenceRequirements, TrustSubject: in.TrustSubject}
 	nodes := make([]Node, 0, len(order))
 	produced := map[StageID]bool{}
 	byID := map[StageID][]StageID{}
@@ -687,6 +725,12 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 		return res, fmt.Errorf("%w: %s: %v", ErrStageFailed, StageFusion, canonErr)
 	}
 	res.Canonical = canon
+	// The trust evaluation's release condition is surfaced on the Result
+	// itself, not only inside the trace, so no consumer can act on the
+	// decision while being structurally unable to see that a human must
+	// look at it first.
+	res.HumanReviewRequired = canon.Trust.ReviewRequired
+	res.TrustReviewReasons = canon.Trust.ReviewReasons
 
 	// decID is the DECISION's own independent identifier (P0-7): a
 	// content-addressed hash over the ExecutionID PLUS the decision's
@@ -960,17 +1004,52 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 				string(d.Action)+"|"+d.PolicyName+"|"+fnum(d.RiskScore), nil)
 
 		case StageTrust:
-			if e.Trust == nil || in.TrustSubject == "" {
-				record(id, nil, nil, StatusSkipped, "no trust engine or subject supplied", "trust:skipped", nil)
+			// The stage's PRIMARY artifact is now canon.Trust -- the trust
+			// evaluation that actually gated which evidence reached fusion
+			// (canonical-truth-path mandate, WAVE A item 2). It is
+			// attributed here rather than recomputed, exactly like every
+			// other canonical-backed stage (see this file's package doc on
+			// stage attribution), so the DAG node hash moves whenever the
+			// trust ledger, the trust policy, or any source's trust posture
+			// moves -- which is the mechanism behind "tamper the trust
+			// ledger and the execution root changes".
+			//
+			// TrustSubject remains a real, additional input: it names the
+			// CASE-level subject (the entity under investigation), whose
+			// state is reported alongside the per-source postures. It is no
+			// longer what makes the difference between SKIPPED and OK,
+			// because trust participates whether or not a caller happened
+			// to name a case subject.
+			tev := canon.Trust
+			var subjectLine string
+			if e.Trust != nil && in.TrustSubject != "" {
+				st := e.Trust.StateAt(in.TrustSubject, ctx.Tick)
+				subjectLine = "; case subject " + in.TrustSubject + " is " + string(st.Level) +
+					" at " + fnum(st.Score) + " (effective " + fnum(st.EffectiveScore) +
+					" after decay, confidence " + fnum(st.Confidence) + ")"
+			}
+			if !tev.Configured {
+				// Honest, not permissive: no trust authority is attached to
+				// this pipeline, so no trust finding was made. Recorded as
+				// SKIPPED (not OK) so a consumer can never read "trust ran
+				// and found nothing wrong" off a deployment that has no
+				// trust engine at all.
+				record(id, []string{in.TrustSubject}, nil, StatusSkipped,
+					"no trust engine attached to the canonical pipeline; trust did not participate"+subjectLine,
+					"trust:unconfigured|"+tev.RootHash, nil)
 				produced[id] = true
 				break
 			}
-			st := e.Trust.StateAt(in.TrustSubject, ctx.Tick)
-			trustLine = "trust " + string(st.Level) + " at " + fnum(st.Score) +
-				" (effective " + fnum(st.EffectiveScore) + " after decay, confidence " +
-				fnum(st.Confidence) + ")"
-			record(id, []string{in.TrustSubject}, []string{string(st.Level)}, StatusOK,
-				trustLine, string(st.Level)+"|"+fnum(st.Score), nil)
+			trustLine = "trust policy " + shortHash(tev.PolicyHash) + " over " +
+				strconv.Itoa(len(tev.Sources)) + " sources against ledger head " +
+				shortHash(tev.LedgerHead) + "; " + strconv.Itoa(len(tev.Excluded)) +
+				" excluded, review_required=" + strconv.FormatBool(tev.ReviewRequired) + subjectLine
+			outs := []string{"trust_root=" + tev.RootHash}
+			if tev.ReviewRequired {
+				outs = append(outs, "HUMAN_REVIEW_REQUIRED")
+			}
+			record(id, []string{in.TrustSubject}, outs, StatusOK, trustLine,
+				tev.RootHash+"|"+tev.LedgerHead+"|"+strconv.FormatBool(tev.ReviewRequired), nil)
 
 		case StageDigitalTwin:
 			record(id, []string{string(in.Case.Entity)}, []string{"twin_head"}, StatusOK,
@@ -1099,6 +1178,19 @@ func (e *Engine) buildExplanation(ctx Context, in Input, canon *canonical.Canoni
 			Output: "submission", Value: dep.Base[sid], HasValue: true,
 			Detail: "declared reliability", ArtifactHash: dep.RootHash})
 	}
+	// TRUST is a real link of the explanation chain now that it gates
+	// evidence, placed immediately after the sources it judges and before
+	// the dependency/weight links whose effective weights it multiplies.
+	// pkg/explanation.StageTrust already existed as a vocabulary entry;
+	// before this it appeared only as free-text TrustLines, never as a
+	// causal link in the chain a consumer walks.
+	chain = append(chain, explanation.Link{Stage: explanation.StageTrust,
+		Input: "submissions", Output: "trust_admitted_evidence",
+		Value: float64(len(canon.Trust.Excluded)), HasValue: true,
+		Detail: "trust policy " + canon.Trust.PolicyHash + " excluded " +
+			strconv.Itoa(len(canon.Trust.Excluded)) + " source(s); review_required=" +
+			strconv.FormatBool(canon.Trust.ReviewRequired),
+		ArtifactHash: canon.Trust.RootHash})
 	chain = append(chain,
 		explanation.Link{Stage: explanation.StageEvidence, Input: "submissions",
 			Output: ctx.EvidencePackageID, Detail: strconv.Itoa(canon.Arbitration.EvidenceCount) +
@@ -1147,6 +1239,11 @@ func (e *Engine) buildExplanation(ctx Context, in Input, canon *canonical.Canoni
 	if trustLine != "" {
 		trustLines = append(trustLines, trustLine)
 	}
+	for _, s := range canon.Trust.Sources {
+		trustLines = append(trustLines, s.SourceID+" (trust subject "+s.Subject+"): "+
+			string(s.Level)+" -> "+string(s.Posture)+" at weight "+fnum(s.Weight)+" — "+s.Reason)
+	}
+	trustLines = append(trustLines, canon.Trust.ReviewReasons...)
 
 	return explanation.Build(explanation.Input{
 		DecisionID: decID, Subject: in.Case.Subject, Intent: ctx.CaseID,
@@ -1280,7 +1377,11 @@ type ReplayRequest struct {
 	// both are required, not optional, for a faithful replay).
 	ExpectedPolicyHash   string                `json:"expected_policy_hash,omitempty"`
 	EvidenceRequirements []EvidenceRequirement `json:"evidence_requirements,omitempty"`
-	Committed            Trace                 `json:"committed_trace"`
+	// TrustSubject is exactly Input.TrustSubject the original run used
+	// (see Result.TrustSubject's doc comment for why omitting it makes
+	// any pkg/lifecycle-originated execution structurally unreplayable).
+	TrustSubject string `json:"trust_subject,omitempty"`
+	Committed    Trace  `json:"committed_trace"`
 }
 
 // Marshal serialises the request.
@@ -1333,7 +1434,8 @@ func ReplayDAGWithResult(goCtx context.Context, data []byte, freshEngine *Engine
 	}
 	out, err := freshEngine.Run(goCtx, Input{Context: req.Context, Case: req.Case,
 		Scenarios: req.Scenarios, Currency: req.Currency, IdentityAliases: req.IdentityAliases,
-		ExpectedPolicyHash: req.ExpectedPolicyHash, EvidenceRequirements: req.EvidenceRequirements})
+		ExpectedPolicyHash: req.ExpectedPolicyHash, EvidenceRequirements: req.EvidenceRequirements,
+		TrustSubject: req.TrustSubject})
 	if out == nil {
 		return ReplayVerdict{}, nil, err
 	}

@@ -34,7 +34,11 @@ package provenance
 
 import (
 	"context"
+	"errors"
 	"sort"
+	"strconv"
+	"strings"
+	"sync"
 
 	egraph "veriqo/pkg/evidence/graph"
 	"veriqo/pkg/platform/telemetry"
@@ -45,13 +49,64 @@ import (
 // concurrent use (delegates all locking to the underlying evidence
 // graph).
 type Graph struct {
+	attMu   sync.RWMutex
 	g       *egraph.Graph
 	nodeIDs map[string]egraph.NodeID // sourceID -> its graph node
+	// attestations records, per source ID, the reference of a real
+	// third-party attestation that this source's declared origin is
+	// factually what it claims. Nothing in this package mints one: a
+	// caller with an actual attestation artifact (a signed provider
+	// statement, a registry confirmation) records it here, and that is
+	// the ONLY way IndependenceAssessment.AttestationComplete can become
+	// true. See RecordAttestation.
+	attestations map[string]string
 }
 
 // New builds an empty provenance Graph.
 func New() *Graph {
-	return &Graph{g: egraph.NewGraph(), nodeIDs: make(map[string]egraph.NodeID)}
+	return &Graph{g: egraph.NewGraph(), nodeIDs: make(map[string]egraph.NodeID),
+		attestations: make(map[string]string)}
+}
+
+// ErrNoAttestationRef is returned by RecordAttestation when a caller
+// tries to attest a source without naming the artifact that attests it.
+// An attestation with no reference is an assertion, which is exactly
+// what this mechanism exists to stop being mistaken for evidence.
+var ErrNoAttestationRef = errors.New("provenance: an attestation must name the artifact that backs it")
+
+// RecordAttestation records that a real third party has attested this
+// source's declared origin, identified by ref (a signature, a
+// certificate hash, a registry confirmation ID — whatever artifact the
+// deployment can independently produce on demand). It is the ONLY input
+// to IndependenceAssessment.AttestationComplete.
+//
+// This package deliberately does not validate ref against anything: it
+// has no access to a signing authority or an external registry, and
+// pretending to verify one would be the fabrication the whole
+// DECLARED-vs-VERIFIED distinction exists to prevent. What it does
+// guarantee is that an unattested source can never be reported as
+// verified-independent, because AttestationComplete requires an explicit
+// entry here for every compared source.
+func (p *Graph) RecordAttestation(sourceID, ref string) error {
+	if strings.TrimSpace(sourceID) == "" {
+		return ErrNoAttestationRef
+	}
+	if strings.TrimSpace(ref) == "" {
+		return ErrNoAttestationRef
+	}
+	p.attMu.Lock()
+	defer p.attMu.Unlock()
+	p.attestations[sourceID] = ref
+	return nil
+}
+
+// Attestation returns the recorded attestation reference for sourceID,
+// if any.
+func (p *Graph) Attestation(sourceID string) (string, bool) {
+	p.attMu.RLock()
+	defer p.attMu.RUnlock()
+	ref, ok := p.attestations[sourceID]
+	return ref, ok
 }
 
 func (p *Graph) nodeFor(sourceID string) egraph.NodeID {
@@ -184,14 +239,108 @@ const (
 	StatusVerified ProvenanceStatus = "VERIFIED"
 )
 
+// EvidenceBasis names WHAT an independence score was actually computed
+// over — the missing half of the R23 audit's finding that "Score=1.0"
+// is unreadable on its own. Status says what the finding was; Basis
+// says what body of evidence produced it, which is the difference
+// between "we compared six pairs of declared lineages and found no
+// overlap" and "there was exactly one source, so there was no pair to
+// compare and the ratio defaulted to 1.0".
+type EvidenceBasis string
+
+const (
+	// BasisNoPairs: fewer than two distinct sources, so ComputeIndependence
+	// returned its documented trivial Ratio=1.0 (see its len(uniq) <= 1
+	// branch). NOTHING was compared. This is the exact case the mandate's
+	// section IV names as dangerous.
+	BasisNoPairs EvidenceBasis = "NO_PAIRS"
+	// BasisNoDeclarations: two or more sources, but not one of them has
+	// any declared upstream at all, so every pair trivially "shares no
+	// ancestor" because no ancestry exists to share.
+	BasisNoDeclarations EvidenceBasis = "NO_DECLARATIONS"
+	// BasisPartialDeclaredGraph: some sources declared, some not — the
+	// StatusPartialUnknown case, kept as its own basis so a consumer can
+	// distinguish partial knowledge from complete knowledge without
+	// re-deriving it from Status.
+	BasisPartialDeclaredGraph EvidenceBasis = "PARTIAL_DECLARED_GRAPH"
+	// BasisDeclaredGraph: every compared source is registered in the
+	// declared provenance graph and every pair was genuinely evaluated
+	// against multi-hop ancestry. The strongest basis this package can
+	// produce from declarations alone.
+	BasisDeclaredGraph EvidenceBasis = "DECLARED_GRAPH"
+	// BasisAttestedGraph: BasisDeclaredGraph plus a recorded third-party
+	// attestation for every compared source (see Graph.RecordAttestation).
+	// This is the only basis under which IsVerifiedIndependent can be
+	// true.
+	BasisAttestedGraph EvidenceBasis = "ATTESTED_GRAPH"
+)
+
+// ScoreNotInterpretable is the string a rendering/reporting layer MUST
+// display in place of a bare Score whenever IsVerifiedIndependent is
+// false — the mandate's section IV requirement, made a real constant so
+// a dashboard cannot accidentally print "1.00" for an assessment that
+// compared nothing. See IndependenceAssessment.ScoreDisplay.
+const ScoreNotInterpretable = "SCORE_NOT_INTERPRETABLE_WITHOUT_STATUS"
+
 // IndependenceAssessment is the full epistemic result of a provenance
 // check — score PLUS the status/evidence that earned it, so a Trust
 // layer consumer never has to interpret a bare float in isolation.
+//
+// PairCount/Basis/AttestationComplete and IsVerifiedIndependent were
+// added by the canonical-truth-path mandate's section IV, which found
+// the previous shape still readable as a false positive: Status=UNKNOWN
+// with Score=1.0 was structurally indistinguishable, to a consumer that
+// looked only at the number, from a genuinely verified independent set.
+// The three new fields make "how many pairs were actually compared",
+// "over what body of evidence", and "was every source attested" first-
+// class rather than something a consumer had to infer.
 type IndependenceAssessment struct {
 	Score           float64
 	Status          ProvenanceStatus
 	SharedAncestors []string // ancestor IDs found in common, if any
 	EvidenceIDs     []string // the source IDs this assessment was computed over
+	// PairCount is how many distinct source pairs were genuinely
+	// evaluated. Zero means NOTHING was compared and Score is a default,
+	// not a finding.
+	PairCount int
+	// Basis names the body of evidence Score was computed over.
+	Basis EvidenceBasis
+	// AttestationComplete is true only when EVERY source in EvidenceIDs
+	// has a recorded third-party attestation (Graph.RecordAttestation).
+	// This package produces no attestations by itself — see
+	// StatusVerified's doc comment — so it is false for every source set
+	// no caller has explicitly attested.
+	AttestationComplete bool
+}
+
+// ComparedIDs is the mandate's own name for the source set this
+// assessment was computed over. It is a method rather than a duplicate
+// field so there is exactly ONE stored copy (EvidenceIDs) and no way
+// for two names for the same thing to drift apart.
+func (a IndependenceAssessment) ComparedIDs() []string { return a.EvidenceIDs }
+
+// IsVerifiedIndependent is the single predicate every consumer that
+// wants to act on "these sources are independent" must call instead of
+// reading Score. It is true ONLY when all three of the mandate's
+// conditions hold: the declared-graph finding was DECLARED_INDEPENDENT,
+// at least one real pair was compared, and every compared source
+// carries a recorded attestation.
+//
+// It is deliberately false for StatusUnknown-with-Score-1.0, for a
+// single-source set, and for any set where attestation is incomplete.
+func (a IndependenceAssessment) IsVerifiedIndependent() bool {
+	return a.Status == StatusDeclaredIndependent && a.PairCount >= 1 && a.AttestationComplete
+}
+
+// ScoreDisplay is what a dashboard/report/CLI must render. It returns
+// the numeric score ONLY when the assessment actually supports an
+// independence reading; otherwise it returns ScoreNotInterpretable, so
+// a bare 1.0 can never reach a human as if it meant "independent".
+func (a IndependenceAssessment) ScoreDisplay() string {
+	if !a.IsVerifiedIndependent() {
+		return ScoreNotInterpretable
+	}
+	return strconv.FormatFloat(a.Score, 'f', 4, 64)
 }
 
 // Assess is ComputeIndependence's richer sibling: same computation,
@@ -247,8 +396,40 @@ func (p *Graph) Assess(sourceIDs []string) (IndependenceAssessment, error) {
 		shared = append(shared, a)
 	}
 	sort.Strings(shared)
+
+	// Attestation is complete only when EVERY compared source carries a
+	// recorded attestation, and only ever over a non-empty set: an empty
+	// source set is vacuously "all attested" under a naive fold, which
+	// would be the same class of false positive PairCount exists to close.
+	attestationComplete := len(uniq) > 0
+	p.attMu.RLock()
+	for _, id := range uniq {
+		if _, ok := p.attestations[id]; !ok {
+			attestationComplete = false
+			break
+		}
+	}
+	p.attMu.RUnlock()
+
+	// Basis names WHAT was compared, derived from the same three facts
+	// the status switch above used, plus attestation — never asserted.
+	basis := BasisNoDeclarations
+	switch {
+	case res.PairCount == 0:
+		basis = BasisNoPairs
+	case status == StatusPartialUnknown:
+		basis = BasisPartialDeclaredGraph
+	case status == StatusUnknown:
+		basis = BasisNoDeclarations
+	case attestationComplete:
+		basis = BasisAttestedGraph
+	default:
+		basis = BasisDeclaredGraph
+	}
+
 	return IndependenceAssessment{
 		Score: res.Ratio, Status: status, SharedAncestors: shared, EvidenceIDs: uniq,
+		PairCount: res.PairCount, Basis: basis, AttestationComplete: attestationComplete,
 	}, nil
 }
 

@@ -217,8 +217,15 @@ func TestRWC002AliasesResolveThroughTheCanonicalIdentityAuthority(t *testing.T) 
 		t.Errorf("RWC-002 fell back to the legacy union-find; unmapped alias kinds=%v",
 			res.Lifecycle.UnmappedAliasKinds)
 	}
-	if res.Lifecycle.HumanReviewRequired {
-		t.Error("RWC-002 was flagged HumanReviewRequired, which only a fallback resolution sets")
+	// HumanReviewRequired is no longer set only by a fallback resolution:
+	// since the canonical-truth-path round, a trust evaluation that finds
+	// any source in a RESTRICTED or EXCLUDED posture sets it too, and
+	// every RWC source is a never-assessed provider (RESTRICTED). This
+	// test's subject is identity resolution, so it asserts that identity
+	// contributed no review requirement, which is what it always meant.
+	if res.Lifecycle.HumanReviewRequired && !res.Lifecycle.Canonical.Trust.ReviewRequired {
+		t.Error("RWC-002 was flagged HumanReviewRequired for a reason other than trust; " +
+			"a fallback resolution is the only other cause and this run did not fall back")
 	}
 	if res.Lifecycle.EntityID == "" {
 		t.Error("RWC-002 produced no canonical entity ID from its IMO/MMSI aliases")

@@ -122,20 +122,21 @@ func TestAuditKnowledgeGraphIsWrittenButDoesNotDecide(t *testing.T) {
 	}
 }
 
-// TestAuditTrustCalculusDoesNotParticipate is the unflattering half of
-// audit section 1.
+// TestAuditTrustNowParticipatesInEveryRWCDecision is the RE-DERIVED
+// form of the R23 audit's section-1 finding.
 //
-// veriqo/kernel.New constructs ONE trustcalc.Calculus and shares it
-// across Evidence, Intelligence, Intent and Calibration, and its every
-// Observe() is hash-chained into a ledger. None of that is exercised by
-// an RWC case: canonical.RunCanonical never reads Pipeline.Trust, and
-// pkg/lifecycle never sets execution.Input.TrustSubject, so the DAG's
-// TRUST_STATE stage records SKIPPED for every case in the corpus.
+// WHAT R23 FOUND, verbatim from the test this replaces: "canonical.
+// RunCanonical never reads Pipeline.Trust, and pkg/lifecycle never sets
+// execution.Input.TrustSubject, so the DAG's TRUST_STATE stage records
+// SKIPPED for every case in the corpus." That test asserted
+// k.TrustLedger.Len() == 0 and passed, which is what made the audit's
+// "trust state NOT PROVEN" answer true at the time.
 //
-// The test asserts the ledger stays EMPTY. If a future change makes the
-// canonical path observe trust, this fails — and that would be good news
-// requiring the audit's answer to question 4 to be raised.
-func TestAuditTrustCalculusDoesNotParticipate(t *testing.T) {
+// The canonical-truth-path round (WAVE A item 2) closed exactly that
+// gap, so this test now pins the OPPOSITE fact, with the same
+// discipline: every clause below is something that was demonstrably
+// false in R23 and must not silently become false again.
+func TestAuditTrustNowParticipatesInEveryRWCDecision(t *testing.T) {
 	k, err := kernel.New()
 	if err != nil {
 		t.Fatalf("kernel.New: %v", err)
@@ -146,14 +147,67 @@ func TestAuditTrustCalculusDoesNotParticipate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildRWC001Case: %v", err)
 	}
-	if _, err := Run(context.Background(), k, req); err != nil {
+	res, err := Run(context.Background(), k, req)
+	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if n := k.TrustLedger.Len(); n != 0 {
-		t.Fatalf("the shared trust calculus recorded %d observations for an RWC case. That is a "+
-			"real improvement over what audit section 1 found, but it makes the report's "+
-			"\"trust state NOT PROVEN\" answer stale — re-derive it rather than deleting this test", n)
+	// 1. The shared trust Calculus is genuinely written by a canonical
+	//    run (R23: exactly 0 observations).
+	if n := k.TrustLedger.Len(); n == 0 {
+		t.Error("the shared trust calculus recorded nothing for an RWC case; " +
+			"canonical.RunCanonical is not reading/writing Pipeline.Trust again")
+	}
+
+	// 2. The trust evaluation is a real artifact of the case, with a
+	//    named policy and a ledger head (R23: no such artifact existed).
+	tr := res.Lifecycle.Canonical.Trust
+	if !tr.Configured {
+		t.Fatal("the canonical pipeline reports no trust engine attached")
+	}
+	if tr.RootHash == "" || tr.PolicyHash == "" || tr.LedgerHead == "" {
+		t.Fatalf("trust evaluation is missing its commitments: root=%q policy=%q head=%q",
+			tr.RootHash, tr.PolicyHash, tr.LedgerHead)
+	}
+	if len(tr.Sources) != len(req.Submissions) {
+		t.Errorf("trust evaluated %d sources for a case with %d submissions",
+			len(tr.Sources), len(req.Submissions))
+	}
+
+	// 3. The trust commitment is inside the certificate chain (R23: the
+	//    certificate had no trust field at all).
+	if res.Lifecycle.Canonical.Certificate.TrustRootHash != tr.RootHash {
+		t.Error("the canonical certificate does not commit to the trust evaluation that gated the case")
+	}
+
+	// 4. TRUST_STATE is a real, OK DAG node placed BEFORE the decision
+	//    (R23: SKIPPED, and declared downstream of DECISION).
+	var trustIdx, decisionIdx = -1, -1
+	for i, n := range res.Lifecycle.Execution.Trace.Nodes {
+		switch n.StageID {
+		case "TRUST_STATE":
+			trustIdx = i
+			if n.Status != "OK" {
+				t.Errorf("TRUST_STATE recorded %s for a real RWC case", n.Status)
+			}
+		case "DECISION":
+			decisionIdx = i
+		}
+	}
+	if trustIdx < 0 || decisionIdx < 0 {
+		t.Fatalf("TRUST_STATE (%d) or DECISION (%d) missing from the trace", trustIdx, decisionIdx)
+	}
+	if trustIdx > decisionIdx {
+		t.Error("TRUST_STATE is still recorded after DECISION; trust cannot gate a decision it follows")
+	}
+
+	// 5. Every RWC provider is a never-assessed subject, so the honest
+	//    outcome is RESTRICTED with mandatory review — not a silent pass.
+	if !res.Lifecycle.HumanReviewRequired {
+		t.Error("no RWC provider has ever been trust-assessed, yet the run did not require human review")
+	}
+	if len(res.Lifecycle.TrustReviewReasons) == 0 {
+		t.Error("human review was required with no reason given")
 	}
 }
 

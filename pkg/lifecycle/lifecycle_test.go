@@ -839,8 +839,21 @@ func TestCanonicalIdentityPathIsNeverMarkedAsAFallback(t *testing.T) {
 	if res.LegacyIdentityFallbackUsed {
 		t.Fatal("a canonically-resolved run was marked as a legacy fallback")
 	}
-	if res.HumanReviewRequired {
-		t.Fatal("a canonically-resolved run demanded human review")
+	// HumanReviewRequired has TWO independent causes since the
+	// canonical-truth-path round wired trust into every decision: an
+	// identity fallback, and a trust evaluation that placed any source
+	// in a RESTRICTED/EXCLUDED posture. This test's subject is the
+	// former, so it asserts on the IDENTITY cause specifically. A run
+	// whose sources have never been assessed for trust legitimately does
+	// demand review, and asserting otherwise here would have made this
+	// test a barrier to trust participating at all -- which is exactly
+	// the inert-module failure mode the mandate exists to close.
+	if res.HumanReviewRequired && !res.Canonical.Trust.ReviewRequired {
+		t.Fatal("a canonically-resolved run demanded human review for a reason other than trust")
+	}
+	if len(res.TrustReviewReasons) != len(res.Canonical.Trust.ReviewReasons) {
+		t.Fatalf("trust review reasons were not surfaced on the lifecycle result: %v vs %v",
+			res.TrustReviewReasons, res.Canonical.Trust.ReviewReasons)
 	}
 	if len(res.UnmappedAliasKinds) != 0 {
 		t.Fatalf("UnmappedAliasKinds = %v on a fully-modelled run", res.UnmappedAliasKinds)

@@ -53,6 +53,7 @@ import (
 	"veriqo/pkg/moat/intelligence/risk"
 	"veriqo/pkg/moat/kg"
 	"veriqo/pkg/moat/provenance"
+	"veriqo/pkg/trust/state"
 )
 
 // ErrNoSubmissions is returned when a CaseInput has no source
@@ -143,6 +144,31 @@ type CanonicalCertificate struct {
 	MaxDependencyDiscount float64
 	IndependentFamilies   int
 
+	// TrustRootHash, TrustLedgerHead and TrustReviewRequired are the
+	// canonical-truth-path mandate's WAVE A item 2 commitment: trust is
+	// not an inert module hanging off the side of the pipeline, it is
+	// INSIDE the certificate hash. Tampering with the trust ledger moves
+	// TrustLedgerHead, which moves TrustRootHash, which moves Hash, which
+	// moves the execution root one layer up (see pkg/execution). That is
+	// the mechanical form of "tamper trust ledger -> execution root
+	// changes".
+	//
+	// TrustReviewRequired is carried in the certificate rather than only
+	// on the result because it is a RELEASE condition: a consumer holding
+	// nothing but this certificate must be able to tell that the decision
+	// it commits to may not be acted on without a human.
+	TrustRootHash       string
+	TrustLedgerHead     string
+	TrustReviewRequired bool
+
+	// ProvenanceVerifiedIndependent is IndependenceAssessment.
+	// IsVerifiedIndependent() for this case, committed here so a
+	// certificate holder never has to re-derive independence from a bare
+	// score (mandate section IV). It is false for every case in this
+	// repository today, which is the honest answer: no attestation
+	// mechanism exists in this environment.
+	ProvenanceVerifiedIndependent bool
+
 	Hash string
 }
 
@@ -193,7 +219,12 @@ type CanonicalResult struct {
 	EconomicImpact digitaltwin.EconomicImpactResult
 	// Dependency is the mandatory pre-fusion dependency evaluation —
 	// never nil-valued on a successful run (see dependency.go).
-	Dependency  DependencyEvaluation
+	Dependency DependencyEvaluation
+	// Trust is the mandatory pre-fusion TRUST evaluation (see trust.go).
+	// Like Dependency it is never optional and never nil-valued on a
+	// successful run: there is no code path from RunCanonical's entry to
+	// Fusion.Submit that does not pass through evaluateTrust first.
+	Trust       TrustEvaluation
 	Certificate CanonicalCertificate
 }
 
@@ -202,7 +233,24 @@ type CanonicalResult struct {
 // can still reach into any one layer directly — Pipeline does not
 // hide them, it just also offers the single composed call.
 type Pipeline struct {
-	Trust         *trustcalc.Calculus
+	Trust *trustcalc.Calculus
+	// TrustState is the trust STATE MACHINE (pkg/trust/state) every
+	// canonical run consults before fusion — the canonical-truth-path
+	// mandate's WAVE A item 2. It is distinct from Trust above:
+	// Trust is the Bayesian belief Calculus shared OS-wide (what VERIQO
+	// believes about a subject's accuracy), TrustState is the governed,
+	// hash-chained, revocable trust POSTURE (whether VERIQO may act on
+	// that subject's evidence at all). RunCanonical reads TrustState
+	// causally and writes Trust as a consequence — see trust.go.
+	//
+	// Never nil for a Pipeline built by NewPipeline. A hand-constructed
+	// Pipeline with a nil TrustState is still valid and produces an
+	// honest "Configured: false" TrustEvaluation rather than a silent
+	// full-trust default.
+	TrustState *state.Engine
+	// TrustPolicy is the named, hashable weighting policy TrustState's
+	// levels are interpreted under. Zero value means DefaultTrustPolicy.
+	TrustPolicy   TrustPolicy
 	Provenance    *provenance.Graph
 	KG            *kg.Graph
 	Fusion        *fusion.Engine
@@ -229,7 +277,17 @@ func NewPipeline(calc *trustcalc.Calculus) *Pipeline {
 	}
 	g := kg.NewGraph()
 	return &Pipeline{
-		Trust:         calc,
+		Trust: calc,
+		// A real trust state machine on every pipeline, not an optional
+		// extra: the mandate's finding was that trust existed but never
+		// participated. Half-life 1000 ticks and a neutral prior of 0.5
+		// are pkg/trust/state's own documented defaults (NewEngine's
+		// zero-half-life fallback is 1000); 0.5 is the honest neutral
+		// point for a Beta(1,1)-equivalent "we know nothing" posture,
+		// matching the uninformative prior veriqo/kernel.New already
+		// constructs for the shared Calculus.
+		TrustState:    state.NewEngine(1000, 0.5),
+		TrustPolicy:   DefaultTrustPolicy(),
 		Provenance:    provenance.New(),
 		KG:            g,
 		Fusion:        fusion.NewEngine(g),
@@ -265,9 +323,22 @@ func (p *Pipeline) RunCanonical(actorID string, in CaseInput) (*CanonicalResult,
 		return nil, err
 	}
 
+	// --- Trust (MANDATORY, pre-fusion) ------------------------------
+	// WAVE A item 2. Like the dependency gate above, there is no path
+	// from here to Fusion.Submit that skips this: the submissions the
+	// loop below iterates are `admitted`, which applyTrustWeights
+	// produced, and the weights it registers are the trust-adjusted
+	// weights. A REVOKED provider's evidence is not downweighted, it is
+	// not present.
+	trustEval := p.evaluateTrust(in)
+	admitted, depEval, err := applyTrustWeights(depEval, trustEval, in.Submissions)
+	if err != nil {
+		return nil, err
+	}
+
 	// --- Evidence + Provenance ------------------------------------
-	sourceIDs := make([]string, 0, len(in.Submissions))
-	for _, s := range in.Submissions {
+	sourceIDs := make([]string, 0, len(admitted))
+	for _, s := range admitted {
 		effective, ok := depEval.Effective[string(s.SourceID)]
 		if !ok {
 			// Unreachable by construction; kept as a hard structural
@@ -386,22 +457,32 @@ func (p *Pipeline) RunCanonical(actorID string, in CaseInput) (*CanonicalResult,
 		ProvenanceStatus: provAssess.Status, RiskLabel: riskResult.Label, RiskScore: riskResult.Score,
 		DecisionAction: dec.Action, TwinHead: p.Twin.Head(),
 		DependencyRootHash: depEval.RootHash, MaxDependencyDiscount: depEval.MaxDiscount,
-		IndependentFamilies: depEval.IndependentFamilyCount(),
+		IndependentFamilies:           depEval.IndependentFamilyCount(),
+		TrustRootHash:                 trustEval.RootHash,
+		TrustLedgerHead:               trustEval.LedgerHead,
+		TrustReviewRequired:           trustEval.ReviewRequired,
+		ProvenanceVerifiedIndependent: provAssess.IsVerifiedIndependent(),
 	}
 	cert.Hash = hashCertificate(cert)
+
+	// Trust WRITE happens last, after the decision is fixed, and feeds
+	// nothing in this run — see recordTrustObservations' doc comment on
+	// why a feedback loop here would make cold replay impossible.
+	p.recordTrustObservations(trustEval)
 
 	return &CanonicalResult{
 		Arbitration: arb, Truth: truthRec, CausalSupport: causalSupport,
 		Provenance: provAssess, Risk: riskResult, Decision: dec, Twin: twin,
-		EconomicImpact: econ, Dependency: depEval, Certificate: cert,
+		EconomicImpact: econ, Dependency: depEval, Trust: trustEval, Certificate: cert,
 	}, nil
 }
 
 func hashCertificate(c CanonicalCertificate) string {
-	raw := fmt.Sprintf("subject=%s|predicate=%s|winner=%s|arb=%s|truth=%s|prov=%s|label=%s|score=%.6f|action=%s|twin=%s|deproot=%s|depmax=%.6f|depfam=%d",
+	raw := fmt.Sprintf("subject=%s|predicate=%s|winner=%s|arb=%s|truth=%s|prov=%s|label=%s|score=%.6f|action=%s|twin=%s|deproot=%s|depmax=%.6f|depfam=%d|trustroot=%s|trusthead=%s|trustreview=%v|provverified=%v",
 		c.Subject, c.Predicate, c.ArbitrationWinner, c.ArbitrationHash, c.TruthHash,
 		c.ProvenanceStatus, c.RiskLabel, c.RiskScore, c.DecisionAction, c.TwinHead,
-		c.DependencyRootHash, c.MaxDependencyDiscount, c.IndependentFamilies)
+		c.DependencyRootHash, c.MaxDependencyDiscount, c.IndependentFamilies,
+		c.TrustRootHash, c.TrustLedgerHead, c.TrustReviewRequired, c.ProvenanceVerifiedIndependent)
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }
