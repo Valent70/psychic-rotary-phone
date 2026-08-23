@@ -3,6 +3,7 @@ package entrypoints
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -74,23 +75,53 @@ func TestEveryEntrypointKindIsAccountedFor(t *testing.T) {
 	}
 }
 
-// TestExactlyOneEntrypointProducesGovernedDecisions is the structural
-// statement PHASE C is really making. If this number ever rises, it
-// should rise in a diff someone reviewed, not silently.
-func TestExactlyOneEntrypointProducesGovernedDecisions(t *testing.T) {
+// TestGovernedDecisionEntrypointsAreExactlyTheAuditedSet is the
+// structural statement PHASE C is really making. If this set ever
+// changes, it should change in a diff someone reviewed, not silently.
+//
+// It was previously a count ("must be exactly 1"). It is now an exact
+// SET, which is strictly stronger: a count of 1 could have been kept
+// while swapping WHICH entrypoint is governed, and this cannot. The set
+// grew to two in round R22 when cmd/veriqo-rwc-v2 was registered: it
+// reaches pkg/lifecycle.Orchestrator.RunUnified through pkg/rwc.Run, so
+// it genuinely originates governed decisions and recording it as a
+// non-governed harness would have been false. It shares the SAME single
+// execution engine -- the execution.Engine marker in this package
+// independently proves no second one was constructed for it.
+func TestGovernedDecisionEntrypointsAreExactlyTheAuditedSet(t *testing.T) {
+	want := map[string]bool{
+		"HTTP:POST /lifecycle/run_unified": true,
+		"CLI:cmd/veriqo-rwc-v2":            true,
+	}
 	rep, err := Audit(repoRoot(t))
 	if err != nil {
 		t.Fatalf("Audit: %v", err)
 	}
-	if rep.GovernedEntrypoints != 1 {
-		var names []string
-		for _, e := range rep.Entrypoints {
-			if e.GovernedDecisions {
-				names = append(names, string(e.Kind)+":"+e.Name)
-			}
+	got := map[string]bool{}
+	for _, e := range rep.Entrypoints {
+		if e.GovernedDecisions {
+			got[string(e.Kind)+":"+e.Name] = true
 		}
-		t.Fatalf("governed-decision entrypoints = %d (%s), want exactly 1",
-			rep.GovernedEntrypoints, strings.Join(names, ", "))
+	}
+	for name := range want {
+		if !got[name] {
+			t.Errorf("audited governed-decision entrypoint %q is no longer marked governed", name)
+		}
+	}
+	for name := range got {
+		if !want[name] {
+			t.Errorf("UNAUDITED governed-decision entrypoint %q appeared; a new path that "+
+				"originates governed decisions must be reviewed, not merely listed", name)
+		}
+	}
+	if rep.GovernedEntrypoints != len(want) {
+		var names []string
+		for name := range got {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		t.Fatalf("governed-decision entrypoints = %d (%s), want exactly %d",
+			rep.GovernedEntrypoints, strings.Join(names, ", "), len(want))
 	}
 }
 

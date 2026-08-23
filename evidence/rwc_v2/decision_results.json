@@ -1,0 +1,132 @@
+{
+  "RWC-001-A": {
+    "action": "MONITOR",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=0.0000 contribution=0.0000",
+      "risk_score=0.0000 -\u003e action=MONITOR (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 0,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 0,
+    "risk_score": 0
+  },
+  "RWC-001-B": {
+    "action": "ESCALATE",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=1.0000 contribution=1.0000",
+      "risk_score=1.0000 -\u003e action=ESCALATE (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 1,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 1,
+    "risk_score": 1
+  },
+  "RWC-001-C": {
+    "action": "ESCALATE",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=1.0000 contribution=1.0000",
+      "risk_score=1.0000 -\u003e action=ESCALATE (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 1,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 1,
+    "risk_score": 1
+  },
+  "RWC-001-D": {
+    "action": "ESCALATE",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=1.0000 contribution=1.0000",
+      "risk_score=1.0000 -\u003e action=ESCALATE (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 1,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 1,
+    "risk_score": 1
+  },
+  "RWC-001-E": {
+    "action": "FLAG",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=0.5000 contribution=0.5000",
+      "risk_score=0.5000 -\u003e action=FLAG (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 0.5,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 0.5,
+    "risk_score": 0.5
+  },
+  "RWC-002-CARGO_IDENTITY": {
+    "action": "MONITOR",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=0.0000 contribution=0.0000",
+      "risk_score=0.0000 -\u003e action=MONITOR (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 0,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 0,
+    "risk_score": 0
+  },
+  "RWC-002-DOCUMENT_EXISTENCE": {
+    "action": "MONITOR",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=0.0000 contribution=0.0000",
+      "risk_score=0.0000 -\u003e action=MONITOR (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 0,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 0,
+    "risk_score": 0
+  },
+  "RWC-002-TRANSACTION_SEQUENCE": {
+    "action": "ESCALATE",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=1.0000 contribution=1.0000",
+      "risk_score=1.0000 -\u003e action=ESCALATE (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 1,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 1,
+    "risk_score": 1
+  },
+  "RWC-002-VESSEL_IDENTITY": {
+    "action": "MONITOR",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=0.0000 contribution=0.0000",
+      "risk_score=0.0000 -\u003e action=MONITOR (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 0,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 0,
+    "risk_score": 0
+  },
+  "RWC-002-VOYAGE_POSITION": {
+    "action": "MONITOR",
+    "explanation": [
+      "policy \"rwc001_vessel_port_suitability_v1\": 1 factor(s)",
+      "  factor=\"tbml_composite_risk_score\" weight=1.000 value=0.0000 contribution=0.0000",
+      "risk_score=0.0000 -\u003e action=MONITOR (flag\u003e=0.30, escalate\u003e=0.70)"
+    ],
+    "pattern_score": 0,
+    "policy": "rwc001_vessel_port_suitability_v1",
+    "policy_hash": "56ebdf762d0e33a74f9df7bd49518ace343a0b5e3ab5d36ce8c3866606ed9351",
+    "price_anomaly": 0,
+    "risk_score": 0
+  }
+}

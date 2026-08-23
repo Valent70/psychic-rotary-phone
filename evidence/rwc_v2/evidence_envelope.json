@@ -1,0 +1,19 @@
+{
+  "computed_release": "v7.12.1",
+  "computed_sbom_hash": "sha256:dada36c243732f20442577e735d194f7976b8ae5a7ffc3d22996ff3bdf09e677",
+  "computed_source_hash": "9ba8af63bc8dc88c2c961c7192bff996b561a6ee366dac6a4db96246c3d416b5",
+  "envelope_emitted": false,
+  "limitations": [
+    "No live data feed of any kind was consulted: no AIS, no port-authority system, no vessel registry, no tide service. Every figure in this corpus was entered by hand from supplied real-world text.",
+    "RWC-002's vessel identity check is deterministic offline arithmetic on the claimed identifiers themselves (IMO check digit per IMO Resolution A.600(15), MMSI MID prefix lookup against a small local table). It can prove a claimed identifier is internally malformed; it cannot confirm that the vessel exists, or that this identifier belongs to it.",
+    "The MagicPort and MarineTraffic references in the RWC-002 corpus are themselves broker assertions that those sources were checked. Neither was queried by this system, so nothing here corroborates them.",
+    "The ledger anchor recorded per case is an in-process, in-memory hash-chain head (pkg/moat/fusion.Engine.Head). It is not persisted, not written to a write-ahead log, and not anchored to any external system.",
+    "The replay performed per case is an in-process re-execution through a fresh pkg/canonical.Pipeline. Cross-process cold DAG replay is a separate capability with its own binary (cmd/veriqo-cold-replay); this bundle exports the request bytes for it but does not itself run it.",
+    "The environment is a sandbox with no external infrastructure. Nothing in this bundle bears on hsm_kms, multi_region_dr, pentest, scale_qualification, soak_72h, spire_mtls or supply_chain_scan, and it cannot qualify live_data."
+  ],
+  "missing_fields": [
+    "commit (pass -commit)",
+    "binary_hash (pass -binary-hash)"
+  ],
+  "reason": "release identity incomplete; an evidence envelope binds to one exact build and this process cannot compute every field of that identity for itself"
+}

@@ -118,11 +118,23 @@ var guarded = []marker{
 		//   which is exactly what an entrypoint should do. Verified by
 		//   reading both occurrences (a struct tag declaration and one
 		//   assignment from a real result), not assumed.
+		// - cmd/veriqo-rwc-v2/main.go declares the field on the evidence
+		//   record it writes into evidence/rwc_v2/execution_manifest.json
+		//   and fills it from res.Lifecycle.Certificate.ExecutionRootHash
+		//   — the same read-and-report shape as the lifecycle route above,
+		//   for the same reason (an evidence bundle that omitted the DAG
+		//   root hash could not be checked against the execution it claims
+		//   to describe). Verified the same way: both occurrences read, one
+		//   a struct tag declaration and one an assignment from a real
+		//   lifecycle result. The command computes no root hash of its own
+		//   and constructs no execution.Engine — the first marker above
+		//   independently enforces the second half of that.
 		allowedFiles: []string{
 			filepath.FromSlash("pkg/execution/execution.go"),
 			filepath.FromSlash("pkg/lifecycle/lifecycle.go"),
 			filepath.FromSlash("cmd/veriqo-cold-replay/main.go"),
 			filepath.FromSlash("veriqo/gateway/rest/lifecycle_route.go"),
+			filepath.FromSlash("cmd/veriqo-rwc-v2/main.go"),
 			filepath.FromSlash("internal/entrypoints/entrypoints.go"),
 		},
 	},
@@ -206,6 +218,31 @@ var matrix = []Entrypoint{
 		File:              filepath.FromSlash("veriqo/cli/generated_commands.go"),
 		GovernedDecisions: false,
 		CanonicalPath:     "compatibility/control surface only -- same registry engines as the HTTP compatibility routes",
+	},
+	{
+		Kind: KindCLI, Name: "cmd/veriqo-rwc-v2",
+		File:              filepath.FromSlash("cmd/veriqo-rwc-v2/main.go"),
+		GovernedDecisions: true,
+		// This row is the second GovernedDecisions=true entry this matrix
+		// has ever carried, and it is deliberately not disguised as
+		// anything smaller. cmd/veriqo-rwc-v2 runs the real-world
+		// validation corpus through pkg/rwc.Run, which calls
+		// pkg/lifecycle.Orchestrator.RunUnified -- the same single
+		// canonical chain the HTTP lifecycle route takes, through the same
+		// one execution engine pkg/lifecycle owns. It therefore genuinely
+		// originates governed decisions, and recording it as a harness
+		// that merely "exercises the system" (the way the soak and
+		// qualification rows honestly do, because neither reaches
+		// RunUnified at all) would have been the false statement.
+		//
+		// Reaches names pkg/rwc.Run rather than RunUnified directly
+		// because that is what this file actually calls; the hop from
+		// there to RunUnified is one function in pkg/rwc/run.go, and
+		// pkg/rwc constructs no engine of its own (enforced by the
+		// execution.Engine marker above and by internal/nobypass).
+		CanonicalPath: "CLI -> pkg/rwc.Run -> Lifecycle.RunUnified -> execution.Engine -> Policy -> " +
+			"Evidence -> Decision -> Verification -> pkg/replay.Engine",
+		Reaches: "rwc.Run(",
 	},
 	{
 		Kind: KindReplay, Name: "cmd/veriqo-cold-replay",

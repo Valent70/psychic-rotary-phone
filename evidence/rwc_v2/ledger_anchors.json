@@ -1,0 +1,72 @@
+{
+  "RWC-001-A": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "56361ab0dbc480e1c0cb71068838e2ef1f108569cb2c73c70809cc605e6a0b52",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-001-B": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "dafa74b12df574848b23b35981d88f49183a8d4d55bc797466c87abacb530461",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-001-C": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "fa02fa8708aff17c910df5bbe18c2b5961d38062df5223d4ec403bbaceac39ff",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-001-D": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "ee2d6a09fc1e335298f25309bd362e684ca234866a66267acdbdfb4fa06dd08a",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-001-E": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "7376d993ec0e233f1ac837789f0b51f9a00825c5a1f03e556d3e5cf49788fa12",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-002-CARGO_IDENTITY": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "9df42eb2ddadddb9675d299eb4e5798a66fd0e24ee85baf7590ae32bac4704fe",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-002-DOCUMENT_EXISTENCE": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "49c1633006230d75c027f614266c07c51bc119b0e9efd7c9c35b9cdd7c8215e2",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-002-TRANSACTION_SEQUENCE": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "1b1f27d71ddf99aeb2c82ec302c1f5ac24cb61bb7386fea66f5e1757de636a1a",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-002-VESSEL_IDENTITY": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "0506541d858e75536c53088443608464c177ddb4376c0aa820930d06701ca497",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  },
+  "RWC-002-VOYAGE_POSITION": {
+    "durable": false,
+    "externally_anchored": false,
+    "fusion_chain_head": "08f35bef368d840fb4879bb07eea746a05104f3b7e2755bec5c7174fba51ddce",
+    "kind": "IN_MEMORY_HASH_CHAIN",
+    "note": "pkg/moat/fusion.Engine.Head() for this case's own fresh in-process engine; re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits"
+  }
+}

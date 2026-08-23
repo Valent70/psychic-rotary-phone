@@ -1,0 +1,197 @@
+{
+  "RWC-001-A": {
+    "case_id": "52c0515782356e707642b9e20f80f5d5451a6cab532ccabbb895c0300438d11d",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 8,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-001-B": {
+    "case_id": "2b197668a5e1c0819908691c64b38da6015a2292bc0eb315792c46f9e97df3ee",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 8,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-001-C": {
+    "case_id": "599416a0a9665cce6388fc1207929060457bbbd5abd8b679ca11bf52bf72b309",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 8,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-001-D": {
+    "case_id": "17952364697d553b86bd9a7fd931d8d4ff23c3c39ac710646f620e3381bb2bde",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 8,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-001-E": {
+    "case_id": "5b1a8e70975aa6519d01bdd4bef46f312a2a2d645d1635636db7836f97825c2e",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 8,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-002-CARGO_IDENTITY": {
+    "case_id": "d1e1d55a76c3912afa6c81192cb8f8a3ec52e9ae8e8bb8b185bb0a77158d55ae",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 9,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "EVENT",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-002-DOCUMENT_EXISTENCE": {
+    "case_id": "e1d2766c2cce8e49db9cb2820c1c2b6ae2d777afac42f520c28b4d86c7c4c5cb",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 9,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "EVENT",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-002-TRANSACTION_SEQUENCE": {
+    "case_id": "47e227973d691f70d09a74d5c256eda2ecb0081b6facfebf1ed62f8bcb0061c8",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 9,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "EVENT",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-002-VESSEL_IDENTITY": {
+    "case_id": "b509aeed938227eef1038700ad12e45c0ede3a1cd2e334fb649b4195d5105758",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 10,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "EVENT",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  },
+  "RWC-002-VOYAGE_POSITION": {
+    "case_id": "7c710765d4c01a46da4bd9ef7beb37dff49ce8ba421aa62af38593fd07eceb12",
+    "chain_verified": true,
+    "complete": false,
+    "missing_kinds": [
+      "OUTCOME"
+    ],
+    "node_count": 9,
+    "note": "Complete=false is the correct answer: pkg/lineage requires an OUTCOME node and no ground truth exists for these cases at case-run time",
+    "present_kinds": [
+      "INTENT",
+      "ENTITY",
+      "EVIDENCE",
+      "EVENT",
+      "POLICY",
+      "DECISION",
+      "VERIFICATION",
+      "REPLAY"
+    ]
+  }
+}

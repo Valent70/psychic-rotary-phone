@@ -1,0 +1,22 @@
+{
+  "all_pass": true,
+  "base_tick": 1,
+  "case_count": 10,
+  "case_ids": [
+    "RWC-001-A",
+    "RWC-001-B",
+    "RWC-001-C",
+    "RWC-001-D",
+    "RWC-001-E",
+    "RWC-002-CARGO_IDENTITY",
+    "RWC-002-DOCUMENT_EXISTENCE",
+    "RWC-002-TRANSACTION_SEQUENCE",
+    "RWC-002-VESSEL_IDENTITY",
+    "RWC-002-VOYAGE_POSITION"
+  ],
+  "corpus_version": "VERIQO_REAL_WORLD_VALIDATION_CORPUS_V2",
+  "cross_process_replay": "NOT RUN BY THIS COMMAND — request bytes exported to replay_requests/ for cmd/veriqo-cold-replay",
+  "kernel_per_case": true,
+  "native_path": "veriqo/kernel.New -\u003e pkg/lifecycle.Orchestrator.RunUnified -\u003e pkg/execution.Engine -\u003e pkg/canonical.Pipeline.RunCanonical -\u003e IVF -\u003e LifecycleCertificate -\u003e pkg/replay.Engine",
+  "replay_kind": "IN_PROCESS_FRESH_PIPELINE"
+}

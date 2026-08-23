@@ -1,0 +1,27 @@
+{
+  "IntentID": "52c0515782356e707642b9e20f80f5d5451a6cab532ccabbb895c0300438d11d",
+  "EntityID": "ENT:48d83f2ffafd055a1c6d25a44e1f571c",
+  "EvidencePlanHash": "f2b52573d4f11f316ab5459083f680e79684eb0d012833c8c03892fabd8ae9ea",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:48d83f2ffafd055a1c6d25a44e1f571c",
+    "Predicate": "VESSEL_CONSTRAINT:AKONIKIEN",
+    "ArbitrationWinner": "{\"loa_m\":140,\"draft_m\":7.2,\"geared\":true,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "ArbitrationHash": "56361ab0dbc480e1c0cb71068838e2ef1f108569cb2c73c70809cc605e6a0b52",
+    "TruthHash": "6e0ebb7266b8e8521363ab041cdf0cc3e7bf517dcd27a11bf6ad721bfe692162",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "LOW",
+    "RiskScore": 0,
+    "DecisionAction": "MONITOR",
+    "TwinHead": "68fa5a4de557f5162210b3d64eb7ae70a738e62a945989bd2a8cf2348c7f90cc",
+    "DependencyRootHash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 1,
+    "Hash": "07cace1a48415c247d041a19ecb1c32d6e7a49eb5a8bbe79d82e42955ce3984e"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "d21d78629b33f022569c25c7145cbc3165285f5cbf8ef93413f564e9b39805b3",
+  "ReplayID": "07cace1a48415c247d041a19ecb1c32d6e7a49eb5a8bbe79d82e42955ce3984e",
+  "ExecutionRootHash": "13f075f692017eebf4e79bb44ac4f87c6f6aa237eef3850573a8e1c5ff21c12a",
+  "Hash": "1425ee09fc9fa310d13e641311d5177b006e458cc9bdee2a33b8412356fa6a94"
+}
