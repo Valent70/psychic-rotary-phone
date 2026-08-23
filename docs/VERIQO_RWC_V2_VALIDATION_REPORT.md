@@ -1,7 +1,10 @@
 # VERIQO RWC v2 — Validation Report
 
-Round R22. This report records **what the run did and what came out of it**, on
-this branch, from the bundle in `evidence/rwc_v2/`. It is a record of execution,
+Round R22, amended in R23. This report records **what the run did and what came
+out of it**, on this branch, from the bundle in `evidence/rwc_v2/`. The R23
+amendments are the two places the audit found an R22 statement to be false —
+the RWC-002 vessel-identity status, and the bundle's cold-replayability — and
+both are marked where they appear rather than silently rewritten. It is a record of execution,
 not an assessment of proof. The assessment — including the places where the
 vocabulary used below turns out to overstate what happened — is in
 `docs/RWC_V2_INDEPENDENT_AUDIT_REPORT.md`, which supersedes this document
@@ -37,16 +40,19 @@ go run ./cmd/veriqo-rwc-v2
 | RWC-002-CARGO_IDENTITY | UNVERIFIED | MONITOR | 0.0000 | ok | match | 12 |
 | RWC-002-DOCUMENT_EXISTENCE | UNVERIFIED | MONITOR | 0.0000 | ok | match | 12 |
 | RWC-002-TRANSACTION_SEQUENCE | UNVERIFIED | ESCALATE | 1.0000 | ok | match | 12 |
-| RWC-002-VESSEL_IDENTITY | CORROBORATED (see note) | MONITOR | 0.0000 | ok | match | 12 |
+| RWC-002-VESSEL_IDENTITY | STRUCTURALLY_VALIDATED | MONITOR | 0.0000 | ok | match | 12 |
 | RWC-002-VOYAGE_POSITION | UNVERIFIED | MONITOR | 0.0000 | ok | match | 12 |
 
-**Note on RWC-002-VESSEL_IDENTITY.** `ClassifyProvenance` reports CORROBORATED
-here. The round-R23 audit examined what actually produced that label and
-concluded it is an overclaim: the "second source" is deterministic offline
-arithmetic on the claimed identifier itself, and the native provenance status
-for the case is `UNKNOWN`, not `DECLARED_INDEPENDENT`. See the audit report,
-section 3. This row records what the R22 code emitted; it is not an endorsement
-of the label.
+**Note on RWC-002-VESSEL_IDENTITY.** Round R22 reported this case as
+CORROBORATED. The round-R23 audit examined what actually produced that label and
+found it an overclaim: the "second source" is deterministic offline arithmetic on
+the claimed identifier itself, and the native provenance status for the case is
+`UNKNOWN`, not `DECLARED_INDEPENDENT`. The classifier and the test that encoded
+the overclaim were both corrected, and the table above shows the corrected
+status. See `docs/RWC_V2_INDEPENDENT_AUDIT_REPORT.md` §3.
+
+**No case in this corpus reaches CORROBORATED**, and none can while this
+environment has no path to an independent external source.
 
 ### Why each RWC-001 verdict came out as it did
 
@@ -116,10 +122,18 @@ directions by `pkg/rwc`'s tests so neither reading can drift.
   when it exits. It is not persisted, not a write-ahead log, and not an external
   anchor. Every field in that file says so explicitly.
 - `replay_results.json` records an **in-process** replay through a fresh
-  `pkg/canonical.Pipeline` with no shared pointer to the original run. It is not
-  a cross-process cold DAG replay. The bytes for that separate capability are
-  exported to `replay_requests/` for `cmd/veriqo-cold-replay`; this command does
-  not run it, and `manifest.json` says so.
+  `pkg/canonical.Pipeline` with no shared pointer to the original run, comparing
+  12 canonical stages. It is not the cross-process cold DAG replay, which
+  compares 18 DAG nodes and is a separate capability with its own binary.
+  `replay_requests/` carries both halves that binary needs — `<case>.json` (the
+  DAG export) and `<case>.identity.json` (the identity ledger and the aliases
+  each case resolved). This command does not run the cold replay, and
+  `manifest.json` says so. Round R23 verified it by hand: 10 of 10 PASSED, and a
+  one-field tamper of an export diverges at `TRUTH_ARBITRATION`.
+
+  The identity export was missing when R22 first shipped this bundle, which made
+  every cold replay exit with a usage error rather than a verdict. See the audit
+  report §6.
 - `evidence_envelope.json` carries a `pkg/governance/envelope` envelope declared
   FIXTURE with origin `REAL_DERIVED_BENCHMARK`, or — when the release identity is
   incomplete, as in the committed bundle — a named refusal listing exactly which
