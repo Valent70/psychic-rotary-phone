@@ -878,9 +878,12 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 			p := canon.Provenance
 			record(id, []string{strconv.Itoa(a.EvidenceCount) + " evidence"},
 				[]string{"posterior"}, StatusOK,
-				"independence "+fnum(p.Score)+" ("+string(p.Status)+"), posterior "+
-					fnum(a.WinnerConfidence),
-				canon.Certificate.ArbitrationHash+"|"+fnum(p.Score), nil)
+				"independence "+p.ScoreDisplay()+" ("+string(p.Status)+", basis "+
+					string(p.Basis)+", "+strconv.Itoa(p.PairCount)+" pair(s) compared, "+
+					"verified_independent="+strconv.FormatBool(p.IsVerifiedIndependent())+
+					"), posterior "+fnum(a.WinnerConfidence),
+				canon.Certificate.ArbitrationHash+"|"+fnum(p.Score)+"|"+
+					strconv.FormatBool(p.IsVerifiedIndependent()), nil)
 
 		case StageTemporal:
 			// Temporal Bayesian reasoning applies only when the case
@@ -1289,11 +1292,17 @@ func (e *Engine) buildExplanation(ctx Context, in Input, canon *canonical.Canoni
 		EvidenceLines: []string{strconv.Itoa(canon.Arbitration.EvidenceCount) +
 			" evidence items across " + strconv.Itoa(dep.IndependentFamilyCount()) +
 			" independent families"},
-		IdentityLines:       []string{"entity " + string(in.Case.Entity) + " under identity resolution " + ctx.IdentityResolutionVersion},
-		DependencyLines:     depLines,
-		TruthLines:          canon.Arbitration.Explanation,
-		ContradictionLines:  []string{"contradiction score " + fnum(canon.Truth.ContradictionScore) + " with confidence delta " + fnum(canon.Truth.ConfidenceDelta)},
-		FusionLines:         []string{"independence " + fnum(canon.Provenance.Score) + " status " + string(canon.Provenance.Status) + " over shared ancestors " + strings.Join(canon.Provenance.SharedAncestors, ",")},
+		IdentityLines:      []string{"entity " + string(in.Case.Entity) + " under identity resolution " + ctx.IdentityResolutionVersion},
+		DependencyLines:    depLines,
+		TruthLines:         canon.Arbitration.Explanation,
+		ContradictionLines: []string{"contradiction score " + fnum(canon.Truth.ContradictionScore) + " with confidence delta " + fnum(canon.Truth.ConfidenceDelta)},
+		FusionLines: []string{"independence " + canon.Provenance.ScoreDisplay() +
+			" status " + string(canon.Provenance.Status) +
+			" basis " + string(canon.Provenance.Basis) +
+			" pairs_compared " + strconv.Itoa(canon.Provenance.PairCount) +
+			" attestation_complete " + strconv.FormatBool(canon.Provenance.AttestationComplete) +
+			" verified_independent " + strconv.FormatBool(canon.Provenance.IsVerifiedIndependent()) +
+			" over shared ancestors " + strings.Join(canon.Provenance.SharedAncestors, ",")},
 		CausalLines:         []string{"aggregate causal support " + fnum(canon.CausalSupport) + " over " + strconv.Itoa(len(in.Case.CausalLinks)) + " asserted links"},
 		RiskLines:           canon.Risk.Explanation,
 		TrustLines:          trustLines,

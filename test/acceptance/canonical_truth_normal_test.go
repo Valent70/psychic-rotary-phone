@@ -464,6 +464,42 @@ func TestAcceptanceCanonicalTruthProvenanceScoreIsNotInterpretableAlone(t *testi
 		t.Error("AttestationComplete is true for sources nobody has attested")
 	}
 
+	// The RISK model — the one place in this repository where an
+	// independence ratio is genuinely load-bearing — must carry the same
+	// epistemic standing rather than a bare number, and must SAY in its
+	// own explanation that the independence term rests on nothing
+	// compared.
+	r := res.Canonical.Risk
+	if r.ProvenanceVerifiedIndependent {
+		t.Error("the risk result claims verified independence for an UNKNOWN assessment")
+	}
+	if r.ProvenanceStatus != provenance.StatusUnknown {
+		t.Errorf("risk result provenance status = %s, want UNKNOWN", r.ProvenanceStatus)
+	}
+	if r.ProvenanceBasis != provenance.BasisNoDeclarations {
+		t.Errorf("risk result provenance basis = %s, want NO_DECLARATIONS", r.ProvenanceBasis)
+	}
+	var saidSo bool
+	for _, line := range r.Explanation {
+		if strings.Contains(line, provenance.ScoreNotInterpretable) {
+			saidSo = true
+		}
+	}
+	if !saidSo {
+		t.Errorf("the risk explanation never says the independence term is not interpretable:\n%v",
+			r.Explanation)
+	}
+
+	// And the DAG's own explanation, which is what a consumer reads,
+	// renders the display form rather than the raw number.
+	fusionLines := res.Execution.Explanation.FusionExplanation.Lines
+	if len(fusionLines) == 0 {
+		t.Fatal("the decision explanation has no fusion lines")
+	}
+	if !strings.Contains(strings.Join(fusionLines, " "), provenance.ScoreNotInterpretable) {
+		t.Errorf("the decision explanation renders a bare independence score: %v", fusionLines)
+	}
+
 	// A single-source case is the sharper form: PairCount 0, nothing
 	// compared at all, and still a 1.0 ratio.
 	single := baseTruthCase()

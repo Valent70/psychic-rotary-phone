@@ -69,12 +69,36 @@
       ]
     },
     {
+      "engine_id": "TRUST_STATE",
+      "version": "execution/v7.12.1",
+      "contract": "pkg/execution.Node",
+      "adapter": "veriqo/pkg/trust/state",
+      "dependencies": [
+        "IDENTITY_RESOLUTION"
+      ],
+      "input_schema": "pkg/execution.Input",
+      "output_schema": "pkg/execution.Node",
+      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
+      "replay_support": true,
+      "evidence_support": true,
+      "trust_support": true,
+      "telemetry_support": false,
+      "status": [
+        "IMPLEMENTED",
+        "INTEGRATED",
+        "TESTED",
+        "REPLAYABLE",
+        "VERIFIED"
+      ]
+    },
+    {
       "engine_id": "DEPENDENCY_EVALUATION",
       "version": "execution/v7.12.1",
       "contract": "pkg/execution.Node",
       "adapter": "veriqo/pkg/canonical",
       "dependencies": [
-        "IDENTITY_RESOLUTION"
+        "IDENTITY_RESOLUTION",
+        "TRUST_STATE"
       ],
       "input_schema": "pkg/execution.Input",
       "output_schema": "pkg/execution.Node",
@@ -269,29 +293,6 @@
       "replay_support": true,
       "evidence_support": true,
       "trust_support": false,
-      "telemetry_support": false,
-      "status": [
-        "IMPLEMENTED",
-        "INTEGRATED",
-        "TESTED",
-        "REPLAYABLE",
-        "VERIFIED"
-      ]
-    },
-    {
-      "engine_id": "TRUST_STATE",
-      "version": "execution/v7.12.1",
-      "contract": "pkg/execution.Node",
-      "adapter": "veriqo/pkg/trust/state",
-      "dependencies": [
-        "DECISION"
-      ],
-      "input_schema": "pkg/execution.Input",
-      "output_schema": "pkg/execution.Node",
-      "determinism": "deterministic given identical release, evidence, entity state and logical tick",
-      "replay_support": true,
-      "evidence_support": true,
-      "trust_support": true,
       "telemetry_support": false,
       "status": [
         "IMPLEMENTED",

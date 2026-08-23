@@ -23,6 +23,7 @@ package risk
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"veriqo/pkg/moat/decision"
 	"veriqo/pkg/moat/provenance"
@@ -49,6 +50,12 @@ type CompositeInput struct {
 	// SourceIDs is non-empty AND a Graph is supplied to
 	// ScoreWithProvenance, the computed ratio overrides this field.
 	ProvenanceIndependenceRatio float64
+	// provenanceAssessment is the full epistemic assessment
+	// ScoreWithProvenance computed, when it computed one. Unexported: a
+	// caller must not be able to assert one, for exactly the reason
+	// ProvenanceIndependenceRatio itself may not be asserted on the
+	// canonical path (see ScoreCanonical).
+	provenanceAssessment *provenance.IndependenceAssessment
 	// HasProvenanceData is false when the caller has no provenance
 	// assessment available; when false, ProvenanceIndependenceRatio is
 	// ignored (treated as neutral 1.0) rather than penalizing the score
@@ -97,6 +104,22 @@ type Result struct {
 	Label       Label
 	Breakdown   []FactorContribution
 	Explanation []string
+
+	// The four fields below carry the EPISTEMIC standing of the
+	// independence term this score was computed with — the
+	// canonical-truth-path mandate's section IV applied to the one place
+	// in this repository where an independence ratio is genuinely
+	// load-bearing. They are populated only by ScoreWithProvenance (the
+	// canonical path); a plain Score call leaves them zero, which is the
+	// honest answer for a caller that supplied a bare asserted ratio.
+	//
+	// ProvenanceVerifiedIndependent is the ONLY field a consumer may read
+	// as "these sources are independent". ProvenanceStatus/Basis/
+	// PairCount explain why it is what it is.
+	ProvenanceStatus              provenance.ProvenanceStatus
+	ProvenanceBasis               provenance.EvidenceBasis
+	ProvenancePairCount           int
+	ProvenanceVerifiedIndependent bool
 }
 
 // Model computes composite TBML/sanctions-evasion risk. Thresholds are
@@ -122,15 +145,40 @@ func NewModel() Model {
 // When in.SourceIDs is empty, falls back to Score's legacy
 // caller-asserted behavior (so existing callers with no graph wiring
 // are unaffected).
+// WHY THE DISCOUNT IS NOT RECALIBRATED FOR UNVERIFIED INDEPENDENCE.
+// The canonical-truth-path mandate's section IV asks that nowhere in
+// the codebase read a bare independence Score as if it meant
+// "independent" -- a Ratio of 1.0 arises trivially when there was no
+// source pair to compare at all. This function was audited against that
+// requirement in round R24 and deliberately LEFT its arithmetic
+// unchanged, for a reason worth stating rather than assuming:
+//
+// the discount is `0.5 + 0.5*independence`, so a HIGH independence
+// value RAISES the composite risk and a low one LOWERS it. Treating an
+// unverified 1.0 as full independence is therefore the CONSERVATIVE
+// direction: it produces the highest score the inputs can justify and
+// cannot cause an under-flag. "Correcting" it by discounting
+// unestablished independence would systematically lower risk scores for
+// exactly the cases with the thinnest provenance, which is the opposite
+// of fail-safe.
+//
+// What WAS wrong, and is fixed, is the INTERPRETATION: a reader of a
+// Result could not tell whether the independence term rested on a real
+// pairwise comparison or on nothing. Result now carries
+// ProvenanceBasis, ProvenancePairCount and ProvenanceVerifiedIndependent,
+// and Explanation says so in words. See Assess/IsVerifiedIndependent.
 func (m Model) ScoreWithProvenance(in CompositeInput, g *provenance.Graph) (Result, error) {
 	if g != nil && len(in.SourceIDs) > 0 {
-		res, err := g.ComputeIndependence(in.SourceIDs)
+		// Assess, not ComputeIndependence: the same ratio, plus the
+		// status/basis/pair-count that make it readable.
+		a, err := g.Assess(in.SourceIDs)
 		if err != nil {
 			return Result{}, err
 		}
-		in.ProvenanceIndependenceRatio = res.Ratio
+		in.ProvenanceIndependenceRatio = a.Score
 		in.HasProvenanceData = true
 		in.provenanceComputed = true
+		in.provenanceAssessment = &a
 	}
 	return m.Score(in), nil
 }
@@ -215,11 +263,29 @@ func (m Model) Score(in CompositeInput) Result {
 	if in.HasProvenanceData && independence < 0.5 {
 		expl = append(expl, "Contributing evidence sources are largely provenance-dependent (shared upstream) — composite score discounted for reduced independent confirmation.")
 	}
+	// Section IV: an independence term that rests on nothing compared
+	// must SAY so, in the explanation a human reads, rather than
+	// presenting a trivial 1.0 as a finding.
+	if a := in.provenanceAssessment; a != nil && !a.IsVerifiedIndependent() {
+		expl = append(expl, "Source independence is NOT established ("+string(a.Status)+
+			", basis "+string(a.Basis)+", "+strconv.Itoa(a.PairCount)+
+			" source pair(s) compared, attestation_complete="+strconv.FormatBool(a.AttestationComplete)+
+			"). The independence term in this score is therefore "+provenance.ScoreNotInterpretable+
+			" as a claim about the world; it is applied in the conservative direction (no discount), "+
+			"which cannot lower this score.")
+	}
 	if len(expl) == 0 {
 		expl = append(expl, "No individual factor crossed its own significance threshold.")
 	}
 
-	return Result{Score: composite, Label: label, Breakdown: breakdown, Explanation: expl}
+	out := Result{Score: composite, Label: label, Breakdown: breakdown, Explanation: expl}
+	if a := in.provenanceAssessment; a != nil {
+		out.ProvenanceStatus = a.Status
+		out.ProvenanceBasis = a.Basis
+		out.ProvenancePairCount = a.PairCount
+		out.ProvenanceVerifiedIndependent = a.IsVerifiedIndependent()
+	}
+	return out
 }
 
 // ToDecisionValues projects a computed Result into the

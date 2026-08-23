@@ -3,7 +3,6 @@ package rwc
 import (
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/moat/decision"
-	"veriqo/pkg/moat/provenance"
 )
 
 // VesselPortPolicy is the native decision.Policy every RWC case
@@ -109,7 +108,14 @@ func ClassifyProvenance(res *canonical.CanonicalResult, subs []canonical.SourceS
 	}
 
 	switch {
-	case observations >= 2 && res.Provenance.Status == provenance.StatusDeclaredIndependent:
+	// R24 (mandate section IV): IsVerifiedIndependent(), not a bare
+	// Status comparison. StatusDeclaredIndependent alone can still be
+	// reached over a source set nobody has attested; CORROBORATED is a
+	// claim that something OUTSIDE the claim confirmed it, which
+	// requires the attestation too. This tightens the R23 correction
+	// rather than replacing it -- the R23 rule is the first of the three
+	// conjuncts IsVerifiedIndependent checks.
+	case observations >= 2 && res.Provenance.IsVerifiedIndependent():
 		return StatusCorroborated
 	case observations >= 1 && derived >= 1:
 		return StatusStructurallyValidated
