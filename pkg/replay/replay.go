@@ -45,6 +45,7 @@ import (
 	"fmt"
 
 	"veriqo/pkg/canonical"
+	"veriqo/pkg/moat/digitaltwin"
 	"veriqo/pkg/moat/evidencegraph"
 	"veriqo/pkg/trust/state"
 )
@@ -368,7 +369,38 @@ func stageFingerprints(res *canonical.CanonicalResult, bound ExecutionRecord) []
 			Score  float64 `json:"score"`
 			Policy string  `json:"policy"`
 		}{string(res.Decision.Action), res.Decision.RiskScore, res.Decision.PolicyName})},
-		{StageTwin, h(StageTwin, res.Twin.Attributes)},
+		// StageTwin fingerprints the twin state THIS execution produced —
+		// the attribute for this case's own predicate and the risk state
+		// for its own policy — not the entity's whole accumulated
+		// attribute map.
+		//
+		// CORRECTED in the canonical-truth-path round. Hashing the full
+		// map made cold replay of the SECOND case for any entity diverge
+		// unconditionally at this stage: a twin accumulates one attribute
+		// per predicate across every case that entity has ever been
+		// arbitrated on, while a cold replay legitimately starts from an
+		// empty registry holding only this case. That is precisely the
+		// "engine-position-dependent value" class resultHash's own doc
+		// comment says must not be conflated with a genuine divergence,
+		// and TwinHead was already excluded for exactly this reason —
+		// Attributes had simply not been recognised as the same kind of
+		// value. No existing test caught it because every prior suite runs
+		// at most one case per entity per engine; the multi-source
+		// arbitration scenarios (WAVE A item 4) are the first to run two.
+		//
+		// What is still verified is everything this run is actually
+		// responsible for: if the arbitration winner, its confidence, its
+		// contradiction flag, or the decision this case recorded against
+		// the twin changes, this fingerprint changes.
+		{StageTwin, h(StageTwin, struct {
+			Predicate string                     `json:"predicate"`
+			Attribute digitaltwin.AttributeState `json:"attribute"`
+			Policy    string                     `json:"policy"`
+			Risk      digitaltwin.RiskState      `json:"risk"`
+		}{
+			res.Certificate.Predicate, res.Twin.Attributes[res.Certificate.Predicate],
+			res.Decision.PolicyName, res.Twin.Risk[res.Decision.PolicyName],
+		})},
 		{StageEconomic, h(StageEconomic, res.EconomicImpact)},
 		{StageCertificate, h(StageCertificate, struct {
 			Winner   string  `json:"winner"`

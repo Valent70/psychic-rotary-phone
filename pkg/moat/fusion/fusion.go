@@ -27,6 +27,11 @@
 //     recommendation that "every KG mutation must originate from one
 //     ordered entry" — the fusion engine is that ordering actor for the
 //     truth layer, the same way raftlite.Adapter is for cluster topology.
+//   - Evidence is never deleted. A later correction RETIRES prior
+//     evidence from a new arbitration (see Supersede) without removing it
+//     from the store, so "old evidence preserved, new truth recalculated"
+//     is a property of the engine rather than a convention its callers
+//     have to maintain.
 package fusion
 
 import (
@@ -37,6 +42,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 
 	"veriqo/pkg/moat/kg"
@@ -139,9 +145,31 @@ type Engine struct {
 	sources  map[SourceID]SourceProfile
 	evidence map[string][]Evidence // claim key -> append-only evidence
 	seenID   map[string]bool
-	log      []FusionRecord
-	head     string
-	graph    *kg.Graph // optional deterministic sink; nil = fusion-only mode
+	// superseded is claim key -> evidence ID -> the supersession record
+	// that retired it. Evidence is NEVER removed from `evidence` above:
+	// this map records which entries a later, explicitly-declared
+	// correction has retired, so Arbitrate can exclude them from a NEW
+	// truth while EvidenceFor and the audit log still return them in
+	// full. See Supersede.
+	superseded map[string]map[string]Supersession
+	log        []FusionRecord
+	head       string
+	graph      *kg.Graph // optional deterministic sink; nil = fusion-only mode
+}
+
+// Supersession records that one piece of evidence has been retired by a
+// later correction from the same source. It is the fusion-layer form of
+// pkg/evidence/provenance.CorrectionSuperseded, which already models the
+// same idea for external-delivery envelopes but had no counterpart
+// inside the arbitration engine itself.
+type Supersession struct {
+	// SupersededEvidenceID is the retired evidence.
+	SupersededEvidenceID string
+	// BySourceID is the source whose correction retired it.
+	BySourceID SourceID
+	// Reason is why, in the corrector's own words. Required.
+	Reason string
+	Tick   uint64
 }
 
 // NewEngine constructs a fusion engine. graph may be nil to run the
@@ -149,10 +177,11 @@ type Engine struct {
 // Graph (useful for unit testing the math in isolation).
 func NewEngine(graph *kg.Graph) *Engine {
 	return &Engine{
-		sources:  make(map[SourceID]SourceProfile),
-		evidence: make(map[string][]Evidence),
-		seenID:   make(map[string]bool),
-		graph:    graph,
+		sources:    make(map[SourceID]SourceProfile),
+		evidence:   make(map[string][]Evidence),
+		seenID:     make(map[string]bool),
+		superseded: make(map[string]map[string]Supersession),
+		graph:      graph,
 	}
 }
 
@@ -202,6 +231,106 @@ func (e *Engine) Submit(src SourceID, claim Claim, value string, tick uint64) (E
 	e.evidence[claim.Key()] = append(e.evidence[claim.Key()], ev)
 	e.seenID[id] = true
 	return ev, nil
+}
+
+// ErrNothingToSupersede is returned when a supersession names a source
+// that has submitted nothing on this claim. Fail-closed: a correction
+// that silently retires nothing would let a caller believe an outdated
+// value had been withdrawn when it had not.
+var ErrNothingToSupersede = errors.New("fusion: no evidence from that source on this claim to supersede")
+
+// ErrNoSupersessionReason refuses an unexplained correction.
+var ErrNoSupersessionReason = errors.New("fusion: a supersession must carry a reason")
+
+// Supersede retires every piece of evidence `retiredSource` previously
+// submitted on `claim`, on the authority of `bySource`'s correction.
+//
+// NOTHING IS DELETED. The evidence stays in the append-only store and
+// keeps being returned by EvidenceFor and by the hash-chained audit log;
+// what changes is that Arbitrate stops counting it toward a NEW truth.
+// That distinction is the whole point: "old evidence preserved, new
+// truth recalculated" (canonical-truth-path mandate, WAVE A item 4,
+// Case C) is not satisfiable by an engine that either overwrites the
+// original or keeps counting it forever.
+//
+// It is deliberately a SEPARATE, explicit call rather than an implicit
+// consequence of a same-source resubmission. A source sending a second
+// value is, in general, a contradiction to be surfaced — not a
+// correction to be honoured — and inferring supersession from
+// resubmission would silently convert every disagreement into a quiet
+// overwrite.
+func (e *Engine) Supersede(claim Claim, retiredSource, bySource SourceID, reason string, tick uint64) ([]Supersession, error) {
+	if strings.TrimSpace(reason) == "" {
+		return nil, ErrNoSupersessionReason
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	key := claim.Key()
+	var out []Supersession
+	for _, ev := range e.evidence[key] {
+		if ev.Source != retiredSource {
+			continue
+		}
+		if e.superseded[key] == nil {
+			e.superseded[key] = make(map[string]Supersession)
+		}
+		if _, already := e.superseded[key][ev.ID]; already {
+			continue
+		}
+		s := Supersession{SupersededEvidenceID: ev.ID, BySourceID: bySource,
+			Reason: reason, Tick: tick}
+		e.superseded[key][ev.ID] = s
+		out = append(out, s)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("%w: source=%s claim=%s", ErrNothingToSupersede, retiredSource, key)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].SupersededEvidenceID < out[j].SupersededEvidenceID
+	})
+	return out, nil
+}
+
+// CurrentEvidenceFor returns the evidence for a claim that is still
+// CURRENT — i.e. everything EvidenceFor returns, minus anything a later
+// correction has retired via Supersede.
+//
+// It is the accessor a caller wants when asking "what does this claim
+// rest on NOW". EvidenceFor remains the accessor for "what has ever been
+// submitted about this claim", which is what an auditor wants; the two
+// answers are genuinely different after a correction and this package
+// refuses to conflate them behind one name.
+func (e *Engine) CurrentEvidenceFor(claim Claim) []Evidence {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	retired := e.superseded[claim.Key()]
+	all := e.evidence[claim.Key()]
+	out := make([]Evidence, 0, len(all))
+	for _, ev := range all {
+		if _, gone := retired[ev.ID]; gone {
+			continue
+		}
+		out = append(out, ev)
+	}
+	return canonicalOrder(out)
+}
+
+// SupersededFor returns every supersession recorded against a claim, in
+// deterministic order — so "what was retired, by whom, and why" is
+// answerable without reading engine internals.
+func (e *Engine) SupersededFor(claim Claim) []Supersession {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	m := e.superseded[claim.Key()]
+	out := make([]Supersession, 0, len(m))
+	for _, s := range m {
+		out = append(out, s)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].SupersededEvidenceID < out[j].SupersededEvidenceID
+	})
+	return out
 }
 
 // canonicalOrder returns a claim's evidence sorted deterministically by
@@ -284,7 +413,26 @@ func (e *Engine) Arbitrate(actorID string, claim Claim, tick uint64) (Arbitratio
 	if len(all) == 0 {
 		return ArbitrationResult{}, ErrNoEvidence
 	}
-	ordered := canonicalOrder(all)
+	// Superseded evidence is excluded from a NEW truth but never removed
+	// from the store (see Supersede). An arbitration over a claim whose
+	// evidence has been ENTIRELY superseded has nothing current to reason
+	// over, which is ErrNoEvidence -- fail-closed, not a decision made
+	// from retired data.
+	retired := e.superseded[claim.Key()]
+	current := all
+	if len(retired) > 0 {
+		current = make([]Evidence, 0, len(all))
+		for _, ev := range all {
+			if _, gone := retired[ev.ID]; gone {
+				continue
+			}
+			current = append(current, ev)
+		}
+		if len(current) == 0 {
+			return ArbitrationResult{}, ErrNoEvidence
+		}
+	}
+	ordered := canonicalOrder(current)
 
 	groups := make(map[string][]Evidence)
 	var values []string

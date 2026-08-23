@@ -77,6 +77,28 @@ type SourceSubmission struct {
 	// evidence weight (PHASE 1 of the v7.10.3 audit). NodeID/SourceID/
 	// TxTick are filled in automatically from this submission.
 	Dependencies []evidencegraph.DependencyRecord
+
+	// Supersedes names source IDs whose PRIOR evidence on this same claim
+	// this submission corrects. It is the canonical-truth-path mandate's
+	// WAVE A item 4, Case C ("source correction: old evidence preserved,
+	// new truth recalculated").
+	//
+	// Nothing is deleted. RunCanonical calls Fusion.Supersede, which
+	// retires the named source's earlier evidence from the NEW
+	// arbitration while leaving it in the append-only store, still
+	// returned by EvidenceFor and still in the hash-chained audit log.
+	// Both the pre-correction and post-correction truths therefore remain
+	// independently inspectable, each with its own certificate.
+	//
+	// It is deliberately explicit rather than inferred from a same-source
+	// resubmission: a source sending a second, different value is in
+	// general a CONTRADICTION to surface, not a correction to honour, and
+	// inferring otherwise would silently convert every disagreement into
+	// a quiet overwrite. See fusion.Supersede.
+	Supersedes []string
+	// SupersedesReason is required whenever Supersedes is non-empty — an
+	// unexplained correction is refused (fusion.ErrNoSupersessionReason).
+	SupersedesReason string
 }
 
 // CausalLink is one optional cause->claim edge to assert into the
@@ -169,6 +191,11 @@ type CanonicalCertificate struct {
 	// mechanism exists in this environment.
 	ProvenanceVerifiedIndependent bool
 
+	// SupersededCount is how many pieces of prior evidence a correction
+	// in this run retired from the arbitration. It is inside Hash so a
+	// corrected truth is not presentable as an uncorrected one.
+	SupersededCount int
+
 	Hash string
 }
 
@@ -224,8 +251,22 @@ type CanonicalResult struct {
 	// Like Dependency it is never optional and never nil-valued on a
 	// successful run: there is no code path from RunCanonical's entry to
 	// Fusion.Submit that does not pass through evaluateTrust first.
-	Trust       TrustEvaluation
-	Certificate CanonicalCertificate
+	Trust TrustEvaluation
+	// Supersessions records every piece of prior evidence a correction in
+	// THIS run retired from the arbitration (WAVE A item 4, Case C). The
+	// retired evidence itself is untouched and still readable via
+	// Fusion.EvidenceFor — this is the list of what stopped counting
+	// toward the NEW truth, and why.
+	Supersessions []fusion.Supersession
+	// SupersessionMisses names, in sorted order, every declared
+	// correction that found no prior evidence to retire in THIS engine.
+	// It is deliberately NOT an error and deliberately NOT hashed into
+	// the certificate: it is engine-position-dependent (a cold replay
+	// holding only this case legitimately misses every cross-case
+	// supersession), exactly like TwinHead. It exists so "retired
+	// nothing" is visible rather than silent.
+	SupersessionMisses []string
+	Certificate        CanonicalCertificate
 }
 
 // Pipeline composes every MOAT engine the canonical path needs. All
@@ -362,6 +403,55 @@ func (p *Pipeline) RunCanonical(actorID string, in CaseInput) (*CanonicalResult,
 		sourceIDs = append(sourceIDs, string(s.SourceID))
 	}
 
+	// --- Corrections (WAVE A item 4, Case C) --------------------------
+	// Applied AFTER every submission is in, and BEFORE arbitration, so a
+	// correction retires prior evidence for the truth about to be
+	// computed without ever removing it from the append-only store. The
+	// supersession is also declared into the provenance graph, so a
+	// correction is correctly assessed as DEPENDENT on what it corrects
+	// rather than as a second independent witness.
+	var supersessions []fusion.Supersession
+	var supersessionMisses []string
+	for _, s := range admitted {
+		for _, retired := range s.Supersedes {
+			recs, err := p.Fusion.Supersede(claim, fusion.SourceID(retired), s.SourceID,
+				s.SupersedesReason, in.Tick)
+			switch {
+			case errors.Is(err, fusion.ErrNothingToSupersede):
+				// This engine holds no evidence from that source on this
+				// claim, so there is nothing to retire. That is a REAL,
+				// expected situation, not a failure, in two cases that both
+				// occur in production:
+				//
+				//   - a cold replay (pkg/replay) rebuilds a fresh engine
+				//     holding only THIS case, so the prior submission the
+				//     correction retires was never there to retire;
+				//   - a node that received the correction but never received
+				//     the original delivery.
+				//
+				// Failing the case would make every corrected case
+				// structurally unreplayable, which would defeat the purpose
+				// of recording the correction at all. It is recorded in
+				// SupersessionMisses instead of being swallowed, so "this
+				// correction retired nothing" is visible rather than
+				// indistinguishable from "this correction retired evidence".
+				supersessionMisses = append(supersessionMisses,
+					string(s.SourceID)+" supersedes "+retired+" (no such evidence on this claim here)")
+			case err != nil:
+				// Every other failure -- notably an unexplained correction
+				// (fusion.ErrNoSupersessionReason) -- is fatal.
+				return nil, fmt.Errorf("canonical: superseding %s by %s: %w", retired, s.SourceID, err)
+			default:
+				supersessions = append(supersessions, recs...)
+			}
+			if err := p.Provenance.Declare(string(s.SourceID), retired); err != nil {
+				return nil, fmt.Errorf("canonical: declaring correction provenance %s->%s: %w",
+					s.SourceID, retired, err)
+			}
+		}
+	}
+	sort.Strings(supersessionMisses)
+
 	// --- Truth Arbitration ------------------------------------------
 	arb, err := p.Fusion.Arbitrate(actorID, claim, in.Tick)
 	if err != nil {
@@ -375,8 +465,14 @@ func (p *Pipeline) RunCanonical(actorID string, in CaseInput) (*CanonicalResult,
 	}
 
 	// --- Contradiction / Truth Engine --------------------------------
+	// CURRENT evidence, not all evidence ever submitted: after a
+	// correction, crediting retired evidence as a winning or losing
+	// source of the NEW truth would misattribute the new arbitration to
+	// inputs it did not use. EvidenceFor (everything ever submitted)
+	// remains available to auditors; the contradiction record is about
+	// the truth just computed.
 	var winning, losing []string
-	for _, ev := range p.Fusion.EvidenceFor(claim) {
+	for _, ev := range p.Fusion.CurrentEvidenceFor(claim) {
 		if ev.Value == arb.Winner {
 			winning = append(winning, string(ev.Source))
 		} else {
@@ -458,6 +554,7 @@ func (p *Pipeline) RunCanonical(actorID string, in CaseInput) (*CanonicalResult,
 		DecisionAction: dec.Action, TwinHead: p.Twin.Head(),
 		DependencyRootHash: depEval.RootHash, MaxDependencyDiscount: depEval.MaxDiscount,
 		IndependentFamilies:           depEval.IndependentFamilyCount(),
+		SupersededCount:               len(supersessions),
 		TrustRootHash:                 trustEval.RootHash,
 		TrustLedgerHead:               trustEval.LedgerHead,
 		TrustReviewRequired:           trustEval.ReviewRequired,
@@ -473,16 +570,19 @@ func (p *Pipeline) RunCanonical(actorID string, in CaseInput) (*CanonicalResult,
 	return &CanonicalResult{
 		Arbitration: arb, Truth: truthRec, CausalSupport: causalSupport,
 		Provenance: provAssess, Risk: riskResult, Decision: dec, Twin: twin,
-		EconomicImpact: econ, Dependency: depEval, Trust: trustEval, Certificate: cert,
+		EconomicImpact: econ, Dependency: depEval, Trust: trustEval,
+		Supersessions: supersessions, SupersessionMisses: supersessionMisses,
+		Certificate: cert,
 	}, nil
 }
 
 func hashCertificate(c CanonicalCertificate) string {
-	raw := fmt.Sprintf("subject=%s|predicate=%s|winner=%s|arb=%s|truth=%s|prov=%s|label=%s|score=%.6f|action=%s|twin=%s|deproot=%s|depmax=%.6f|depfam=%d|trustroot=%s|trusthead=%s|trustreview=%v|provverified=%v",
+	raw := fmt.Sprintf("subject=%s|predicate=%s|winner=%s|arb=%s|truth=%s|prov=%s|label=%s|score=%.6f|action=%s|twin=%s|deproot=%s|depmax=%.6f|depfam=%d|trustroot=%s|trusthead=%s|trustreview=%v|provverified=%v|superseded=%d",
 		c.Subject, c.Predicate, c.ArbitrationWinner, c.ArbitrationHash, c.TruthHash,
 		c.ProvenanceStatus, c.RiskLabel, c.RiskScore, c.DecisionAction, c.TwinHead,
 		c.DependencyRootHash, c.MaxDependencyDiscount, c.IndependentFamilies,
-		c.TrustRootHash, c.TrustLedgerHead, c.TrustReviewRequired, c.ProvenanceVerifiedIndependent)
+		c.TrustRootHash, c.TrustLedgerHead, c.TrustReviewRequired, c.ProvenanceVerifiedIndependent,
+		c.SupersededCount)
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }
