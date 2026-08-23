@@ -47,6 +47,7 @@ import (
 	"veriqo/pkg/execution"
 	bayescalibration "veriqo/pkg/governance/calibration"
 	"veriqo/pkg/identity"
+	"veriqo/pkg/ledger"
 	"veriqo/pkg/lineage"
 	"veriqo/pkg/moat/calibration"
 	"veriqo/pkg/moat/digitaltwin"
@@ -197,6 +198,18 @@ type LifecycleCertificate struct {
 	// way ReplayID already ties this certificate to the canonical
 	// certificate one layer down.
 	ExecutionRootHash string
+	// DurableLedgerHead is the head of the durable event ledger
+	// (pkg/ledger) AFTER this run's whole event set was written — the
+	// canonical-truth-path mandate's WAVE A item 5 requirement that the
+	// chain end "... -> durable ledger head -> certificate". It is inside
+	// Hash, so a certificate cannot be presented against a ledger it was
+	// not actually written into.
+	//
+	// Empty when no durable ledger is attached to the Orchestrator. That
+	// empty is load-bearing and must not be read as "the ledger was
+	// empty": it means this deployment kept no durable record of the run
+	// at all.
+	DurableLedgerHead string
 	Hash              string
 }
 
@@ -249,6 +262,10 @@ type Result struct {
 	// without a person looking at it. It is a separate field rather than
 	// a derived property so a future condition can also set it.
 	HumanReviewRequired bool
+	// DurableLedgerHead is the durable event-ledger head after this run
+	// (see LifecycleCertificate.DurableLedgerHead). Empty when no durable
+	// ledger is attached.
+	DurableLedgerHead string
 	// TrustReviewReasons names, per source, why the trust evaluation
 	// required human review — empty when it did not. It is the
 	// explainable half of HumanReviewRequired: a reviewer must be told
@@ -264,9 +281,10 @@ type Result struct {
 
 func hashLifecycleCert(c LifecycleCertificate) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "intent=%s|entity=%s|plan=%s|unmet=%d|canonical=%s|ivf=%v|ivfcert=%s|replay=%s|execroot=%s|",
+	fmt.Fprintf(h, "intent=%s|entity=%s|plan=%s|unmet=%d|canonical=%s|ivf=%v|ivfcert=%s|replay=%s|execroot=%s|durable=%s|",
 		c.IntentID, c.EntityID, c.EvidencePlanHash, len(c.UnmetRequirements),
-		c.Canonical.Hash, c.IVFVerified, c.IVFCertificateHash, c.ReplayID, c.ExecutionRootHash)
+		c.Canonical.Hash, c.IVFVerified, c.IVFCertificateHash, c.ReplayID, c.ExecutionRootHash,
+		c.DurableLedgerHead)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -350,6 +368,21 @@ type Orchestrator struct {
 	// Complete=false until RecordOutcome runs, which is the honest
 	// answer, not a gap.
 	Lineage *lineage.Ledger
+	// Ledger, when set, is the DURABLE event ledger (pkg/ledger, over
+	// pkg/storage/wal) every RunUnified call writes its whole event set
+	// to before returning — the canonical-truth-path mandate's WAVE A
+	// item 5. See durable.go for the event set and the ordering
+	// argument.
+	//
+	// Nil by default, exactly like Lineage and TemporalCalibration above.
+	// That is a deployment decision, not an optional guarantee: a
+	// deployment that attaches one has declared that a decision it cannot
+	// durably record is a decision it will not make, and RunUnified fails
+	// the call rather than returning an unrecorded decision. A deployment
+	// that does not attach one gets the honest empty
+	// DurableLedgerHead — never a value that looks as if something had
+	// been written.
+	Ledger *ledger.Ledger
 }
 
 // NewOrchestrator builds a lifecycle Orchestrator over an existing
@@ -574,6 +607,12 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 		LedgerPosition: uint64(len(o.Identity.Ledger())), Tick: in.Tick,
 		ReplayMetadata: "lifecycle.RunUnified",
 	}
+	// The execution commits to the durable ledger head it STARTED from —
+	// the on-disk state it will be appended after. See durable.go's
+	// package comment on why this is the pre-state and not the post-state.
+	if o.Ledger != nil {
+		execCtx.DurableLedgerHead, _ = o.Ledger.Head()
+	}
 	execIn := execution.Input{Context: execCtx, Case: caseIn}
 	// TrustSubject is DERIVED, not left to the caller (canonical-truth-
 	// path mandate, WAVE A item 2: "RunUnified tidak mengisi
@@ -731,6 +770,24 @@ func (o *Orchestrator) RunUnified(ctx context.Context, in Intent, plan EvidenceP
 		if err := o.recordLineage(res, caseIn); err != nil {
 			return nil, err
 		}
+	}
+	// --- Durable ledger (WAVE A item 5) --------------------------------
+	// Written LAST, over a fully-formed result, and the certificate is
+	// then re-sealed over the head it produced. Re-sealing rather than
+	// leaving the head outside the hash is the whole point: the mandate's
+	// chain ends "durable ledger head -> certificate", so a certificate
+	// that did not commit to the head would leave the durable record and
+	// the signed artifact as two independent claims.
+	if o.Ledger != nil {
+		head, derr := o.recordDurable(res, caseIn, execRes)
+		if derr != nil {
+			span.RecordError(derr)
+			return nil, derr
+		}
+		res.DurableLedgerHead = head
+		cert.DurableLedgerHead = head
+		cert.Hash = hashLifecycleCert(cert)
+		res.Certificate = cert
 	}
 	return res, nil
 }

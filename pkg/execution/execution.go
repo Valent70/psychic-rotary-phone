@@ -200,6 +200,18 @@ type Context struct {
 	ReplayMetadata            string   `json:"replay_metadata"`
 	BindingHash               string   `json:"binding_hash"`
 	KnowledgeRoot             string   `json:"knowledge_root"`
+	// DurableLedgerHead is the head of the durable event ledger
+	// (pkg/ledger, canonical-truth-path mandate WAVE A item 5) at the
+	// moment this execution STARTED -- the on-disk state it was appended
+	// after. It is deliberately the pre-state, not the post-state: the
+	// execution commits to the ledger position it began from, and the
+	// ledger's own DecisionEvent then commits to the execution root the
+	// run produced. Committing to a post-state here would be circular.
+	//
+	// Empty when no durable ledger is attached, which is an honest empty
+	// -- a deployment with no durable ledger has no head to commit to,
+	// and must not be able to produce a trace that looks as if it had one.
+	DurableLedgerHead string `json:"durable_ledger_head,omitempty"`
 }
 
 func (c Context) validate() error {
@@ -253,7 +265,8 @@ func (c Context) hash() string {
 		strings.Join(sortedCopy(c.ModelVersions), ";") + "\n" +
 		strings.Join(sortedCopy(c.SourceVersions), ";") + "\n" +
 		strconv.FormatUint(c.LedgerPosition, 10) + "\n" + strconv.FormatUint(c.Tick, 10) + "\n" +
-		c.ReplayMetadata + "\n" + c.BindingHash + "\n" + c.KnowledgeRoot + "\n")
+		c.ReplayMetadata + "\n" + c.BindingHash + "\n" + c.KnowledgeRoot + "\n" +
+		c.DurableLedgerHead + "\n")
 	sum := sha256.Sum256([]byte(sb.String()))
 	return hex.EncodeToString(sum[:])
 }
@@ -722,7 +735,15 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 		res.Trace = Trace{Context: ctx, ContextHash: ctx.hash(), Nodes: nodes}
 		res.Trace.RootHash = rootHash(res.Trace)
 		res.ExecutionRootHash = res.Trace.RootHash
-		return res, fmt.Errorf("%w: %s: %v", ErrStageFailed, StageFusion, canonErr)
+		// canonErr is wrapped with %w, not %v: a caller must be able to
+		// tell WHICH canonical failure this was. That matters now that
+		// trust can fail a case closed (canonical.ErrAllEvidenceUntrusted
+		// -- "every source was excluded, refusing to decide on no
+		// evidence"), which is a governance outcome a caller may need to
+		// route differently from, say, a malformed policy. Before this,
+		// %v flattened every canonical error into an opaque string and
+		// errors.Is could not reach past ErrStageFailed.
+		return res, fmt.Errorf("%w: %s: %w", ErrStageFailed, StageFusion, canonErr)
 	}
 	res.Canonical = canon
 	// The trust evaluation's release condition is surfaced on the Result
@@ -1095,7 +1116,23 @@ func (e *Engine) Run(goCtx context.Context, in Input) (*Result, error) {
 			if e.Identity != nil {
 				identityLedgerHead = e.Identity.Head()
 			}
-			rec, err := replay.Record(ctx.Actor, in.Case, canon, e.Pipeline.Dependencies.Ledger(), identityLedgerHead)
+			// Bind the replay package to EVERY external state this
+			// execution depended on, not only identity (canonical-truth-
+			// path mandate, WAVE A item 7). The trust LEDGER travels in
+			// full, not as a head: a cold replayer must be able to
+			// re-derive the trust posture itself, which is what makes a
+			// tampered trust history detectable rather than merely
+			// mismatched.
+			b := replay.Bindings{
+				IdentityLedgerHead: identityLedgerHead,
+				PolicyHash:         in.Case.Policy.Hash(),
+				DurableLedgerHead:  ctx.DurableLedgerHead,
+			}
+			if e.Trust != nil {
+				b.TrustLedger = e.Trust.Ledger()
+				b.TrustHalfLife, b.TrustNeutralPrior = e.Trust.Params()
+			}
+			rec, err := replay.RecordBound(ctx.Actor, in.Case, canon, e.Pipeline.Dependencies.Ledger(), b)
 			if err != nil {
 				record(id, nil, nil, StatusFailed, "replay record failed", "", err)
 				continue

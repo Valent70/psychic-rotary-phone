@@ -376,6 +376,46 @@ func (e *Engine) Ledger() []Transition {
 	return out
 }
 
+// Rebuild reconstructs a trust Engine from a serialized transition
+// ledger ALONE, verifying the hash chain before accepting a single
+// entry — the trust counterpart of pkg/moat/evidencegraph.Rebuild, and
+// for the same reason: an independent replayer must be able to
+// re-derive trust state from recorded history without holding a pointer
+// to the engine that produced it (canonical-truth-path mandate, WAVE A
+// items 2 and 7: "this must be provable through replay").
+//
+// halfLife and neutralPrior are the decay parameters the ORIGINAL
+// engine ran under. They are not recoverable from the ledger (decay is
+// applied at read time, never recorded), so a replayer must carry them
+// alongside it; pkg/replay.ExecutionRecord does exactly that. Passing
+// different values reproduces different effective scores, which is
+// correct: an execution replayed under a different trust decay model is
+// not the same execution and must not silently claim to match.
+//
+// A tampered ledger — a rewritten reason, a moved score, a reordered
+// entry, a deleted middle — fails ErrChainBroken here rather than
+// producing a plausible-looking engine, so a replay over tampered trust
+// history cannot return a verdict at all.
+func Rebuild(transitions []Transition, halfLife uint64, neutralPrior float64) (*Engine, error) {
+	e := NewEngine(halfLife, neutralPrior)
+	prev := ""
+	for i, t := range transitions {
+		if t.Index != uint64(i) || t.PrevHash != prev || hashTransition(t) != t.Hash {
+			return nil, fmt.Errorf("%w at index %d", ErrChainBroken, i)
+		}
+		prev = t.Hash
+		e.ledger = append(e.ledger, t)
+	}
+	return e, nil
+}
+
+// Params returns the decay parameters this engine was constructed with,
+// so a caller exporting an execution for replay can record them without
+// having to remember what it passed to NewEngine.
+func (e *Engine) Params() (halfLife uint64, neutralPrior float64) {
+	return e.HalfLife, e.NeutralPrior
+}
+
 // VerifyChain independently re-derives the ledger.
 func (e *Engine) VerifyChain() error {
 	e.mu.RLock()

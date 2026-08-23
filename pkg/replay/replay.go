@@ -46,15 +46,21 @@ import (
 
 	"veriqo/pkg/canonical"
 	"veriqo/pkg/moat/evidencegraph"
+	"veriqo/pkg/trust/state"
 )
 
 // Errors returned by the replay engine.
 var (
-	ErrPackageTampered   = errors.New("replay: package hash does not match its own content")
-	ErrLedgerTampered    = errors.New("replay: dependency ledger failed independent verification")
-	ErrExecutionMismatch = errors.New("replay: replayed result differs from the original result")
-	ErrEmptyPackage      = errors.New("replay: execution record carries no case input")
-	ErrCertTampered      = errors.New("replay: verification certificate hash does not match its own fields")
+	ErrPackageTampered = errors.New("replay: package hash does not match its own content")
+	ErrLedgerTampered  = errors.New("replay: dependency ledger failed independent verification")
+	// ErrTrustLedgerTampered is the trust counterpart of
+	// ErrLedgerTampered: the recorded trust transition ledger failed its
+	// own hash-chain verification, so no trust posture could be
+	// independently re-derived and no verdict is issued.
+	ErrTrustLedgerTampered = errors.New("replay: trust ledger failed independent verification")
+	ErrExecutionMismatch   = errors.New("replay: replayed result differs from the original result")
+	ErrEmptyPackage        = errors.New("replay: execution record carries no case input")
+	ErrCertTampered        = errors.New("replay: verification certificate hash does not match its own fields")
 )
 
 // StageResult is one lifecycle stage's deterministic fingerprint. The
@@ -86,14 +92,57 @@ const (
 	// inserted in resolution order so existing StageOrder indices
 	// used elsewhere are not renumbered.
 	StageIdentity = "identity_ledger"
+	// StageTrust, StagePolicy and StageDurableLedger close the
+	// canonical-truth-path mandate's WAVE A item 7: "Replay must include
+	// trust, identity, and policy, not just evidence/decision."
+	//
+	//   - StageTrust fingerprints the TRUST EVALUATION the replay
+	//     independently RE-COMPUTED from the recorded trust ledger (see
+	//     ExecutionRecord.TrustLedger), not the one the original run
+	//     asserted. A tampered ledger fails chain verification outright;
+	//     a chain-consistent rewrite moves the head and therefore this
+	//     fingerprint.
+	//   - StagePolicy fingerprints decision.Policy.Hash() of the policy
+	//     the case actually ran under, so a case cannot be replayed under
+	//     a different policy and reported as matching.
+	//   - StageDurableLedger fingerprints the durable event-ledger head
+	//     (pkg/ledger, WAVE A item 5) the original execution committed
+	//     to, so the on-disk record and the replayed computation are tied
+	//     to one another rather than being two independent claims.
+	//
+	// Appended after StageIdentity rather than inserted in lifecycle
+	// order, for the same reason StageIdentity itself was: existing
+	// StageOrder indices are not renumbered.
+	StageTrust         = "trust_evaluation"
+	StagePolicy        = "policy"
+	StageDurableLedger = "durable_ledger"
 )
 
 // StageOrder is the authoritative ordering used for divergence
 // reporting.
+// StageOrder is the authoritative ordering used for divergence
+// reporting. It is CAUSAL order, not the order stageFingerprints emits:
+// firstDivergence walks this list to answer "what is the earliest thing
+// that went wrong", and an answer of "the certificate" when the real
+// cause was a rewritten trust ledger would point an investigator at the
+// last link in the chain instead of the first.
+//
+// It affects reporting only. resultHash folds the fingerprint SLICE in
+// its own fixed emission order, so reordering this list changes no hash
+// and invalidates no previously-issued certificate — which is why the
+// canonical-truth-path round could correct it rather than having to
+// live with the append-only placement the identity stage originally
+// took for backward-compatibility reasons.
 var StageOrder = []string{
+	// Identity and trust gate the evidence, so they precede it.
+	StageIdentity, StageTrust,
 	StageEvidence, StageDependency, StageProvenance, StageArbitration,
-	StageContradiction, StageCausal, StageRisk, StageDecision, StageTwin,
-	StageEconomic, StageCertificate, StageIdentity,
+	StageContradiction, StageCausal, StageRisk,
+	// Policy governs the decision it precedes.
+	StagePolicy, StageDecision, StageTwin, StageEconomic,
+	// The certificate commits to everything above it; the durable ledger
+	// records the whole thing.
+	StageCertificate, StageDurableLedger,
 }
 
 // ExecutionRecord is the complete, self-contained record of one
@@ -139,6 +188,51 @@ type ExecutionRecord struct {
 	// participate in tamper-detection; a later round's own audit named
 	// that gap explicitly, and it is closed here).
 	IdentityLedgerHead string `json:"identity_ledger_head,omitempty"`
+
+	// TrustLedger is the FULL, hash-chained trust transition history the
+	// original execution's trust evaluation was computed against
+	// (canonical-truth-path mandate, WAVE A items 2 and 7). It is the
+	// ledger itself, not a summary: Replay hands it to
+	// pkg/trust/state.Rebuild, which verifies the chain and refuses a
+	// tampered one, and then RE-EVALUATES trust from scratch inside a
+	// fresh canonical pipeline. That is what makes "tamper the trust
+	// ledger -> replay detects it" a mechanism rather than a promise.
+	//
+	// Carrying the whole ledger rather than only its head is deliberate.
+	// A head alone would let a replay confirm "the head I was told about
+	// is the head I was told about" — the tautology PHASE 10 removed from
+	// ReplayID — without ever recomputing a trust posture.
+	TrustLedger []state.Transition `json:"trust_ledger,omitempty"`
+	// TrustHalfLife and TrustNeutralPrior are the decay parameters the
+	// original trust engine ran under. Trust decay is applied at READ
+	// time and never recorded in a transition, so these are not
+	// recoverable from TrustLedger and must travel with it — see
+	// state.Rebuild's doc comment.
+	TrustHalfLife     uint64  `json:"trust_half_life,omitempty"`
+	TrustNeutralPrior float64 `json:"trust_neutral_prior,omitempty"`
+	// PolicyHash is decision.Policy.Hash() of the policy this case ran
+	// under, committed as its own StagePolicy fingerprint.
+	PolicyHash string `json:"policy_hash,omitempty"`
+	// DurableLedgerHead is the pkg/ledger head (the last durable WAL
+	// record's hash) the original execution committed to. Empty when the
+	// deployment had no durable ledger attached — an honest empty, not a
+	// silently-omitted field.
+	DurableLedgerHead string `json:"durable_ledger_head,omitempty"`
+}
+
+// Bindings are the external states an execution was bound to, beyond
+// its own case input: which identity ledger, which trust ledger, which
+// policy, and which durable event ledger. They are grouped into one
+// struct rather than added as four more positional parameters so a
+// future binding is a field, not another signature break for every
+// caller.
+type Bindings struct {
+	IdentityLedgerHead string
+	TrustLedger        []state.Transition
+	TrustHalfLife      uint64
+	TrustNeutralPrior  float64
+	PolicyHash         string
+	DurableLedgerHead  string
 }
 
 // SchemaVersion for the replay contract (PHASE 51).
@@ -186,12 +280,24 @@ func hashJSON(prefix string, v any) (string, error) {
 // replayable ExecutionRecord. It reads only the RESULT and the INPUT —
 // it does not retain the pipeline.
 func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResult, depLedger []evidencegraph.DependencyRecord, identityLedgerHead string) (ExecutionRecord, error) {
+	return RecordBound(actorID, in, res, depLedger, Bindings{IdentityLedgerHead: identityLedgerHead})
+}
+
+// RecordBound is Record's full form: it additionally captures the trust
+// ledger, policy hash and durable ledger head this execution was bound
+// to (canonical-truth-path mandate, WAVE A item 7). Record delegates to
+// it with only an identity binding, preserving every prior caller's
+// behavior for the fields they do supply.
+func RecordBound(actorID string, in canonical.CaseInput, res *canonical.CanonicalResult, depLedger []evidencegraph.DependencyRecord, b Bindings) (ExecutionRecord, error) {
 	if len(in.Submissions) == 0 {
 		return ExecutionRecord{}, ErrEmptyPackage
 	}
 	rec := ExecutionRecord{
 		ActorID: actorID, CaseInput: in, DependencyLedger: depLedger,
-		SchemaVersion: SchemaVersion, IdentityLedgerHead: identityLedgerHead,
+		SchemaVersion: SchemaVersion, IdentityLedgerHead: b.IdentityLedgerHead,
+		TrustLedger: b.TrustLedger, TrustHalfLife: b.TrustHalfLife,
+		TrustNeutralPrior: b.TrustNeutralPrior, PolicyHash: b.PolicyHash,
+		DurableLedgerHead: b.DurableLedgerHead,
 	}
 	var err error
 	if rec.EvidencePackageID, err = hashJSON("veriqo.evidence_package/v1", in.Submissions); err != nil {
@@ -204,7 +310,7 @@ func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResu
 	}{actorID, in, depLedger}); err != nil {
 		return ExecutionRecord{}, err
 	}
-	rec.Stages = stageFingerprints(res, identityLedgerHead)
+	rec.Stages = stageFingerprints(res, rec)
 	rec.OriginalResultHash = resultHash(rec.Stages)
 	return rec, nil
 }
@@ -224,7 +330,13 @@ func Record(actorID string, in canonical.CaseInput, res *canonical.CanonicalResu
 // reproduces the identical fingerprint and a tampered one does not,
 // the exact same mechanism CaseInput tampering already relies on via
 // resultHash comparison against the ORIGINAL committed hash.
-func stageFingerprints(res *canonical.CanonicalResult, identityLedgerHead string) []StageResult {
+// The `bound` parameter carries the external bindings this execution
+// was tied to. Record passes the record it is building; Replay passes
+// the record it read off the (possibly tampered) package, with
+// TrustLedger REPLACED by the ledger the rebuilt engine independently
+// verified — so an untampered round trip reproduces identical
+// fingerprints and a tampered one does not.
+func stageFingerprints(res *canonical.CanonicalResult, bound ExecutionRecord) []StageResult {
 	h := func(prefix string, v any) string {
 		s, err := hashJSON(prefix, v)
 		if err != nil {
@@ -271,7 +383,16 @@ func stageFingerprints(res *canonical.CanonicalResult, identityLedgerHead string
 			string(res.Certificate.RiskLabel), res.Certificate.RiskScore,
 			string(res.Certificate.DecisionAction), res.Certificate.DependencyRootHash,
 			res.Certificate.MaxDependencyDiscount, res.Certificate.IndependentFamilies})},
-		{StageIdentity, h(StageIdentity, identityLedgerHead)},
+		{StageIdentity, h(StageIdentity, bound.IdentityLedgerHead)},
+		// StageTrust fingerprints the trust evaluation the pipeline
+		// actually produced for this run — including its LedgerHead,
+		// PolicyHash and every per-source posture — NOT the ledger the
+		// package claims. Replay recomputes res.Trust from a rebuilt,
+		// chain-verified engine, so this fingerprint is a real second
+		// computation, not an echo.
+		{StageTrust, h(StageTrust, res.Trust)},
+		{StagePolicy, h(StagePolicy, bound.PolicyHash)},
+		{StageDurableLedger, h(StageDurableLedger, bound.DurableLedgerHead)},
 	}
 }
 
@@ -341,16 +462,45 @@ func (Engine) Replay(pkg ReplayPackage) (VerificationCertificate, error) {
 		return VerificationCertificate{}, err
 	}
 
-	// 3. Fresh engines. No access to the originals.
+	// 3. Independently rebuild the TRUST ledger before using it, exactly
+	//    the way step 1 rebuilds the dependency ledger and for the same
+	//    reason: a replay that trusts a tampered trust ledger is not a
+	//    verification. state.Rebuild verifies the whole hash chain and
+	//    refuses a ledger whose index, prev-hash or content hash has been
+	//    altered anywhere, so a tampered trust history produces an error
+	//    here rather than a plausible-looking verdict.
+	//
+	//    An execution recorded WITHOUT a trust ledger (a legacy export, or
+	//    a pipeline with no trust engine) leaves rebuiltTrust nil, and the
+	//    fresh pipeline below keeps its own empty trust engine — which
+	//    reproduces the original's "no transitions" evaluation exactly.
+	var rebuiltTrust *state.Engine
+	if len(exec.TrustLedger) > 0 {
+		halfLife, prior := exec.TrustHalfLife, exec.TrustNeutralPrior
+		rebuiltTrust, err = state.Rebuild(exec.TrustLedger, halfLife, prior)
+		if err != nil {
+			return VerificationCertificate{}, fmt.Errorf("%w: %v", ErrTrustLedgerTampered, err)
+		}
+	}
+
+	// 4. Fresh engines. No access to the originals.
 	p := canonical.NewPipeline(nil)
 	p.Dependencies = rebuilt
+	if rebuiltTrust != nil {
+		p.TrustState = rebuiltTrust
+	} else if exec.TrustHalfLife > 0 {
+		// No transitions, but the original's decay parameters are known:
+		// honour them so an empty-ledger replay is evaluated under the
+		// same trust model rather than NewPipeline's defaults.
+		p.TrustState = state.NewEngine(exec.TrustHalfLife, exec.TrustNeutralPrior)
+	}
 
 	res, err := p.RunCanonical(exec.ActorID, caseIn)
 	if err != nil {
 		return VerificationCertificate{}, fmt.Errorf("replay: re-execution failed: %w", err)
 	}
 
-	replayStages := stageFingerprints(res, exec.IdentityLedgerHead)
+	replayStages := stageFingerprints(res, exec)
 	cert := VerificationCertificate{
 		ExecutionID: exec.ExecutionID, EvidencePackageID: exec.EvidencePackageID,
 		ReplayPackageID: pkg.ReplayPackageID, OriginalResultHash: exec.OriginalResultHash,
