@@ -46,9 +46,13 @@ func TestRWC001AdversarialCandidates(t *testing.T) {
 				t.Fatalf("Run: %v", err)
 			}
 
-			verdict, warn := InterpretVerdict(cr, res.Lifecycle.Canonical.Decision)
-			if warn != "" {
-				t.Errorf("consistency warning: %s", warn)
+			// R24: the verdict is read off the result, where rwc.Run
+			// derived it from the NATIVE decision.Action. cr is used only
+			// for the diagnostic message below and for the cross-check
+			// rwc.Run already performed.
+			verdict := res.Verdict
+			if res.ConstraintWarning != "" {
+				t.Errorf("constraint cross-check warning: %s", res.ConstraintWarning)
 			}
 			if verdict != want[c.ID] {
 				t.Errorf("candidate %s: got verdict %s, want %s (violations=%v unresolved=%v decision_action=%s risk_score=%.4f)",

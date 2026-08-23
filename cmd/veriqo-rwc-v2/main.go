@@ -211,12 +211,17 @@ func run(args []string) error {
 
 		switch c.Kind {
 		case rwc.KindVesselPortSuitability:
-			verdict, warn := rwc.InterpretVerdict(c.Constraint, res.Lifecycle.Canonical.Decision)
-			rec.Verdict = string(verdict)
-			rec.ConsistencyWarn = warn
+			// R24 (canonical-truth-path mandate, WAVE A item 1): the
+			// verdict is read off res, where rwc.Run already derived it
+			// from the NATIVE decision.Action. This command no longer
+			// computes a verdict at all -- it cannot, because
+			// rwc.InterpretVerdict no longer exists and its replacement
+			// does not accept a ConstraintResult.
+			rec.Verdict = string(res.Verdict)
+			rec.ConsistencyWarn = res.ConstraintWarning
 			rec.HardViolations = c.Constraint.HardViolations
 			rec.Unresolved = c.Constraint.Unresolved
-			if warn != "" {
+			if res.ConstraintWarning != "" {
 				allPass = false
 			}
 		case rwc.KindProvenanceClaim:
@@ -250,14 +255,25 @@ func run(args []string) error {
 				"re-derivable via Fusion.VerifyChain() while the process lives, and gone when it exits",
 		}
 		trustResults[c.ID] = map[string]any{
-			"provenance_status":             res.Lifecycle.Canonical.Provenance.Status,
-			"provenance_score":              res.Lifecycle.Canonical.Provenance.Score,
-			"provenance_shared_ancestors":   res.Lifecycle.Canonical.Provenance.SharedAncestors,
-			"provenance_evidence_ids":       res.Lifecycle.Canonical.Provenance.EvidenceIDs,
-			"risk_label":                    res.Lifecycle.Canonical.Risk.Label,
-			"risk_score":                    res.Lifecycle.Canonical.Risk.Score,
-			"risk_breakdown":                res.Lifecycle.Canonical.Risk.Breakdown,
-			"arbitration_winner_confidence": res.Lifecycle.Canonical.Arbitration.WinnerConfidence,
+			"provenance_status": res.Lifecycle.Canonical.Provenance.Status,
+			// R24 (mandate section IV): the raw score is reported only
+			// alongside the fields that make it readable, and the
+			// DISPLAY form is what a dashboard must show -- it renders
+			// SCORE_NOT_INTERPRETABLE_WITHOUT_STATUS whenever the
+			// assessment does not actually support an independence
+			// reading, which is every case in this corpus.
+			"provenance_score":                res.Lifecycle.Canonical.Provenance.Score,
+			"provenance_score_display":        res.Lifecycle.Canonical.Provenance.ScoreDisplay(),
+			"provenance_pair_count":           res.Lifecycle.Canonical.Provenance.PairCount,
+			"provenance_basis":                res.Lifecycle.Canonical.Provenance.Basis,
+			"provenance_attestation_complete": res.Lifecycle.Canonical.Provenance.AttestationComplete,
+			"provenance_verified_independent": res.Lifecycle.Canonical.Provenance.IsVerifiedIndependent(),
+			"provenance_shared_ancestors":     res.Lifecycle.Canonical.Provenance.SharedAncestors,
+			"provenance_evidence_ids":         res.Lifecycle.Canonical.Provenance.EvidenceIDs,
+			"risk_label":                      res.Lifecycle.Canonical.Risk.Label,
+			"risk_score":                      res.Lifecycle.Canonical.Risk.Score,
+			"risk_breakdown":                  res.Lifecycle.Canonical.Risk.Breakdown,
+			"arbitration_winner_confidence":   res.Lifecycle.Canonical.Arbitration.WinnerConfidence,
 		}
 		decisionResults[c.ID] = map[string]any{
 			"action":        res.DecisionAction,

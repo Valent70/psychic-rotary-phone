@@ -155,6 +155,14 @@ func buildVesselPortCase(caseID string, v Vessel, p Port, portLabel string, cr C
 		PatternScore: cr.ViolationRatio(),
 		PriceAnomaly: cr.ViolationRatio(), // see policy.go doc comment: single composite RWC signal fed to both risk-model input slots
 		Tick:         tick,
+		// Constraint is carried so Run can compute the CROSS-CHECK
+		// (ConstraintCrossCheck). Since R24 it feeds nothing in the
+		// verdict path -- the verdict comes from the native
+		// decision.Action alone. The constraint findings still feed the
+		// engine, but they do so through PatternScore/PriceAnomaly above,
+		// which is the only route by which they have ever legitimately
+		// influenced an outcome.
+		Constraint: cr,
 	}
 	return req, nil
 }

@@ -44,14 +44,27 @@ import (
 
 // Verdict is the RWC-domain decision class the corpus requires.
 //
-// HONEST SCOPE: a Verdict is computed by InterpretVerdict from the
-// evidence-derived ConstraintResult, and the native decision.Decision is
-// used to CROSS-CHECK it, not to produce it.
-// The native engine is always run first (Run is the only way to obtain a
-// decision.Decision here), and a disagreement between the two is
-// surfaced, but the mapping from constraint findings to PASS/FAIL/
-// CONDITIONAL is this package's own arithmetic. Do not read a Verdict as
-// "the VERIQO decision engine said PASS".
+// SCOPE, CORRECTED IN ROUND R24 (canonical-truth-path mandate, section
+// II). This doc comment previously read, accurately for its time:
+//
+//	"a Verdict is computed by InterpretVerdict from the evidence-derived
+//	ConstraintResult, and the native decision.Decision is used to
+//	CROSS-CHECK it, not to produce it. ... Do not read a Verdict as 'the
+//	VERIQO decision engine said PASS'."
+//
+// That is no longer the shape of this package. A Verdict is now derived
+// from the native pkg/moat/decision.Engine's own decision.Action by
+// InterpretNativeDecision, under an explicit, hashable VerdictPolicy
+// (see verdict.go). The constraint arithmetic feeds the engine — it
+// computes the PatternScore/PriceAnomaly the risk model scores — and
+// then CROSS-CHECKS the result. It cannot select an outcome: no
+// function in this package returns a Verdict from a ConstraintResult.
+//
+// So a Verdict MAY now be read as "the VERIQO decision engine reached
+// this action, and this corpus policy maps that action to this class".
+// It may still NOT be read as a claim about the real world: what the
+// engine reasoned over is a broker's declaration, not an observation
+// (see ProvenanceStatus below and EpistemicKindOf).
 type Verdict string
 
 const (

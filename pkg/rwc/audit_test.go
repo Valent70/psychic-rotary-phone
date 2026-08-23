@@ -12,32 +12,33 @@ import (
 	"context"
 	"testing"
 
+	"errors"
+
 	"veriqo/pkg/moat/decision"
 	"veriqo/veriqo/kernel"
 )
 
-// TestAuditVerdictIsProducibleWithoutTheNativeEngine is audit section 2's
-// FALSE-POSITIVE finding, demonstrated rather than described.
+// TestAuditVerdictNowRequiresTheNativeEngine is the RE-DERIVED form of
+// audit section 2's FALSE-POSITIVE finding.
 //
-// InterpretVerdict returns the same Verdict when handed a zero-valued
-// decision.Decision — i.e. when no native engine ran at all — as when
-// handed the real one. The verdict is a pure function of the constraint
-// evaluation. The native decision only ever affects the returned
-// consistencyWarning.
+// WHAT R23 FOUND, and demonstrated with a live test: InterpretVerdict
+// returned the SAME Verdict when handed a zero-valued decision.Decision
+// — i.e. when no native engine had run at all — as when handed the real
+// one. The verdict was a pure function of the constraint arithmetic;
+// the native decision affected only a warning string.
 //
-// This is not a bug to be fixed here; it is the honest shape of the
-// adapter, and it is why Verdict's doc comment forbids describing a
-// verdict as the decision engine's output. What makes the pipeline safe
-// in practice is the SECOND half of this test: the warning does fire, and
-// every real caller treats it as a failure.
-func TestAuditVerdictIsProducibleWithoutTheNativeEngine(t *testing.T) {
+// The canonical-truth-path round (WAVE A item 1 / mandate section II)
+// inverted that chain. This test now pins the three properties the
+// mandate requires, each of which was demonstrably false in R23.
+func TestAuditVerdictNowRequiresTheNativeEngine(t *testing.T) {
 	k, err := kernel.New()
 	if err != nil {
 		t.Fatalf("kernel.New: %v", err)
 	}
 	defer k.Shutdown() //nolint:errcheck // test teardown
 
-	// Candidate B: a hard LOA violation, so the honest verdict is FAIL.
+	// Candidate B: a hard LOA violation, so the native engine ESCALATEs
+	// and the corpus verdict is FAIL.
 	req, cr, err := BuildRWC001Case(RWC001Candidates()[1], 1)
 	if err != nil {
 		t.Fatalf("BuildRWC001Case: %v", err)
@@ -46,35 +47,121 @@ func TestAuditVerdictIsProducibleWithoutTheNativeEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
+	policy := DefaultVerdictPolicy()
 
-	real, realWarn := InterpretVerdict(cr, res.Lifecycle.Canonical.Decision)
-	none, noneWarn := InterpretVerdict(cr, decision.Decision{})
-	wrongDec := res.Lifecycle.Canonical.Decision
-	wrongDec.Action = decision.ActionMonitor
-	wrong, wrongWarn := InterpretVerdict(cr, wrongDec)
-
-	if real != VerdictFail {
-		t.Fatalf("control: got %s, want FAIL", real)
+	if res.Verdict != VerdictFail {
+		t.Fatalf("control verdict = %s, want FAIL", res.Verdict)
 	}
-	if none != real || wrong != real {
-		t.Fatalf("the verdict DID vary with the decision handed in (real=%s zero=%s wrong=%s). "+
-			"If InterpretVerdict has been changed to consume dec, audit section 2 and Verdict's "+
-			"doc comment must both be re-derived — this is a material change, not a refinement",
-			real, none, wrong)
+	if res.DecisionAction != string(decision.ActionEscalate) {
+		t.Fatalf("control native action = %s, want ESCALATE", res.DecisionAction)
+	}
+	if res.ConstraintWarning != "" {
+		t.Errorf("a correctly wired run produced a cross-check warning: %s", res.ConstraintWarning)
 	}
 
-	// The bypass is detectable, and this is the only thing that makes it
-	// safe. Both the corpus test and cmd/veriqo-rwc-v2 treat a non-empty
-	// warning as a failure.
-	if realWarn != "" {
-		t.Errorf("a correctly wired run produced a consistency warning: %s", realWarn)
+	// PROPERTY 1 — "Jika Native Decision.Action berubah, Final Verdict
+	// berubah." The constraint findings are held FIXED across this loop;
+	// only the action varies.
+	real := res.Lifecycle.Canonical.Decision
+	evidence := res.Lifecycle.Canonical.Arbitration.EvidenceCount
+	for action, want := range map[decision.Action]Verdict{
+		decision.ActionEscalate: VerdictFail,
+		decision.ActionFlag:     VerdictConditional,
+		decision.ActionMonitor:  VerdictPass,
+	} {
+		moved := real
+		moved.Action = action
+		got, err := InterpretNativeDecision(moved, evidence, policy)
+		if err != nil {
+			t.Fatalf("InterpretNativeDecision(%s): %v", action, err)
+		}
+		if got != want {
+			t.Errorf("native action %s produced verdict %s, want %s — the verdict is not tracking "+
+				"the native decision", action, got, want)
+		}
 	}
-	if noneWarn == "" {
-		t.Error("a verdict produced with NO native decision raised no warning — the bypass would " +
-			"then be undetectable, which is the condition audit section 2 says must not hold")
+
+	// PROPERTY 2 — "Jika native decision engine dihapus: No final
+	// verdict." A zero-valued Decision is exactly what "no engine ran"
+	// looks like, and it must yield an ERROR, not a verdict derived from
+	// the constraint findings that are still sitting right there.
+	if v, err := InterpretNativeDecision(decision.Decision{}, evidence, policy); err == nil {
+		t.Errorf("a zero-valued decision produced verdict %s; R23's finding is back", v)
+	} else if !errors.Is(err, ErrNoNativeDecision) {
+		t.Errorf("error = %v, want ErrNoNativeDecision", err)
 	}
-	if wrongWarn == "" {
-		t.Error("a verdict produced against a contradicting native decision raised no warning")
+	// And the constraint result is genuinely still capable of implying
+	// FAIL, so property 2 is not passing merely because there was
+	// nothing to fall back TO.
+	if len(cr.HardViolations) == 0 {
+		t.Error("this case has no hard violations, so property 2 is not being exercised")
+	}
+
+	// PROPERTY 3 — "Jika policy mapping berubah: Decision root berubah."
+	inverted := DefaultVerdictPolicy()
+	inverted.Name = "rwc.verdict_mapping_inverted"
+	inverted.Mapping[decision.ActionEscalate] = VerdictConditional
+	invertedVerdict, err := InterpretNativeDecision(real, evidence, inverted)
+	if err != nil {
+		t.Fatalf("InterpretNativeDecision under the inverted policy: %v", err)
+	}
+	if invertedVerdict == res.Verdict {
+		t.Error("changing the policy mapping did not change the verdict")
+	}
+	rootA := DecisionRoot(res.Lifecycle.Execution.ExecutionRootHash, real.Action, policy, res.Verdict)
+	rootB := DecisionRoot(res.Lifecycle.Execution.ExecutionRootHash, real.Action, inverted, invertedVerdict)
+	if rootA != rootB && rootA != res.DecisionRoot {
+		t.Errorf("CaseResult.DecisionRoot %s is not the root its own fields recompute to (%s)",
+			res.DecisionRoot, rootA)
+	}
+	if rootA == rootB {
+		t.Error("changing the policy mapping did not change the decision root")
+	}
+
+	// PROPERTY 4 — an action the policy does not map fails CLOSED rather
+	// than defaulting to PASS.
+	unmapped := real
+	unmapped.Action = decision.Action("SEIZE_THE_VESSEL")
+	if v, err := InterpretNativeDecision(unmapped, evidence, policy); err == nil {
+		t.Errorf("an unmapped native action produced verdict %s instead of an error", v)
+	} else if !errors.Is(err, ErrUnmappedAction) {
+		t.Errorf("error = %v, want ErrUnmappedAction", err)
+	}
+}
+
+// TestAuditAdapterCannotReachAVerdictWithoutTheEngine is the structural
+// half of the same finding: R23's bypass existed because a function
+// taking a ConstraintResult could return a Verdict. That is now a
+// compile-time impossibility, and this test states the invariant so a
+// future change that reintroduces such a function is a visible diff
+// rather than a silent regression.
+//
+// It asserts on the ONE property that matters and that a reader can
+// check by inspection: the verdict-producing function's signature does
+// not mention ConstraintResult, and the constraint-consuming function
+// does not return a Verdict.
+func TestAuditAdapterCannotReachAVerdictWithoutTheEngine(t *testing.T) {
+	// InterpretNativeDecision's signature: (decision.Decision, int,
+	// VerdictPolicy) -> (Verdict, error). Assigning it to this typed
+	// variable fails to compile if anyone widens it to take constraint
+	// findings.
+	var verdictProducer func(decision.Decision, int, VerdictPolicy) (Verdict, error) = InterpretNativeDecision
+	// ConstraintCrossCheck's signature: (ConstraintResult,
+	// decision.Decision) -> string. It cannot return a Verdict.
+	var crossCheck func(ConstraintResult, decision.Decision) string = ConstraintCrossCheck
+
+	if verdictProducer == nil || crossCheck == nil {
+		t.Fatal("unreachable; the assignments above exist for their compile-time effect")
+	}
+
+	// And the runtime half: a cross-check over findings that imply FAIL,
+	// against an engine that said MONITOR, produces a WARNING — never a
+	// verdict — so the arithmetic's opinion cannot become the answer.
+	cr := ConstraintResult{Evaluated: 2, HardViolations: []string{"LOA"}}
+	warn := crossCheck(cr, decision.Decision{Action: decision.ActionMonitor})
+	if warn == "" {
+		t.Error("a contradicting native decision raised no cross-check warning; the wiring defect " +
+			"R23 was able to detect would now be invisible")
 	}
 }
 

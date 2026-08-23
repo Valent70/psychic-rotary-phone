@@ -59,7 +59,7 @@ func TestRWC001MutationChangesDecisionOnlyWhenExpected(t *testing.T) {
 		}
 		defer k.Shutdown()
 
-		req, cr, err := BuildVesselPortCase("MUTATION-TEST", v, p, "MUTATED_PORT", 1)
+		req, _, err := BuildVesselPortCase("MUTATION-TEST", v, p, "MUTATED_PORT", 1)
 		if err != nil {
 			t.Fatalf("BuildVesselPortCase: %v", err)
 		}
@@ -67,11 +67,14 @@ func TestRWC001MutationChangesDecisionOnlyWhenExpected(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Run: %v", err)
 		}
-		verdict, warn := InterpretVerdict(cr, res.Lifecycle.Canonical.Decision)
-		if warn != "" {
-			t.Errorf("consistency warning: %s", warn)
+		// R24: the verdict now comes from the native decision.Action via
+		// rwc.Run. That makes this mutation suite strictly stronger than
+		// it was: a mutation that moves the verdict must have moved the
+		// native engine's own action to do so.
+		if res.ConstraintWarning != "" {
+			t.Errorf("constraint cross-check warning: %s", res.ConstraintWarning)
 		}
-		return verdict
+		return res.Verdict
 	}
 
 	t.Run("baseline_is_control_PASS", func(t *testing.T) {

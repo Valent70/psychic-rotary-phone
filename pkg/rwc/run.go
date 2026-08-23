@@ -29,6 +29,19 @@ type CaseRequest struct {
 	PatternScore  float64
 	PriceAnomaly  float64
 	Tick          uint64
+
+	// VerdictPolicy is the mapping from the native decision.Action onto
+	// the corpus verdict vocabulary. Zero value means
+	// DefaultVerdictPolicy. It is a REQUEST field rather than a package
+	// constant so a test can prove that changing the mapping changes the
+	// verdict and the decision root — the mandate's third proof
+	// obligation (section II).
+	VerdictPolicy VerdictPolicy
+	// Constraint is the constraint evaluation this case's
+	// PatternScore/PriceAnomaly were derived from. It is carried purely
+	// so Run can compute ConstraintCrossCheck; nothing in the verdict
+	// path reads it. A zero value simply produces no cross-check.
+	Constraint ConstraintResult
 }
 
 // CaseResult is one case's outcome, carrying every hash/ID the RWC
@@ -60,6 +73,30 @@ type CaseResult struct {
 
 	DecisionAction string // decision.Action, verbatim from the native engine (MONITOR/FLAG/ESCALATE)
 	RiskScore      float64
+
+	// Verdict is the corpus-vocabulary outcome, and since round R24 it is
+	// derived from DecisionAction and nothing else (see verdict.go). Run
+	// fails rather than returning a CaseResult with an empty Verdict: a
+	// case that reached no native decision has no verdict, which is the
+	// mandate's "if the native decision engine is removed: no final
+	// verdict".
+	Verdict Verdict
+	// VerdictPolicyHash is the mapping that produced Verdict, and
+	// DecisionRoot commits to the execution root, the action, that
+	// mapping and the verdict together — so "changing the policy mapping
+	// changes the decision root" is a checkable property of this struct.
+	VerdictPolicyHash string
+	DecisionRoot      string
+	// ConstraintWarning is non-empty when the native action disagrees
+	// with what the constraint findings implied. It is a diagnostic, not
+	// an input: no field above is derived from it. Every caller treats a
+	// non-empty warning as a failure.
+	ConstraintWarning string
+	// HumanReviewRequired is the release condition the native trust
+	// evaluation produced. It is carried here because a Verdict of PASS
+	// that may not be released without review is not the same artifact as
+	// a PASS that may.
+	HumanReviewRequired bool
 
 	// Correlation is the seven-identifier join key pkg/lifecycle produced
 	// for this exact run (pkg/platform/correlation.Key). It is the real
@@ -118,8 +155,9 @@ func Run(ctx context.Context, k *kernel.Kernel, req CaseRequest) (*CaseResult, e
 		Tick:               req.Tick,
 	}
 	// No MinSources gating: RWC v2 reports INSUFFICIENT_EVIDENCE
-	// explicitly (see InterpretVerdict) rather than hard-failing the
-	// call, which is what lifecycle.ErrPlanUnsatisfied would do.
+	// explicitly (see VerdictPolicy.InsufficientEvidenceBelowSources)
+	// rather than hard-failing the call, which is what
+	// lifecycle.ErrPlanUnsatisfied would do.
 	plan := lifecycle.PlanEvidence(intent, nil)
 
 	caseIn := canonical.CaseInput{
@@ -136,17 +174,39 @@ func Run(ctx context.Context, k *kernel.Kernel, req CaseRequest) (*CaseResult, e
 		return nil, fmt.Errorf("rwc: RunUnified(%s): %w", req.CaseID, err)
 	}
 
+	// --- The verdict, derived from the NATIVE decision -----------------
+	// WAVE A item 1. The action below is the one pkg/execution's DECISION
+	// stage recorded, which is pkg/moat/decision.Engine's own output for
+	// this case. Nothing in this function can reach a verdict any other
+	// way: InterpretNativeDecision does not accept a ConstraintResult,
+	// and a missing action is an error rather than a fallback.
+	verdictPolicy := req.VerdictPolicy
+	if verdictPolicy.Mapping == nil {
+		verdictPolicy = DefaultVerdictPolicy()
+	}
+	nativeDecision := lcRes.Canonical.Decision
+	verdict, err := InterpretNativeDecision(nativeDecision,
+		lcRes.Canonical.Arbitration.EvidenceCount, verdictPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("rwc: interpreting the native decision for %s: %w", req.CaseID, err)
+	}
+
 	return &CaseResult{
-		CaseID:          req.CaseID,
-		InputHash:       inputHash,
-		ExecutionID:     lcRes.Execution.Trace.Context.ExecutionID,
-		CanonicalHash:   lcRes.Certificate.Canonical.Hash,
-		CertificateHash: lcRes.Certificate.Hash,
-		LedgerAnchor:    k.Canonical.Fusion.Head(),
-		DecisionAction:  lcRes.Execution.Decision,
-		RiskScore:       lcRes.Canonical.Decision.RiskScore,
-		Correlation:     lcRes.Correlation,
-		LineageCaseID:   lcRes.CaseID,
-		Lifecycle:       lcRes,
+		Verdict:             verdict,
+		VerdictPolicyHash:   verdictPolicy.Hash(),
+		DecisionRoot:        DecisionRoot(lcRes.Execution.ExecutionRootHash, nativeDecision.Action, verdictPolicy, verdict),
+		ConstraintWarning:   ConstraintCrossCheck(req.Constraint, nativeDecision),
+		HumanReviewRequired: lcRes.HumanReviewRequired,
+		CaseID:              req.CaseID,
+		InputHash:           inputHash,
+		ExecutionID:         lcRes.Execution.Trace.Context.ExecutionID,
+		CanonicalHash:       lcRes.Certificate.Canonical.Hash,
+		CertificateHash:     lcRes.Certificate.Hash,
+		LedgerAnchor:        k.Canonical.Fusion.Head(),
+		DecisionAction:      lcRes.Execution.Decision,
+		RiskScore:           lcRes.Canonical.Decision.RiskScore,
+		Correlation:         lcRes.Correlation,
+		LineageCaseID:       lcRes.CaseID,
+		Lifecycle:           lcRes,
 	}, nil
 }

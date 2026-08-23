@@ -39,47 +39,19 @@ var VesselPortPolicy = decision.Policy{
 	EscalateThreshold: 0.7, // crosses at ViolationRatio=1.0 (hard violation)
 }
 
-// InterpretVerdict projects the evidence-derived constraint findings onto
-// the PASS/FAIL/CONDITIONAL/INSUFFICIENT_EVIDENCE vocabulary the corpus
-// requires. It contains no per-case branching (no vessel name, no case
-// ID) — only counts already computed by EvaluateVesselAtPort.
+// InterpretVerdict was REMOVED in round R24 (canonical-truth-path
+// mandate, WAVE A item 1 / section II). It projected the constraint
+// findings onto PASS/FAIL/CONDITIONAL using only `cr`, which meant the
+// adapter could produce a final verdict with no native decision at all
+// — the exact regression the mandate names. Its two replacements live
+// in verdict.go and split the two jobs it had conflated:
 //
-// WHAT dec IS AND IS NOT USED FOR. dec is the REAL decision.Engine
-// output for the same case, whose RiskScore was computed FROM the same
-// ConstraintResult's ViolationRatio (see buildVesselPortCase). It is
-// used here to CROSS-CHECK the verdict, and a mismatch is returned as a
-// non-empty consistencyWarning so a genuine wiring bug (e.g.
-// PatternScore not actually reaching the engine) surfaces instead of
-// being silently absorbed by two disconnected computations that happen
-// to agree. It is NOT what selects the verdict: the switch below reads
-// only cr. A caller must therefore not describe a Verdict as the
-// decision engine's own output. See Verdict's doc comment in types.go.
-func InterpretVerdict(cr ConstraintResult, dec decision.Decision) (verdict Verdict, consistencyWarning string) {
-	switch {
-	case cr.Evaluated == 0:
-		verdict = VerdictInsufficientEvidence
-	case len(cr.HardViolations) > 0:
-		verdict = VerdictFail
-	case len(cr.Unresolved) > 0:
-		verdict = VerdictConditional
-	default:
-		verdict = VerdictPass
-	}
-
-	wantAction := decision.ActionMonitor
-	switch {
-	case len(cr.HardViolations) > 0:
-		wantAction = decision.ActionEscalate
-	case len(cr.Unresolved) > 0:
-		wantAction = decision.ActionFlag
-	}
-	if cr.Evaluated > 0 && dec.Action != wantAction {
-		consistencyWarning = "native decision.Action=" + string(dec.Action) +
-			" does not match the action expected from ConstraintResult (" + string(wantAction) +
-			") — PatternScore/PriceAnomaly wiring should be checked"
-	}
-	return verdict, consistencyWarning
-}
+//	InterpretNativeDecision(dec, evidenceCount, policy) -> Verdict
+//	ConstraintCrossCheck(cr, dec)                       -> warning
+//
+// It is deliberately not kept as a deprecated shim. A shim would leave
+// a compiling call site that still bypasses the native engine, and the
+// whole point of this item is that no such call site can exist.
 
 // ClassifyProvenance derives the claim/corroboration status from the REAL
 // outputs of pkg/moat/contradiction (res.Truth.Observation.Contradiction)
