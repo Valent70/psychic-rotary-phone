@@ -2,4 +2,4 @@ gate: policy_registry_usage_coverage
 command: go test -run PolicyRegistryUsageCoverage ./pkg/execution/
 exit: 0
 ---
-ok  	veriqo/pkg/execution	0.005s
+ok  	veriqo/pkg/execution	(cached)

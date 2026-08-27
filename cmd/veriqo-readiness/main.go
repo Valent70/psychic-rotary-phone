@@ -731,6 +731,15 @@ func main() {
 				pass:     summary.HumanReviewPass(),
 				failures: summary.HumanReviewFailures,
 			},
+			{
+				id: "insurance_cold_replay",
+				desc: "a case reconstructed from NOTHING but its own serialised snapshot -- no reference to the " +
+					"live in-memory case -- reproduces the exact evidence root hash, preservation hash, quantum " +
+					"result and resolved policy version the live drive produced (Final Design SS20 'C5' / spec SS73)",
+				exit:     "cold replay reproduces the live result on all seven synthetic cases",
+				pass:     summary.ColdReplayPass(),
+				failures: summary.ColdReplayFailures,
+			},
 		}
 
 		for _, g := range gates {

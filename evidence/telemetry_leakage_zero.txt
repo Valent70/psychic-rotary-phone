@@ -2,4 +2,4 @@ gate: telemetry_leakage_zero
 command: go test -run Leak|Redact|Sensitive|Confidential ./pkg/platform/telemetry/
 exit: 0
 ---
-ok  	veriqo/pkg/platform/telemetry	0.009s
+ok  	veriqo/pkg/platform/telemetry	(cached)

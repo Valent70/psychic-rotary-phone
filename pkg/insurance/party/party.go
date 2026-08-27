@@ -79,6 +79,31 @@ const (
 	RoleRespondent        Role = "RESPONDENT"
 	RoleRegulator         Role = "REGULATOR"
 	RoleAuditor           Role = "AUDITOR"
+
+	// The roles below complete the real-world insurance network the
+	// VERIQO Master Closure Mandate §10 requires by name: "Insured ->
+	// Broker -> Coverholder/MGA -> Underwriter -> Insurer -> Co-insurer
+	// -> Reinsurer -> P&I Club -> Claims Handler -> Loss Adjuster ->
+	// Surveyor -> Average Adjuster -> Expert -> Salvage Party -> Recovery
+	// Party -> Lawyer -> ... -> Repairer -> Bank/Trade Finance -> Other
+	// responsible counterparties". Insured, Broker, P&I Club, Loss
+	// Adjuster, Surveyor and Legal Counsel already existed above; the
+	// nine below did not and are added now rather than mislabelled onto
+	// an existing role, for the same reason the block above gives.
+	// ClaimsHandler is deliberately distinct from LossAdjuster: a claims
+	// handler acts FOR the insurer administering the claim, a loss
+	// adjuster is the (often independent) expert who assesses it — the
+	// mandate names both because they are not the same authority.
+	RoleCoverholderMGA   Role = "COVERHOLDER_MGA"
+	RoleUnderwriter      Role = "UNDERWRITER"
+	RoleCoInsurer        Role = "CO_INSURER"
+	RoleClaimsHandler    Role = "CLAIMS_HANDLER"
+	RoleAverageAdjuster  Role = "AVERAGE_ADJUSTER"
+	RoleExpert           Role = "EXPERT"
+	RoleSalvageParty     Role = "SALVAGE_PARTY"
+	RoleRecoveryParty    Role = "RECOVERY_PARTY"
+	RoleRepairer         Role = "REPAIRER"
+	RoleBankTradeFinance Role = "BANK_TRADE_FINANCE"
 )
 
 var knownRoles = map[Role]bool{
@@ -91,6 +116,10 @@ var knownRoles = map[Role]bool{
 	RoleWarehouse: true, RoleStevedore: true, RoleShipManager: true,
 	RoleManufacturer: true, RoleLogisticsProvider: true, RoleCounterparty: true,
 	RoleRespondent: true, RoleRegulator: true, RoleAuditor: true,
+	RoleCoverholderMGA: true, RoleUnderwriter: true, RoleCoInsurer: true,
+	RoleClaimsHandler: true, RoleAverageAdjuster: true, RoleExpert: true,
+	RoleSalvageParty: true, RoleRecoveryParty: true, RoleRepairer: true,
+	RoleBankTradeFinance: true,
 }
 
 // KnownRoles returns every modelled role in deterministic order.

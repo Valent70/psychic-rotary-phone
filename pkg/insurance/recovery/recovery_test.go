@@ -500,11 +500,18 @@ func TestPotentialResponsiblePartyCategoriesMatchesBlueprintVerbatim(t *testing.
 }
 
 func TestCategoryPartyRoleMapping(t *testing.T) {
-	// Categories with an existing party.Role, per pkg/insurance/party.go.
+	// Every category in the blueprint's §23 list now has a corresponding
+	// party.Role. party.RoleWarehouse and party.RoleManufacturer were
+	// added in a later round than the one that originally wrote this
+	// package (see party.go's own doc comment), which had left
+	// CategoryPartyRole stale until this round's fix — see
+	// CategoryPartyRole's own doc comment for the history.
 	roleCases := map[ResponsiblePartyCategory]party.Role{
 		CategoryCarrier:         party.RoleCarrier,
 		CategoryTerminal:        party.RoleTerminal,
+		CategoryWarehouse:       party.RoleWarehouse,
 		CategoryForwarder:       party.RoleForwarder,
+		CategoryManufacturer:    party.RoleManufacturer,
 		CategorySurveyor:        party.RoleSurveyor,
 		CategoryOtherThirdParty: party.RoleOtherResponsibleParty,
 	}
@@ -521,12 +528,12 @@ func TestCategoryPartyRoleMapping(t *testing.T) {
 		}
 	}
 
-	// Warehouse and Manufacturer have NO corresponding party.Role today
-	// (see package doc and blueprint task instructions point 2) — the
-	// gap must be reported honestly, never silently invented.
-	for _, cat := range []ResponsiblePartyCategory{CategoryWarehouse, CategoryManufacturer} {
-		if _, ok := CategoryPartyRole(cat); ok {
-			t.Fatalf("expected %s to have NO known party.Role (this is a real gap in pkg/insurance/party, not one this package should paper over)", cat)
+	// Every category named in PotentialResponsiblePartyCategories must
+	// now resolve to a role — the roleCases map above is exhaustive over
+	// that list, not a subset chosen for convenience.
+	for _, cat := range PotentialResponsiblePartyCategories() {
+		if _, ok := roleCases[cat]; !ok {
+			t.Fatalf("category %s is not covered by this test's roleCases map", cat)
 		}
 	}
 }

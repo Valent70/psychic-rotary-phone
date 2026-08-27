@@ -46,7 +46,7 @@ and they are carried in `INSURANCE_RESIDUAL_GATE_REGISTER.md`.
 | X-6 | Verification gates §54–§57 | `pkg/insurance/verification/gates.go`, `cmd/veriqo-readiness` | `TestThreeGatesPassOnEveryCase`, `TestHumanReviewGateFailsClosedOnEveryCase`, `TestHumanReviewGateOpensWithARealAuthorization`, `TestARubberStampAuthorizationIsRefused` | Coverage traceability, quantum reproducibility and preservation PASS on all seven cases; human review fails closed without authorization and opens with a complete one; a rubber stamp is refused | R21-6, R21-7 | **VERIFIED** |
 | X-7 | Human-in-the-loop; fail closed when mandatory review is missing | `pkg/insurance/verification`, `pkg/insurance/dossier` | `TestHumanReviewGateFailsClosedOnEveryCase`, `TestDossierHasNoVerdictField` | Finalization is refused while any review question is unaddressed, and the refusal names each one | R21-6 | **VERIFIED** |
 | X-8 | Synthetic case pack CASE-INS-001…007 | `pkg/insurance/casepack` | `TestAllSevenCasesExistAndValidate`, `TestEveryCaseDrivesTheFullFacadePath`, `TestCasesAreDeterministicFixtures`, `TestNoRealWorldEntityAppearsInThePack` | All seven exist, drive end to end through the real facade, reproduce byte-identical content-addressed IDs across runs, and name no real-world entity anywhere in the package source | R21-6 | **VERIFIED** |
-| X-9 | Per-case replay (spec §73, Final Design §20 "C5") | `pkg/replay` exists and is **not** duplicated | — | The canonical replay engine is untouched and no second one was built. A per-case insurance binding to it was **not** implemented this round | — | **OPEN** — see Residual Register |
+| X-9 | Per-case replay (spec §73, Final Design §20 "C5") | `pkg/replay` exists and is **not** duplicated; `pkg/insurance/casepack/replay.go` (R22) adds `Snapshot`/`ReplayFromSnapshot`/`ColdReplay` | `TestColdReplayReproducesIdenticalResultOnEveryCase`, `TestReplayFromSnapshotNeverTouchesTheOriginalCase`, `TestColdReplayDetectsADivergedSnapshot` | A case reconstructed from nothing but its own serialised snapshot reproduces the live evidence root hash, preservation hash, quantum result and resolved policy version on all seven cases; the replay path never references the original in-memory case | R22 | **VERIFIED (R22)** |
 | X-10 | The Final Design §39 forbidden list | whole tree | `TestNoVendorJudgmentOrCompanyIsHardCodedAnywhere`, `TestNoOpaqueConfidenceScoreAnywhereInTheInsuranceDomain`, `TestNoDeterminationFieldAnywhereInTheInsuranceDomain`, `TestAFixtureCaseCanNeverReportAsLive` | No named vendor, real judgment or real company anywhere; no float or confidence field on any exported type; no determination field; a fixture case cannot claim live provenance | R21-6, R21-8 | **VERIFIED** |
 
 ---
@@ -70,14 +70,18 @@ The spec names fifteen items for the first operational release.
 | 11 | Contradiction analysis | `pkg/insurance/contradiction` (adapter over the real `pkg/moat` arbitration engine) | `TestEveryCaseSurfacesItsContradiction` | **VERIFIED** |
 | 12 | Human review | `pkg/insurance/verification` §57 gate + `pkg/governance/hitl` as the canonical authority | `TestHumanReviewGateFailsClosedOnEveryCase` | **VERIFIED** |
 | 13 | Claim dossier | `pkg/insurance/dossier` | `TestDossierHasNoVerdictField`, `TestEveryCaseDossierRequiresReviewAndCarriesNoVerdict` | **VERIFIED** |
-| 14 | Replay | `pkg/replay` (canonical, not duplicated) | — | **OPEN** — the insurance binding is not built |
-| 15 | Verification | `pkg/insurance/verification` (`Manifest` + four gates) | `TestVerifyDetectsAlteredEvidence`, `TestThreeGatesPassOnEveryCase` | **VERIFIED** |
+| 14 | Replay | `pkg/replay` (canonical, not duplicated) + `pkg/insurance/casepack/replay.go` (R22) | `TestColdReplayReproducesIdenticalResultOnEveryCase` | **VERIFIED (R22)** |
+| 15 | Verification | `pkg/insurance/verification` (`Manifest` + five gates, R22 adds `insurance_cold_replay`) | `TestVerifyDetectsAlteredEvidence`, `TestThreeGatesPassOnEveryCase` | **VERIFIED** |
 
-**14 of 15 closed. Item 14 (replay) is honestly OPEN** — see the
-Residual Register. It is recorded as open rather than claimed on the
-strength of "the canonical replay engine exists", because the engine
-existing is not the same fact as an insurance case being replayable
-through it.
+**15 of 15 closed as of R22.** Item 14 (replay) moved from OPEN to
+VERIFIED this round: `pkg/insurance/casepack/replay.go` serialises a
+case to canonical JSON, reconstructs it from those bytes ALONE (no
+reference to the original in-memory value), drives the reconstruction
+through the same production path (`Drive`) a live case takes, and
+compares the two results field by field. This is a real cold replay,
+not a restatement of drive-determinism — see the Residual Register's R22
+closure note for why the earlier round declined to claim this on
+drive-determinism alone.
 
 ---
 
@@ -112,7 +116,7 @@ through it.
 | | Export audit | `preservation.Order.RecordExport` + `TestPerItemEventsRequireACoveredItemAndAnActor` | **VERIFIED** |
 | **Final** | Dossier generated | `TestEveryCaseDrivesTheFullFacadePath` | **VERIFIED** |
 | | Hash manifest generated | `TestEveryCaseDrivesTheFullFacadePath` (manifest verified per case) | **VERIFIED** |
-| | Replay succeeds | — | **OPEN** — no insurance replay binding exists |
+| | Replay succeeds | `TestColdReplayReproducesIdenticalResultOnEveryCase` | **VERIFIED (R22)** — cold replay from a serialised snapshot reproduces the live result on all seven cases |
 | | Independent verification succeeds | `verification.Verify` recomputes the evidence root from the registry alone | **INTERNAL_QUALIFIED** — independently *recomputable*, but not independently *reviewed* |
 
 ---
@@ -130,12 +134,15 @@ through it.
 | Human review passes | **VERIFIED** | Both directions: fails closed, and opens with a complete authorization |
 | Dossier export passes | **VERIFIED** | `TestEveryCaseDrivesTheFullFacadePath` |
 | Independent verification passes | **INTERNAL_QUALIFIED** | Recomputable by any holder of the evidence set; not externally reviewed |
-| Deterministic replay passes | **OPEN** | Drive determinism is proven; cold cross-process replay of an insurance case is not built |
+| Deterministic replay passes | **VERIFIED (R22)** | Cold replay from a serialised snapshot (no reference to the live case) reproduces the evidence root hash, preservation hash, quantum result and resolved policy version, on all seven cases — `insurance_cold_replay` readiness gate |
 | Race / concurrency tests pass | **VERIFIED** | `go test -race -p 1 ./pkg/insurance/...` clean; the `race` gate is VERIFIED in `READINESS_MANIFEST.json` |
 
-**8 VERIFIED, 2 INTERNAL_QUALIFIED, 1 OPEN, 1 BLOCKED-external.** The
-Definition of Done is therefore **not met**, and this document says so
-rather than reporting the eight.
+**9 VERIFIED, 2 INTERNAL_QUALIFIED, 0 OPEN, 1 BLOCKED-external (as of
+R22; was 8/2/1/1).** The Definition of Done is therefore still **not
+met** — one criterion (real historical case replays) is blocked on
+external data that does not exist inside this repository and cannot be
+fabricated to close it — and this document says so rather than reporting
+the nine.
 
 ---
 
@@ -160,10 +167,11 @@ rather than reporting the eight.
 
 ---
 
-## 7. The four registered readiness gates
+## 7. The five registered readiness gates
 
-As regenerated in `READINESS_MANIFEST.json` (58 gates, `race` VERIFIED,
-the eight external blockers semantically unchanged):
+As regenerated in `READINESS_MANIFEST.json` (59 gates as of R22 — was
+58 — `race` VERIFIED, the eight external blockers semantically
+unchanged):
 
 | Gate | Mandatory | Status | What it actually proves |
 |---|---|---|---|
@@ -171,8 +179,9 @@ the eight external blockers semantically unchanged):
 | `insurance_quantum_reproducibility` | yes | VERIFIED | A genuine re-run of `quantum.Compute` produces an identical result on all seven; every non-zero operand cites evidence; a calculation version is declared |
 | `insurance_preservation_chain_integrity` | yes | VERIFIED | All nine §56 checks pass per order, every record is covered, and the case lineage hash chain verifies |
 | `insurance_human_review_enforcement` | yes | VERIFIED | Finalization is refused with no authorization **and** permitted with a complete one — both directions, because a gate that only ever refuses proves nothing |
+| `insurance_cold_replay` | yes | VERIFIED (R22) | A case reconstructed from nothing but its own serialised snapshot reproduces the live evidence root hash, preservation hash, quantum result and resolved policy version, on all seven cases |
 
-**Scope, stated rather than left to be inferred:** all four are
+**Scope, stated rather than left to be inferred:** all five are
 ENGINEERING gates over synthetic cases. They establish nothing about live
 customer data, which remains the `live_data` blocker's business and is
 unaffected by any of them.

@@ -55,9 +55,68 @@ These are engineering work this round did not do. Each says what exists,
 what does not, and why it was not attempted, so the next round starts
 from a fact rather than a re-derivation.
 
+### R22 closure (VERIQO Master Closure Mandate round)
+
+**INS-D1 is now CLOSED.** `pkg/insurance/casepack/replay.go` adds
+`Case.Snapshot()` (canonical JSON), `SnapshotID()` (content address),
+`ReplayFromSnapshot()` (reconstructs a `Case` from bytes ALONE — no
+reference to any prior in-memory value — and drives it through the
+identical production path `Drive()` uses), and `ColdReplay()` /
+`RunColdReplay()`, which run the comparison and report per-field
+divergence. Wired as a fifth mandatory readiness gate,
+`insurance_cold_replay`, registered in `cmd/veriqo-readiness` alongside
+the original four. `TestColdReplayReproducesIdenticalResultOnEveryCase`
+proves it on all seven synthetic cases;
+`TestReplayFromSnapshotNeverTouchesTheOriginalCase` proves the replay
+path is genuinely cold (the original `Case` is scoped out of reach
+before replay runs); `TestColdReplayDetectsADivergedSnapshot` proves the
+comparison is a real check, not a vacuous one. The historical entry
+below is retained for the record of why it was deferred, not because it
+is still accurate.
+
+Three further items this round closed as real engineering (not
+mandated by the two frozen design documents, but by the VERIQO Master
+Closure Mandate's §10, §18 and §20):
+
+- **Real-world insurance network roles** (§10): `pkg/insurance/party`
+  gained ten roles — `COVERHOLDER_MGA`, `UNDERWRITER`, `CO_INSURER`,
+  `CLAIMS_HANDLER`, `AVERAGE_ADJUSTER`, `EXPERT`, `SALVAGE_PARTY`,
+  `RECOVERY_PARTY`, `REPAIRER`, `BANK_TRADE_FINANCE` — completing the
+  mandate's own named chain (Insured → Broker → Coverholder/MGA →
+  Underwriter → Insurer → Co-insurer → Reinsurer → P&I Club → Claims
+  Handler → Loss Adjuster → Surveyor → Average Adjuster → Expert →
+  Salvage Party → Recovery Party → Lawyer → … → Repairer → Bank/Trade
+  Finance). A genuine pre-existing bug was found and fixed in the same
+  pass: `pkg/insurance/recovery.CategoryPartyRole` still reported "no
+  known role" for `Warehouse`/`Manufacturer` after an earlier round had
+  already added `party.RoleWarehouse`/`party.RoleManufacturer` — the two
+  packages had drifted out of sync while both kept passing their own
+  tests. Fixed and covered by `TestCategoryPartyRoleMapping`.
+- **Salvage lifecycle** (§18, and §78's explicit "do not declare the
+  Insurance System complete without Subrogation, Recovery, Salvage"):
+  new package `pkg/insurance/salvage` — damaged asset/cargo, assessment,
+  contractor engagement, evidence linkage, disposal, proceeds, expenses,
+  and a real `NetValue()`/`TotalNetValueForClaim()` computation (evidence-
+  backed, integer minor units, matching `pkg/insurance/quantum`'s own
+  representation) that feeds the "impact on quantum" half of §18 —
+  callers pass the total into `quantum.ComputeInput.Salvage`. 16 tests,
+  including a concurrency test and the same reflection-based
+  no-liability-field / no-opaque-confidence-field checks the rest of the
+  domain uses. Confirmed picked up by `pkg/insurance/guardrails`'
+  whole-tree scan (`TestTheScanReachesEveryInsurancePackage`) with zero
+  forbidden patterns found.
+- **Co-insurance / reinsurance participation** (§20): new file
+  `pkg/insurance/policy/participation.go` adds `Participant` (party,
+  role, fixed-point basis-points share, treaty/facultative basis) on
+  `policy.Version`, with `Reinsurers()`/`CoInsurers()`/
+  `RetainedBasisPoints()` and aggregate validation (co-insured and ceded
+  totals each independently capped at 100%). Additive only: a `Version`
+  with no `Participants` — the common single-insurer case — is unaffected
+  and unchanged.
+
 | # | Item | What exists | What does not | Why not attempted | Final |
 |---|---|---|---|---|---|
-| **INS-D1** | **Per-case insurance replay** (spec §73; Final Design §20 "C5"; MVP §80 item 14) | `pkg/replay` is the canonical full-lifecycle replay engine and was deliberately **not** duplicated. `canonical.Binding.AttachReplay` accepts a real `ReplayPackageID` today, and the seven synthetic cases are proven deterministic across runs | A binding that takes one insurance case and replays it cold, cross-process, to a byte-identical dossier and manifest | Honest scoping. Cold replay of an insurance case needs a serialised case snapshot — evidence set, policy version, rules, calculation version, effective tick — which is a real design decision about what an insurance replay package *is*, not a wiring task. Claiming it on the strength of drive-determinism would have been the exact false green this programme forbids | **DEFERRED** |
+| ~~**INS-D1**~~ | ~~Per-case insurance replay~~ | See "R22 closure" above. | — | — | **CLOSED (R22)** |
 | **INS-D2** | **Case Room API and UI** (Final Design §23 "C8", §28) | `api.Facade` sequences the whole lifecycle and now exposes `Status()`/`Stage()`; every §23 endpoint has a real method behind it | The HTTP surface itself, and the six-panel Case Room | Out of scope for a domain-layer round. The domain must be right before a UI renders it, and `pkg/api` already owns HTTP semantics | **DEFERRED** |
 | **INS-D3** | **Rights-aware source adapters** (Final Design §18 "C3", §26 "C4") | `pkg/connector/{aisstream,sar,bol,insurance,payment}` are the five audited adapters, each parsing a real wire schema and failing closed on malformed input. `evidenceapi.SyntheticDocument` is the new fixture adapter | An insurance-specific adapter set, and the Rights Gate placed *before* a Case Room (there is no Case Room yet) | The adapters exist and are provider-neutral; nothing insurance-specific was missing that could be built without a real feed to shape it | **DEFERRED** |
 | **INS-D4** | **Reserve intelligence** (spec §27, Phase 2 §81) | `pkg/insurance/quantum` computes an indicative value with full operand lineage | Initial / updated / scenario reserves, worst-expected-best cases | Explicitly Phase 2 in the spec's own §81. Not attempted, and not claimed | **DEFERRED (Phase 2)** |
@@ -106,7 +165,8 @@ it being blocked.
 | | Count |
 |---|---|
 | Insurance items **BLOCKED_EXTERNAL** | 6 (INS-E1 … INS-E6) |
-| Insurance items **DEFERRED** | 7 (INS-D1 … INS-D7) |
+| Insurance items **DEFERRED** | 6 (INS-D2 … INS-D7) |
+| Insurance items **CLOSED this round (R22)** | 1 (INS-D1) + 3 not tracked as numbered items (real-world party network, salvage, co/reinsurance participation — see "R22 closure" above) |
 | Insurance items **closed with a stated limitation** | 7 (INS-L1 … INS-L7) |
 | Pre-existing external blockers, unchanged | 8 |
 
@@ -115,9 +175,11 @@ blocked mandatory gate makes the whole verdict not-ready, by design, and
 there are eight.
 
 The insurance domain's own position, stated without inflation: the eight
-frozen domains are implemented and tested; the four insurance gates pass
-as engineering gates over synthetic cases; the Definition of Done in
-Final Design §38 is **not met**, because two of its eleven criteria are
-only internally qualified, one (deterministic replay) is open, and one
-(real historical case replays) is blocked on data that does not exist
-here.
+frozen domains are implemented and tested; the domain now has FIVE
+engineering gates passing over synthetic cases (the original four plus
+`insurance_cold_replay`, closed this round); the Definition of Done in
+Final Design §38 has ten of its eleven criteria met or internally
+qualified — deterministic replay moved from OPEN to VERIFIED this round —
+and the eleventh (real historical case replays) remains genuinely
+blocked on permissioned data that does not exist inside this repository
+and cannot be fabricated to close it.

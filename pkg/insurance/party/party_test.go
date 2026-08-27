@@ -161,16 +161,23 @@ func TestKnownRolesCoversTheBlueprintList(t *testing.T) {
 	//
 	// The count is asserted rather than dropped, so adding a role stays
 	// the deliberate, auditable act this package's own doc comment
-	// describes.
-	const blueprintRoles, r21AddedRoles = 21, 9
-	if got := len(KnownRoles()); got != blueprintRoles+r21AddedRoles {
-		t.Fatalf("expected %d known roles (%d from VICE blueprint §3 plus %d added in R21), got %d",
-			blueprintRoles+r21AddedRoles, blueprintRoles, r21AddedRoles, got)
+	// describes. A further round (the VERIQO Master Closure Mandate §10,
+	// "the real-world insurance network") added ten more: COVERHOLDER_MGA,
+	// UNDERWRITER, CO_INSURER, CLAIMS_HANDLER, AVERAGE_ADJUSTER, EXPERT,
+	// SALVAGE_PARTY, RECOVERY_PARTY, REPAIRER, BANK_TRADE_FINANCE.
+	const blueprintRoles, r21AddedRoles, masterAddedRoles = 21, 9, 10
+	if got := len(KnownRoles()); got != blueprintRoles+r21AddedRoles+masterAddedRoles {
+		t.Fatalf("expected %d known roles (%d from VICE blueprint §3 plus %d added in R21 plus %d added for the "+
+			"real-world insurance network), got %d",
+			blueprintRoles+r21AddedRoles+masterAddedRoles, blueprintRoles, r21AddedRoles, masterAddedRoles, got)
 	}
 	// Each added role must genuinely be recognised, not merely counted.
 	for _, r := range []Role{
 		RoleWarehouse, RoleStevedore, RoleShipManager, RoleManufacturer,
 		RoleLogisticsProvider, RoleCounterparty, RoleRespondent, RoleRegulator, RoleAuditor,
+		RoleCoverholderMGA, RoleUnderwriter, RoleCoInsurer, RoleClaimsHandler,
+		RoleAverageAdjuster, RoleExpert, RoleSalvageParty, RoleRecoveryParty,
+		RoleRepairer, RoleBankTradeFinance,
 	} {
 		if !IsKnownRole(r) {
 			t.Fatalf("role %q is declared but not registered as known", r)

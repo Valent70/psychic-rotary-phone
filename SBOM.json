@@ -10,7 +10,7 @@
     "properties": [
       {
         "name": "go.version",
-        "value": "go1.25.5"
+        "value": "go1.24.7"
       },
       {
         "name": "vcs.commit",

@@ -48,12 +48,16 @@ type Summary struct {
 	CaseCount int           `json:"case_count"`
 	Cases     []CaseOutcome `json:"cases"`
 
-	// The four per-gate verdicts, each DERIVED from the corresponding
+	// The five per-gate verdicts, each DERIVED from the corresponding
 	// failure list below.
 	CoverageTraceabilityFailures   []string `json:"coverage_traceability_failures,omitempty"`
 	QuantumReproducibilityFailures []string `json:"quantum_reproducibility_failures,omitempty"`
 	PreservationFailures           []string `json:"preservation_failures,omitempty"`
 	HumanReviewFailures            []string `json:"human_review_failures,omitempty"`
+	// ColdReplayFailures backs the §20 "C5" / spec §73 gate: MVP §80
+	// item 14, closed this round (see replay.go). Every failure here is
+	// one case's ColdReplayReport.Failures, prefixed with its CaseID.
+	ColdReplayFailures []string `json:"cold_replay_failures,omitempty"`
 }
 
 // CoverageTraceabilityPass reports the §54 gate's verdict over the pack.
@@ -86,6 +90,13 @@ func (s Summary) HumanReviewPass() bool {
 	return s.CaseCount > 0 && len(s.HumanReviewFailures) == 0
 }
 
+// ColdReplayPass reports the cold-replay gate's verdict: every case,
+// reconstructed from nothing but its own serialised snapshot, must
+// reproduce the live result exactly. See replay.go.
+func (s Summary) ColdReplayPass() bool {
+	return s.CaseCount > 0 && len(s.ColdReplayFailures) == 0
+}
+
 // RunAssurance drives every synthetic case through the real domain and
 // returns the four gates' evidence. It never panics and never skips a
 // case: a case that fails to drive at all is reported as a failure of
@@ -100,6 +111,7 @@ func RunAssurance() Summary {
 			s.QuantumReproducibilityFailures = append(s.QuantumReproducibilityFailures, msg)
 			s.PreservationFailures = append(s.PreservationFailures, msg)
 			s.HumanReviewFailures = append(s.HumanReviewFailures, msg)
+			s.ColdReplayFailures = append(s.ColdReplayFailures, msg)
 			s.Cases = append(s.Cases, CaseOutcome{CaseID: string(c.ID)})
 			continue
 		}
@@ -191,6 +203,18 @@ func RunAssurance() Summary {
 			s.HumanReviewFailures = append(s.HumanReviewFailures,
 				string(c.ID)+": finalization was refused even with a complete authorization — "+
 					"a gate that only ever refuses proves nothing")
+		}
+
+		// --- §20 "C5" cold replay: a case reconstructed from ONLY its
+		// own serialised snapshot must reproduce this exact result. ---
+		_, _, coldReport, coldErr := ColdReplay(c)
+		if coldErr != nil {
+			s.ColdReplayFailures = append(s.ColdReplayFailures,
+				fmt.Sprintf("%s: cold replay could not run at all: %v", c.ID, coldErr))
+		} else if !coldReport.Pass() {
+			for _, f := range coldReport.Failures {
+				s.ColdReplayFailures = append(s.ColdReplayFailures, string(c.ID)+": "+f)
+			}
 		}
 
 		s.Cases = append(s.Cases, out)

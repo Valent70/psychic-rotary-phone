@@ -27,18 +27,14 @@
 // not merely by convention or comment.
 //
 // Relationship to pkg/insurance/party: a Target names its target via
-// party.PartyID. Where the blueprint's category already has a matching
-// party.Role in pkg/insurance/party (Carrier, Terminal, Forwarder,
-// Surveyor, and the catch-all Other-third-party -> Role
-// OtherResponsibleParty), CategoryPartyRole returns it so callers can
-// tag the Target with the SAME role vocabulary the rest of VICE uses.
-// Warehouse and Manufacturer have NO corresponding party.Role constant
-// in pkg/insurance/party today — that package is a frozen foundation
-// this package must not add roles to — so for those two categories
-// CategoryPartyRole honestly reports "no known role" (its second return
-// value is false) and a Target for them is identified by party.PartyID
-// alone, with PartyRole left the zero value. This is a real gap in
-// pkg/insurance/party, not silently worked around here.
+// party.PartyID. Every category in the blueprint's §23 worked list now
+// has a matching party.Role in pkg/insurance/party — Carrier, Terminal,
+// Warehouse, Forwarder, Manufacturer, Surveyor, and the catch-all
+// Other-third-party -> Role OtherResponsibleParty — so CategoryPartyRole
+// always returns one, and callers can tag the Target with the SAME role
+// vocabulary the rest of VICE uses. See CategoryPartyRole's own doc
+// comment for the history of the Warehouse/Manufacturer gap this round
+// closed.
 package recovery
 
 import (
@@ -334,7 +330,7 @@ func KnownRecoveryStatuses() []RecoveryStatus {
 //   - PartyRole: OPTIONAL. Records which party.Role (already defined in
 //     pkg/insurance/party) this pursuit corresponds to, when one
 //     exists — see CategoryPartyRole. Left the zero value when no
-//     matching role exists (Warehouse, Manufacturer targets).
+//     matching ResponsiblePartyCategory was ever supplied for this Target.
 //   - LimitationDeadlineTick: the tick ComputeLimitationStatus needs to
 //     do real work instead of limitation_status being a purely
 //     decorative field; 0 means "not yet established".
@@ -697,27 +693,35 @@ func PotentialResponsiblePartyCategories() []ResponsiblePartyCategory {
 }
 
 // CategoryPartyRole returns the pkg/insurance/party.Role that
-// corresponds to c, and true, when one already exists in that package's
-// known-role set. It returns ("", false) for CategoryWarehouse and
-// CategoryManufacturer, which have NO corresponding party.Role constant
-// today (party.go is a frozen foundation this package does not modify
-// to add one) — callers must not invent a role for those two; identify
-// such a Target by party.PartyID alone, leaving Target.PartyRole the
-// zero value.
+// corresponds to c, and true, when one exists in that package's
+// known-role set.
+//
+// Historical note, corrected: an earlier round of this package left
+// CategoryWarehouse and CategoryManufacturer mapped to ("", false) with
+// a comment stating party.go carried no corresponding role and was a
+// "frozen foundation" this package must not ask to be extended. A later
+// round DID add party.RoleWarehouse and party.RoleManufacturer (they
+// exist today — see party.go's own doc comment on why), which left this
+// function silently stale: it kept reporting "no known role" for two
+// categories that now have one, a real gap between two packages that
+// both compiled and both had passing tests. Fixed here rather than left
+// for the next reader to rediscover — see TestCategoryPartyRoleCoversEveryModelledCategory.
 func CategoryPartyRole(c ResponsiblePartyCategory) (party.Role, bool) {
 	switch c {
 	case CategoryCarrier:
 		return party.RoleCarrier, true
 	case CategoryTerminal:
 		return party.RoleTerminal, true
+	case CategoryWarehouse:
+		return party.RoleWarehouse, true
 	case CategoryForwarder:
 		return party.RoleForwarder, true
+	case CategoryManufacturer:
+		return party.RoleManufacturer, true
 	case CategorySurveyor:
 		return party.RoleSurveyor, true
 	case CategoryOtherThirdParty:
 		return party.RoleOtherResponsibleParty, true
-	case CategoryWarehouse, CategoryManufacturer:
-		return "", false
 	default:
 		return "", false
 	}

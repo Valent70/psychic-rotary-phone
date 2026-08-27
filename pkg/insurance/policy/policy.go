@@ -64,6 +64,13 @@ type Version struct {
 	Supersedes string `json:"supersedes,omitempty"`
 
 	Clauses []Clause `json:"clauses,omitempty"`
+
+	// Participants records every co-insurer and reinsurer sharing this
+	// version's risk — the VERIQO Master Closure Mandate §20
+	// ("Reinsurance / Co-insurance") requirement. Empty means a single
+	// insurer bears the whole risk, which remains the common case and is
+	// never treated as an error. See participation.go.
+	Participants []Participant `json:"participants,omitempty"`
 }
 
 // Kind classifies a policy Version's relationship to the policy's
@@ -119,6 +126,9 @@ func (v Version) Validate() error {
 	}
 	if v.EffectiveTo != 0 && v.EffectiveTo < v.EffectiveFrom {
 		return ErrEffectiveToBeforeFrom
+	}
+	if err := validateParticipants(v.Participants); err != nil {
+		return err
 	}
 	return nil
 }
