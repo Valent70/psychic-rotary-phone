@@ -103,10 +103,11 @@ type GateAxes struct {
 type CanonicalStatus string
 
 const (
-	// CanonicalVerifiedInternal: FINAL is READY. Either the gate has no
-	// external dependency at all, or it had one and real EXTERNAL_QUALIFIED
-	// evidence closed it. This is the ceiling any gate can honestly reach
-	// from inside this repository and its own qualification harnesses.
+	// CanonicalVerifiedInternal: FINAL is READY and the gate has NO
+	// external dependency at all. This is the ceiling any gate can
+	// honestly reach purely from inside this repository and its own
+	// qualification harnesses -- it says nothing about any external
+	// party, because none was ever needed.
 	CanonicalVerifiedInternal CanonicalStatus = "VERIFIED_INTERNAL"
 	// CanonicalReadyForExternalQualification: the gate's own code and its
 	// in-sandbox qualification harness both pass (ENGINEERING=PASS,
@@ -115,6 +116,21 @@ const (
 	// external act itself (a vendor, a purchase order, a physical host,
 	// an independent auditor) is missing.
 	CanonicalReadyForExternalQualification CanonicalStatus = "READY_FOR_EXTERNAL_QUALIFICATION"
+	// CanonicalExternallyQualified: the gate HAD a named external
+	// dependency, and real, release-bound, signed external evidence
+	// (via pkg/governance/qualification -- registered provider/reviewer
+	// identity, release-bound signature, live revocation check) closed
+	// it. Deliberately a DIFFERENT value from CanonicalVerifiedInternal:
+	// Round 5's own explicit rule is "Tidak boleh menyamakan Internal
+	// Verification = External Qualification" -- a reader must be able to
+	// tell, from the status alone, whether a gate's READY final axis
+	// reflects the absence of any external dependency or the genuine
+	// closure of one. As of this release no gate has reached this value
+	// (ExternalQualified count is 0 across the whole manifest); the
+	// constant exists so that the day one does, it is reported under
+	// its own honest name rather than silently merged into
+	// VERIFIED_INTERNAL.
+	CanonicalExternallyQualified CanonicalStatus = "EXTERNALLY_QUALIFIED"
 	// CanonicalBlockedExternal: FINAL is BLOCKED_EXTERNAL and the internal
 	// qualification step itself could not even be attempted (INTERNAL is
 	// NOT_RUN or NOT_APPLICABLE) -- typically because the external
@@ -137,6 +153,9 @@ const (
 func canonicalStatus(a GateAxes) CanonicalStatus {
 	switch a.Final {
 	case AxisReady:
+		if a.ExternalDependency != "" && a.External == AxisExternalQualified {
+			return CanonicalExternallyQualified
+		}
 		return CanonicalVerifiedInternal
 	case AxisBlockedExternal:
 		if a.Internal == AxisInternalQualified {
@@ -301,10 +320,12 @@ type AxesReport struct {
 	// CanonicalSummary is the same 60 (or however many are registered)
 	// gates, counted once each under the one-source-of-truth taxonomy
 	// above. VerifiedInternal + ReadyForExternalQualification +
-	// BlockedExternal + NotReady always equals len(Gates) exactly --
-	// every gate lands in exactly one bucket, never zero and never two.
+	// ExternallyQualified + BlockedExternal + NotReady always equals
+	// len(Gates) exactly -- every gate lands in exactly one bucket,
+	// never zero and never two.
 	VerifiedInternal              int `json:"canonical_verified_internal"`
 	ReadyForExternalQualification int `json:"canonical_ready_for_external_qualification"`
+	ExternallyQualifiedCount      int `json:"canonical_externally_qualified"`
 	BlockedExternal               int `json:"canonical_blocked_external"`
 	NotReady                      int `json:"canonical_not_ready"`
 }
@@ -336,6 +357,8 @@ func (r *Registry) Axes() AxesReport {
 			rep.VerifiedInternal++
 		case CanonicalReadyForExternalQualification:
 			rep.ReadyForExternalQualification++
+		case CanonicalExternallyQualified:
+			rep.ExternallyQualifiedCount++
 		case CanonicalBlockedExternal:
 			rep.BlockedExternal++
 		case CanonicalNotReady:

@@ -2,6 +2,7 @@ package party
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -326,4 +327,77 @@ func relationshipIDs(rels []Relationship) []string {
 		ids[i] = r.RelationshipID
 	}
 	return ids
+}
+
+// ---- Round 5: Case Room Security matrix -- "delegation chain cannot exceed policy" ----
+
+// TestDelegationChainCannotExceedPolicy builds a chain one link past
+// SetMaxDelegationDepth's limit and proves the LAST link is refused --
+// not merely that some arbitrary error appears, but exactly
+// ErrDelegationChainTooLong.
+func TestDelegationChainCannotExceedPolicy(t *testing.T) {
+	reg, _ := NewRelationshipRegistry("CASE-1")
+	if err := reg.SetMaxDelegationDepth(3); err != nil {
+		t.Fatalf("SetMaxDelegationDepth: %v", err)
+	}
+
+	mustLink := func(id, delegatedFrom string) Relationship {
+		r, err := New(id, "CASE-1", PartyID("PTY-"+id), "PTY-ROOT", RoleBroker, 0)
+		if err != nil {
+			t.Fatalf("New(%s): %v", id, err)
+		}
+		r.CanDelegate = true
+		r.DelegatedFrom = delegatedFrom
+		return r
+	}
+
+	link1 := mustLink("REL-1", "")
+	if err := reg.Register(link1); err != nil {
+		t.Fatalf("Register(REL-1): %v", err)
+	}
+	link2 := mustLink("REL-2", "REL-1")
+	if err := reg.Register(link2); err != nil {
+		t.Fatalf("Register(REL-2): %v", err)
+	}
+	link3 := mustLink("REL-3", "REL-2")
+	if err := reg.Register(link3); err != nil {
+		t.Fatalf("Register(REL-3): %v", err) // depth 3, exactly at policy -- must succeed
+	}
+
+	link4 := mustLink("REL-4", "REL-3")
+	if err := reg.Register(link4); !errors.Is(err, ErrDelegationChainTooLong) {
+		t.Fatalf("Register(REL-4) at depth 4 over a max of 3: expected ErrDelegationChainTooLong, got %v", err)
+	}
+}
+
+// TestSetMaxDelegationDepthRejectsNonPositive proves the policy setter
+// itself fails closed against a nonsensical (zero or negative) limit.
+func TestSetMaxDelegationDepthRejectsNonPositive(t *testing.T) {
+	reg, _ := NewRelationshipRegistry("CASE-1")
+	if err := reg.SetMaxDelegationDepth(0); err == nil {
+		t.Fatal("expected SetMaxDelegationDepth(0) to be rejected")
+	}
+	if err := reg.SetMaxDelegationDepth(-1); err == nil {
+		t.Fatal("expected SetMaxDelegationDepth(-1) to be rejected")
+	}
+}
+
+// TestDefaultMaxDelegationDepthAllowsFiveLinks proves the default
+// policy is generous enough for a real-world chain before any override.
+func TestDefaultMaxDelegationDepthAllowsFiveLinks(t *testing.T) {
+	reg, _ := NewRelationshipRegistry("CASE-1")
+	prev := ""
+	for i := 1; i <= DefaultMaxDelegationDepth; i++ {
+		id := fmt.Sprintf("REL-%d", i)
+		r, err := New(id, "CASE-1", PartyID("PTY-"+id), "PTY-ROOT", RoleBroker, 0)
+		if err != nil {
+			t.Fatalf("New(%s): %v", id, err)
+		}
+		r.CanDelegate = true
+		r.DelegatedFrom = prev
+		if err := reg.Register(r); err != nil {
+			t.Fatalf("Register(%s) at depth %d (== default max): %v", id, i, err)
+		}
+		prev = id
+	}
 }

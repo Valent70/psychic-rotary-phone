@@ -136,6 +136,7 @@ var canonicalRank = map[CanonicalStatus]int{
 	CanonicalBlockedExternal:               1,
 	CanonicalReadyForExternalQualification: 2,
 	CanonicalVerifiedInternal:              3,
+	CanonicalExternallyQualified:           4,
 }
 
 // TemporaryReadinessReport is the whole-release composition: every
@@ -164,6 +165,7 @@ type CategoryComposition struct {
 
 	VerifiedInternal              int `json:"verified_internal"`
 	ReadyForExternalQualification int `json:"ready_for_external_qualification"`
+	ExternallyQualified           int `json:"externally_qualified"`
 	BlockedExternal               int `json:"blocked_external"`
 	NotReady                      int `json:"not_ready"`
 
@@ -198,13 +200,30 @@ const (
 // computed AxesReport (Registry.Axes()) -- itself derived, never
 // declared, exactly like every other verdict in this package.
 func ComposeTemporaryReadiness(axes AxesReport) TemporaryReadinessReport {
+	// bestPossible is the highest-ranked CanonicalStatus in canonicalRank
+	// -- computed from the map itself, never hard-coded, so the "worst
+	// gate wins" comparison below stays correct even if the rank scale
+	// grows a value ranked above today's ceiling. Every category (and
+	// the whole-release worstRank) starts here and can only move DOWN
+	// as real gates are folded in -- a category or release with zero
+	// gates therefore never gets stuck reporting an optimistic status
+	// it never earned.
+	bestPossible := CanonicalNotReady
+	bestRank := -1
+	for status, rank := range canonicalRank {
+		if rank > bestRank {
+			bestRank = rank
+			bestPossible = status
+		}
+	}
+
 	byCategory := map[ReadinessCategory]*CategoryComposition{}
 	for _, cat := range AllCategories() {
-		byCategory[cat] = &CategoryComposition{Category: cat, ComposedStatus: CanonicalVerifiedInternal}
+		byCategory[cat] = &CategoryComposition{Category: cat, ComposedStatus: bestPossible}
 	}
 
 	var unmapped []string
-	worstRank := canonicalRank[CanonicalVerifiedInternal]
+	worstRank := bestRank
 	for _, ga := range axes.Gates {
 		cat, ok := gateCategory[ga.GateID]
 		if !ok {
@@ -218,6 +237,8 @@ func ComposeTemporaryReadiness(axes AxesReport) TemporaryReadinessReport {
 			cc.VerifiedInternal++
 		case CanonicalReadyForExternalQualification:
 			cc.ReadyForExternalQualification++
+		case CanonicalExternallyQualified:
+			cc.ExternallyQualified++
 		case CanonicalBlockedExternal:
 			cc.BlockedExternal++
 		case CanonicalNotReady:

@@ -308,6 +308,43 @@ type Record struct {
 	// one, when CorrectionSuperseded is set.
 	SupersededBy string `json:"superseded_by,omitempty"`
 
+	// The five fields below are additive (Round 5's Real-World Evidence
+	// Qualification Layer, §3): every one defaults to empty and every
+	// existing caller's behavior is unchanged. Free text, matching
+	// Authority/ContractualBasis's own convention in
+	// party/relationship.go: a closed taxonomy of every real-world
+	// acquisition method, license or access policy would be a worse fit
+	// than a stated reason a reviewer can read directly.
+
+	// SourceAuthority names the specific authority the source claims for
+	// this assertion (e.g. "vessel master's own logbook entry", "port
+	// authority's official berth log") -- distinct from Origin (WHO
+	// submitted it into the case) and from SourcePartyID (the party
+	// record): this is what STANDING that party claims to make the
+	// assertion.
+	SourceAuthority string `json:"source_authority,omitempty"`
+	// AcquisitionMethod records HOW this evidence reached VERIQO (e.g.
+	// "manual upload by claims handler", "API pull from AIS provider",
+	// "email attachment forwarded by broker").
+	AcquisitionMethod string `json:"acquisition_method,omitempty"`
+	// LicenseReference cites the specific license/contract clause
+	// permitting VERIQO's use of this record, when Rights depends on one
+	// (complements Rights itself, which is the enforced provenance.
+	// RightsState; this is the human-readable citation behind it).
+	LicenseReference string `json:"license_reference,omitempty"`
+	// AccessPolicy names who/what may see this record within VERIQO
+	// (e.g. "case parties with VIEW_EVIDENCE permission only") --
+	// complements party.Permission's own enforcement (the real gate);
+	// this is the stated policy a reviewer can check the enforcement
+	// against.
+	AccessPolicy string `json:"access_policy,omitempty"`
+	// RetentionPolicy states how long this record must be kept and why
+	// (e.g. "7 years per regulatory retention schedule X"), distinct
+	// from pkg/insurance/preservation's own case-level preservation
+	// order (which records an active LEGAL HOLD overriding normal
+	// retention, not the baseline policy itself).
+	RetentionPolicy string `json:"retention_policy,omitempty"`
+
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 

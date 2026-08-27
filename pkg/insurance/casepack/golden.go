@@ -189,7 +189,16 @@ func (gr *GoldenResult) attachRelationships() error {
 		return err
 	}
 	if err := reg.GrantPermissions("REL-GOLDEN-BROKER",
-		party.PermissionSubmitClaim, party.PermissionViewEvidence, party.PermissionReceiveNotice); err != nil {
+		party.PermissionSubmitClaim, party.PermissionViewEvidence, party.PermissionReceiveNotice,
+		// AccessCaseRoom, added for Round 5's own required end-to-end
+		// chain (§28: "... -> Case Room -> Dossier -> Cold Replay"): a
+		// broker who may submit claims and view evidence plausibly also
+		// needs the case room itself, and pkg/insurance/caseroom's own
+		// authorization layer (built this round) needs a real,
+		// already-registered relationship that genuinely holds this
+		// permission to prove against, rather than a purpose-built
+		// fixture disconnected from the golden case's own narrative.
+		party.PermissionAccessCaseRoom); err != nil {
 		return err
 	}
 	if !reg.EffectiveAt("REL-GOLDEN-BROKER", 100) {

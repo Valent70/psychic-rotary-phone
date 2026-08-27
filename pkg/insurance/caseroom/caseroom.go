@@ -33,6 +33,18 @@ import (
 // is refined only once inside.
 var ErrNoAccess = errors.New("caseroom: relationship does not currently grant ACCESS_CASE_ROOM")
 
+// The three errors below are Round 5's own named Case Room Security
+// matrix requirements (§11): "tenant A cannot access tenant B", "wrong
+// jurisdiction cannot authorize", "wrong scope cannot authorize". Each
+// is distinct from ErrNoAccess and from each other, so a caller (and a
+// test) can tell WHICH boundary refused the request, not merely that
+// one did.
+var (
+	ErrCrossTenantAccess = errors.New("caseroom: relationship's tenant does not match the required tenant")
+	ErrWrongJurisdiction = errors.New("caseroom: relationship's jurisdiction does not match the required jurisdiction")
+	ErrWrongScope        = errors.New("caseroom: relationship's scope does not match the required scope")
+)
+
 // Section is one named, independently-gated part of a case's dossier a
 // Case Room viewer might see.
 type Section string
@@ -132,4 +144,64 @@ func BuildView(reg *party.RelationshipRegistry, relationshipID string, tick uint
 		v.HumanReviewQuestionCount = len(d.HumanReviewQuestions)
 	}
 	return v, nil
+}
+
+// AuthorizeContext bundles the Case Room Security matrix's contextual
+// requirements (Round 5 work order §11) a caller supplies beyond the
+// relationship itself — the tenant/jurisdiction/scope a specific
+// action is being attempted under. A zero-value field means "no
+// restriction on this axis" (matching Relationship's own convention:
+// an empty Tenant means "the case's own single tenant", not "match
+// nothing").
+type AuthorizeContext struct {
+	Tenant       string
+	Jurisdiction string
+	Scope        string
+}
+
+// Authorize is the full Case Room Security matrix gate: BuildView's own
+// access rule (unknown relationship / not EffectiveAt / missing
+// ACCESS_CASE_ROOM -> ErrNoAccess) PLUS three further, independently-
+// named checks the order's own adversarial test list requires by name:
+//
+//   - "tenant A cannot access tenant B": rel.Tenant, if set, must match
+//     ctx.Tenant, if required -> ErrCrossTenantAccess.
+//   - "wrong jurisdiction cannot authorize": rel.Jurisdiction, if set,
+//     must match ctx.Jurisdiction, if required -> ErrWrongJurisdiction.
+//   - "wrong scope cannot authorize": rel.Scope, if set, must match
+//     ctx.Scope, if required -> ErrWrongScope.
+//
+// Each check is independent and separately testable: a caller (and a
+// test) can tell exactly which boundary refused a request, never just
+// "denied". "Revoked authority cannot act" and "expired authority
+// cannot act" are already covered by the shared access rule above
+// (party.Relationship.EffectiveAt itself enforces both); "delegation
+// cannot self-delegate" and "delegation chain cannot exceed policy" are
+// enforced earlier, at RelationshipRegistry.Register time, so an
+// over-long or self-referential chain can never reach this function at
+// all — see party/relationship.go.
+//
+// A field left empty on EITHER side of a comparison means "not
+// restricted on this axis" (an unset Relationship.Tenant is not itself
+// a violation, and an unset ctx.Tenant means the caller is not
+// requiring tenant isolation for this call) -- matching the same
+// "empty means unrestricted" convention Relationship's own fields
+// already use, rather than a stricter fail-closed-on-any-empty rule
+// that would make every relationship created before this round's
+// Tenant/Jurisdiction/Scope fields existed suddenly unauthorizable.
+func Authorize(reg *party.RelationshipRegistry, relationshipID string, tick uint64, ctx AuthorizeContext) (party.Relationship, error) {
+	rel, ok := reg.Get(relationshipID)
+	if !ok || !reg.EffectiveAt(relationshipID, tick) || !rel.HasPermission(party.PermissionAccessCaseRoom) {
+		return party.Relationship{}, ErrNoAccess
+	}
+	if ctx.Tenant != "" && rel.Tenant != "" && rel.Tenant != ctx.Tenant {
+		return party.Relationship{}, ErrCrossTenantAccess
+	}
+	if ctx.Jurisdiction != "" && rel.Jurisdiction != "" && rel.Jurisdiction != ctx.Jurisdiction {
+		return party.Relationship{}, ErrWrongJurisdiction
+	}
+	if ctx.Scope != "" && rel.Scope != "" && rel.Scope != ctx.Scope {
+		return party.Relationship{}, ErrWrongScope
+	}
+	return rel, nil
 }

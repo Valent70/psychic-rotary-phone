@@ -213,6 +213,7 @@ var (
 	ErrSelfDelegation            = errors.New("party: Relationship.DelegatedFrom must not be its own RelationshipID")
 	ErrDelegationSourceNotFound  = errors.New("party: DelegatedFrom does not name a relationship already registered in this registry")
 	ErrDelegationNotPermitted    = errors.New("party: DelegatedFrom names a relationship that does not permit further delegation (CanDelegate is false)")
+	ErrDelegationChainTooLong    = errors.New("party: registering this relationship would exceed the registry's max delegation chain depth")
 )
 
 // Validate checks r's own internal consistency. Deliberately does NOT
@@ -324,7 +325,22 @@ type RelationshipRegistry struct {
 	caseID string
 	rels   map[string]Relationship
 	order  []string
+
+	// maxDelegationDepth bounds how long a DelegatedFrom chain may grow
+	// -- Round 5's own explicit adversarial requirement, "delegation
+	// chain cannot exceed policy". Defaults to DefaultMaxDelegationDepth;
+	// SetMaxDelegationDepth overrides it per registry (e.g. a stricter
+	// policy for a higher-risk case).
+	maxDelegationDepth int
 }
+
+// DefaultMaxDelegationDepth is the delegation-chain length limit every
+// RelationshipRegistry starts with. A chain of length 1 is a
+// relationship with no DelegatedFrom at all; each additional link adds
+// one. Five hops (broker -> coverholder -> sub-agent -> sub-sub-agent
+// -> ...) already exceeds every real authority chain this domain's own
+// design documents name, so it is a generous ceiling, not a narrow one.
+const DefaultMaxDelegationDepth = 5
 
 // NewRelationshipRegistry returns an empty relationship registry scoped
 // to caseID.
@@ -332,11 +348,49 @@ func NewRelationshipRegistry(caseID string) (*RelationshipRegistry, error) {
 	if caseID == "" {
 		return nil, ErrEmptyRelationshipCase
 	}
-	return &RelationshipRegistry{caseID: caseID, rels: make(map[string]Relationship)}, nil
+	return &RelationshipRegistry{caseID: caseID, rels: make(map[string]Relationship), maxDelegationDepth: DefaultMaxDelegationDepth}, nil
 }
 
 // CaseID returns the case this registry is scoped to.
 func (r *RelationshipRegistry) CaseID() string { return r.caseID }
+
+// SetMaxDelegationDepth overrides this registry's delegation-chain
+// length policy. n must be at least 1 (a relationship with no
+// DelegatedFrom is always permitted regardless of policy -- it is not
+// itself part of any chain).
+func (r *RelationshipRegistry) SetMaxDelegationDepth(n int) error {
+	if n < 1 {
+		return fmt.Errorf("party: max delegation depth must be at least 1, got %d", n)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.maxDelegationDepth = n
+	return nil
+}
+
+// chainDepthLocked returns the number of links in id's own delegation
+// chain (1 for a relationship with no DelegatedFrom). Caller must
+// already hold r.mu -- this is the lock-free counterpart to
+// DelegationChain, used from inside Register (which already holds the
+// write lock) to avoid a self-deadlock on the same RWMutex.
+func (r *RelationshipRegistry) chainDepthLocked(id string) int {
+	depth := 0
+	cur := id
+	seen := map[string]bool{}
+	for cur != "" {
+		if seen[cur] {
+			return depth // defensive: a cycle should be unconstructable, never trust it blindly
+		}
+		seen[cur] = true
+		rel, ok := r.rels[cur]
+		if !ok {
+			return depth
+		}
+		depth++
+		cur = rel.DelegatedFrom
+	}
+	return depth
+}
 
 // Register adds a new, already-valid Relationship.
 func (r *RelationshipRegistry) Register(rel Relationship) error {
@@ -358,6 +412,10 @@ func (r *RelationshipRegistry) Register(rel Relationship) error {
 		}
 		if !source.CanDelegate {
 			return fmt.Errorf("%w: %s", ErrDelegationNotPermitted, rel.DelegatedFrom)
+		}
+		if depth := r.chainDepthLocked(rel.DelegatedFrom) + 1; depth > r.maxDelegationDepth {
+			return fmt.Errorf("%w: registering %s via %s would make a chain of depth %d, policy allows at most %d",
+				ErrDelegationChainTooLong, rel.RelationshipID, rel.DelegatedFrom, depth, r.maxDelegationDepth)
 		}
 	}
 	r.rels[rel.RelationshipID] = rel

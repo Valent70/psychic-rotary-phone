@@ -315,6 +315,60 @@ func TestCanonicalStatusNeverCallsAWaiverReady(t *testing.T) {
 	}
 }
 
+// TestCanonicalStatusDistinguishesExternallyQualifiedFromVerifiedInternal
+// is Round 5's own explicit rule: "Tidak boleh menyamakan Internal
+// Verification = External Qualification". A gate with NO external
+// dependency that reaches READY must report VERIFIED_INTERNAL; a gate
+// that HAD a named external dependency and was closed with real,
+// EXTERNAL_QUALIFIED evidence must report a DIFFERENT value,
+// EXTERNALLY_QUALIFIED, never silently merged into the first.
+func TestCanonicalStatusDistinguishesExternallyQualifiedFromVerifiedInternal(t *testing.T) {
+	r := NewRegistry()
+	if err := r.Register(Gate{
+		ID: "build", Mandatory: true, RequiredStatus: StatusVerified,
+		OwnerPackage: "./...", ExitCriteria: "zero build errors",
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if err := r.Attach("build", StatusVerified, axisPassing(t, "build", "go build ./...")); err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+
+	if err := r.Register(Gate{
+		ID: "pentest", Mandatory: true, RequiredStatus: StatusQualified,
+		OwnerPackage: "external", ExitCriteria: "independent penetration test",
+		ExternalDependency: "an independent security vendor",
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	// A real, signed external qualification submission closed this gate
+	// -- the only way EffectiveStatus can honestly reach QUALIFIED with
+	// a named ExternalDependency still set.
+	if err := r.Attach("pentest", StatusQualified, axisPassing(t, "pentest", "external:vendor-signed-report")); err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+
+	build, _ := r.Get("build")
+	if got := build.Axes().Canonical; got != CanonicalVerifiedInternal {
+		t.Fatalf("build canonical = %q, want VERIFIED_INTERNAL", got)
+	}
+	pentest, _ := r.Get("pentest")
+	if got := pentest.Axes().Canonical; got != CanonicalExternallyQualified {
+		t.Fatalf("pentest canonical = %q, want EXTERNALLY_QUALIFIED", got)
+	}
+	if pentest.Axes().Canonical == build.Axes().Canonical {
+		t.Fatal("an externally-qualified gate must never report the same canonical value as a no-dependency gate")
+	}
+
+	rep := r.Axes()
+	if rep.VerifiedInternal != 1 || rep.ExternallyQualifiedCount != 1 {
+		t.Fatalf("rollup = verified:%d externally_qualified:%d, want 1 and 1", rep.VerifiedInternal, rep.ExternallyQualifiedCount)
+	}
+	if total := rep.VerifiedInternal + rep.ReadyForExternalQualification + rep.ExternallyQualifiedCount + rep.BlockedExternal + rep.NotReady; total != len(rep.Gates) {
+		t.Fatalf("canonical buckets sum to %d, want exactly %d", total, len(rep.Gates))
+	}
+}
+
 func TestAttachAxisEvidenceRefusesAnUnknownGateAndATamperedArtifact(t *testing.T) {
 	r := blockedGateRegistry(t)
 	if err := r.AttachEngineering("no_such_gate", axisPassing(t, "no_such_gate", "x")); err == nil {

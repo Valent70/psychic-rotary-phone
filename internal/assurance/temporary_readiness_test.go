@@ -80,6 +80,32 @@ func TestComposeTemporaryReadinessWorstGateWinsPerCategory(t *testing.T) {
 	}
 }
 
+// TestComposeTemporaryReadinessCountsExternallyQualifiedSeparately proves
+// the category rollup keeps EXTERNALLY_QUALIFIED as its own bucket,
+// never folded into VerifiedInternal, and that it outranks
+// VerifiedInternal in the worst-status-wins composition (a category
+// with one EXTERNALLY_QUALIFIED gate and nothing worse composes to
+// EXTERNALLY_QUALIFIED).
+func TestComposeTemporaryReadinessCountsExternallyQualifiedSeparately(t *testing.T) {
+	axes := AxesReport{Gates: []GateAxes{
+		{GateID: "pentest", Mandatory: true, Canonical: CanonicalExternallyQualified},
+	}}
+	report := ComposeTemporaryReadiness(axes)
+	for _, cc := range report.Categories {
+		if cc.Category == CategorySecurity {
+			if cc.ExternallyQualified != 1 {
+				t.Fatalf("SECURITY ExternallyQualified = %d, want 1", cc.ExternallyQualified)
+			}
+			if cc.ComposedStatus != CanonicalExternallyQualified {
+				t.Fatalf("SECURITY composed status = %q, want EXTERNALLY_QUALIFIED", cc.ComposedStatus)
+			}
+			if cc.VerifiedInternal != 0 {
+				t.Fatalf("SECURITY VerifiedInternal = %d, want 0 -- must not be folded together", cc.VerifiedInternal)
+			}
+		}
+	}
+}
+
 // TestComposeTemporaryReadinessCandidateVerdictNeverClaimsFullyQualified
 // proves the verdict vocabulary structurally cannot express
 // "PRODUCTION_QUALIFIED" or a fabricated "all verified" claim: even in
