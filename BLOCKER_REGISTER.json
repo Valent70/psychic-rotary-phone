@@ -1,0 +1,88 @@
+{
+  "schema": "veriqo.blocker_register/v1",
+  "generated_from": "READINESS_MANIFEST.json (single source of truth) -- description/internal_closure/external_evidence_required are this round's own honest assessment, cross-referenced against each gate's real evidence files.",
+  "assessment_date": "2026-08-27",
+  "rule": "blocking_production is true for every item unless qualification_status is exactly EXTERNALLY_QUALIFIED -- READY_FOR_EXTERNAL_QUALIFICATION still blocks a genuine PRODUCTION_QUALIFIED claim, even though its engineering is complete.",
+  "blockers": [
+    {
+      "blocker_id": "HSM_KMS",
+      "description": "Production HSM/KMS-backed signing (key generation, custody, signing, rotation, revocation, verification, audit).",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "a procured HSM/KMS tenancy and real, valid credentials",
+      "internal_closure": "pkg/blockers/hsmkms: full failure-mode matrix (unavailable/timeout/permission-denied/wrong-key/revoked) all fail closed; RequireProductionSafe refuses any software-backed provider under env=production; a real AWS KMS DescribeKey call this round confirmed this environment's placeholder credentials are rejected by AWS itself (procurement-blocked, not engineering-blocked).",
+      "qualification_status": "BLOCKED_EXTERNAL",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "LIVE_DATA",
+      "description": "Non-synthetic live data feeds across maritime/commodity/insurance/finance connector classes (AIS/SAR/BoL/SWIFT-adjacent/etc.).",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "licensed, rights-cleared commercial data contract(s) per feed type",
+      "internal_closure": "pkg/blockers/livedata: a real FeedConnector/Pipeline with content-hash dedup, real anti-replay defense, and explicit LIVE/TEST/SIMULATED/UNAVAILABLE DataMode labeling (ModeSynthetic/ModeReplay/ModeLive) -- a SIMULATED-mode connector's record is refused a LIVE label outright.",
+      "qualification_status": "BLOCKED_EXTERNAL",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "MULTI_REGION_DR",
+      "description": "Multi-region disaster recovery with measured RPO/RTO across real cross-datacenter infrastructure.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "real cross-datacenter infrastructure: genuine WAN characteristics, real cloud regions, a real traffic-manager cutover",
+      "internal_closure": "3 real Docker containers on a real bridge network, a real docker network disconnect partition of the leader, ~500ms measured RTO, RPO=0, independently verified converged state after healing.",
+      "qualification_status": "READY_FOR_EXTERNAL_QUALIFICATION",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "PENTEST",
+      "description": "Independent third-party penetration test against this codebase's own production attack surface (pkg/api, pkg/kernel/sandbox, pkg/authz).",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "a signed report from a real, independent, contracted security vendor",
+      "internal_closure": "pkg/blockers/pentest: a real target registry, a real release-identity preflight, and adversarial probes (JWT alg=none, unknown kid, sandbox path traversal, authz wildcard escalation) run directly against this codebase's own production code -- READY_FOR_REAL_QUALIFICATION on the harness itself.",
+      "qualification_status": "BLOCKED_EXTERNAL",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "SCALE_QUALIFICATION",
+      "description": "100-node / 1,000,000-envelope physical scale benchmark across real distinct infrastructure.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "real distinct multi-host / multi-network / multi-process infrastructure",
+      "internal_closure": "100 genuinely separate Docker containers over real HTTP, a real exactly-once-delivery integrity check, 1,000,000 records, zero lost, zero duplicated, ~2,536 records/sec -- the literal count is met; distinct-infrastructure execution (all 100 containers currently run on one physical host) is what remains.",
+      "qualification_status": "READY_FOR_EXTERNAL_QUALIFICATION",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "SOAK_72H",
+      "description": "72-hour continuous soak with zero leak and zero ledger corruption.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "a host able to stay up, unbroken, for 72 continuous hours",
+      "internal_closure": "pkg/blockers/soak: a hash-chained, tamper-evident checkpoint harness; one genuine unbroken 60-minute run (30x the smoke pass) completed with zero errors.",
+      "qualification_status": "READY_FOR_EXTERNAL_QUALIFICATION",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "SPIRE_MTLS",
+      "description": "Production SPIFFE/SPIRE deployment with node attestation and mTLS certificate rotation.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "a production node attestor (cloud-instance-identity, k8s-PSAT, or TPM) in a real cloud/orchestration environment",
+      "internal_closure": "a real multi-container SPIRE cluster (1 server, 2 independently-attested agents), real X.509-SVID issuance/rotation/revocation, and a live end-to-end mTLS handshake through pkg/transport/rafttcp.",
+      "qualification_status": "READY_FOR_EXTERNAL_QUALIFICATION",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "SUPPLY_CHAIN_SCAN",
+      "description": "govulncheck / gosec / staticcheck in CI with policy-gated build failure on vulnerability threshold.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "network-permitted access to vuln.go.dev / osv.dev / the GitHub Advisory API (this sandbox's own network policy blocks all three, re-verified this round)",
+      "internal_closure": "staticcheck and gosec both clean (0 findings; 89 prior findings individually triaged); a real go list -m all dependency-discovery step, a policy engine, and a real HTTP-backed VulnerabilityProvider (unit-tested against a local mock).",
+      "qualification_status": "READY_FOR_EXTERNAL_QUALIFICATION",
+      "blocking_production": true
+    }
+  ]
+}
