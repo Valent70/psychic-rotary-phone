@@ -22,8 +22,8 @@
     "verdict": "NOT_PRODUCTION_READY",
     "assessment": {
       "verdict": "NOT_PRODUCTION_READY",
-      "mandatory_total": 59,
-      "mandatory_passing": 51,
+      "mandatory_total": 60,
+      "mandatory_passing": 52,
       "optional_total": 0,
       "optional_passing": 0,
       "blocked_mandatory": [
@@ -3740,6 +3740,26 @@
       ]
     },
     {
+      "id": "insurance_golden_cross_domain",
+      "description": "one case (CASE-INS-002 extended) proves geospatial geofencing, the party relationship layer, salvage, and co-/reinsurance allocation are CONNECTED to the rest of the insurance domain -- salvage genuinely reduces the quantum figure by its own exact net value, both allocation layers sum to exactly their input, and the whole extension survives a cold replay of the underlying case (VERIQO Final Remaining Gap Closure Order P0 SS6/SS7/SS37)",
+      "mandatory": true,
+      "required_status": "VERIFIED",
+      "owner_package": "./pkg/insurance/verification, ./pkg/insurance/casepack",
+      "exit_criteria": "geospatial + relationships + salvage + co-/reinsurance + dispute all verified on one driven case, cold-replay included",
+      "status": "VERIFIED",
+      "evidence": [
+        {
+          "artifact_id": "a55341ec67eef819",
+          "gate_id": "insurance_golden_cross_domain",
+          "command": "internal:casepack.RunAssurance",
+          "output": "{\n  \"case_count\": 7,\n  \"cases\": [\n    {\n      \"case_id\": \"CASE-INS-001\",\n      \"evidence_count\": 6,\n      \"evidence_root_hash\": \"04983cf4897f4a39ce29a4554907029e7ba7e6199f165caf9d4ea66065f35a42\",\n      \"preservation_order_hash\": \"897d7104238f1d17f7731882ee67fe28447fa893915dd947ca958bccc8e1c10c\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-001-V1\",\n      \"lineage_node_count\": 20,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 6,\n      \"coverage_traceable_facts\": 6,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"47500.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 6,\n      \"preservation_evidence_preserved\": 6,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 20\n    },\n    {\n      \"case_id\": \"CASE-INS-002\",\n      \"evidence_count\": 10,\n      \"evidence_root_hash\": \"39cca8a97fd50f9464df7a365a72bfa358d919a8172e68faeaca43906457194a\",\n      \"preservation_order_hash\": \"260d9dc4b0f3187f10f3534148c6994f8288f2ff171a3896a75904ab2bbbd428\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-002-V1\",\n      \"lineage_node_count\": 25,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 8,\n      \"coverage_traceable_facts\": 8,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"150000.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 10,\n      \"preservation_evidence_preserved\": 10,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 12\n    },\n    {\n      \"case_id\": \"CASE-INS-003\",\n      \"evidence_count\": 5,\n      \"evidence_root_hash\": \"d0f3b4731eeef9080b7b877064131ac59dfaba711c1ccec5554fc8728b1d7d29\",\n      \"preservation_order_hash\": \"2d4aa288771c89b478a6d2454487f2c8fe73a1e718d3e4ed2526654bcf4e1f37\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-003-V1\",\n      \"lineage_node_count\": 16,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 7,\n      \"coverage_traceable_facts\": 7,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"204000.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 5,\n      \"preservation_evidence_preserved\": 5,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 8\n    },\n    {\n      \"case_id\": \"CASE-INS-004\",\n      \"evidence_count\": 6,\n      \"evidence_root_hash\": \"ce955ed014e1435d55d72e63b48c83edb9451016877eae51403d42f9839d3323\",\n      \"preservation_order_hash\": \"a82c4a9cfd708b2f49d5727820e75d56c873cf368f8f01eb701bc1a4e876cbd6\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-004-V1\",\n      \"lineage_node_count\": 17,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 6,\n      \"coverage_traceable_facts\": 6,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"1250000.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 6,\n      \"preservation_evidence_preserved\": 6,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 9\n    },\n    {\n      \"case_id\": \"CASE-INS-005\",\n      \"evidence_count\": 6,\n      \"evidence_root_hash\": \"e5a3385845d29aa6b994d5d01ac97bcbb628220e927654116ad3619419338b59\",\n      \"preservation_order_hash\": \"aa36834845e2b430b69d632519b6cec8310a7c46be98ab905e83c5129045beae\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-005-V1\",\n      \"lineage_node_count\": 15,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 7,\n      \"coverage_traceable_facts\": 7,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"340000.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 6,\n      \"preservation_evidence_preserved\": 6,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 11\n    },\n    {\n      \"case_id\": \"CASE-INS-006\",\n      \"evidence_count\": 5,\n      \"evidence_root_hash\": \"c9c90453322b98acdda095bada63b730c669b440377514d6fdd20e5d5bbe5330\",\n      \"preservation_order_hash\": \"e81c31cae958352ee625bdbb1d87ed1764b506a11f083a8b61eed8da741614aa\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-006-V1\",\n      \"lineage_node_count\": 16,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 6,\n      \"coverage_traceable_facts\": 6,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"2400000.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 5,\n      \"preservation_evidence_preserved\": 5,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 12\n    },\n    {\n      \"case_id\": \"CASE-INS-007\",\n      \"evidence_count\": 6,\n      \"evidence_root_hash\": \"8696f38a361024912f799e6e02452e53763ab0b3775b5296e31980cd8a911b9c\",\n      \"preservation_order_hash\": \"1a8a7c71a2e40bc10634d9ffe652ec9a86f667c6b0d8dcd3b6ebcdceb7da9ff3\",\n      \"resolved_policy_version_id\": \"POL-CASE-INS-007-V1\",\n      \"lineage_node_count\": 18,\n      \"lineage_chain_verified\": true,\n      \"coverage_traceability_pass\": true,\n      \"coverage_fact_count\": 7,\n      \"coverage_traceable_facts\": 7,\n      \"quantum_reproducible\": true,\n      \"quantum_indicative_claim_value\": \"96000.00\",\n      \"preservation_pass\": true,\n      \"preservation_evidence_in_case\": 6,\n      \"preservation_evidence_preserved\": 6,\n      \"human_review_required\": true,\n      \"finalization_refused_without_authorization\": true,\n      \"finalization_permitted_with_authorization\": true,\n      \"outstanding_review_questions\": 15\n    }\n  ]\n}",
+          "exit_code": 0,
+          "produced_at": 1787803024,
+          "hash": "a55341ec67eef819601449e6c3d85140d0bd81fecaeb59ff4022d3f81a47def7"
+        }
+      ]
+    },
+    {
       "id": "pentest",
       "description": "independent third-party penetration test",
       "mandatory": true,
@@ -3982,8 +4002,8 @@
   ],
   "assessment": {
     "verdict": "NOT_PRODUCTION_READY",
-    "mandatory_total": 59,
-    "mandatory_passing": 51,
+    "mandatory_total": 60,
+    "mandatory_passing": 52,
     "optional_total": 0,
     "optional_passing": 0,
     "blocked_mandatory": [
@@ -4505,5 +4525,5 @@
     "internal_qualified": 5,
     "external_qualified": 0
   },
-  "generated_from": "pkg/execution.Registry() + this run's execution_graph/replay_determinism_100x gate results; R22 addendum: insurance_cold_replay merged in from a fresh -skip-race cmd/veriqo-readiness run (race remains VERIFIED from this same session's separate full go test -race -count=1 ./... pass, not re-run inside the same invocation for time efficiency)"
+  "generated_from": "pkg/execution.Registry() + this run's execution_graph/replay_determinism_100x gate results; R22 addendum: insurance_cold_replay merged from a fresh -skip-race cmd/veriqo-readiness run; R23 addendum: insurance_golden_cross_domain (geospatial+relationships+salvage+co/reinsurance+dispute, one driven case, cold-replay included) merged the same way. race remains VERIFIED from this session's separate full go test -race -count=1 ./... pass (171/171), not re-run inside either -skip-race invocation for time efficiency."
 }

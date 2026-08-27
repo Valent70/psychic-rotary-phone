@@ -689,6 +689,10 @@ func main() {
 		out, _ := json.MarshalIndent(summary, "", "  ")
 		_ = os.WriteFile("evidence/insurance_assurance_gates.json", out, 0o600)
 
+		goldenSummary := insurancecasepack.RunGoldenAssurance()
+		goldenOut, _ := json.MarshalIndent(goldenSummary, "", "  ")
+		_ = os.WriteFile("evidence/insurance_golden_cross_domain.json", goldenOut, 0o600)
+
 		type insuranceGate struct {
 			id       string
 			desc     string
@@ -739,6 +743,17 @@ func main() {
 				exit:     "cold replay reproduces the live result on all seven synthetic cases",
 				pass:     summary.ColdReplayPass(),
 				failures: summary.ColdReplayFailures,
+			},
+			{
+				id: "insurance_golden_cross_domain",
+				desc: "one case (CASE-INS-002 extended) proves geospatial geofencing, the party relationship " +
+					"layer, salvage, and co-/reinsurance allocation are CONNECTED to the rest of the insurance " +
+					"domain -- salvage genuinely reduces the quantum figure by its own exact net value, both " +
+					"allocation layers sum to exactly their input, and the whole extension survives a cold " +
+					"replay of the underlying case (VERIQO Final Remaining Gap Closure Order P0 SS6/SS7/SS37)",
+				exit:     "geospatial + relationships + salvage + co-/reinsurance + dispute all verified on one driven case, cold-replay included",
+				pass:     goldenSummary.Pass(),
+				failures: goldenSummary.Failures,
 			},
 		}
 

@@ -3,6 +3,9 @@ package policy
 import (
 	"errors"
 	"fmt"
+	"sort"
+
+	"veriqo/pkg/insurance/quantum"
 )
 
 // This file closes the VERIQO Master Closure Mandate §20 ("Reinsurance
@@ -209,4 +212,157 @@ func (v Version) RetainedBasisPoints() int64 {
 		return 0
 	}
 	return retained
+}
+
+// ---- Allocation (mandate §15/§41: "allocation", exact integer arithmetic) ----
+
+// AllocationRole distinguishes what one Allocation entry represents:
+// the insurer's own primary share of a payment TO the insured, a
+// co-insurer's primary share of that same payment, or a reinsurer's
+// recovery FROM the insurer (a between-insurers movement, never a
+// payment to the insured).
+type AllocationRole string
+
+const (
+	AllocationRoleInsurerPrimary     AllocationRole = "INSURER_PRIMARY_SHARE"
+	AllocationRoleCoInsurerPrimary   AllocationRole = "CO_INSURER_PRIMARY_SHARE"
+	AllocationRoleReinsurerRecovery  AllocationRole = "REINSURER_RECOVERY"
+	AllocationRoleInsurerNetRetained AllocationRole = "INSURER_NET_RETAINED"
+)
+
+// Allocation is one party's exact share of a claim payment or of a
+// reinsurance recovery — the mandate's own "allocation" field, always
+// evidence-traceable back to the Version's Participants and always an
+// exact integer minor-unit amount, never a float.
+type Allocation struct {
+	PartyID     string         `json:"party_id"`
+	Role        AllocationRole `json:"role"`
+	BasisPoints int64          `json:"basis_points"`
+	Amount      quantum.Amount `json:"amount"`
+}
+
+var (
+	ErrNonPositivePayment = errors.New("policy: total payment to allocate must be > 0")
+)
+
+// allocateByBasisPoints splits total across shares (partyID -> basis
+// points, which need not sum to ParticipationScale — the caller passes
+// only the shares that participate in THIS allocation) using the
+// largest-remainder method: an exact floor per share, then the leftover
+// minor units distributed one at a time to the shares with the largest
+// truncated fractional remainder, tie-broken by partyID for
+// determinism. The returned amounts always sum to EXACTLY total (given
+// shares whose basis points sum to <= ParticipationScale) — proven by
+// TestAllocateByBasisPointsAlwaysSumsToTotal across randomised inputs.
+func allocateByBasisPoints(total quantum.Amount, shares map[string]int64) map[string]quantum.Amount {
+	type remainder struct {
+		partyID string
+		rem     int64 // truncated remainder, in the same fixed-point space as ParticipationScale*minor-units
+	}
+	out := make(map[string]quantum.Amount, len(shares))
+	var remainders []remainder
+	var allocated int64
+	for partyID, bp := range shares {
+		numerator := int64(total) * bp
+		floor := numerator / ParticipationScale
+		rem := numerator % ParticipationScale
+		out[partyID] = quantum.Amount(floor)
+		allocated += floor
+		remainders = append(remainders, remainder{partyID, rem})
+	}
+	leftover := int64(total) - allocated
+	sort.Slice(remainders, func(i, j int) bool {
+		if remainders[i].rem != remainders[j].rem {
+			return remainders[i].rem > remainders[j].rem
+		}
+		return remainders[i].partyID < remainders[j].partyID
+	})
+	for i := int64(0); i < leftover && int(i) < len(remainders); i++ {
+		partyID := remainders[i].partyID
+		out[partyID] = out[partyID] + 1
+	}
+	return out
+}
+
+// AllocateCoInsurance splits totalPayment (the full amount payable to
+// the insured on this claim) across every CO_INSURER's primary share
+// plus the named Insurer's own primary share (ParticipationScale minus
+// the co-insured total) — the mandate's "primary risk -> participation
+// -> co-insurance allocation -> insurer payment" chain. The returned
+// Allocations always sum to EXACTLY totalPayment.
+func (v Version) AllocateCoInsurance(totalPayment quantum.Amount) ([]Allocation, error) {
+	if totalPayment <= 0 {
+		return nil, ErrNonPositivePayment
+	}
+	if err := validateParticipants(v.Participants); err != nil {
+		return nil, err
+	}
+	shares := map[string]int64{}
+	var coInsuredTotal int64
+	for _, p := range v.CoInsurers() {
+		shares[p.PartyID] += p.BasisPoints
+		coInsuredTotal += p.BasisPoints
+	}
+	insurerBP := ParticipationScale - coInsuredTotal
+	insurerKey := "INSURER:" + v.Insurer
+	shares[insurerKey] = insurerBP
+
+	amounts := allocateByBasisPoints(totalPayment, shares)
+
+	var out []Allocation
+	for _, p := range v.CoInsurers() {
+		out = append(out, Allocation{
+			PartyID: p.PartyID, Role: AllocationRoleCoInsurerPrimary,
+			BasisPoints: p.BasisPoints, Amount: amounts[p.PartyID],
+		})
+	}
+	out = append(out, Allocation{
+		PartyID: insurerKey, Role: AllocationRoleInsurerPrimary,
+		BasisPoints: insurerBP, Amount: amounts[insurerKey],
+	})
+	sort.Slice(out, func(i, j int) bool { return out[i].PartyID < out[j].PartyID })
+	return out, nil
+}
+
+// AllocateReinsurance splits insurerPrimaryAmount (the named Insurer's
+// OWN primary share of a claim payment — typically the
+// AllocationRoleInsurerPrimary amount AllocateCoInsurance just
+// computed, never the co-insurers' shares, which the reinsurance
+// program here does not touch) into each REINSURER's recovery from the
+// insurer plus the insurer's own final net-retained amount — the
+// mandate's "ceded exposure -> retention -> reinsurance participation
+// -> recovery -> allocation" chain. These are recoveries BETWEEN
+// insurers, never payments to the insured.
+func (v Version) AllocateReinsurance(insurerPrimaryAmount quantum.Amount) ([]Allocation, error) {
+	if insurerPrimaryAmount <= 0 {
+		return nil, ErrNonPositivePayment
+	}
+	if err := validateParticipants(v.Participants); err != nil {
+		return nil, err
+	}
+	shares := map[string]int64{}
+	var cededTotal int64
+	for _, p := range v.Reinsurers() {
+		shares[p.PartyID] += p.BasisPoints
+		cededTotal += p.BasisPoints
+	}
+	insurerKey := "INSURER:" + v.Insurer
+	retainedBP := ParticipationScale - cededTotal
+	shares[insurerKey] = retainedBP
+
+	amounts := allocateByBasisPoints(insurerPrimaryAmount, shares)
+
+	var out []Allocation
+	for _, p := range v.Reinsurers() {
+		out = append(out, Allocation{
+			PartyID: p.PartyID, Role: AllocationRoleReinsurerRecovery,
+			BasisPoints: p.BasisPoints, Amount: amounts[p.PartyID],
+		})
+	}
+	out = append(out, Allocation{
+		PartyID: insurerKey, Role: AllocationRoleInsurerNetRetained,
+		BasisPoints: retainedBP, Amount: amounts[insurerKey],
+	})
+	sort.Slice(out, func(i, j int) bool { return out[i].PartyID < out[j].PartyID })
+	return out, nil
 }

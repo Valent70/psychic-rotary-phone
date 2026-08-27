@@ -1,0 +1,13 @@
+{
+  "ran": true,
+  "evidence_root_hash": "39cca8a97fd50f9464df7a365a72bfa358d919a8172e68faeaca43906457194a",
+  "incident_zone_id": "TERMINAL-CALDER-BAY",
+  "vessel_speed_plausible": true,
+  "broker_relationship_active": true,
+  "salvage_net_value": "7600.00",
+  "quantum_reduced_by_salvage_exactly": true,
+  "co_insurance_allocation_exact": true,
+  "reinsurance_allocation_exact": true,
+  "dispute_both_positions_recorded": true,
+  "cold_replay_matches": true
+}
