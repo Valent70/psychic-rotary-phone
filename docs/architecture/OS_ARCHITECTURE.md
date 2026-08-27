@@ -119,7 +119,7 @@ PipelineResult { ProcessID, RiskResult, ComplianceResult, Decision, TwinHash, DA
 
 Domain packages (`pkg/domain/*`) MUST NOT import:
 - Each other
-- `pkg/consensus/raft` directly
+- `pkg/consensus/raftlite` directly
 - `pkg/storage/evidence` directly
 
 Domain packages MAY import:
@@ -142,7 +142,7 @@ Domain packages MAY import:
 | VEP-031 | `pkg/domain/trade` | ✅ Complete |
 | VEP-034 | `pkg/ucr` | ✅ Complete |
 | VEP-035 | `pkg/os` (Digital Twin) | ✅ Complete |
-| — | `pkg/consensus/raft` | ✅ Complete (WAL gap filled) |
+| — | `pkg/consensus/raftlite` + `pkg/transport/rafttcp` | ✅ Complete (production-authoritative consensus path; the earlier `pkg/consensus/raft`/`pkg/consensus/transport` prototype was removed as dead code in Round 7 -- zero production imports, no tests, this table's own prior "Complete" claim for it was stale) |
 | — | `pkg/storage/wal` | ✅ Complete (was missing) |
 | — | `pkg/storage/snapshot` | ✅ Complete (was missing) |
 | — | `pkg/cluster` | ✅ Complete (new) |

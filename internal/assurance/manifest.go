@@ -335,6 +335,12 @@ type ReadinessManifest struct {
 	// from Gates (via Axes itself) and feeds nothing back — adding it
 	// changes no certificate, no Status, no release Verdict.
 	TemporaryReadiness TemporaryReadinessReport `json:"temporary_production_readiness"`
+	// ProductionReadiness is the Round 7 work order's own required
+	// three-level hierarchy (ENGINEERING_READY /
+	// TEMPORARY_PRODUCTION_READINESS / PRODUCTION_QUALIFIED), derived
+	// purely from Axes and TemporaryReadiness — like both, it feeds
+	// nothing back into any certificate, Status, or release Verdict.
+	ProductionReadiness ProductionReadinessReport `json:"production_readiness_level"`
 }
 
 // ManifestSchemaVersion identifies the readiness manifest contract.
@@ -347,10 +353,12 @@ func BuildReadinessManifest(r *Registry, acc AcceptanceManifest, cert ReleaseCer
 	cert.AcceptanceManifestHash = acc.Hash
 	cert = cert.Finalize(a)
 	axes := r.Axes()
+	tpr := ComposeTemporaryReadiness(axes)
 	return ReadinessManifest{
 		SchemaVersion: ManifestSchemaVersion, Release: cert,
 		Acceptance: acc, Gates: r.Gates(), Assessment: a, Axes: axes,
-		TemporaryReadiness: ComposeTemporaryReadiness(axes),
+		TemporaryReadiness:  tpr,
+		ProductionReadiness: ComposeProductionReadinessLevel(axes, tpr),
 	}
 }
 
