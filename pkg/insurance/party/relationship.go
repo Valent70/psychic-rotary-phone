@@ -112,6 +112,60 @@ type Relationship struct {
 	// relationship rests on.
 	ContractualBasis string `json:"contractual_basis,omitempty"`
 
+	// The four fields below are additive: the Round 4 work order's Party
+	// Authority Model (§27) names organization/scope/delegation/tenant/
+	// jurisdiction as required fields alongside the ones already above
+	// (identity=FromParty/ToParty, role=Role, authority=Authority,
+	// effective_from/to, consent, revocation). None of them changes the
+	// meaning of an existing field or an existing caller's behavior —
+	// every one defaults to its zero value, which Validate treats as
+	// "not stated" rather than an error.
+
+	// Organization names the organizational entity FromParty acts FOR,
+	// distinct from FromParty's own individual/party identity — e.g.
+	// FromParty is one named surveyor, Organization is "Acme Marine
+	// Surveyors Ltd" the surveyor works for. Free text, matching
+	// Authority's own convention: a closed taxonomy of every real-world
+	// organization would be a worse fit than a stated name.
+	Organization string `json:"organization,omitempty"`
+
+	// Scope bounds WHAT this relationship's authority covers, in the
+	// claims officer's own words (e.g. "cargo damage assessment for
+	// CLM-002 only; hull is out of scope") — distinct from Permissions,
+	// which is the closed system-action vocabulary. Scope is the
+	// subject-matter boundary; Permissions is the operational boundary.
+	Scope string `json:"scope,omitempty"`
+
+	// DelegatedFrom, if non-empty, names the RelationshipID this
+	// relationship's own authority derives from — e.g. a sub-surveyor a
+	// broker's coverholder appointed under its own binding authority.
+	// RelationshipRegistry.Register refuses a DelegatedFrom that does
+	// not already exist in the same registry, which is what makes a
+	// delegation chain real rather than a bare string: it can only ever
+	// point to a relationship that was itself already validated and
+	// registered, so a cycle cannot be constructed.
+	DelegatedFrom string `json:"delegated_from,omitempty"`
+	// CanDelegate reports whether this relationship's authority may
+	// itself be delegated further (i.e. whether another Relationship may
+	// cite this one's RelationshipID as its own DelegatedFrom). Defaults
+	// false: delegation authority is never assumed, only granted.
+	CanDelegate bool `json:"can_delegate,omitempty"`
+
+	// Tenant names the operational unit (insurer, coverholder, MGA
+	// office) this relationship's authority was granted within, for a
+	// multi-tenant deployment where more than one such unit shares this
+	// codebase. Free text; empty means "the case's own single tenant",
+	// which remains the common case and is never treated as an error.
+	Tenant string `json:"tenant,omitempty"`
+
+	// Jurisdiction names the governing law/forum this relationship's
+	// authority is granted under (e.g. "England and Wales", "Singapore
+	// International Arbitration Centre") — distinct from
+	// ContractualBasis (which names the instrument) and from
+	// dispute.Forum (which is the forum for a DISPUTE, not for the
+	// underlying relationship itself).
+	Jurisdiction string `json:"jurisdiction,omitempty"`
+
 	EffectiveFrom uint64 `json:"effective_from"`
 	// EffectiveTo == 0 means open-ended, matching policy.Version's own
 	// convention (and now geospatial.Geofence's) for the same reason:
@@ -156,6 +210,9 @@ var (
 	ErrConsentWithNoEvidence     = errors.New("party: ConsentGiven is true but ConsentEvidenceID is empty -- consent without evidence did not happen")
 	ErrRelationshipUnknownStatus = errors.New("party: unknown Relationship.Status")
 	ErrRevokedNeedsReason        = errors.New("party: Status is REVOKED but RevocationReason is empty")
+	ErrSelfDelegation            = errors.New("party: Relationship.DelegatedFrom must not be its own RelationshipID")
+	ErrDelegationSourceNotFound  = errors.New("party: DelegatedFrom does not name a relationship already registered in this registry")
+	ErrDelegationNotPermitted    = errors.New("party: DelegatedFrom names a relationship that does not permit further delegation (CanDelegate is false)")
 )
 
 // Validate checks r's own internal consistency. Deliberately does NOT
@@ -182,6 +239,9 @@ func (r Relationship) Validate() error {
 	}
 	if r.EffectiveTo != 0 && r.EffectiveTo < r.EffectiveFrom {
 		return ErrRelationshipToBeforeFrom
+	}
+	if r.DelegatedFrom != "" && r.DelegatedFrom == r.RelationshipID {
+		return ErrSelfDelegation
 	}
 	for _, p := range r.Permissions {
 		if !IsKnownPermission(p) {
@@ -290,6 +350,15 @@ func (r *RelationshipRegistry) Register(rel Relationship) error {
 	defer r.mu.Unlock()
 	if _, exists := r.rels[rel.RelationshipID]; exists {
 		return fmt.Errorf("%w: %s", ErrDuplicateRelationship, rel.RelationshipID)
+	}
+	if rel.DelegatedFrom != "" {
+		source, ok := r.rels[rel.DelegatedFrom]
+		if !ok {
+			return fmt.Errorf("%w: %s", ErrDelegationSourceNotFound, rel.DelegatedFrom)
+		}
+		if !source.CanDelegate {
+			return fmt.Errorf("%w: %s", ErrDelegationNotPermitted, rel.DelegatedFrom)
+		}
 	}
 	r.rels[rel.RelationshipID] = rel
 	r.order = append(r.order, rel.RelationshipID)
@@ -440,6 +509,37 @@ func (r *RelationshipRegistry) AddProvenance(id, evidenceID string) error {
 	rel.ProvenanceEvidenceIDs = append(rel.ProvenanceEvidenceIDs, evidenceID)
 	r.rels[id] = rel
 	return nil
+}
+
+// DelegationChain returns the full chain of relationships id's authority
+// derives from, ROOT-FIRST, ending with id itself. A relationship with
+// no DelegatedFrom returns a single-element chain (itself). Register's
+// own DelegatedFrom check makes a cycle unconstructable through normal
+// use (a delegation can only ever point to a relationship registered
+// strictly earlier), but this still walks defensively rather than
+// trusting that invariant blindly.
+func (r *RelationshipRegistry) DelegationChain(id string) ([]Relationship, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var chain []Relationship
+	cur := id
+	seen := map[string]bool{}
+	for cur != "" {
+		if seen[cur] {
+			return nil, fmt.Errorf("party: delegation chain for %s contains a cycle at %s", id, cur)
+		}
+		seen[cur] = true
+		rel, ok := r.rels[cur]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrRelationshipNotFound, cur)
+		}
+		chain = append(chain, rel)
+		cur = rel.DelegatedFrom
+	}
+	for i, j := 0, len(chain)-1; i < j; i, j = i+1, j-1 {
+		chain[i], chain[j] = chain[j], chain[i]
+	}
+	return chain, nil
 }
 
 // Count returns the number of relationships in the registry.

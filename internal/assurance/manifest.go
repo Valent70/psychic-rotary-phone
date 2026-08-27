@@ -328,6 +328,13 @@ type ReadinessManifest struct {
 	// adding it leaves every historically-signed certificate verifiable
 	// byte-for-byte (the same discipline EnvironmentHash documents).
 	Axes AxesReport `json:"axes"`
+	// TemporaryReadiness is the Round 4 work order's own required
+	// aggregate: the twelve named categories, each gate's canonical
+	// status rolled up into one composed-per-category verdict, and one
+	// final TemporaryReadinessVerdict. Like Axes, it is purely derived
+	// from Gates (via Axes itself) and feeds nothing back — adding it
+	// changes no certificate, no Status, no release Verdict.
+	TemporaryReadiness TemporaryReadinessReport `json:"temporary_production_readiness"`
 }
 
 // ManifestSchemaVersion identifies the readiness manifest contract.
@@ -339,9 +346,11 @@ func BuildReadinessManifest(r *Registry, acc AcceptanceManifest, cert ReleaseCer
 	acc.Hash = acc.ComputeHash()
 	cert.AcceptanceManifestHash = acc.Hash
 	cert = cert.Finalize(a)
+	axes := r.Axes()
 	return ReadinessManifest{
 		SchemaVersion: ManifestSchemaVersion, Release: cert,
-		Acceptance: acc, Gates: r.Gates(), Assessment: a, Axes: r.Axes(),
+		Acceptance: acc, Gates: r.Gates(), Assessment: a, Axes: axes,
+		TemporaryReadiness: ComposeTemporaryReadiness(axes),
 	}
 }
 

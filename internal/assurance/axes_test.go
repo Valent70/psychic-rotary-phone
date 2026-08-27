@@ -251,6 +251,70 @@ func TestWaivedGateNeverReportsReadyOnTheFinalAxis(t *testing.T) {
 	}
 }
 
+// TestCanonicalStatusDistinguishesReadyFromTrulyBlocked is Round 4's own
+// worked example: two mandatory gates both BLOCKED_EXTERNAL on the FINAL
+// axis, but one has a real in-sandbox qualification drill behind it and
+// the other genuinely cannot run one without the external dependency
+// itself. The canonical taxonomy is required to tell them apart under
+// two different names, not collapse them into one.
+func TestCanonicalStatusDistinguishesReadyFromTrulyBlocked(t *testing.T) {
+	r := blockedGateRegistry(t) // scale_qualification: engineering PASS, internal QUALIFIED
+	if err := r.Register(Gate{
+		ID: "hsm_kms", Mandatory: true, RequiredStatus: StatusQualified,
+		OwnerPackage: "external", ExitCriteria: "production KMS tenancy provisioned",
+		ExternalDependency: "a real HSM/KMS tenancy nobody in this sandbox can provision",
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if err := r.Block("hsm_kms", "a real HSM/KMS tenancy nobody in this sandbox can provision"); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+	if err := r.AttachEngineering("hsm_kms", axisPassing(t, "hsm_kms", "go test ./pkg/blockers/hsmkms/")); err != nil {
+		t.Fatalf("attach engineering: %v", err)
+	}
+	// Deliberately no AttachInternal: an HSM/KMS internal drill needs the
+	// HSM/KMS itself, so it cannot be attempted at all in this sandbox.
+
+	sc, _ := r.Get("scale_qualification")
+	if got := sc.Axes().Canonical; got != CanonicalReadyForExternalQualification {
+		t.Fatalf("scale_qualification canonical = %q, want READY_FOR_EXTERNAL_QUALIFICATION", got)
+	}
+	hk, _ := r.Get("hsm_kms")
+	if got := hk.Axes().Canonical; got != CanonicalBlockedExternal {
+		t.Fatalf("hsm_kms canonical = %q, want BLOCKED_EXTERNAL", got)
+	}
+
+	rep := r.Axes()
+	if rep.ReadyForExternalQualification != 1 || rep.BlockedExternal != 1 {
+		t.Fatalf("rollup = ready:%d blocked:%d, want 1 and 1", rep.ReadyForExternalQualification, rep.BlockedExternal)
+	}
+	if total := rep.VerifiedInternal + rep.ReadyForExternalQualification + rep.BlockedExternal + rep.NotReady; total != len(rep.Gates) {
+		t.Fatalf("canonical buckets sum to %d, want exactly %d (every gate lands in exactly one bucket)", total, len(rep.Gates))
+	}
+}
+
+// TestCanonicalStatusNeverCallsAWaiverReady proves a waived gate lands in
+// NOT_READY under the canonical taxonomy too, not a fifth invented word.
+func TestCanonicalStatusNeverCallsAWaiverReady(t *testing.T) {
+	r := NewRegistry()
+	if err := r.Register(Gate{
+		ID: "vuln_db", Mandatory: true, RequiredStatus: StatusVerified,
+		OwnerPackage: "./...", ExitCriteria: "vulnerability DB queried",
+		ExternalDependency: "an egress policy that permits vuln.go.dev",
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if err := r.Waive("vuln_db", Waiver{
+		Owner: "release-eng", Justification: "org egress policy denies the feed", ExpiresAtTick: 999,
+	}); err != nil {
+		t.Fatalf("waive: %v", err)
+	}
+	g, _ := r.Get("vuln_db")
+	if got := g.Axes().Canonical; got != CanonicalNotReady {
+		t.Fatalf("canonical = %q, want NOT_READY", got)
+	}
+}
+
 func TestAttachAxisEvidenceRefusesAnUnknownGateAndATamperedArtifact(t *testing.T) {
 	r := blockedGateRegistry(t)
 	if err := r.AttachEngineering("no_such_gate", axisPassing(t, "no_such_gate", "x")); err == nil {

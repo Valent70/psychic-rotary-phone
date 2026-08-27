@@ -42,6 +42,7 @@ func TestValidateRejectsMalformed(t *testing.T) {
 		{"consent with no evidence", func(r Relationship) Relationship { r.ConsentGiven = true; return r }, ErrConsentWithNoEvidence},
 		{"unknown status", func(r Relationship) Relationship { r.Status = "BOGUS"; return r }, ErrRelationshipUnknownStatus},
 		{"revoked with no reason", func(r Relationship) Relationship { r.Status = RelationshipStatusRevoked; return r }, ErrRevokedNeedsReason},
+		{"self delegation", func(r Relationship) Relationship { r.DelegatedFrom = r.RelationshipID; return r }, ErrSelfDelegation},
 	}
 	for _, c := range cases {
 		if err := c.mod(base()).Validate(); !errors.Is(err, c.want) {
@@ -232,4 +233,97 @@ func TestKnownPermissionsExhaustive(t *testing.T) {
 	if len(KnownPermissions()) != 10 {
 		t.Fatalf("expected 10 known permissions, got %d: %v", len(KnownPermissions()), KnownPermissions())
 	}
+}
+
+// ---- Round 4: Party Authority Model additive fields ----
+
+// TestPartyAuthorityModelFieldsRoundTrip proves organization/scope/
+// tenant/jurisdiction are ordinary, settable, validated fields -- not
+// merely declared in the struct.
+func TestPartyAuthorityModelFieldsRoundTrip(t *testing.T) {
+	r, err := New("REL-SURVEYOR-1", "CASE-1", "PTY-SURVEYOR", "PTY-INSURER", RoleSurveyor, 100)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	r.Organization = "Acme Marine Surveyors Ltd"
+	r.Scope = "cargo damage assessment for CLM-002 only"
+	r.Tenant = "TENANT-LLOYDS-SYNDICATE-42"
+	r.Jurisdiction = "England and Wales"
+	if err := r.Validate(); err != nil {
+		t.Fatalf("Validate rejected a relationship with only the new optional fields set: %v", err)
+	}
+}
+
+// TestDelegationRequiresAnAlreadyRegisteredPermittingSource proves the
+// registry-level enforcement: DelegatedFrom must name a relationship
+// that (a) already exists in this registry and (b) explicitly allows
+// further delegation.
+func TestDelegationRequiresAnAlreadyRegisteredPermittingSource(t *testing.T) {
+	reg, err := NewRelationshipRegistry("CASE-1")
+	if err != nil {
+		t.Fatalf("NewRelationshipRegistry: %v", err)
+	}
+
+	sub, err := New("REL-SUB", "CASE-1", "PTY-SUB-SURVEYOR", "PTY-INSURER", RoleSurveyor, 100)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	sub.DelegatedFrom = "REL-BROKER"
+	if err := reg.Register(sub); !errors.Is(err, ErrDelegationSourceNotFound) {
+		t.Fatalf("expected ErrDelegationSourceNotFound before the source is registered, got %v", err)
+	}
+
+	broker, err := New("REL-BROKER", "CASE-1", "PTY-BROKER", "PTY-INSURED", RoleBroker, 50)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	// CanDelegate defaults false: delegation authority is never assumed.
+	if err := reg.Register(broker); err != nil {
+		t.Fatalf("Register(broker): %v", err)
+	}
+	if err := reg.Register(sub); !errors.Is(err, ErrDelegationNotPermitted) {
+		t.Fatalf("expected ErrDelegationNotPermitted while CanDelegate is false, got %v", err)
+	}
+
+	broker.CanDelegate = true
+	reg2, _ := NewRelationshipRegistry("CASE-1")
+	if err := reg2.Register(broker); err != nil {
+		t.Fatalf("Register(broker with CanDelegate): %v", err)
+	}
+	if err := reg2.Register(sub); err != nil {
+		t.Fatalf("Register(sub) once the source permits delegation: %v", err)
+	}
+
+	chain, err := reg2.DelegationChain("REL-SUB")
+	if err != nil {
+		t.Fatalf("DelegationChain: %v", err)
+	}
+	if len(chain) != 2 || chain[0].RelationshipID != "REL-BROKER" || chain[1].RelationshipID != "REL-SUB" {
+		t.Fatalf("expected root-first [REL-BROKER, REL-SUB], got %v", relationshipIDs(chain))
+	}
+}
+
+// TestDelegationChainOfOneReturnsJustItself proves a relationship with
+// no DelegatedFrom is its own one-element chain, not an error.
+func TestDelegationChainOfOneReturnsJustItself(t *testing.T) {
+	reg, _ := NewRelationshipRegistry("CASE-1")
+	r, _ := New("REL-1", "CASE-1", "PTY-A", "PTY-B", RoleBroker, 0)
+	if err := reg.Register(r); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	chain, err := reg.DelegationChain("REL-1")
+	if err != nil {
+		t.Fatalf("DelegationChain: %v", err)
+	}
+	if len(chain) != 1 || chain[0].RelationshipID != "REL-1" {
+		t.Fatalf("expected a single-element chain, got %v", relationshipIDs(chain))
+	}
+}
+
+func relationshipIDs(rels []Relationship) []string {
+	ids := make([]string, len(rels))
+	for i, r := range rels {
+		ids[i] = r.RelationshipID
+	}
+	return ids
 }

@@ -164,12 +164,16 @@ func TestKnownRolesCoversTheBlueprintList(t *testing.T) {
 	// describes. A further round (the VERIQO Master Closure Mandate §10,
 	// "the real-world insurance network") added ten more: COVERHOLDER_MGA,
 	// UNDERWRITER, CO_INSURER, CLAIMS_HANDLER, AVERAGE_ADJUSTER, EXPERT,
-	// SALVAGE_PARTY, RECOVERY_PARTY, REPAIRER, BANK_TRADE_FINANCE.
-	const blueprintRoles, r21AddedRoles, masterAddedRoles = 21, 9, 10
-	if got := len(KnownRoles()); got != blueprintRoles+r21AddedRoles+masterAddedRoles {
+	// SALVAGE_PARTY, RECOVERY_PARTY, REPAIRER, BANK_TRADE_FINANCE. Round 4
+	// (Gap_dan_Tugas_Tambahan's Real-World Insurance Network Assurance
+	// Layer, §27) added five more to reach its 20+ participant-type
+	// target: MARINE_SURVEY_COMPANY, INSPECTION_COMPANY, PORT_OPERATOR,
+	// COMMODITY_TRADER, INDEPENDENT_REVIEWER.
+	const blueprintRoles, r21AddedRoles, masterAddedRoles, r4AddedRoles = 21, 9, 10, 5
+	if got := len(KnownRoles()); got != blueprintRoles+r21AddedRoles+masterAddedRoles+r4AddedRoles {
 		t.Fatalf("expected %d known roles (%d from VICE blueprint §3 plus %d added in R21 plus %d added for the "+
-			"real-world insurance network), got %d",
-			blueprintRoles+r21AddedRoles+masterAddedRoles, blueprintRoles, r21AddedRoles, masterAddedRoles, got)
+			"real-world insurance network plus %d added in Round 4), got %d",
+			blueprintRoles+r21AddedRoles+masterAddedRoles+r4AddedRoles, blueprintRoles, r21AddedRoles, masterAddedRoles, r4AddedRoles, got)
 	}
 	// Each added role must genuinely be recognised, not merely counted.
 	for _, r := range []Role{
@@ -178,6 +182,8 @@ func TestKnownRolesCoversTheBlueprintList(t *testing.T) {
 		RoleCoverholderMGA, RoleUnderwriter, RoleCoInsurer, RoleClaimsHandler,
 		RoleAverageAdjuster, RoleExpert, RoleSalvageParty, RoleRecoveryParty,
 		RoleRepairer, RoleBankTradeFinance,
+		RoleMarineSurveyCompany, RoleInspectionCompany, RolePortOperator,
+		RoleCommodityTrader, RoleIndependentReviewer,
 	} {
 		if !IsKnownRole(r) {
 			t.Fatalf("role %q is declared but not registered as known", r)

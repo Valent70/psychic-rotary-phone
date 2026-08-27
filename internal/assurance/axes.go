@@ -86,6 +86,66 @@ type GateAxes struct {
 	ExternalDependency string `json:"external_dependency,omitempty"`
 	// Note explains, in one sentence, why FINAL is what it is.
 	Note string `json:"note,omitempty"`
+	// Canonical is the single-word readiness taxonomy every report,
+	// register and PDF in this program is required to use verbatim
+	// instead of inventing its own vocabulary. It is derived, never
+	// declared -- see canonicalStatus below for the exact rule.
+	Canonical CanonicalStatus `json:"canonical_status"`
+}
+
+// CanonicalStatus is the one-source-of-truth readiness vocabulary this
+// program's own governing documents mandate: no gap may be reported
+// under two different names across the manifest, the gap-closure
+// report, the external-dependency register and the PDF deliverables.
+// It is a strict, mechanical function of the four axes above -- there
+// is no separate place that assigns it by hand, so it cannot drift
+// from what Axes() actually computed.
+type CanonicalStatus string
+
+const (
+	// CanonicalVerifiedInternal: FINAL is READY. Either the gate has no
+	// external dependency at all, or it had one and real EXTERNAL_QUALIFIED
+	// evidence closed it. This is the ceiling any gate can honestly reach
+	// from inside this repository and its own qualification harnesses.
+	CanonicalVerifiedInternal CanonicalStatus = "VERIFIED_INTERNAL"
+	// CanonicalReadyForExternalQualification: the gate's own code and its
+	// in-sandbox qualification harness both pass (ENGINEERING=PASS,
+	// INTERNAL=INTERNAL_QUALIFIED) but FINAL is still BLOCKED_EXTERNAL --
+	// every internally-closeable half of the work is done; only the
+	// external act itself (a vendor, a purchase order, a physical host,
+	// an independent auditor) is missing.
+	CanonicalReadyForExternalQualification CanonicalStatus = "READY_FOR_EXTERNAL_QUALIFICATION"
+	// CanonicalBlockedExternal: FINAL is BLOCKED_EXTERNAL and the internal
+	// qualification step itself could not even be attempted (INTERNAL is
+	// NOT_RUN or NOT_APPLICABLE) -- typically because the external
+	// dependency is a precondition for running any qualification drill at
+	// all (you cannot internally qualify against a real HSM without an
+	// HSM; you cannot admit a live data feed without a live data
+	// contract; you cannot run a pentest without an independent pentest
+	// firm).
+	CanonicalBlockedExternal CanonicalStatus = "BLOCKED_EXTERNAL"
+	// CanonicalNotReady: FINAL is NOT_READY (the gate fails its own
+	// required status on engineering grounds, with no external excuse
+	// available) or WAIVED (a waiver is a visibly weaker verdict, never a
+	// synonym for readiness).
+	CanonicalNotReady CanonicalStatus = "NOT_READY"
+)
+
+// canonicalStatus derives the CanonicalStatus from a gate's already-computed
+// four axes. See the constants above for the exact rule; this function is
+// the only place that rule is implemented.
+func canonicalStatus(a GateAxes) CanonicalStatus {
+	switch a.Final {
+	case AxisReady:
+		return CanonicalVerifiedInternal
+	case AxisBlockedExternal:
+		if a.Internal == AxisInternalQualified {
+			return CanonicalReadyForExternalQualification
+		}
+		return CanonicalBlockedExternal
+	default: // AxisNotReady, AxisWaived
+		return CanonicalNotReady
+	}
 }
 
 // Axes derives this gate's four-axis report. Every value comes from
@@ -162,6 +222,7 @@ func (g Gate) Axes() GateAxes {
 		a.Final = AxisNotReady
 		a.Note = "gate does not meet its own required status"
 	}
+	a.Canonical = canonicalStatus(a)
 	return a
 }
 
@@ -236,6 +297,16 @@ type AxesReport struct {
 	EngineeringTotal   int `json:"engineering_total"`
 	InternalQualified  int `json:"internal_qualified"`
 	ExternalQualified  int `json:"external_qualified"`
+
+	// CanonicalSummary is the same 60 (or however many are registered)
+	// gates, counted once each under the one-source-of-truth taxonomy
+	// above. VerifiedInternal + ReadyForExternalQualification +
+	// BlockedExternal + NotReady always equals len(Gates) exactly --
+	// every gate lands in exactly one bucket, never zero and never two.
+	VerifiedInternal              int `json:"canonical_verified_internal"`
+	ReadyForExternalQualification int `json:"canonical_ready_for_external_qualification"`
+	BlockedExternal               int `json:"canonical_blocked_external"`
+	NotReady                      int `json:"canonical_not_ready"`
 }
 
 // Axes computes the four-axis report for every registered gate, in
@@ -259,6 +330,16 @@ func (r *Registry) Axes() AxesReport {
 		}
 		if a.Mandatory && a.Final == AxisBlockedExternal {
 			rep.BlockedExternalMandatory = append(rep.BlockedExternalMandatory, a.GateID)
+		}
+		switch a.Canonical {
+		case CanonicalVerifiedInternal:
+			rep.VerifiedInternal++
+		case CanonicalReadyForExternalQualification:
+			rep.ReadyForExternalQualification++
+		case CanonicalBlockedExternal:
+			rep.BlockedExternal++
+		case CanonicalNotReady:
+			rep.NotReady++
 		}
 	}
 	return rep

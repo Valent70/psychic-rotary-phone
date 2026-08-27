@@ -54,6 +54,8 @@ import (
 	"veriqo/pkg/governance/entityconsistency"
 	"veriqo/pkg/governance/qualification"
 	insurancecasepack "veriqo/pkg/insurance/casepack"
+	"veriqo/pkg/insurance/caseroom"
+	"veriqo/pkg/insurance/dossierverify"
 )
 
 type check struct {
@@ -794,6 +796,101 @@ func main() {
 			fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (cases=%d failures=%d)\n",
 				g.id, "internal:casepack.RunAssurance", code, ev.ArtifactID, summary.CaseCount, len(g.failures))
 		}
+	}
+
+	// PHASE R4 -- Independent Dossier Verifier gate ("Don't trust
+	// VERIQO. Verify VERIQO."). Registers the SAME check
+	// cmd/veriqo-dossier-verify runs for a human operator, via the
+	// shared pkg/insurance/dossierverify library, so the release gate
+	// and the operational CLI can never quietly diverge. Every check
+	// here recomputes its claim from raw inputs -- it never reads a
+	// cached Result field and trusts it.
+	{
+		allPass, reports, verr := dossierverify.RunAll()
+		artifact, _ := json.MarshalIndent(reports, "", "  ")
+		code := 0
+		switch {
+		case verr != nil:
+			code = 1
+			artifact = []byte(verr.Error())
+		case !allPass:
+			code = 1
+		}
+		desc := "every case's dossier independently re-verifies: two fully independent Drive() runs agree " +
+			"byte-for-byte on evidence root hash, quantum figure and dossier; the evidence manifest root hash " +
+			"is RECOMPUTED from the raw evidence registry rather than read off the cached field; the quantum " +
+			"figure is RECOMPUTED from its own recorded ComputeInput via the pure quantum.Compute function; " +
+			"cold replay reproduces the live result; and the compiled Dossier type is scanned and carries no " +
+			"coverage/liability/settlement verdict field -- run across all seven synthetic cases plus the " +
+			"golden cross-domain case (\"Don't trust VERIQO. Verify VERIQO.\")"
+		gid := "dossier_verification"
+		if err := reg.Register(assurance.Gate{
+			ID: gid, Description: desc,
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./pkg/insurance/dossierverify",
+			ExitCriteria: "every independent check passes on all 7 synthetic cases plus the golden case",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence(gid, "internal:dossierverify.RunAll", string(artifact), code, now)
+		writeArtifact(*evidenceDir, gid, "internal:dossierverify.RunAll", code, string(artifact))
+		gateHashes[gid] = ev.Hash
+		gatePassed[gid] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach(gid, status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s (cases=%d)\n",
+			gid, "internal:dossierverify.RunAll", code, ev.ArtifactID, len(reports))
+	}
+
+	// PHASE R4 -- Case Room access-control gate. Registers the real
+	// fail-closed BuildView scenarios (unknown relationship, missing
+	// permission, still-PENDING consent, independent per-section
+	// gating on the real golden case) so CASE_ROOM has genuine
+	// engineering evidence rather than reading as an unregistered,
+	// silently-NOT_READY category in the temporary-readiness composition.
+	{
+		crSummary := caseroom.RunAssurance()
+		artifact, _ := json.MarshalIndent(crSummary, "", "  ")
+		code := 0
+		if !crSummary.Pass() {
+			code = 1
+		}
+		gid := "case_room_access_control"
+		if err := reg.Register(assurance.Gate{
+			ID: gid, Description: "the Case Room's permissioned-view access control (pkg/insurance/caseroom) " +
+				"fails closed for an unknown relationship, a relationship without ACCESS_CASE_ROOM, and a " +
+				"still-PENDING (unconsented) relationship; and, on the real golden cross-domain case, two " +
+				"relationships with different granted permissions see genuinely different Section sets from " +
+				"the identical dossier, with redacted sections reporting zero content rather than leaking it",
+			Mandatory: true, RequiredStatus: assurance.StatusVerified,
+			OwnerPackage: "./pkg/insurance/caseroom",
+			ExitCriteria: "every fail-closed and per-section gating scenario passes",
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: register:", err)
+			os.Exit(3)
+		}
+		ev := assurance.NewEvidence(gid, "internal:caseroom.RunAssurance", string(artifact), code, now)
+		writeArtifact(*evidenceDir, gid, "internal:caseroom.RunAssurance", code, string(artifact))
+		gateHashes[gid] = ev.Hash
+		gatePassed[gid] = code == 0
+		status := assurance.StatusVerified
+		if code != 0 {
+			status = assurance.StatusImplemented
+			failures++
+		}
+		if err := reg.Attach(gid, status, ev); err != nil {
+			fmt.Fprintln(os.Stderr, "readiness: attach:", err)
+			os.Exit(3)
+		}
+		fmt.Printf("== %-24s %s\n   -> exit=%d artifact=%s\n", gid, "internal:caseroom.RunAssurance", code, ev.ArtifactID)
 	}
 
 	// Regenerate SBOM.json from THIS release's actual identity, and

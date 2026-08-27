@@ -1,0 +1,259 @@
+gate: dossier_verification
+command: internal:dossierverify.RunAll
+exit: 0
+---
+[
+  {
+    "case_id": "CASE-INS-001",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=04983cf4897f4a39ce29a4554907029e7ba7e6199f165caf9d4ea66065f35a42)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 6 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 47500.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-bbc28d774996c922ec478d9c4626805a2773694c13ac82c4a09dd5e5a35537ed replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "CASE-INS-002",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=39cca8a97fd50f9464df7a365a72bfa358d919a8172e68faeaca43906457194a)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 10 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 150000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-e80f82bd5250e10b2d55a69e09d3459587a5e7d9db74891cc9563acceb5ba0c5 replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "CASE-INS-003",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=d0f3b4731eeef9080b7b877064131ac59dfaba711c1ccec5554fc8728b1d7d29)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 5 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 204000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-f5f6769e46d182d1840f4f00c30116fe62725dd0d11ce399b030018c225d733e replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "CASE-INS-004",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=ce955ed014e1435d55d72e63b48c83edb9451016877eae51403d42f9839d3323)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 6 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 1250000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-31179d9523334d52bdea0782453465319c0ac613dda0e06499950d799b02fe7f replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "CASE-INS-005",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=e5a3385845d29aa6b994d5d01ac97bcbb628220e927654116ad3619419338b59)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 6 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 340000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-2d96d7b6c52a22ec9e8d17c8f867ca5c4ec9ef854b24429ff12274e3a16d3199 replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "CASE-INS-006",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=c9c90453322b98acdda095bada63b730c669b440377514d6fdd20e5d5bbe5330)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 5 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 2400000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-de19913d0fd32b963fdf3767bf1a82e6543dd1fb259881a3598aca8f13af2c77 replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "CASE-INS-007",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=8696f38a361024912f799e6e02452e53763ab0b3775b5296e31980cd8a911b9c)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 6 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 96000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "snapshot INSREPLAY-45c35fc5c59324a82afe9cf790c695a1a777846d25d55b1d4807b5e922bb133d replayed cold reproduces the live result exactly"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  },
+  {
+    "case_id": "GOLDEN",
+    "tagline": "Don't trust VERIQO. Verify VERIQO.",
+    "checks": [
+      {
+        "name": "independent_reproduction",
+        "pass": true,
+        "detail": "two independent runs agree exactly (evidence_root_hash=39cca8a97fd50f9464df7a365a72bfa358d919a8172e68faeaca43906457194a)"
+      },
+      {
+        "name": "evidence_chain_integrity",
+        "pass": true,
+        "detail": "root hash recomputed from 10 raw evidence records, matches the manifest"
+      },
+      {
+        "name": "quantum_recomputation",
+        "pass": true,
+        "detail": "recomputed 150000.00 from ComputeInput via the pure quantum.Compute function, matches"
+      },
+      {
+        "name": "golden_salvage_recomputation",
+        "pass": true,
+        "detail": "independently recomputed both figures from ComputeInput; drop of exactly 7600.00 matches the salvage net value"
+      },
+      {
+        "name": "cold_replay",
+        "pass": true,
+        "detail": "cold-replayed golden case matches the live run"
+      },
+      {
+        "name": "no_verdict_field",
+        "pass": true,
+        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+      }
+    ]
+  }
+]

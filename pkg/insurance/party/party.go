@@ -104,6 +104,41 @@ const (
 	RoleRecoveryParty    Role = "RECOVERY_PARTY"
 	RoleRepairer         Role = "REPAIRER"
 	RoleBankTradeFinance Role = "BANK_TRADE_FINANCE"
+
+	// The five roles below complete the Round 4 work order's
+	// Real-World Insurance Network Assurance Layer participant list
+	// (20+ participant types). Each is a distinct real-world actor a
+	// maritime cargo/hull claim genuinely involves and none of them
+	// already fit an existing role without mislabelling:
+	//
+	//   - MarineSurveyCompany is the ORGANIZATION a RoleSurveyor
+	//     individual acts for — the mandate's Party Authority Model
+	//     (§8) distinguishes an acting individual from the
+	//     organization whose authority they carry, and this role
+	//     names that organization's own party record.
+	//   - InspectionCompany is distinct from a marine survey company:
+	//     a cargo/quality inspection firm (e.g. pre-shipment or
+	//     condition inspection) is a different real-world entity with
+	//     a different scope of engagement, not a mislabelled surveyor.
+	//   - PortOperator is distinct from RolePortAuthority: an
+	//     authority is the regulatory/statutory body; an operator is
+	//     the commercial entity running terminal operations day to
+	//     day, and a claim can name either or both.
+	//   - CommodityTrader is the counterparty that bought or sold the
+	//     cargo itself — distinct from CargoOwner (who may be a
+	//     financing or title-holding entity) and from Shipper/
+	//     Consignee (logistics roles), per the mandate's explicit
+	//     participant list.
+	//   - IndependentReviewer is the functional spec §77 independent-
+	//     review role the mandate's Dossier Verifier surface (EXT-09)
+	//     names by name — distinct from Auditor (who reviews process
+	//     compliance) and from LossAdjuster (who acts within the
+	//     claim itself).
+	RoleMarineSurveyCompany Role = "MARINE_SURVEY_COMPANY"
+	RoleInspectionCompany   Role = "INSPECTION_COMPANY"
+	RolePortOperator        Role = "PORT_OPERATOR"
+	RoleCommodityTrader     Role = "COMMODITY_TRADER"
+	RoleIndependentReviewer Role = "INDEPENDENT_REVIEWER"
 )
 
 var knownRoles = map[Role]bool{
@@ -119,7 +154,9 @@ var knownRoles = map[Role]bool{
 	RoleCoverholderMGA: true, RoleUnderwriter: true, RoleCoInsurer: true,
 	RoleClaimsHandler: true, RoleAverageAdjuster: true, RoleExpert: true,
 	RoleSalvageParty: true, RoleRecoveryParty: true, RoleRepairer: true,
-	RoleBankTradeFinance: true,
+	RoleBankTradeFinance:    true,
+	RoleMarineSurveyCompany: true, RoleInspectionCompany: true,
+	RolePortOperator: true, RoleCommodityTrader: true, RoleIndependentReviewer: true,
 }
 
 // KnownRoles returns every modelled role in deterministic order.
