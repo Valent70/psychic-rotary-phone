@@ -1,0 +1,5 @@
+gate: calibration
+command: go test ./pkg/moat/reliability/
+exit: 0
+---
+ok  	veriqo/pkg/moat/reliability	(cached)

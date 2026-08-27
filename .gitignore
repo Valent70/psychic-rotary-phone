@@ -1,0 +1,15 @@
+/veriqo-demo
+/veriqo-gateway
+/veriqo-kernel-demo
+/veriqo-live-demo
+/veriqo-node
+/veriqo-readiness
+/veriqo-release-keygen
+/veriqo-requirements
+/veriqo-testrunner
+/veriqo-verify
+/veriqo-verify-release
+*.key
+*.test
+*.prof
+/veriqo-rwc-v2

@@ -1,0 +1,620 @@
+{
+  "schema_version": "veriqo.testrun/v1",
+  "timeout_seconds": 120,
+  "race": false,
+  "packages": [
+    {
+      "package": "veriqo/cmd/veriqo-demo",
+      "outcome": "PASS",
+      "duration_ms": 286,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-gateway",
+      "outcome": "NO_TESTS",
+      "duration_ms": 170,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-kernel-demo",
+      "outcome": "NO_TESTS",
+      "duration_ms": 106,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-live-demo",
+      "outcome": "NO_TESTS",
+      "duration_ms": 151,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-node",
+      "outcome": "NO_TESTS",
+      "duration_ms": 155,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-readiness",
+      "outcome": "NO_TESTS",
+      "duration_ms": 104,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-requirements",
+      "outcome": "PASS",
+      "duration_ms": 204,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-testrunner",
+      "outcome": "NO_TESTS",
+      "duration_ms": 91,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/cmd/veriqo-verify",
+      "outcome": "NO_TESTS",
+      "duration_ms": 115,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/internal/assurance",
+      "outcome": "PASS",
+      "duration_ms": 219,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/api",
+      "outcome": "PASS",
+      "duration_ms": 593,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/authz",
+      "outcome": "PASS",
+      "duration_ms": 212,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/canonical",
+      "outcome": "PASS",
+      "duration_ms": 201,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/chaos",
+      "outcome": "PASS",
+      "duration_ms": 65656,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/connector",
+      "outcome": "PASS",
+      "duration_ms": 262,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/consensus/raftlite",
+      "outcome": "PASS",
+      "duration_ms": 6860,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/core/trustcalc",
+      "outcome": "PASS",
+      "duration_ms": 266,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/dataplatform/ingest",
+      "outcome": "PASS",
+      "duration_ms": 210,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/dataquality",
+      "outcome": "PASS",
+      "duration_ms": 224,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/engine",
+      "outcome": "PASS",
+      "duration_ms": 306,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/evidence/api",
+      "outcome": "PASS",
+      "duration_ms": 283,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/evidence/graph",
+      "outcome": "PASS",
+      "duration_ms": 313,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/evidence/ontology",
+      "outcome": "PASS",
+      "duration_ms": 315,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/execution",
+      "outcome": "PASS",
+      "duration_ms": 269,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/explanation",
+      "outcome": "PASS",
+      "duration_ms": 289,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/governance/data",
+      "outcome": "PASS",
+      "duration_ms": 228,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/governance/hitl",
+      "outcome": "PASS",
+      "duration_ms": 239,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/governance/knowledge",
+      "outcome": "PASS",
+      "duration_ms": 213,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/governance/lifecycle",
+      "outcome": "PASS",
+      "duration_ms": 218,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/governance/qualification",
+      "outcome": "PASS",
+      "duration_ms": 215,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/identity",
+      "outcome": "PASS",
+      "duration_ms": 219,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/distributed",
+      "outcome": "PASS",
+      "duration_ms": 303,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/execgraph",
+      "outcome": "PASS",
+      "duration_ms": 270,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/intent",
+      "outcome": "PASS",
+      "duration_ms": 265,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/intentgraph",
+      "outcome": "PASS",
+      "duration_ms": 216,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/mission",
+      "outcome": "PASS",
+      "duration_ms": 246,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/ontology",
+      "outcome": "PASS",
+      "duration_ms": 207,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/plugin",
+      "outcome": "PASS",
+      "duration_ms": 2580,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/policy",
+      "outcome": "PASS",
+      "duration_ms": 203,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/reasoning",
+      "outcome": "PASS",
+      "duration_ms": 224,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/resource",
+      "outcome": "PASS",
+      "duration_ms": 676,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/runtime",
+      "outcome": "PASS",
+      "duration_ms": 245,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/sandbox",
+      "outcome": "PASS",
+      "duration_ms": 226,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/kernel/selfheal",
+      "outcome": "PASS",
+      "duration_ms": 241,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/lifecycle",
+      "outcome": "PASS",
+      "duration_ms": 321,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/calibration",
+      "outcome": "PASS",
+      "duration_ms": 275,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/causal",
+      "outcome": "PASS",
+      "duration_ms": 260,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/contradiction",
+      "outcome": "PASS",
+      "duration_ms": 272,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/decision",
+      "outcome": "PASS",
+      "duration_ms": 264,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/digitaltwin",
+      "outcome": "PASS",
+      "duration_ms": 280,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/domain/maritime",
+      "outcome": "PASS",
+      "duration_ms": 338,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/economic",
+      "outcome": "PASS",
+      "duration_ms": 214,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/entity",
+      "outcome": "PASS",
+      "duration_ms": 242,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/evidencegraph",
+      "outcome": "PASS",
+      "duration_ms": 302,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/fusion",
+      "outcome": "PASS",
+      "duration_ms": 282,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/fusion/hbayes",
+      "outcome": "PASS",
+      "duration_ms": 251,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/hbayes",
+      "outcome": "PASS",
+      "duration_ms": 225,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/intelligence/evidence",
+      "outcome": "PASS",
+      "duration_ms": 202,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/intelligence/patterns",
+      "outcome": "PASS",
+      "duration_ms": 198,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/intelligence/pricing",
+      "outcome": "PASS",
+      "duration_ms": 209,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/intelligence/risk",
+      "outcome": "PASS",
+      "duration_ms": 282,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/kg",
+      "outcome": "PASS",
+      "duration_ms": 291,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/metaintelligence",
+      "outcome": "PASS",
+      "duration_ms": 202,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/provenance",
+      "outcome": "PASS",
+      "duration_ms": 243,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/reliability",
+      "outcome": "PASS",
+      "duration_ms": 224,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/simulation",
+      "outcome": "PASS",
+      "duration_ms": 206,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/moat/temporal",
+      "outcome": "PASS",
+      "duration_ms": 213,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/platform/audit",
+      "outcome": "PASS",
+      "duration_ms": 244,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/platform/config",
+      "outcome": "PASS",
+      "duration_ms": 216,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/platform/observability",
+      "outcome": "PASS",
+      "duration_ms": 240,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/platform/security",
+      "outcome": "PASS",
+      "duration_ms": 403,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/platform/security/keys",
+      "outcome": "PASS",
+      "duration_ms": 235,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/platform/telemetry",
+      "outcome": "PASS",
+      "duration_ms": 193,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/replay",
+      "outcome": "PASS",
+      "duration_ms": 220,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/storage",
+      "outcome": "PASS",
+      "duration_ms": 310,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/storage/wal",
+      "outcome": "PASS",
+      "duration_ms": 239,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/transport/flowcontrol",
+      "outcome": "PASS",
+      "duration_ms": 355,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/transport/rafttcp",
+      "outcome": "PASS",
+      "duration_ms": 780,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/trust",
+      "outcome": "PASS",
+      "duration_ms": 261,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/trust/state",
+      "outcome": "PASS",
+      "duration_ms": 259,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/verification",
+      "outcome": "PASS",
+      "duration_ms": 395,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/pkg/workflow",
+      "outcome": "PASS",
+      "duration_ms": 216,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/test/acceptance",
+      "outcome": "PASS",
+      "duration_ms": 630,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/test/acceptance/replay",
+      "outcome": "PASS",
+      "duration_ms": 469,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/test/chaos",
+      "outcome": "PASS",
+      "duration_ms": 279,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/test/integration",
+      "outcome": "PASS",
+      "duration_ms": 2256,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/test/stress",
+      "outcome": "PASS",
+      "duration_ms": 6560,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/cli",
+      "outcome": "PASS",
+      "duration_ms": 1048,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/core/evidence",
+      "outcome": "PASS",
+      "duration_ms": 278,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/core/execution",
+      "outcome": "PASS",
+      "duration_ms": 353,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/core/intelligence",
+      "outcome": "PASS",
+      "duration_ms": 250,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/core/knowledge",
+      "outcome": "PASS",
+      "duration_ms": 243,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/core/runtime",
+      "outcome": "PASS",
+      "duration_ms": 415,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/examples",
+      "outcome": "PASS",
+      "duration_ms": 301,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/gateway/rest",
+      "outcome": "PASS",
+      "duration_ms": 1216,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/generator",
+      "outcome": "PASS",
+      "duration_ms": 358,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/generator/cmd/gen",
+      "outcome": "NO_TESTS",
+      "duration_ms": 106,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/kernel",
+      "outcome": "PASS",
+      "duration_ms": 446,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/moat/scorecard",
+      "outcome": "PASS",
+      "duration_ms": 250,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/registry",
+      "outcome": "PASS",
+      "duration_ms": 422,
+      "exit_code": 0
+    },
+    {
+      "package": "veriqo/veriqo/sdk/go",
+      "outcome": "PASS",
+      "duration_ms": 329,
+      "exit_code": 0
+    }
+  ],
+  "totals": {
+    "NO_TESTS": 8,
+    "PASS": 93
+  },
+  "total_duration_ms": 111721,
+  "verdict": "PASS",
+  "report_hash": "32bf849b59844d88567e02ddec996201aaa6a8aac5920ce48c8c738d390582dd"
+}

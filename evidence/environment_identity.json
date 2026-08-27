@@ -1,0 +1,11 @@
+{
+  "os": "linux",
+  "arch": "amd64",
+  "compiler": "gc",
+  "toolchain": "go1.25.5",
+  "hostname": "repl",
+  "kernel_version": "6.18.46",
+  "container_runtime_detected": false,
+  "configuration_hash": "fa147c41103e3790ecdc667c53e6555a5542a09ddef91aee4c740f67e0aa3657",
+  "time_reference_unix": 1787646612
+}

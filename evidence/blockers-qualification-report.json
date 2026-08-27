@@ -1,0 +1,142 @@
+{
+  "outcomes": [
+    {
+      "id": "scale_qualification",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "duplicate_policy": "REJECT",
+        "elapsed": "1.974062ms",
+        "input_ledger_hash": "be848467a51ea9dab7fa09395e531590e08989204f21ecaa3d215fe6635392dd",
+        "merkle_root": "4dd79a4a6d08b3cc4f75cd23a1b31a33bef094aed68680499ae0dbb955ba6330",
+        "node_count": "8",
+        "nodes_with_no_traffic_count": "0",
+        "output_ledger_hash": "3b70e94af9d1c9a2ec045b3946d835297850cecb9444ca7e18baba17e75561cb",
+        "reconciliation_consistent": "true",
+        "records_processed": "2000",
+        "records_submitted": "2000",
+        "release_commit": "9692a6b58f24b1e67e2710acdf7fadbb36a7b04e",
+        "release_identity_source": "git",
+        "release_source_hash": "72b1d2d4af0c86c8c829da8f04db44c0eddbfe975daa367119a5f64a50bc6626",
+        "throughput_per_s": "1013139.40",
+        "unauthorized_count": "0"
+      }
+    },
+    {
+      "id": "multi_region_dr",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "acknowledged_writes": "3",
+        "failback_converged": "true",
+        "failed_region": "region-0",
+        "healed_convergence": "true",
+        "recovered_leader": "region-1",
+        "region_count": "3",
+        "release_commit": "9692a6b58f24b1e67e2710acdf7fadbb36a7b04e",
+        "release_identity_source": "git",
+        "release_source_hash": "72b1d2d4af0c86c8c829da8f04db44c0eddbfe975daa367119a5f64a50bc6626",
+        "replication_caught_up": "true",
+        "replication_matched_entries": "3",
+        "replication_total_entries": "3",
+        "rpo_lost_writes": "0",
+        "rto": "185.905283ms",
+        "topology_after_leader": "region-1",
+        "topology_before_leader": "region-0"
+      }
+    },
+    {
+      "id": "hsm_kms",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "PERMISSION_DENIED": "blocked=true",
+        "PRODUCTION_GUARD": "blocked=true",
+        "REVOKED": "blocked=true provider_touched=false",
+        "TIMEOUT": "blocked=true",
+        "UNAVAILABLE": "blocked=true",
+        "WRONG_KEY": "blocked=true"
+      }
+    },
+    {
+      "id": "live_data",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "connectors": "4",
+        "first_pass_accepted": "80",
+        "first_pass_rejected": "0",
+        "replay_accepted": "0",
+        "replay_rejected": "80"
+      }
+    },
+    {
+      "id": "soak_72h",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "actual_duration": "3.036898079s",
+        "binary_hash": "8a4ed3ad11a1dcb6af4cdcb884972d958805ae4861f14b79a54016608bb8b17c",
+        "chain_verified": "true",
+        "checkpoints": "11",
+        "drift_detected": "false",
+        "dropped_events": "0",
+        "end_time": "2026-08-25T08:29:59Z",
+        "host_identity": "ed8011a2abc91b3cbfe6050ea3d516dbbfb5b077b953258ecd2f11c1e3c59d8f",
+        "hostname": "repl",
+        "is_full_72h": "false",
+        "iterations": "23881731",
+        "leak_detected": "false",
+        "reconciliation": "true",
+        "restart_count": "0",
+        "run_id": "soak-run-07731da09f5db8fbefae0c50a4fda87b",
+        "source_hash": "72b1d2d4af0c86c8c829da8f04db44c0eddbfe975daa367119a5f64a50bc6626",
+        "start_time": "2026-08-25T08:29:56Z"
+      }
+    },
+    {
+      "id": "spire_mtls",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "claimed_id_mismatch_rejected": "blocked_or_passed=true",
+        "expired_svid_rejected": "blocked_or_passed=true",
+        "fetch_then_validate": "blocked_or_passed=true",
+        "old_svid_still_structurally_valid_until_revoked": "blocked_or_passed=true",
+        "revoked_svid_rejected": "blocked_or_passed=true",
+        "rotation_observed_via_watch": "blocked_or_passed=true",
+        "untrusted_bundle_rejected": "blocked_or_passed=true",
+        "validate_peer_returns_actual_id": "blocked_or_passed=true"
+      }
+    },
+    {
+      "id": "supply_chain_scan",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "dependency_count": "0",
+        "findings": "0",
+        "source_type": "TEST_FIXTURE",
+        "unjustified": "0"
+      }
+    },
+    {
+      "id": "pentest",
+      "status": "READY_FOR_REAL_QUALIFICATION",
+      "pass": true,
+      "measurements": {
+        "clean_tree": "false",
+        "commit": "9692a6b58f24b1e67e2710acdf7fadbb36a7b04e",
+        "critical_findings": "0",
+        "high_findings": "0",
+        "low_findings": "0",
+        "medium_findings": "0",
+        "probes_ran_at": "2026-08-25T08:29:59Z",
+        "probes_run": "4",
+        "retest_status": "PASS",
+        "source_hash": "72b1d2d4af0c86c8c829da8f04db44c0eddbfe975daa367119a5f64a50bc6626"
+      }
+    }
+  ],
+  "all_pass": true
+}

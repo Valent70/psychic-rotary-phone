@@ -1,0 +1,5 @@
+gate: data_governance
+command: go test ./pkg/governance/data/
+exit: 0
+---
+ok  	veriqo/pkg/governance/data	(cached)

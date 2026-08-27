@@ -1,0 +1,5 @@
+gate: correlation_propagation_coverage
+command: go test -run CorrelationPropagationCoverage ./pkg/platform/correlation/
+exit: 0
+---
+ok  	veriqo/pkg/platform/correlation	0.007s

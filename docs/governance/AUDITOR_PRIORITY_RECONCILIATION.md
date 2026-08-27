@@ -1,0 +1,358 @@
+# Auditor Priority-Phase Reconciliation (R18, R19)
+
+This document reconciles a fresh auditor document ("Fase Prioritas menurut
+Auditor harus diselesaikan") against this repository's actual, current
+state. The auditor's own document frames VERIQO's status as a split
+between two independent axes:
+
+```
+ENGINEERING CORE  ~90%+ strong   (Execution, Evidence, Identity, Truth,
+                                   Fusion, Bayesian, Decision, Digital
+                                   Twin, Replay, Verification)
+REAL-WORLD PROOF  ~40-50%        (Live AIS, Live BoL, Calibration corpus,
+                                   HSM/KMS, SPIRE production, 100 nodes,
+                                   Multi-region, 72h soak, Pentest,
+                                   Pilot customer)
+```
+
+and lists five priority phases, in the auditor's own stated order. Each
+is addressed below with a precise, checkable status — not a rhetorical
+one — following this project's standing "no false green" discipline: a
+claim of CLOSED must cite a real, reproducible artifact; a claim of
+BLOCKED_EXTERNAL must name the specific real-world resource (money,
+contract, physical infrastructure, an independent third party) that no
+coding session can substitute for without fabricating evidence.
+
+## PRIORITY 1 — Real data acquisition (AIS, BoL/customs, SAR,
+commodity/trade, historical outcome data)
+
+**Status: BLOCKED_EXTERNAL for the live feeds themselves, unchanged and
+explicitly excluded from scope by standing operator directive — but the
+adjacent, genuinely OPEN *engineering* gap this priority also implied
+(R-050: "real-world ingestion contracts" for all five named source
+types, not just AIS) is now closed, R19, real code and real tests.**
+
+This is the `live_data` blocker (`pkg/blockers/livedata`), which the
+operator directing this entire multi-round effort explicitly excluded
+from the "close every remaining gap" mandate from the outset ("...selain
+daripada real data..."). It requires genuine commercial data contracts
+with AIS/BoL/SAR/commodity-trade providers — a procurement and legal
+action, not an engineering one. What IS real and already built: a
+production-shaped `FeedConnector`/`Pipeline` with content-hash dedup and
+a proven anti-replay defense across all four source types, which refuses
+any `SIMULATED`-mode connector's record tagged `LIVE` (see
+`evidence/blockers-qualification-report.json`,
+`READY_FOR_REAL_QUALIFICATION`).
+
+R19 addendum: before this round, `pkg/connector` only had a real
+ingestion-contract treatment for ONE of the five source types the
+requirement traceability matrix's R-050 row named (AIS, via
+`pkg/connector/aisstream` — a full wire-schema parser, structural
+validator, and canonicalizer into `pkg/evidence/ontology.Evidence`); the
+other four (SAR, BoL, insurance, payment) simply did not exist, making
+R-050 the one genuinely OPEN, non-infrastructure-blocked row in the
+entire 51-row matrix. R19 closes it for real: `pkg/connector/{sar,bol,
+insurance,payment}` each now parse a raw wire schema, structurally
+validate it (malformed/truncated/wrong-schema/missing-field all fail
+closed before any semantic check runs), semantically validate it, and
+canonicalize into `pkg/evidence/ontology.Evidence` (`TypeSARObservation`,
+`TypeTradeRecord`, `TypeDocument`, `TypeFinancialRecord` respectively).
+`pkg/connector.Drain` composes `pkg/blockers/livedata`'s existing
+`FeedConnector`/`Pipeline` (content-hash dedup, anti-replay, LIVE-
+refusal) with each source's new `Decoder`, rather than duplicating any
+of that machinery — the SAME discipline this priority's own paragraph
+above already describes for the four original sources. Every new
+connector is SIMULATED-mode only, deterministic and seeded, exactly like
+before; `TestSimulatedNeverAcceptedAsLive` (one per new package) proves a
+SIMULATED connector's record tagged LIVE is still refused. None of this
+narrows the actual `live_data` blocker above by one inch — it still
+needs real commercial data contracts, unchanged — it only closes the
+separate, genuine engineering gap that sat next to it in the matrix. No
+further engineering work narrows
+this without a real data contract; none was attempted this round, per
+standing scope.
+
+## PRIORITY 2 — Calibration corpus (historical events, labels, priors,
+likelihoods, model versions, calibration provenance)
+
+**Status: PARTIALLY CLOSED this round — the calibration PROCESS is now
+real; the underlying historical DATASET remains BLOCKED_EXTERNAL for the
+same reason as Priority 1.**
+
+`pkg/governance/calibration` already closed two of the three parts a
+prior audit named distinctly:
+
+- The **contract** half: a `LikelihoodTable` cannot be registered without
+  a complete `CalibrationRecord` (calibration_source, model_version,
+  prior, effective_tick, dataset_provenance) — `Register`/`BuildObservation`
+  fail closed (`ErrNoCalibration`) for anything ungoverned.
+- The **wiring** half: `pkg/lifecycle.Orchestrator`'s optional
+  `TemporalCalibration` field, when set, makes `RunUnified` call through
+  to a real `pkg/moat/hbayes.Model.Infer` over real, provenanced evidence
+  — not a stub (`TestRunUnifiedTemporalBayesianStageExecutesWhenCalibrationRegistered`).
+
+This round adds the third, previously-missing part: the **fitting
+process** itself. `pkg/governance/calibration/corpus.go`'s `Dataset` and
+`Fit` turn a corpus of labeled historical events into a real
+`LikelihoodTable` via deterministic frequentist maximum-likelihood
+estimation — P(evidence value | hidden state) computed by counting, and
+the marginal `Prior` computed the same way, both entirely derived from
+`Dataset`, never asserted. `Fit` fails closed
+(`ErrInsufficientSamples`) when a declared hidden state has too few
+labeled events to estimate reliably, exactly the same "no false green"
+discipline as every other refusal in this codebase. `Dataset.Hash()`
+content-addresses the corpus so `CalibrationRecord.DatasetProvenance`
+cites something checkable, not a free-text claim; the round-trip test
+(`TestFittedTableRoundTripsThroughTheRealRegistryAndProducesAnObservation`)
+proves a `Fit`-produced table is a genuinely registrable, usable
+`LikelihoodTable`, not just numerically correct in isolation.
+
+What remains, and cannot be closed by any coding session: a real corpus
+of genuinely investigated, ground-truth-labeled historical events. This
+requires either a commercial data-and-labeling contract or years of this
+system's own resolved case history — the same category of real-world
+dependency as `live_data`, not a code gap. `corpus_test.go` registers a
+clearly-labelled `fixture:synthetic-dark-vessel-corpus-v1 (NOT a real
+production calibration dataset)` corpus to prove `Fit`'s machinery is
+real; it is never claimed to be production data.
+
+## PRIORITY 3 — Real infrastructure qualification (KMS, SPIRE
+production, 100-node, multi-region, 72h)
+
+**Status: BLOCKED_EXTERNAL, substantially narrowed across R17 with real
+multi-container drills; the literal production-scale requirement is
+unchanged and cannot be closed without real procurement.**
+
+This is exactly `hsm_kms` + `spire_mtls` + `scale_qualification` +
+`multi_region_dr` + `soak_72h`. R17 already pushed real evidence as far
+as this sandbox's actual capabilities allow:
+
+- **KMS**: `pkg/platform/security/keys`'s `SoftwareBacked` production
+  guard refuses any software-backed key provider under `env=production`;
+  every real failure mode (unavailable, timeout, permission-denied,
+  wrong-key, revoked) is proven to fail closed. A real cloud KMS
+  adapter was **deliberately not added** this round: this codebase's
+  `zero_dependency` gate (`go list -m all`, evidence:
+  `evidence/blockers-qualification-report.json`) is a real, enforced,
+  intentional architectural property, and any real AWS KMS / GCP KMS /
+  Azure Key Vault client requires an external Go module — adding one
+  would trade a genuine "we ship zero third-party code" guarantee for a
+  cosmetic step toward a blocker that still needs real cloud credentials
+  and a paid tenancy to ever qualify. That trade was judged not worth
+  making; the interface remains ready to receive a real adapter the
+  moment an operator provisions real KMS credentials.
+- **SPIRE production**: a real 3-container SPIRE cluster (1 server + 2
+  independently-attested agents) proved node-scoped isolation and live
+  per-node revocation (`evidence/spire_mtls-multi-container-integration.txt`).
+  What remains — a production node attestor (cloud-instance-identity /
+  k8s-PSAT / TPM, not the test `join_token` attestor used here) and a
+  Workload API client wired into `pkg/transport/rafttcp` — was
+  re-examined this round and found to have the same zero-dependency
+  tension as KMS: a real go-spiffe Workload API client is an external
+  module, and a hand-rolled gRPC-over-Unix-socket client written from
+  scratch risks producing something that does not actually speak the
+  real protocol correctly — a worse outcome than an honest BLOCKED,
+  because it would look closed without being real. Not attempted this
+  round for that reason.
+- **100-node scale**: 10 genuinely separate Docker containers, real
+  HTTP, 50,000 records, zero lost/duplicated
+  (`evidence/scale_qualification-multi-container-drill.txt`) — one order
+  of magnitude short of the literal 100-node acceptance criterion, which
+  requires real cloud/physical infrastructure this sandbox does not have
+  and cannot provision.
+- **Multi-region**: 3 real `cmd/veriqo-node` containers, a real `docker
+  network disconnect` partition, ~500ms RTO / RPO=0
+  (`evidence/multi_region_dr-multi-container-drill.txt`) — still not
+  real cross-datacenter WAN infrastructure.
+- **72h soak**: a genuine, unbroken 60-minute run
+  (`evidence/soak-60min-run-log.txt`) backs the standing 2-minute smoke
+  pass — 30x, not 72x60x the target. This sandbox's session lifecycle
+  cannot honestly stay up for a continuous 72-hour window; no amount of
+  retrying changes that physical constraint.
+
+No further engineering narrowing was found tractable this round beyond
+what R17 already produced.
+
+## PRIORITY 4 — Independent assurance (external pentest, vulnerability
+DB, independent build/reproducibility)
+
+**Status: BLOCKED_EXTERNAL for the vendor and vulnerability-feed
+components, unchanged; independent-build reproducibility narrowed this
+round with a real cross-runner proof.**
+
+- **External pentest**: unchanged. `pkg/blockers/pentest` runs real
+  adversarial probes (JWT alg=none, unknown kid, sandbox path traversal,
+  authz wildcard escalation) directly against this codebase's own
+  production `pkg/api`/`pkg/kernel/sandbox`/`pkg/authz`
+  (`READY_FOR_REAL_QUALIFICATION`), but only a real, independent
+  security vendor's signed report can ever satisfy this by construction
+  — no session, however long, substitutes for an independent third
+  party being independent.
+- **Vulnerability DB**: unchanged, confirmed still blocked. `vuln.go.dev`,
+  `osv.dev`, and the GitHub advisory API all return 403 under this
+  sandbox's own confirmed, explicit organization egress policy — a
+  policy denial, not a technical gap. SAST (`gosec`, `staticcheck`) runs
+  clean (0 findings) and is fully closed; the vulnerability-database
+  query specifically is not.
+- **Independent build / reproducibility**: real progress this round.
+  `internal/reproducibility` already proved bit-for-bit binary equality
+  across two independent *compiler invocations* on one machine (and
+  found/fixed two real reproducibility bugs doing so: cgo's system
+  compiler embedding temp paths `-trimpath` doesn't cover, and `go
+  build`'s default VCS auto-stamping capturing a working-tree dirty bit
+  that could differ between two sequential builds under concurrent test
+  load — see that package's own header comment for the full account).
+  What it could not prove from inside a single `go test` process is two
+  builds from genuinely SEPARATE builders. `.github/workflows/reproducible-build.yml`
+  (new this round) closes that: two parallel GitHub Actions jobs, each
+  on its own freshly-provisioned, isolated ephemeral VM — no shared
+  filesystem, no shared `GOCACHE`, no shared process — independently
+  build the identical source tree and a third job diffs the resulting
+  SHA-256 hashes. This is honestly "two separate machines" narrowing the
+  gap real auditors mean by "independent builder" — though both happen
+  to be GitHub-hosted `ubuntu-latest` runners on the same toolchain
+  vendor, not two independent CI providers or operating systems. That
+  narrower remaining gap (a build on a genuinely different provider/OS
+  lineage) is real and still open; this workflow does not claim
+  otherwise.
+
+## PRIORITY 5 — Pilot customer
+
+**Status: BLOCKED_EXTERNAL, categorically outside any coding session's
+authority or capability.**
+
+A pilot customer is a real commercial relationship: sales, contracting,
+onboarding, and a real organization choosing to run VERIQO against their
+own operations. No amount of engineering effort, however sustained,
+substitutes for a real customer existing and agreeing to a pilot — this
+is not a technical gap this repository's code can close, and claiming
+otherwise would require fabricating a customer relationship that does
+not exist. Nothing was attempted here, and nothing honestly could be.
+
+## R19 addendum — two pure-engineering gaps outside the auditor's five
+priorities, closed this round; one investigated and confirmed NOT stale
+
+The auditor's five priorities above are all, by design, about resources
+a coding session cannot fabricate (commercial data, a labeled historical
+corpus, physical/cloud infrastructure, an independent vendor, a paying
+customer). R19's other work was two items the requirement traceability
+matrix tracks separately, both pure engineering with no such external
+dependency:
+
+- **R-050** (real-world ingestion contracts) — the one genuinely OPEN
+  row in the entire 51-row matrix, closed for real. See the R19 addendum
+  under PRIORITY 1 above for the detail; it does not change PRIORITY 1's
+  own BLOCKED_EXTERNAL status, since the live feeds themselves are still
+  unavailable — it closes the adjacent engineering gap next to it.
+- **R-029** (`pkg/consensus/raftlite` membership/reconfiguration) — VERIFIED
+  since an earlier round but carrying an inline caveat naming three
+  specific missing pieces: an explicit learner/voter role distinction,
+  adversarial corrupted/truncated/stale-snapshot tests, and a named
+  leader-during-reconfiguration scenario. All three closed this round
+  with real code and real tests — see `docs/governance/requirements.json`'s
+  R-029 entry for the precise detail, including the one honest narrowing
+  that remains (true two-phase joint consensus does not yet compose with
+  learners) and the one honest scoping note (the leader-during-
+  reconfiguration test is a direct, deterministic mechanism-level test,
+  not a live multi-node cluster race, after several cluster-level
+  attempts proved unreliable to make deterministic in this sandbox for
+  reasons that turned out to be about Raft's own liveness properties,
+  not about the fix).
+
+A third item was investigated per explicit instruction, NOT attempted:
+whether **R-028**'s "OS-level seccomp/namespace enforcement remains
+BLOCKED" note might be stale, given that this branch's own history
+already contains real seccomp-BPF work (`de646c0`: a hand-encoded
+classic-BPF denylist installed via `PR_SET_SECCOMP`) and real
+`PR_SET_NO_NEW_PRIVS` hardening (`09823ac`). Checked directly rather
+than assumed: both of those live in `cmd/veriqo-plugin-shim`, a separate
+command with its own hand-rolled enforcement for its own specific
+plugin-execution use case. `pkg/kernel/sandbox` — R-028's actual owner
+package — still has exactly two `Enforcer` implementations,
+`InProcessEnforcer` (which explicitly REFUSES policies requiring process
+spawning or syscall filtering rather than pretending to enforce them —
+see its own doc comment) and `UnenforceableEnforcer` (no enforcement at
+all). Neither is a real OS-level seccomp/namespace enforcer, and neither
+wires in `cmd/veriqo-plugin-shim`'s BPF work as a pluggable `Enforcer`.
+**Conclusion: R-028's note is accurate, not stale.** The real seccomp
+work is real, but it is a parallel, narrower piece of machinery serving
+a different package, not integrated into the one this requirement
+actually tracks — closing that integration gap would be legitimate
+future engineering work, but per this round's explicit instruction, it
+was investigated only, not attempted.
+
+## Summary
+
+| Priority | What's real & closed this round or before | What remains, and why it's categorically external |
+|---|---|---|
+| 1. Real data acquisition | Real connector/pipeline/anti-replay machinery; **all 5 named source-type ingestion contracts now real (new, R19)** | Commercial data contracts (excluded from scope by standing directive) |
+| 2. Calibration corpus | Contract + wiring + **real fitting process (new, R18)** | A real labeled historical dataset (data acquisition, same category as #1) |
+| 3. Infrastructure qualification | Real multi-container drills for SPIRE/DR/scale; fail-closed KMS guard | Real cloud/physical procurement at literal production scale; zero-dependency architecture rules out adding cloud SDKs for a partial, still-unqualifiable step |
+| 4. Independent assurance | Real SAST; real adversarial pentest harness; **real cross-runner independent build (new, R18)** | A real vendor's signed report; a blocked vulnerability-DB feed (org policy); a build on a genuinely separate CI provider/OS lineage |
+| 5. Pilot customer | — | A real customer choosing to run a pilot — a sales/business outcome, not a code gap |
+
+Every "PARTIALLY CLOSED" or "narrowed" claim above cites a specific,
+reproducible artifact in this repository or its evidence directory. Every
+"BLOCKED_EXTERNAL" claim names the specific real-world resource — money,
+a contract, physical infrastructure, an independent third party, or a
+real customer — that no coding session can substitute for without
+fabricating evidence, which this project has consistently refused to do.
+
+## R20 addendum — the pre-insurance closure program, and one note above
+## that is now stale
+
+R20 executed a separate mandate ("VERIQO PRE-INSURANCE CLOSURE
+PROGRAM", phases A-K / P0-1..P2-18). Its full accounting lives in three
+documents rather than being restated here:
+
+- `PRE_INSURANCE_IMPLEMENTATION_REPORT.md` — the Step 0 reconciliation
+  (4 items already closed, 10 partial, 4 genuinely missing), what
+  changed per phase, and what was deliberately left alone.
+- `PRE_INSURANCE_VERIFICATION_MATRIX.md` — Requirement | Implementation
+  | Test | Result | Evidence | Status for every item, plus the
+  mandate's own hard-gate checklist answered line by line.
+- `PRE_INSURANCE_RESIDUAL_EXTERNAL_GATE_REGISTER.md` — the eight
+  blockers under a new four-axis (engineering / internal / external /
+  final) separation, plus eight non-gate residuals recorded in code as
+  honest ceilings.
+
+**Nothing in R20 narrowed any of the five priorities above.** The five
+are, by design, about resources a coding session cannot fabricate, and
+R20 attempted none of them. What it did change is how the eight
+blockers are REPORTED: their engineering and internal-qualification
+progress is now a separate, machine-readable axis instead of being
+hidden behind the single word BLOCKED. Their status strings and blocker
+reasons are byte-for-byte unchanged, and
+`TestAxisSeparationNeverAdvancesTheGateItself` proves the change moves
+no gate, no assessment and no release verdict.
+
+### The R19 addendum's R-028 note is now stale, and R20 closed it
+
+The R19 addendum above records that `pkg/kernel/sandbox` had exactly two
+`Enforcer` implementations, neither of which wired in
+`cmd/veriqo-plugin-shim`'s real seccomp-BPF and `PR_SET_NO_NEW_PRIVS`
+work, and states that closing that integration gap "would be legitimate
+future engineering work, but per this round's explicit instruction, it
+was investigated only, not attempted."
+
+R20's PHASE J attempted it and closed it. `pkg/kernel/sandbox.OSEnforcer`
+is the missing third implementation. It reimplements no confinement
+primitive — the namespaces still come from `pkg/kernel/plugin`, seccomp
+and no-new-privs still from the shim, cgroup v2 still from
+`pkg/kernel/resource` — and adds the honest mapping from a `Policy`
+clause to the primitive that must be present, with `Probe()` reading
+`/proc` and `/sys` rather than inferring anything from GOOS.
+
+Seven negative tests cover the seven named escape vectors. The
+important one is `TestSupportedButUnappliedPrimitiveIsNotTreatedAsClosed`:
+a kernel that SUPPORTS `PR_SET_NO_NEW_PRIVS` confines nothing if the
+shim that applies it is not deployed, and the enforcer reports that
+vector as NOT closed rather than green.
+
+The honest ceiling is unchanged in kind from what R19 described, and is
+now stated in code (`sandbox.Qualification()`) rather than in prose:
+INTERNAL_QUALIFIED, never VERIFIED. Proving a genuinely hostile binary
+is contained requires an adversarial drill on a production kernel.
+`pivot_root` filesystem confinement, user-namespace remapping and an
+allowlist-style seccomp profile all remain genuinely open, and are
+listed in that function's own `NotProven` field rather than omitted.

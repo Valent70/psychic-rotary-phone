@@ -1,0 +1,4 @@
+gate: vet
+command: go vet ./...
+exit: 0
+---

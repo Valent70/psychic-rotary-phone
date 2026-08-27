@@ -1,0 +1,5 @@
+gate: decision_explanation
+command: go test ./pkg/explanation/
+exit: 0
+---
+ok  	veriqo/pkg/explanation	(cached)

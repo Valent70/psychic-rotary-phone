@@ -1,0 +1,8 @@
+gate: canonical_entity_authority_coverage
+command: internal:entityconsistency.ScanProductionAuthority
+exit: 0
+---
+{
+  "scanned_files": 298,
+  "violations": null
+}

@@ -1,0 +1,5 @@
+gate: determinism_boundary
+command: go test ./internal/determinism/
+exit: 0
+---
+ok  	veriqo/internal/determinism	(cached)

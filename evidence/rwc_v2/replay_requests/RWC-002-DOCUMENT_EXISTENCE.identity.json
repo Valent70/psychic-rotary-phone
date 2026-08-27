@@ -1,0 +1,42 @@
+{
+  "ledger": [
+    {
+      "index": 0,
+      "type": "MERGE",
+      "actor_id": "rwc-v2-adapter",
+      "source_id": "lifecycle",
+      "a": {
+        "kind": "IMO",
+        "value": "8508292"
+      },
+      "b": {
+        "kind": "MMSI",
+        "value": "525008029"
+      },
+      "confidence": 1,
+      "reason": "lifecycle.RunUnified: aliases co-occur on one Intent",
+      "tx_tick": 1,
+      "prev_hash": "",
+      "hash": "836d72518e4dc2f0c6a973ae404ac34d657e27678ea76da757fa34e38a8423af"
+    }
+  ],
+  "authorities": null,
+  "queries": [
+    {
+      "alias": {
+        "kind": "IMO",
+        "value": "8508292"
+      },
+      "as_of_tick": 1,
+      "expected_entity_id": "ENT:488dcd5be7d76e9db604263170eba305"
+    },
+    {
+      "alias": {
+        "kind": "MMSI",
+        "value": "525008029"
+      },
+      "as_of_tick": 1,
+      "expected_entity_id": "ENT:488dcd5be7d76e9db604263170eba305"
+    }
+  ]
+}

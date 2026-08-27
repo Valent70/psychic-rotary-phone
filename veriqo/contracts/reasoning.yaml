@@ -1,0 +1,42 @@
+# ReasoningContract — canonical surface for the forward-chaining Horn-
+# clause reasoner (pkg/kernel/reasoning): assert ground facts, register
+# rules are done in-process only (rule authoring is not exposed over a
+# flat transport boundary in this session, matching TrustAPI's
+# documented one-fixed-policy constraint), then Infer/Query/Explain.
+engine: reasoning
+description: "Reasoning Knowledge Base — forward-chaining inference over (subject, predicate, object) triples with a full derivation audit trail."
+methods:
+  - name: assert
+    description: "Assert one ground fact (subject, predicate, object) into the knowledge base."
+    params:
+      - name: subject
+        type: string
+      - name: predicate
+        type: string
+      - name: object
+        type: string
+    returns: string
+  - name: infer
+    description: "Run forward-chaining inference to a fixpoint against the built-in rule set; returns the number of newly derived facts."
+    params: []
+    returns: uint
+  - name: query
+    description: "Query facts matching a pattern; use a leading '?' on subject/predicate/object to match any value (e.g. '?x')."
+    params:
+      - name: subject
+        type: string
+      - name: predicate
+        type: string
+      - name: object
+        type: string
+    returns: TripleList
+  - name: explain
+    description: "Return the derivation trace (which rule fired, over which premises) for a derived fact."
+    params:
+      - name: subject
+        type: string
+      - name: predicate
+        type: string
+      - name: object
+        type: string
+    returns: Derivation

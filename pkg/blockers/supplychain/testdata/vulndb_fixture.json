@@ -1,0 +1,33 @@
+{
+  "source": "veriqo-offline-mirror (fixture; NOT a live vuln.go.dev/osv.dev/GHSA feed)",
+  "database_version": "fixture-2026.08.21",
+  "acquired_at": 1787270400,
+  "coverage_period": {
+    "start": 1779580800,
+    "end": 1787270400
+  },
+  "scanner_version": "veriqo-fixture-loader/1.0.0",
+  "scan_time": 1787270400,
+  "entries": {
+    "example.com/vulnerable@v1.0.0": [
+      {
+        "id": "GO-2099-0001",
+        "module": "example.com/vulnerable",
+        "affected_range": "< v1.0.1",
+        "severity": "HIGH",
+        "description": "Fixture-only finding: unauthenticated request smuggling in the offline test handler. Not a real published advisory.",
+        "fixed_in": "v1.0.1"
+      }
+    ],
+    "example.com/critical@v2.3.4": [
+      {
+        "id": "GHSA-fixt-0000-0000",
+        "module": "example.com/critical",
+        "affected_range": ">= v2.0.0, < v2.3.5",
+        "severity": "CRITICAL",
+        "description": "Fixture-only finding: remote code execution via a crafted fixture payload. Not a real published advisory.",
+        "fixed_in": "v2.3.5"
+      }
+    ]
+  }
+}

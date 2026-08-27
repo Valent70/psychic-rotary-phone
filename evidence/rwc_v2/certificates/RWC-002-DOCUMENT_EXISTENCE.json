@@ -1,0 +1,27 @@
+{
+  "IntentID": "e1d2766c2cce8e49db9cb2820c1c2b6ae2d777afac42f520c28b4d86c7c4c5cb",
+  "EntityID": "ENT:488dcd5be7d76e9db604263170eba305",
+  "EvidencePlanHash": "90cf335a22f7431ccca2bd4f86b0065515f018aa306cea974ced3d662d8d21b6",
+  "UnmetRequirements": null,
+  "Canonical": {
+    "Subject": "ENT:488dcd5be7d76e9db604263170eba305",
+    "Predicate": "DOCUMENT_EXISTENCE_CLAIM",
+    "ArbitrationWinner": "Bill of Lading|Certificate of Product Origin|ETA|Freight/Cargo Manifest|Notice of Readiness|Q88|Ullage Report",
+    "ArbitrationHash": "49c1633006230d75c027f614266c07c51bc119b0e9efd7c9c35b9cdd7c8215e2",
+    "TruthHash": "67ad0ef608702cea5c8d52f9802c8e17e8e6b12932a9961ad7c2f9ad1ba16309",
+    "ProvenanceStatus": "UNKNOWN",
+    "RiskLabel": "LOW",
+    "RiskScore": 0,
+    "DecisionAction": "MONITOR",
+    "TwinHead": "2653e4fd177b6e357d33c0f75b90302fd7682642e30cd62d9129fc4ecbf11037",
+    "DependencyRootHash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "MaxDependencyDiscount": 0,
+    "IndependentFamilies": 1,
+    "Hash": "68bd5adcf282876a4924fd5f2d47cf6e72432f753fd56591218eba0e796c3c63"
+  },
+  "IVFVerified": true,
+  "IVFCertificateHash": "5f6832b0975e17d9940ca3c860aca672617f28bd3f27c87559612bcfdc7fb677",
+  "ReplayID": "68bd5adcf282876a4924fd5f2d47cf6e72432f753fd56591218eba0e796c3c63",
+  "ExecutionRootHash": "c3295cee5220560e25337ac917c3d76b0f6278a4c37db7a1b5d93488cde75f9b",
+  "Hash": "1678a6cc9480feefb8f5ba9256eaf3ed9630fd001617db721efbdd3fccb15180"
+}

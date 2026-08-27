@@ -1,0 +1,5 @@
+gate: sandbox
+command: go test ./pkg/kernel/sandbox/
+exit: 0
+---
+ok  	veriqo/pkg/kernel/sandbox	(cached)
