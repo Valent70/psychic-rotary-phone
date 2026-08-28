@@ -43,6 +43,7 @@ import (
 	"fmt"
 	"sync"
 
+	"veriqo/pkg/insurance/invariants"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/payment"
 	"veriqo/pkg/insurance/quantum"
@@ -245,6 +246,13 @@ type CaseLifecycle struct {
 	// linkage this program's own §39 rule requires (never a duplicated
 	// figure).
 	QuantumCalculationID string
+	// QuantumIndicativeAmount is the SAME quantum.Calculation's own
+	// IndicativeClaimValue, recorded (not recomputed) by Quantify --
+	// FINAL INTERNAL CHECK item B's own cross-domain invariant basis:
+	// OpenReserve/AuthorizePayment check against THIS value via
+	// pkg/insurance/invariants, never against a second, independently
+	// supplied figure.
+	QuantumIndicativeAmount quantum.Amount
 
 	// replaying is true only for a CaseLifecycle constructed by Replay
 	// -- see transitionLocked's own settlement-evidence check and
@@ -398,6 +406,7 @@ func (cl *CaseLifecycle) Quantify(calc quantum.Calculation, by party.PartyID, ro
 		return Transition{}, err
 	}
 	cl.QuantumCalculationID = calc.CalculationID
+	cl.QuantumIndicativeAmount = calc.IndicativeClaimValue
 	return t, nil
 }
 
@@ -411,6 +420,9 @@ func (cl *CaseLifecycle) OpenReserve(reserveID, claimID string, amount quantum.A
 	defer cl.mu.Unlock()
 	if cl.Reserve != nil {
 		return Transition{}, ErrReserveAlreadyAttached
+	}
+	if err := invariants.CheckReserveMatchesQuantumBasis(amount, cl.QuantumIndicativeAmount); err != nil {
+		return Transition{}, fmt.Errorf("casestate: OpenReserve: %w", err)
 	}
 	r, err := reserve.New(reserveID, claimID, cl.CaseID, amount, by, role, reason, tick)
 	if err != nil {
@@ -466,6 +478,9 @@ func (cl *CaseLifecycle) AuthorizePayment(paymentID, claimID string, payee party
 	if cl.Reserve.CurrentAmount() != amount {
 		return Transition{}, fmt.Errorf("casestate: AuthorizePayment amount %s does not match this case's own reserve amount %s", amount, cl.Reserve.CurrentAmount())
 	}
+	if err := invariants.CheckPaymentWithinQuantum(amount, cl.QuantumIndicativeAmount); err != nil {
+		return Transition{}, fmt.Errorf("casestate: AuthorizePayment: %w", err)
+	}
 	p, err := payment.New(paymentID, claimID, cl.CaseID, payee, amount, idempotencyKey, proposedBy, reason, tick)
 	if err != nil {
 		return Transition{}, fmt.Errorf("casestate: AuthorizePayment: %w", err)
@@ -503,14 +518,22 @@ func (cl *CaseLifecycle) ExecutePayment(by party.PartyID, role party.Role, metho
 // RecordSettlement calls the attached Payment's own
 // RecordSettlementEvidence -- the real external confirmation required
 // before this case may leave PAYMENT_EXECUTED (see
-// ErrSettlementEvidenceRequired). Does NOT itself change cl.State():
-// settlement evidence is a fact ABOUT the attached Payment, not a new
-// case-lifecycle label, matching ApproveReserve's own reasoning.
-func (cl *CaseLifecycle) RecordSettlement(ev payment.SettlementEvidence) error {
+// ErrSettlementEvidenceRequired) -- and additionally enforces item B's
+// own "Settlement amount == payment amount +/- documented adjustment"
+// invariant via pkg/insurance/invariants. maxAdjustment == 0 requires an
+// EXACT match (see invariants.CheckSettlementWithinAdjustment's own
+// doc comment for why that is the honest default). Does NOT itself
+// change cl.State(): settlement evidence is a fact ABOUT the attached
+// Payment, not a new case-lifecycle label, matching ApproveReserve's
+// own reasoning.
+func (cl *CaseLifecycle) RecordSettlement(ev payment.SettlementEvidence, maxAdjustment quantum.Amount) error {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 	if cl.Payment == nil {
 		return ErrNoPaymentAttached
+	}
+	if err := invariants.CheckSettlementWithinAdjustment(cl.Payment.CurrentAmount(), ev.SettledAmount, maxAdjustment); err != nil {
+		return fmt.Errorf("casestate: RecordSettlement: %w", err)
 	}
 	return cl.Payment.RecordSettlementEvidence(ev)
 }

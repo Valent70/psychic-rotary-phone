@@ -66,7 +66,7 @@ func TestTransitionRequiringEvidenceIsRefusedWithout(t *testing.T) {
 
 func TestAuthorityIsEnforcedPerTransition(t *testing.T) {
 	cl := mustNew(t)
-	driveToQuantified(t, cl)
+	driveToQuantified(t, cl, quantum.Amount(1000))
 	// RoleInsured has no reserve authority -- QUANTIFIED -> RESERVED
 	// must be refused for that role, even via the real coupled method.
 	_, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(1000), "PTY-1", party.RoleInsured, "attempt", "IDEM-RESERVE", 100)
@@ -89,7 +89,7 @@ func TestAuthorityIsEnforcedPerTransition(t *testing.T) {
 func TestGenericTransitionCannotBypassDomainCoupledStates(t *testing.T) {
 	for _, target := range []State{StateReserved, StatePaymentAuthorized, StatePaymentExecuted} {
 		cl := mustNew(t)
-		driveToQuantified(t, cl)
+		driveToQuantified(t, cl, quantum.Amount(1000))
 		_, err := cl.Transition(target, "PTY-INSURER", party.RoleInsurer, "EVID-1", "IDEM-BYPASS-"+string(target), "attempted bypass", 100)
 		if err == nil {
 			t.Fatalf("expected Transition() to refuse reaching %s directly -- this is the bypass invariant a state-machine audit must rule out", target)
@@ -132,7 +132,12 @@ func TestIdempotencyKeyReuseWithDifferentTargetIsRefused(t *testing.T) {
 	}
 }
 
-func driveToQuantified(t *testing.T, cl *CaseLifecycle) {
+// driveToQuantified drives cl to StateQuantified via a REAL Quantify()
+// call carrying amount as its IndicativeClaimValue, so
+// cl.QuantumIndicativeAmount is genuinely set for the cross-domain
+// invariant checks (pkg/insurance/invariants) OpenReserve/
+// AuthorizePayment enforce against it.
+func driveToQuantified(t *testing.T, cl *CaseLifecycle, amount quantum.Amount) {
 	t.Helper()
 	steps := []struct {
 		to   State
@@ -142,18 +147,21 @@ func driveToQuantified(t *testing.T, cl *CaseLifecycle) {
 		{StateAccepted, "", "IDEM-A"},
 		{StateEvidenceExchanged, "EVID-1", "IDEM-B"},
 		{StateUnderReview, "", "IDEM-C"},
-		{StateQuantified, "", "IDEM-D"},
 	}
 	for _, s := range steps {
 		if _, err := cl.Transition(s.to, "PTY-1", party.RoleInsured, s.ev, s.idem, "driving to quantified", 10); err != nil {
 			t.Fatalf("driveToQuantified: transition to %s failed: %v", s.to, err)
 		}
 	}
+	calc := quantum.Calculation{CalculationID: "QC-TEST-1", IndicativeClaimValue: amount}
+	if _, err := cl.Quantify(calc, "PTY-1", party.RoleInsured, "IDEM-D", 10); err != nil {
+		t.Fatalf("driveToQuantified: Quantify failed: %v", err)
+	}
 }
 
 func TestOpenReserveCouplesRealDomainCall(t *testing.T) {
 	cl := mustNew(t)
-	driveToQuantified(t, cl)
+	driveToQuantified(t, cl, quantum.Amount(50_000))
 	tr, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(50_000), "PTY-INSURER", party.RoleInsurer, "initial reserve", "IDEM-RESERVE", 100)
 	if err != nil {
 		t.Fatalf("OpenReserve: %v", err)
@@ -176,7 +184,7 @@ func TestOpenReserveCouplesRealDomainCall(t *testing.T) {
 
 func TestAuthorizePaymentRefusesMismatchedAmount(t *testing.T) {
 	cl := mustNew(t)
-	driveToQuantified(t, cl)
+	driveToQuantified(t, cl, quantum.Amount(50_000))
 	if _, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(50_000), "PTY-INSURER", party.RoleInsurer, "initial reserve", "IDEM-RESERVE", 100); err != nil {
 		t.Fatalf("OpenReserve: %v", err)
 	}
@@ -195,7 +203,7 @@ func TestAuthorizePaymentRefusesMismatchedAmount(t *testing.T) {
 // through this package's own exported API.
 func TestLifecycleLabelNeverDivergesFromRealDomainState(t *testing.T) {
 	cl := mustNew(t)
-	driveToQuantified(t, cl)
+	driveToQuantified(t, cl, quantum.Amount(50_000))
 	if _, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(50_000), "PTY-INSURER", party.RoleInsurer, "initial reserve", "IDEM-RESERVE", 100); err != nil {
 		t.Fatalf("OpenReserve: %v", err)
 	}
@@ -231,7 +239,7 @@ func TestLifecycleLabelNeverDivergesFromRealDomainState(t *testing.T) {
 	if err := cl.RecordSettlement(payment.SettlementEvidence{
 		PaymentID: cl.Payment.PaymentID, Reference: "REF-SETTLE-1", SourceDescription: "bank confirmation",
 		SettledAmount: cl.Payment.CurrentAmount(), ConfirmedAtTick: 320,
-	}); err != nil {
+	}, 0); err != nil {
 		t.Fatalf("RecordSettlement: %v", err)
 	}
 	if _, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE", "closed after settlement", 330); err != nil {
@@ -241,7 +249,7 @@ func TestLifecycleLabelNeverDivergesFromRealDomainState(t *testing.T) {
 
 func TestReplayReproducesLiveHistoryThroughTheSameRules(t *testing.T) {
 	live := mustNew(t)
-	driveToQuantified(t, live)
+	driveToQuantified(t, live, quantum.Amount(50_000))
 	if _, err := live.OpenReserve("RSV-1", "CLM-1", quantum.Amount(50_000), "PTY-INSURER", party.RoleInsurer, "initial reserve", "IDEM-RESERVE", 100); err != nil {
 		t.Fatalf("OpenReserve: %v", err)
 	}
@@ -327,7 +335,7 @@ func TestDisputeReachableFromEveryMidLifecycleState(t *testing.T) {
 	// at least UNDER_REVIEW, QUANTIFIED, RESERVED and PAYMENT_AUTHORIZED
 	// can all reach it, and DISPUTED can return to UNDER_REVIEW or CLOSED.
 	cl := mustNew(t)
-	driveToQuantified(t, cl)
+	driveToQuantified(t, cl, quantum.Amount(1000))
 	if _, err := cl.Transition(StateDisputed, "PTY-1", party.RoleInsured, "", "IDEM-DISPUTE", "disputed at quantified", 90); err != nil {
 		t.Fatalf("expected QUANTIFIED -> DISPUTED to be legal: %v", err)
 	}

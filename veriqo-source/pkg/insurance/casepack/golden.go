@@ -692,7 +692,17 @@ func (gr *GoldenResult) attachLifecycle() error {
 	if _, err := cl.Transition(casestate.StateUnderReview, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-3", "under review", 1120); err != nil {
 		return err
 	}
-	if _, err := cl.Quantify(gr.QuantumWithSalvage, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "IDEM-LC-4", 1130); err != nil {
+	// This CaseLifecycle belongs to PTY-002-INSURER alone, not to the
+	// whole co-insurance panel -- its own canonical quantum basis
+	// (FINAL INTERNAL CHECK item B) is therefore its OWN allocated share
+	// of the same evidence-backed calculation, not the full claim total
+	// every co-insurer collectively covers. insurerCalc carries the
+	// identical evidence/formula/currency lineage as gr.QuantumWithSalvage
+	// and only substitutes the claim value with the real, already-computed
+	// co-insurance allocation this insurer is actually reserving against.
+	insurerCalc := gr.QuantumWithSalvage
+	insurerCalc.IndicativeClaimValue = insurerPrimary.Amount
+	if _, err := cl.Quantify(insurerCalc, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "IDEM-LC-4", 1130); err != nil {
 		return err
 	}
 	if _, err := cl.OpenReserve("RSV-LC-GOLDEN-1", "CLM-"+string(gr.CaseID), insurerPrimary.Amount,
@@ -719,7 +729,7 @@ func (gr *GoldenResult) attachLifecycle() error {
 		PaymentID: cl.Payment.PaymentID, Reference: "REF-LC-GOLDEN-1",
 		SourceDescription: "golden-case synthetic settlement confirmation (no real bank adapter exists)",
 		SettledAmount:     insurerPrimary.Amount, ConfirmedAtTick: 1165,
-	}); err != nil {
+	}, 0); err != nil {
 		return err
 	}
 	if _, err := cl.Transition(casestate.StateRecoveryOpen, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-8", "recovery opened against carrier", 1170); err != nil {
