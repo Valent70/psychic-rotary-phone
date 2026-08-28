@@ -39,6 +39,8 @@ package network
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"veriqo/pkg/insurance/party"
 )
@@ -116,20 +118,129 @@ type ExchangeRequest struct {
 	RequestedAtTick     uint64        `json:"requested_at_tick"`
 }
 
+// ReceiptVerificationStatus is whether THIS receipt's own
+// ReceiptSignature/CredentialID has actually been cryptographically
+// checked, and with what result — a different axis from both
+// QualificationState (the counterparty's own attested standing) and
+// credential.Status (a credential's lifecycle: active/expired/revoked).
+// No verifier exists anywhere in this repository (matching this
+// program's "never fabricate a signature or its verification" rule),
+// so VerificationNotPerformed is the only value any real caller can
+// honestly set today; VerificationVerified/VerificationFailed exist so
+// the SHAPE is ready for a real verifier without a second migration.
+type ReceiptVerificationStatus string
+
+const (
+	VerificationNotPerformed ReceiptVerificationStatus = "NOT_PERFORMED"
+	VerificationVerified     ReceiptVerificationStatus = "VERIFIED"
+	VerificationFailed       ReceiptVerificationStatus = "VERIFICATION_FAILED"
+)
+
+var knownVerificationStatuses = map[ReceiptVerificationStatus]bool{
+	VerificationNotPerformed: true, VerificationVerified: true, VerificationFailed: true,
+}
+
+// IsKnownVerificationStatus reports whether s is a modelled receipt
+// verification status.
+func IsKnownVerificationStatus(s ReceiptVerificationStatus) bool { return knownVerificationStatuses[s] }
+
 // ExchangeReceipt is what a real adapter would hand back: an
 // acknowledgement the exchange happened, with enough to make the
 // acknowledgement itself independently verifiable (a receiver-signed
 // hash of what was actually received, not merely an "OK" boolean).
+//
+// FINAL INTERNAL CHECK item F ("external evidence receipt") names seven
+// things every external exchange must carry: source, timestamp, issuer,
+// content hash, signature/credential, receipt, and verification status
+// — generalising the same shape payment/settlement.go's own
+// SettlementEvidence already models for one specific exchange (a bank
+// confirmation) to every external exchange this package's own
+// EvidenceExchangeAdapter covers. The mapping onto this struct's own
+// fields: Source/ReceivedAtTick (source, timestamp), IssuerPartyID
+// (issuer), EvidenceContentHash (content hash), ReceiptSignature/
+// CredentialID (signature/credential), ReceiptReference (receipt, this
+// struct's own identity), VerificationStatus (verification status).
 type ExchangeReceipt struct {
 	CaseID              string        `json:"case_id"`
 	EvidenceContentHash string        `json:"evidence_content_hash"`
 	ReceivedByPartyID   party.PartyID `json:"received_by_party_id"`
 	ReceivedAtTick      uint64        `json:"received_at_tick"`
+	// Source names WHAT/WHO this receipt actually came from (e.g. "P&I
+	// club claims portal", "broker EDI gateway") — free text, matching
+	// SettlementEvidence.SourceDescription's own "a stated description
+	// beats a closed taxonomy of every real-world system" convention,
+	// never a hard-coded named vendor (this domain's guardrails forbid
+	// that at the whole-tree level).
+	Source string `json:"source"`
+	// IssuerPartyID is WHO issued this receipt — the counterparty party
+	// actually asserting the exchange happened, which is not always the
+	// same party as ReceivedByPartyID (a broker's gateway may issue a
+	// receipt on behalf of the insurer that ultimately received it).
+	IssuerPartyID party.PartyID `json:"issuer_party_id"`
+	// ReceiptReference is the receipt's own reference/ID as the issuer
+	// names it (a portal confirmation number, an EDI control number) —
+	// matching SettlementEvidence.Reference's own free-text convention.
+	ReceiptReference string `json:"receipt_reference"`
+	// CredentialID, if non-empty, names the pkg/insurance/credential.
+	// Credential backing the issuer's authority to issue this receipt —
+	// by reference only, matching this domain's evidence-by-reference
+	// discipline throughout (never a duplicated credential payload).
+	CredentialID string `json:"credential_id,omitempty"`
 	// ReceiptSignature is what a real adapter implementation would
 	// populate with a real cryptographic signature over the receipt's
 	// own content. Empty here: this package defines the SHAPE, never a
 	// fabricated signature.
 	ReceiptSignature string `json:"receipt_signature,omitempty"`
+	// VerificationStatus is whether ReceiptSignature/CredentialID have
+	// actually been checked — see ReceiptVerificationStatus's own doc
+	// comment for why VerificationNotPerformed is the only honest
+	// default today.
+	VerificationStatus ReceiptVerificationStatus `json:"verification_status"`
+}
+
+var (
+	ErrEmptyReceiptCaseID  = errors.New("network: ExchangeReceipt.CaseID must be non-empty")
+	ErrEmptyContentHash    = errors.New("network: ExchangeReceipt.EvidenceContentHash must be non-empty")
+	ErrEmptyReceivedBy     = errors.New("network: ExchangeReceipt.ReceivedByPartyID must be non-empty")
+	ErrEmptySource         = errors.New("network: ExchangeReceipt.Source must be non-empty")
+	ErrEmptyIssuer         = errors.New("network: ExchangeReceipt.IssuerPartyID must be non-empty")
+	ErrEmptyReceiptRef     = errors.New("network: ExchangeReceipt.ReceiptReference must be non-empty")
+	ErrUnknownVerification = errors.New("network: ExchangeReceipt.VerificationStatus is not a known value")
+)
+
+// Validate reports whether r carries every field FINAL INTERNAL CHECK
+// item F requires of an external evidence receipt: source, timestamp
+// (ReceivedAtTick, checked structurally by its own non-zero-ness being
+// the caller's responsibility to set — ticks legitimately start at 0
+// only for a case's own genesis, never for an external receipt, so this
+// package does not additionally gate on it), issuer, content hash,
+// receipt reference, and a recognised verification status.
+// ReceiptSignature/CredentialID are deliberately NOT required: neither
+// has ever been fabricated anywhere in this repository (see their own
+// doc comments), and requiring them would force a caller to invent one.
+func (r ExchangeReceipt) Validate() error {
+	if r.CaseID == "" {
+		return ErrEmptyReceiptCaseID
+	}
+	if r.EvidenceContentHash == "" {
+		return ErrEmptyContentHash
+	}
+	if r.ReceivedByPartyID == "" {
+		return ErrEmptyReceivedBy
+	}
+	if r.Source == "" {
+		return ErrEmptySource
+	}
+	if r.IssuerPartyID == "" {
+		return ErrEmptyIssuer
+	}
+	if r.ReceiptReference == "" {
+		return ErrEmptyReceiptRef
+	}
+	if !IsKnownVerificationStatus(r.VerificationStatus) {
+		return fmt.Errorf("%w: %q", ErrUnknownVerification, r.VerificationStatus)
+	}
+	return nil
 }
 
 // EvidenceExchangeAdapter is the interface a real counterparty

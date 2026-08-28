@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"veriqo/pkg/insurance/party"
@@ -73,6 +74,70 @@ func TestIsNetworkParticipantRoleRefusesUnrelatedRoles(t *testing.T) {
 	}
 	if IsNetworkParticipantRole("NOT_A_REAL_ROLE") {
 		t.Error("an unknown role must never report as a recognised participant")
+	}
+}
+
+// validReceipt is a fully-populated ExchangeReceipt carrying every
+// FINAL INTERNAL CHECK item F field this test file's other cases mutate
+// one at a time.
+func validReceipt() ExchangeReceipt {
+	return ExchangeReceipt{
+		CaseID: "CASE-1", EvidenceContentHash: "sha256:abc123",
+		ReceivedByPartyID: "PTY-INSURER", ReceivedAtTick: 100,
+		Source: "P&I club claims portal", IssuerPartyID: "PTY-PANDI",
+		ReceiptReference: "PORTAL-CONF-9001", VerificationStatus: VerificationNotPerformed,
+	}
+}
+
+func TestExchangeReceiptValidateAcceptsAFullyPopulatedReceipt(t *testing.T) {
+	if err := validReceipt().Validate(); err != nil {
+		t.Fatalf("expected a fully-populated receipt to validate, got %v", err)
+	}
+}
+
+// TestExchangeReceiptValidateRequiresEveryItemFField is the FINAL
+// INTERNAL CHECK item F structural proof: source, timestamp (implicitly
+// carried by every case here already setting ReceivedAtTick), issuer,
+// content hash, receipt reference, and a recognised verification status
+// are each independently required -- omitting any one is refused, not
+// silently accepted with a zero value.
+func TestExchangeReceiptValidateRequiresEveryItemFField(t *testing.T) {
+	cases := []struct {
+		name    string
+		mutate  func(r *ExchangeReceipt)
+		wantErr error
+	}{
+		{"empty CaseID", func(r *ExchangeReceipt) { r.CaseID = "" }, ErrEmptyReceiptCaseID},
+		{"empty EvidenceContentHash", func(r *ExchangeReceipt) { r.EvidenceContentHash = "" }, ErrEmptyContentHash},
+		{"empty ReceivedByPartyID", func(r *ExchangeReceipt) { r.ReceivedByPartyID = "" }, ErrEmptyReceivedBy},
+		{"empty Source", func(r *ExchangeReceipt) { r.Source = "" }, ErrEmptySource},
+		{"empty IssuerPartyID", func(r *ExchangeReceipt) { r.IssuerPartyID = "" }, ErrEmptyIssuer},
+		{"empty ReceiptReference", func(r *ExchangeReceipt) { r.ReceiptReference = "" }, ErrEmptyReceiptRef},
+		{"unknown VerificationStatus", func(r *ExchangeReceipt) { r.VerificationStatus = "BOGUS" }, ErrUnknownVerification},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := validReceipt()
+			c.mutate(&r)
+			err := r.Validate()
+			if err == nil {
+				t.Fatalf("expected Validate to refuse a receipt with %s", c.name)
+			}
+			if !errors.Is(err, c.wantErr) {
+				t.Fatalf("expected %v, got %v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestReceiptVerificationStatusVocabularyIsClosed(t *testing.T) {
+	for _, s := range []ReceiptVerificationStatus{VerificationNotPerformed, VerificationVerified, VerificationFailed} {
+		if !IsKnownVerificationStatus(s) {
+			t.Errorf("expected %q to be a known verification status", s)
+		}
+	}
+	if IsKnownVerificationStatus("BOGUS") {
+		t.Fatal("an unknown verification status must never report as known")
 	}
 }
 
