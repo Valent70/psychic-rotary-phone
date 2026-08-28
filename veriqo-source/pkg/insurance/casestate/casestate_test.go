@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 
+	"veriqo/pkg/insurance/credential"
+	"veriqo/pkg/insurance/network"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/payment"
 	"veriqo/pkg/insurance/quantum"
@@ -131,6 +133,168 @@ func TestIdempotencyKeyReuseWithDifferentTargetIsRefused(t *testing.T) {
 	_, err := cl.Transition(StateUnderReview, "PTY-1", party.RoleInsured, "", "IDEM-X", "conflicting reuse", 30)
 	if err != ErrIdempotencyKeyReused {
 		t.Fatalf("expected ErrIdempotencyKeyReused, got %v", err)
+	}
+}
+
+// TestOutOfOrderTickIsRefused is the FINAL INTERNAL CHECK item G "late
+// message / out-of-order message" proof: a transition carrying a tick
+// earlier than the last one already recorded is refused, while a
+// transition carrying the SAME tick (several events genuinely sharing
+// one instant) remains legal.
+func TestOutOfOrderTickIsRefused(t *testing.T) {
+	cl := mustNew(t)
+	if _, err := cl.Transition(StateAccepted, "PTY-1", party.RoleInsured, "", "IDEM-A", "accepted", 100); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	// A message that arrived late, timestamped BEFORE the one already
+	// recorded, must be refused.
+	_, err := cl.Transition(StateEvidenceExchanged, "PTY-1", party.RoleInsured, "EVID-1", "IDEM-LATE", "a late message", 50)
+	if !errors.Is(err, ErrOutOfOrderTick) {
+		t.Fatalf("expected ErrOutOfOrderTick for a tick earlier than the last recorded one, got %v", err)
+	}
+	if len(cl.History()) != 1 {
+		t.Fatalf("expected the out-of-order attempt to leave history untouched, got %d entries", len(cl.History()))
+	}
+	// The SAME tick as the last recorded transition remains legal --
+	// several real-world events can genuinely share one instant.
+	if _, err := cl.Transition(StateEvidenceExchanged, "PTY-1", party.RoleInsured, "EVID-1", "IDEM-B", "same instant", 100); err != nil {
+		t.Fatalf("expected a transition at the SAME tick as the last recorded one to succeed, got %v", err)
+	}
+}
+
+// TestCredentialRegistryRefusesARevokedActor is the FINAL INTERNAL
+// CHECK item G "revoked credential" proof: once a credential.Registry
+// is attached (AttachCredentialRegistry), an actor whose qualification
+// for the role they are acting under has been revoked is refused, and
+// an actor with no recorded qualification at all is refused the same
+// way -- but a case with NO registry attached (the default) performs no
+// such check at all, exactly as before this item existed.
+func TestCredentialRegistryRefusesARevokedActor(t *testing.T) {
+	reg := credential.NewRegistry()
+	if err := reg.RecordQualification(credential.QualificationRecord{
+		PartyID: "PTY-SURVEYOR", Role: party.RoleSurveyor, State: network.StateSelfAttested,
+		RecordedBy: "PTY-SURVEYOR", RecordedAtTick: 0, EffectiveAtTick: 0,
+	}); err != nil {
+		t.Fatalf("RecordQualification: %v", err)
+	}
+	if err := reg.RecordQualification(credential.QualificationRecord{
+		PartyID: "PTY-SURVEYOR", Role: party.RoleSurveyor, State: network.StateRevoked,
+		RecordedBy: "PTY-COMPLIANCE", RecordedAtTick: 50, EffectiveAtTick: 50, RevocationReason: "licence lapsed",
+	}); err != nil {
+		t.Fatalf("RecordQualification (revoke): %v", err)
+	}
+
+	cl := mustNew(t)
+	cl.AttachCredentialRegistry(reg)
+
+	// PTY-SURVEYOR's qualification was revoked at tick 50 -- any
+	// transition they attempt at or after that tick is refused.
+	_, err := cl.Transition(StateAccepted, "PTY-SURVEYOR", party.RoleSurveyor, "", "IDEM-REVOKED", "attempted after revocation", 60)
+	if !errors.Is(err, ErrActorCredentialNotEffective) {
+		t.Fatalf("expected ErrActorCredentialNotEffective for a revoked actor, got %v", err)
+	}
+	if len(cl.History()) != 0 {
+		t.Fatalf("expected the refused attempt to leave history untouched, got %d entries", len(cl.History()))
+	}
+
+	// An actor with NO recorded qualification at all is refused the
+	// same way -- absence is not silently treated as authorization.
+	_, err = cl.Transition(StateAccepted, "PTY-UNKNOWN", party.RoleInsurer, "", "IDEM-UNKNOWN", "no qualification recorded", 60)
+	if !errors.Is(err, ErrActorCredentialNotEffective) {
+		t.Fatalf("expected ErrActorCredentialNotEffective for an actor with no recorded qualification, got %v", err)
+	}
+
+	// Before the revocation took effect (tick 10 < 50), the SAME actor
+	// was genuinely qualified -- proving this is a real point-in-time
+	// check, not a blanket refusal of PTY-SURVEYOR forever.
+	if _, err := cl.Transition(StateAccepted, "PTY-SURVEYOR", party.RoleSurveyor, "", "IDEM-BEFORE", "attempted before revocation", 10); err != nil {
+		t.Fatalf("expected the actor's transition before their revocation to succeed, got %v", err)
+	}
+}
+
+// TestNoCredentialRegistryAttachedPerformsNoCheck proves the item G
+// credential check is genuinely opt-in: a case with nothing attached
+// behaves exactly as every other test in this file already assumes.
+func TestNoCredentialRegistryAttachedPerformsNoCheck(t *testing.T) {
+	cl := mustNew(t)
+	if cl.CredentialRegistry != nil {
+		t.Fatal("expected a fresh CaseLifecycle to have no credential registry attached")
+	}
+	if _, err := cl.Transition(StateAccepted, "PTY-ANYONE", party.RoleInsured, "", "IDEM-A", "no registry attached", 10); err != nil {
+		t.Fatalf("expected no credential check with no registry attached, got %v", err)
+	}
+}
+
+// TestFailureModesNeverProduceDoubleTransitionOrDoublePayment is the
+// FINAL INTERNAL CHECK item G capstone: it walks through every named
+// failure mode -- duplicate message, late message, out-of-order
+// message, timeout-then-retry, partial exchange, network-failure-then-
+// retry -- and proves each is handled without a double state transition
+// or a double payment. The SAME mechanism (idempotency-key dedup, now
+// joined by the tick-ordering check above) defends against all of them:
+// a caller-side timeout/network-failure/partial-exchange is
+// indistinguishable, from this package's own point of view, from
+// "the caller will retry with the same idempotency key" -- which is
+// exactly the case TestIdempotentRetrySameTargetReturnsSameTransition
+// already proves is safe. This test applies that same guarantee at the
+// one place a double PAYMENT could actually occur: ExecutePayment.
+func TestFailureModesNeverProduceDoubleTransitionOrDoublePayment(t *testing.T) {
+	cl := mustNew(t)
+	driveToQuantified(t, cl, quantum.Amount(50_000))
+	if _, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(50_000), "PTY-INSURER", party.RoleInsurer, "initial reserve", "IDEM-RESERVE", 100); err != nil {
+		t.Fatalf("OpenReserve: %v", err)
+	}
+	if _, err := cl.AuthorizePayment("PAY-1", "CLM-1", "PTY-PAYEE", quantum.Amount(50_000), "IDEM-PAY", "PTY-CLAIMS-HANDLER", party.RoleClaimsHandler, "PTY-INSURER", party.RoleInsurer, "authorize payment", 200); err != nil {
+		t.Fatalf("AuthorizePayment: %v", err)
+	}
+
+	// "Duplicate message": the caller's own message bus redelivers the
+	// exact same execution instruction (same idempotency key) -- e.g.
+	// because it timed out waiting for an ack, suffered a network
+	// failure before receiving one, or the exchange only partially
+	// completed and the caller does not know whether it landed. Every
+	// one of these is, from this package's point of view, "the same
+	// idempotency key was submitted again": call ExecutePayment 5 times
+	// with the SAME key and confirm the underlying Payment is executed
+	// EXACTLY ONCE, never re-instructed or re-settled.
+	const retries = 5
+	var first Transition
+	for i := 0; i < retries; i++ {
+		tr, err := cl.ExecutePayment("PTY-BANK", party.RoleBankTradeFinance, "SWIFT MT103", "REF-1", "IDEM-EXEC", 300)
+		if err != nil {
+			t.Fatalf("retry %d: ExecutePayment: %v", i, err)
+		}
+		if i == 0 {
+			first = tr
+		} else if tr != first {
+			t.Fatalf("retry %d: expected the identical Transition record on every retry, got a different one: %+v vs %+v", i, tr, first)
+		}
+	}
+	if cl.State() != StatePaymentExecuted {
+		t.Fatalf("expected StatePaymentExecuted, got %s", cl.State())
+	}
+	if len(cl.History()) != 7 {
+		t.Fatalf("expected exactly 7 history entries (3 to drive to review + quantify + reserve + authorize + execute, despite %d retried ExecutePayment calls), got %d", retries, len(cl.History()))
+	}
+	if len(cl.Payment.History()) != 4 {
+		t.Fatalf("expected the underlying Payment to record exactly 4 events (created+authorized+instructed+settled), got %d -- a double payment would show as extra INSTRUCT/SETTLE entries here", len(cl.Payment.History()))
+	}
+
+	// "Out-of-order message": a retry that also happens to carry an
+	// EARLIER tick than the original attempt (a genuinely late redelivery)
+	// must still be refused for what it actually is -- see
+	// TestOutOfOrderTickIsRefused -- rather than accepted merely because
+	// its idempotency key differs. A NEW key with an earlier tick, from a
+	// state that has already moved on, is refused by the ordinary state
+	// graph check (ErrInvalidTransition) here since PAYMENT_EXECUTED has
+	// no incoming transitions to itself; the dedicated ordering proof
+	// lives in TestOutOfOrderTickIsRefused above.
+	_, err := cl.ExecutePayment("PTY-BANK", party.RoleBankTradeFinance, "SWIFT MT103", "REF-1-LATE", "IDEM-EXEC-LATE-RETRY", 250)
+	if err == nil {
+		t.Fatal("expected a late/out-of-order retry with a NEW idempotency key to be refused, not silently accepted as a second execution")
+	}
+	if cl.Payment.Status() != payment.StatusPaid {
+		t.Fatalf("expected the Payment to remain PAID exactly once after the refused late retry, got %s", cl.Payment.Status())
 	}
 }
 
@@ -372,7 +536,15 @@ func TestConcurrentActorsRacingSameTargetHaveExactlyOneWinner(t *testing.T) {
 			wg.Add(1)
 			go func(n int, id party.PartyID, role party.Role) {
 				defer wg.Done()
-				_, err := cl.Transition(StateQuantified, id, role, "", fmt.Sprintf("IDEM-RACE-%d-%d", trial, n), "racing to quantify", uint64(n))
+				// All four actors use the SAME tick (20): this eliminates
+				// any ambiguity between ErrInvalidTransition and
+				// ErrOutOfOrderTick as the loser's error -- whichever actor
+				// wins, cl.lastTick becomes 20, and every other actor's own
+				// tick (also 20) still satisfies the item G tick-ordering
+				// check, so their refusal is deterministically
+				// ErrInvalidTransition (a real state-graph conflict), not
+				// an ordering artifact of which n happened to run first.
+				_, err := cl.Transition(StateQuantified, id, role, "", fmt.Sprintf("IDEM-RACE-%d-%d", trial, n), "racing to quantify", 20)
 				results <- err
 			}(i, a.id, a.role)
 		}
@@ -447,7 +619,12 @@ func TestConcurrentActorsRacingDifferentTargetsHaveExactlyOneWinner(t *testing.T
 			wg.Add(1)
 			go func(n int, at attempt) {
 				defer wg.Done()
-				_, err := cl.Transition(at.target, at.id, at.role, "", fmt.Sprintf("IDEM-DIFF-%d-%d", trial, n), "racing with a different proposed outcome", uint64(n))
+				// All four actors use the SAME tick (20) for the same
+				// reason as the same-target race test above: it keeps
+				// item G's tick-ordering check from becoming the reason a
+				// loser is refused, isolating this test to the state-graph
+				// conflict it's meant to prove.
+				_, err := cl.Transition(at.target, at.id, at.role, "", fmt.Sprintf("IDEM-DIFF-%d-%d", trial, n), "racing with a different proposed outcome", 20)
 				results <- err
 			}(i, a)
 		}

@@ -43,6 +43,7 @@ import (
 	"fmt"
 	"sync"
 
+	"veriqo/pkg/insurance/credential"
 	"veriqo/pkg/insurance/invariants"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/payment"
@@ -227,6 +228,20 @@ var (
 	// payment/settlement.go's own PAID-is-never-Settled discipline
 	// applied here at the state-machine level.
 	ErrSettlementEvidenceRequired = errors.New("casestate: cannot leave PAYMENT_EXECUTED without recorded payment.SettlementEvidence -- PAID alone is a system state, not an externally evidenced settlement")
+	// ErrOutOfOrderTick is the FINAL INTERNAL CHECK item G "late message /
+	// out-of-order message" fix: a transition carrying a tick strictly
+	// earlier than the last transition already recorded for this case is
+	// refused rather than silently accepted and reordered into history.
+	// Equal ticks remain legal (several transitions can genuinely share
+	// one simulated instant); only going BACKWARDS is refused.
+	ErrOutOfOrderTick = errors.New("casestate: tick is earlier than the last recorded transition for this case -- a late or out-of-order message")
+	// ErrActorCredentialNotEffective is the FINAL INTERNAL CHECK item G
+	// "revoked credential" fix: when a credential.Registry is attached
+	// (see AttachCredentialRegistry), an actor whose role-qualification
+	// is not effective at this tick -- revoked, expired, or never
+	// recorded -- is refused, structurally, the same way an unauthorized
+	// role already is.
+	ErrActorCredentialNotEffective = errors.New("casestate: actor's credential/qualification for this role is not effective at this tick (revoked, expired, or not recorded)")
 )
 
 // domainCoupledTargets are the three states Transition() itself refuses
@@ -253,6 +268,20 @@ type CaseLifecycle struct {
 	version uint64
 
 	seenIdempotencyKeys map[string]Transition
+
+	// lastTick is the Tick of the most recently recorded Transition --
+	// see ErrOutOfOrderTick.
+	lastTick uint64
+
+	// CredentialRegistry, once attached (see AttachCredentialRegistry),
+	// is checked against every actor before their transition is
+	// accepted -- see ErrActorCredentialNotEffective. nil (the default)
+	// performs no credential check at all, honestly: most tests and the
+	// golden case's own synthetic parties have no registered credentials,
+	// and forcing one on every CaseLifecycle would either fabricate
+	// credentials that were never really issued or break every existing
+	// caller. Attaching a registry is an explicit, opt-in choice.
+	CredentialRegistry *credential.Registry
 
 	// Reserve/Payment, once attached, are the REAL domain objects this
 	// case's RESERVED/PAYMENT_AUTHORIZED/PAYMENT_EXECUTED labels are
@@ -310,6 +339,19 @@ func (cl *CaseLifecycle) Version() uint64 {
 	return cl.version
 }
 
+// AttachCredentialRegistry opts this case into the FINAL INTERNAL CHECK
+// item G "revoked credential" check: every subsequent transition's
+// actor must hold an effective (not revoked, not expired) role
+// qualification in reg at the transition's own tick -- see
+// ErrActorCredentialNotEffective. Never required: a case with no
+// registry attached performs no credential check, exactly as it always
+// has.
+func (cl *CaseLifecycle) AttachCredentialRegistry(reg *credential.Registry) {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	cl.CredentialRegistry = reg
+}
+
 // History returns every recorded Transition, oldest first.
 func (cl *CaseLifecycle) History() []Transition {
 	cl.mu.RLock()
@@ -363,6 +405,14 @@ func (cl *CaseLifecycle) transitionLocked(to State, by party.PartyID, role party
 		return Transition{}, ErrIdempotencyKeyReused
 	}
 
+	// FINAL INTERNAL CHECK item G "late message / out-of-order message":
+	// a genuinely new transition (not an idempotent retry, already
+	// handled above) carrying a tick earlier than the last one already
+	// recorded is refused rather than silently accepted out of order.
+	if len(cl.history) > 0 && tick < cl.lastTick {
+		return Transition{}, fmt.Errorf("%w: tick=%d last_recorded_tick=%d", ErrOutOfOrderTick, tick, cl.lastTick)
+	}
+
 	// The settlement-evidence invariant is checked LIVE only. A pure
 	// label Replay (see Replay below) never attaches a real
 	// payment.PaymentRecord -- it re-validates the state GRAPH, actor
@@ -400,6 +450,15 @@ func (cl *CaseLifecycle) transitionLocked(to State, by party.PartyID, role party
 	if matched.Authorize != nil && !matched.Authorize(role) {
 		return Transition{}, fmt.Errorf("%w: role %q cannot perform %s -> %s", ErrUnauthorizedTransition, role, cl.state, to)
 	}
+	// FINAL INTERNAL CHECK item G "revoked credential": only checked
+	// when a registry has been explicitly attached (see
+	// AttachCredentialRegistry) -- see that method's own doc comment for
+	// why this is opt-in rather than always-on.
+	if cl.CredentialRegistry != nil {
+		if _, effective := cl.CredentialRegistry.EffectiveQualificationAt(by, role, tick); !effective {
+			return Transition{}, fmt.Errorf("%w: party=%s role=%s tick=%d", ErrActorCredentialNotEffective, by, role, tick)
+		}
+	}
 	if matched.RequiresEvidence && evidenceID == "" {
 		return Transition{}, fmt.Errorf("%w: %s -> %s", ErrEvidenceRequired, cl.state, to)
 	}
@@ -420,6 +479,7 @@ func (cl *CaseLifecycle) transitionLocked(to State, by party.PartyID, role party
 	}
 	cl.history = append(cl.history, t)
 	cl.state = to
+	cl.lastTick = tick
 	cl.seenIdempotencyKeys[idempotencyKey] = t
 	return t, nil
 }
@@ -449,6 +509,39 @@ func (cl *CaseLifecycle) Quantify(calc quantum.Calculation, by party.PartyID, ro
 	return t, nil
 }
 
+// idempotencyPrelude is the FINAL INTERNAL CHECK item G fix shared by
+// every domain-coupled method (OpenReserve/AuthorizePayment/
+// ExecutePayment): each of those methods performs a REAL, side-
+// effecting domain call (reserve.New, payment.New/Authorize,
+// Payment.Instruct/Settle) before ever reaching transitionLocked's own
+// idempotency check -- so a genuine retry (the caller resubmitting the
+// SAME idempotencyKey after a timeout, a network failure, or an
+// uncertain partial exchange) used to hit that real call a SECOND time
+// and fail outright (e.g. "reserve already attached", or Payment.
+// Instruct refusing a second call once already PAID), rather than being
+// recognised as a safe retry the way a plain Transition() call already
+// is. Calling this FIRST, while cl.mu is already held, fixes that: a
+// caller sees the retry as this method's own MUST-check-first step, and
+// the method returns immediately with the ORIGINAL result on a genuine
+// retry, never touching the real domain object a second time.
+//
+// Returns (transition, true, nil) on a genuine idempotent retry (the
+// caller must return this transition immediately, doing nothing else).
+// Returns (_, false, ErrIdempotencyKeyReused) on a real conflict (same
+// key, different target -- the caller must return this error
+// immediately). Returns (_, false, nil) when idempotencyKey has never
+// been seen before -- the caller proceeds normally.
+func (cl *CaseLifecycle) idempotencyPrelude(idempotencyKey string, to State) (Transition, bool, error) {
+	prior, seen := cl.seenIdempotencyKeys[idempotencyKey]
+	if !seen {
+		return Transition{}, false, nil
+	}
+	if prior.To == to {
+		return prior, true, nil
+	}
+	return Transition{}, false, ErrIdempotencyKeyReused
+}
+
 // OpenReserve creates a REAL reserve.Reserve (via reserve.New) for this
 // case and transitions QUANTIFIED -> RESERVED only once that succeeds.
 // Refuses if a Reserve is already attached (a case has exactly one
@@ -457,6 +550,9 @@ func (cl *CaseLifecycle) Quantify(calc quantum.Calculation, by party.PartyID, ro
 func (cl *CaseLifecycle) OpenReserve(reserveID, claimID string, amount quantum.Amount, by party.PartyID, role party.Role, reason, idempotencyKey string, tick uint64) (Transition, error) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if t, retry, err := cl.idempotencyPrelude(idempotencyKey, StateReserved); retry || err != nil {
+		return t, err
+	}
 	if cl.Reserve != nil {
 		return Transition{}, ErrReserveAlreadyAttached
 	}
@@ -508,6 +604,9 @@ func (cl *CaseLifecycle) ApproveReserve(by party.PartyID, role party.Role, tick 
 func (cl *CaseLifecycle) AuthorizePayment(paymentID, claimID string, payee party.PartyID, amount quantum.Amount, idempotencyKey string, proposedBy party.PartyID, proposedRole party.Role, authorizedBy party.PartyID, authorizedRole party.Role, reason string, tick uint64) (Transition, error) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if t, retry, err := cl.idempotencyPrelude(idempotencyKey, StatePaymentAuthorized); retry || err != nil {
+		return t, err
+	}
 	if cl.Reserve == nil {
 		return Transition{}, ErrNoReserveAttached
 	}
@@ -542,6 +641,9 @@ func (cl *CaseLifecycle) AuthorizePayment(paymentID, claimID string, payee party
 func (cl *CaseLifecycle) ExecutePayment(by party.PartyID, role party.Role, method, reference, idempotencyKey string, tick uint64) (Transition, error) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if t, retry, err := cl.idempotencyPrelude(idempotencyKey, StatePaymentExecuted); retry || err != nil {
+		return t, err
+	}
 	if cl.Payment == nil {
 		return Transition{}, ErrNoPaymentAttached
 	}
