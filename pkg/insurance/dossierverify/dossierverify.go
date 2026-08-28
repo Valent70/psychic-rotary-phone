@@ -164,6 +164,17 @@ func verifyGolden() (Report, error) {
 	report.Checks = append(report.Checks, checkQuantumRecomputation(runA.QuantumInput, runA.Quantum))
 	report.Checks = append(report.Checks, checkGoldenSalvageRecomputation(runA))
 
+	// Round 8: independently verify the three domains this round wired
+	// into the golden case (claim reserve, recovery/subrogation,
+	// regulatory) actually reproduce identically across the SAME two
+	// independent runs checkIndependentReproduction already drove --
+	// none of these three is embedded in *dossier.Dossier itself, so
+	// that check's DeepEqual on dossA/dossB does not cover them; they
+	// need their own explicit comparison.
+	report.Checks = append(report.Checks, checkGoldenReserveIndependent(runA, runB))
+	report.Checks = append(report.Checks, checkGoldenRecoveryIndependent(runA, runB))
+	report.Checks = append(report.Checks, checkGoldenRegulatoryIndependent(runA, runB))
+
 	_, coldReport, err := casepack.GoldenColdReplay()
 	pass := err == nil && coldReport.Pass()
 	detail := "cold-replayed golden case matches the live run"
@@ -261,6 +272,85 @@ func checkGoldenSalvageRecomputation(gr *casepack.GoldenResult) Check {
 	}
 	return Check{Name: "golden_salvage_recomputation", Pass: true,
 		Detail: fmt.Sprintf("independently recomputed both figures from ComputeInput; drop of exactly %s matches the salvage net value", diff)}
+}
+
+// checkGoldenReserveIndependent independently recomputes the reserve's
+// founding amount from runA's own recorded QuantumInput (the SAME
+// pure-function technique checkGoldenSalvageRecomputation already
+// uses), confirms it matches the reserve's actual current amount, and
+// confirms two independent runs of the same declared golden-case input
+// agree on the reserve's amount and status -- never trusting a single
+// run's cached field.
+func checkGoldenReserveIndependent(runA, runB *casepack.GoldenResult) Check {
+	if runA.Reserve == nil || runB.Reserve == nil {
+		return Check{Name: "golden_reserve_independent", Pass: false, Detail: "reserve was not attached on one or both independent runs"}
+	}
+	recomputed, err := quantum.Compute(func() quantum.ComputeInput {
+		in := runA.QuantumInput
+		in.CalculationID = "VERIFY-RESERVE-BASIS"
+		in.Salvage = runA.SalvageNetValue
+		return in
+	}())
+	if err != nil {
+		return Check{Name: "golden_reserve_independent", Pass: false, Detail: "recomputing the reserve's founding figure: " + err.Error()}
+	}
+	if recomputed.IndicativeClaimValue != runA.Reserve.CurrentAmount() {
+		return Check{Name: "golden_reserve_independent", Pass: false,
+			Detail: fmt.Sprintf("reserve amount %s does not match its independently recomputed founding figure %s",
+				runA.Reserve.CurrentAmount(), recomputed.IndicativeClaimValue)}
+	}
+	if runA.Reserve.CurrentAmount() != runB.Reserve.CurrentAmount() || runA.Reserve.Status() != runB.Reserve.Status() {
+		return Check{Name: "golden_reserve_independent", Pass: false,
+			Detail: fmt.Sprintf("two independent runs diverged: A(amount=%s,status=%s) vs B(amount=%s,status=%s)",
+				runA.Reserve.CurrentAmount(), runA.Reserve.Status(), runB.Reserve.CurrentAmount(), runB.Reserve.Status())}
+	}
+	return Check{Name: "golden_reserve_independent", Pass: true,
+		Detail: fmt.Sprintf("reserve amount %s independently recomputed from ComputeInput and reproduced across two independent runs", recomputed.IndicativeClaimValue)}
+}
+
+// checkGoldenRecoveryIndependent confirms the recovery/subrogation
+// target registered against this case reproduces identically -- same
+// count, same party, same basis category -- across two fully
+// independent runs of the same declared input.
+func checkGoldenRecoveryIndependent(runA, runB *casepack.GoldenResult) Check {
+	if runA.RecoveryRegistry == nil || runB.RecoveryRegistry == nil ||
+		runA.RecoveryRegistry.Count() != 1 || runB.RecoveryRegistry.Count() != 1 {
+		return Check{Name: "golden_recovery_independent", Pass: false, Detail: "recovery target was not registered on one or both independent runs"}
+	}
+	a, okA := runA.RecoveryRegistry.Get(runA.RecoveryTargetID)
+	b, okB := runB.RecoveryRegistry.Get(runB.RecoveryTargetID)
+	if !okA || !okB {
+		return Check{Name: "golden_recovery_independent", Pass: false, Detail: "recovery target ID not found in its own registry"}
+	}
+	if a.Party != b.Party || a.Basis.Category != b.Basis.Category || a.PotentialLoss != b.PotentialLoss {
+		return Check{Name: "golden_recovery_independent", Pass: false,
+			Detail: fmt.Sprintf("two independent runs diverged: A(party=%s,basis=%s,loss=%+v) vs B(party=%s,basis=%s,loss=%+v)",
+				a.Party, a.Basis.Category, a.PotentialLoss, b.Party, b.Basis.Category, b.PotentialLoss)}
+	}
+	return Check{Name: "golden_recovery_independent", Pass: true,
+		Detail: fmt.Sprintf("recovery target against %s (basis=%s) reproduced identically across two independent runs", a.Party, a.Basis.Category)}
+}
+
+// checkGoldenRegulatoryIndependent confirms the regulatory matter --
+// genuinely unintegrated anywhere before this round -- reaches the
+// same allegation count, result, and stage across two fully
+// independent runs.
+func checkGoldenRegulatoryIndependent(runA, runB *casepack.GoldenResult) Check {
+	if runA.RegulatoryMatter == nil || runB.RegulatoryMatter == nil {
+		return Check{Name: "golden_regulatory_independent", Pass: false, Detail: "regulatory matter was not attached on one or both independent runs"}
+	}
+	allegA, allegB := runA.RegulatoryMatter.Allegations(), runB.RegulatoryMatter.Allegations()
+	if len(allegA) != 1 || len(allegB) != 1 {
+		return Check{Name: "golden_regulatory_independent", Pass: false, Detail: "expected exactly one allegation on each independent run"}
+	}
+	if runA.RegulatoryMatter.Stage() != runB.RegulatoryMatter.Stage() || allegA[0].Result != allegB[0].Result {
+		return Check{Name: "golden_regulatory_independent", Pass: false,
+			Detail: fmt.Sprintf("two independent runs diverged: A(stage=%s,result=%s) vs B(stage=%s,result=%s)",
+				runA.RegulatoryMatter.Stage(), allegA[0].Result, runB.RegulatoryMatter.Stage(), allegB[0].Result)}
+	}
+	return Check{Name: "golden_regulatory_independent", Pass: true,
+		Detail: fmt.Sprintf("regulatory matter (stage=%s, allegation result=%s) reproduced identically across two independent runs",
+			runA.RegulatoryMatter.Stage(), allegA[0].Result)}
 }
 
 func checkColdReplay(live, replayed *casepack.Result, report casepack.ColdReplayReport, err error) Check {

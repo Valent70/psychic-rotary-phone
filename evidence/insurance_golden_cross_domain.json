@@ -9,5 +9,10 @@
   "co_insurance_allocation_exact": true,
   "reinsurance_allocation_exact": true,
   "dispute_both_positions_recorded": true,
+  "reserve_authorized": true,
+  "reserve_reconciliation_exact": true,
+  "recovery_target_registered": true,
+  "regulatory_finding_recorded": true,
+  "evidence_sufficiency_assessed": true,
   "cold_replay_matches": true
 }

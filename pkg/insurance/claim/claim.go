@@ -214,6 +214,12 @@ type Claim struct {
 	Status          Status        `json:"status"`
 	PolicyVersionID string        `json:"policy_version_id,omitempty"` // set once EffectiveAt has resolved it
 	Description     string        `json:"description,omitempty"`
+	// ReserveID references this claim's reserve (pkg/insurance/reserve),
+	// when one has been set. Empty means no reserve has been set yet —
+	// this package does not construct or own the Reserve itself (that
+	// would duplicate pkg/insurance/reserve's own authority/history
+	// discipline); it only carries the reference.
+	ReserveID string `json:"reserve_id,omitempty"`
 }
 
 // New constructs a Claim in StatusRegistered. t need not be one of the

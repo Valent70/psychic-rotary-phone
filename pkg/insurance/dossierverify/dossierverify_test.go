@@ -42,6 +42,7 @@ func TestVerifyPassesForGoldenCase(t *testing.T) {
 	for _, want := range []string{
 		"independent_reproduction", "evidence_chain_integrity",
 		"quantum_recomputation", "golden_salvage_recomputation",
+		"golden_reserve_independent", "golden_recovery_independent", "golden_regulatory_independent",
 		"cold_replay", "no_verdict_field",
 	} {
 		if !names[want] {

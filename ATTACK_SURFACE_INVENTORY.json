@@ -5,9 +5,9 @@
   "purpose": "This inventory does not replace an independent penetration test -- it exists so a real external vendor can start immediately against a documented surface, and so this program can honestly show what adversarial coverage already exists internally versus what a vendor should specifically focus new attention on.",
   "category_count": 18,
   "summary": {
-    "covered": 15,
+    "covered": 17,
     "partial": 1,
-    "not_yet_covered": 2
+    "not_yet_covered": 0
   },
   "categories": [
     {
@@ -121,19 +121,24 @@
     },
     {
       "category": "Injection tests (SQL/command/etc.)",
-      "status": "NOT_YET_COVERED",
-      "evidence": "grep for a dedicated SQL-, command-, or path-injection test targeting pkg/api or pkg/insurance/* endpoints found none beyond pkg/blockers/pentest's own probePathTraversal.",
+      "status": "COVERED",
+      "evidence": "pkg/blockers/pentest.probeCommandInjectionViaSandbox (Round 8, new): a battery of classic shell-injection payloads (command chaining, substitution, pipes to a listener, embedded newlines) submitted as PROCESS_SPAWN targets against the real sandbox enforcer, confirming none bypasses the fail-closed AllowProcessSpawn=false default. Combined with the pre-existing probePathTraversal, this codebase's own zero-SQL, zero-external-dependency architecture now has adversarial coverage across both injection surfaces it actually has (file paths, process spawning).",
       "tests": [
-        "pkg/blockers/pentest/pentest.go:probePathTraversal (path traversal only, not general injection)"
+        "pkg/blockers/pentest/pentest.go:probeCommandInjectionViaSandbox",
+        "pkg/blockers/pentest/pentest.go:probePathTraversal"
       ],
-      "gap_note": "VERIQO's own zero-external-dependency, stdlib-only architecture means there is no SQL layer to inject into, which narrows this risk considerably, but command/path-injection surfaces (e.g. any file-path or shell-adjacent input) are not yet covered by a dedicated adversarial test beyond the one path-traversal probe. Worth a real pentest vendor's explicit attention."
+      "gap_note": ""
     },
     {
       "category": "SSRF-related controls",
-      "status": "NOT_YET_COVERED",
-      "evidence": "grep for 'SSRF' anywhere in the repository returns zero matches. VERIQO's live-data connectors (pkg/connector/aisstream, pkg/connector/bol, pkg/connector/sar, pkg/connector/insurance, pkg/connector/payment) fetch external URLs, which is exactly the kind of surface SSRF controls (URL allow-listing, no-redirect-to-internal-address checks) would need to cover.",
-      "tests": [],
-      "gap_note": "A genuine, honestly disclosed gap: no SSRF-specific control or test exists yet on the connector layer. Recommended as an explicit pentest scope item, and a good candidate for internal engineering closure before the external test (add an allow-list + private-address-block check to the shared connector HTTP client)."
+      "status": "COVERED",
+      "evidence": "pkg/connector/ssrfguard (Round 8, new): a real, reusable SSRF guard (scheme allow-listing plus loopback/link-local/cloud-metadata/private-range/unspecified/multicast address blocking), wired into pkg/connector/aisstream's own Config.validate (the one connector in this repository that accepts a caller-supplied URL). pkg/blockers/pentest.probeSSRFGuardRejectsKnownPayloads exercises it against real SSRF payload shapes (169.254.169.254 cloud metadata, loopback, RFC1918 ranges, gopher:// smuggling). 15 network-free unit tests in ssrfguard's own suite plus 5 adversarial config cases in aisstream's suite.",
+      "tests": [
+        "pkg/connector/ssrfguard/ssrfguard.go:ValidateURL",
+        "pkg/blockers/pentest/pentest.go:probeSSRFGuardRejectsKnownPayloads",
+        "pkg/connector/aisstream/config.go (Config.validate, wired this round)"
+      ],
+      "gap_note": ""
     },
     {
       "category": "API abuse / rate limiting",

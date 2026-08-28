@@ -245,6 +245,21 @@ exit: 0
         "detail": "independently recomputed both figures from ComputeInput; drop of exactly 7600.00 matches the salvage net value"
       },
       {
+        "name": "golden_reserve_independent",
+        "pass": true,
+        "detail": "reserve amount 173400.00 independently recomputed from ComputeInput and reproduced across two independent runs"
+      },
+      {
+        "name": "golden_recovery_independent",
+        "pass": true,
+        "detail": "recovery target against PTY-002-CARRIER (basis=BAILEE_LIABILITY) reproduced identically across two independent runs"
+      },
+      {
+        "name": "golden_regulatory_independent",
+        "pass": true,
+        "detail": "regulatory matter (stage=CLOSED_NO_ACTION, allegation result=NOT_PROVEN) reproduced identically across two independent runs"
+      },
+      {
         "name": "cold_replay",
         "pass": true,
         "detail": "cold-replayed golden case matches the live run"

@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"veriqo/pkg/insurance/policy"
+	"veriqo/pkg/insurance/regulatory"
+	"veriqo/pkg/insurance/reserve"
 )
 
 // TestDriveGoldenSucceeds is the mandate's own Gate 5 ("Cross-Domain
@@ -204,5 +206,109 @@ func TestRunGoldenAssurancePasses(t *testing.T) {
 	if !s.QuantumReducedBySalvageExactly || !s.CoInsuranceAllocationExact ||
 		!s.ReinsuranceAllocationExact || !s.ColdReplayMatches {
 		t.Fatalf("expected every cross-domain check to be true, got %+v", s)
+	}
+	if !s.ReserveAuthorized || !s.ReserveReconciliationExact || !s.RecoveryTargetRegistered ||
+		!s.RegulatoryFindingRecorded || !s.EvidenceSufficiencyAssessed {
+		t.Fatalf("expected every Round 8 cross-domain check to be true, got %+v", s)
+	}
+}
+
+// TestGoldenReserveIsApprovedAndReconciled proves the reserve is set
+// from the SAME quantum-with-salvage figure attachSalvage computed
+// (never a disconnected number), approved by a different party
+// (segregation of duties, exercised end to end here rather than only
+// in reserve's own standalone tests), and reconciles exactly against
+// its own founding figure.
+func TestGoldenReserveIsApprovedAndReconciled(t *testing.T) {
+	gr, err := DriveGolden()
+	if err != nil {
+		t.Fatalf("DriveGolden: %v", err)
+	}
+	if gr.Reserve == nil {
+		t.Fatal("expected a reserve to be attached")
+	}
+	if gr.Reserve.Status() != reserve.StatusApproved {
+		t.Fatalf("reserve status = %v, want APPROVED", gr.Reserve.Status())
+	}
+	if gr.Reserve.CurrentAmount() != gr.QuantumWithSalvage.IndicativeClaimValue {
+		t.Fatalf("reserve amount %v does not match its own founding quantum-with-salvage figure %v",
+			gr.Reserve.CurrentAmount(), gr.QuantumWithSalvage.IndicativeClaimValue)
+	}
+	rec := gr.Reserve.Reconcile(gr.QuantumWithSalvage.IndicativeClaimValue)
+	if rec.Adequacy != reserve.AdequacyAdequate {
+		t.Fatalf("reconciliation against its own founding figure = %v, want ADEQUATE", rec.Adequacy)
+	}
+	if len(gr.Reserve.History()) != 2 { // SET, then APPROVE
+		t.Fatalf("expected a 2-entry history (SET, APPROVE), got %d: %+v", len(gr.Reserve.History()), gr.Reserve.History())
+	}
+}
+
+// TestGoldenRecoveryTargetRegisteredAgainstCarrier proves the
+// recovery/subrogation domain operates on this case with a REAL
+// target — not the empty-targets mechanism the base Drive() path
+// exercises on every case.
+func TestGoldenRecoveryTargetRegisteredAgainstCarrier(t *testing.T) {
+	gr, err := DriveGolden()
+	if err != nil {
+		t.Fatalf("DriveGolden: %v", err)
+	}
+	if gr.RecoveryRegistry == nil || gr.RecoveryRegistry.Count() != 1 {
+		t.Fatalf("expected exactly one recovery target registered, got registry=%v", gr.RecoveryRegistry)
+	}
+	target, ok := gr.RecoveryRegistry.Get(gr.RecoveryTargetID)
+	if !ok {
+		t.Fatalf("recovery target %s not found in registry", gr.RecoveryTargetID)
+	}
+	if target.Party != "PTY-002-CARRIER" {
+		t.Fatalf("recovery target party = %s, want PTY-002-CARRIER", target.Party)
+	}
+	if len(target.SupportingEvidence) == 0 {
+		t.Fatal("expected the recovery target to cite real supporting evidence from the case")
+	}
+}
+
+// TestGoldenRegulatoryMatterReachesFindingAndClosure proves
+// pkg/insurance/regulatory — genuinely unintegrated anywhere in this
+// repository before this round — now operates end to end: an
+// allegation is recorded, investigated, determined NOT_PROVEN by a
+// real regulatory finding (never by settlement, per the package's own
+// structural rule), and the matter closes.
+func TestGoldenRegulatoryMatterReachesFindingAndClosure(t *testing.T) {
+	gr, err := DriveGolden()
+	if err != nil {
+		t.Fatalf("DriveGolden: %v", err)
+	}
+	if gr.RegulatoryMatter == nil {
+		t.Fatal("expected a regulatory matter to be attached")
+	}
+	if gr.RegulatoryMatter.Stage() != regulatory.StageClosedNoAction {
+		t.Fatalf("regulatory matter stage = %v, want CLOSED_NO_ACTION", gr.RegulatoryMatter.Stage())
+	}
+	allegations := gr.RegulatoryMatter.Allegations()
+	if len(allegations) != 1 {
+		t.Fatalf("expected exactly one allegation, got %d", len(allegations))
+	}
+	if allegations[0].Result != regulatory.ResultNotProven {
+		t.Fatalf("allegation result = %v, want NOT_PROVEN", allegations[0].Result)
+	}
+	if allegations[0].DeterminedByKind != regulatory.FindingRegulatory {
+		t.Fatalf("allegation determined by kind = %v, want REGULATORY_FINDING (never SETTLEMENT_ONLY)", allegations[0].DeterminedByKind)
+	}
+}
+
+// TestGoldenEvidenceSufficiencyIsGenuinelyAssessed proves the gap
+// package's evidence-sufficiency assessment — already wired into
+// every case via Facade.ComputeGapAssessment — actually produces a
+// real, non-empty rating on the golden case specifically, correcting
+// Round 7's own overstated finding that gap was "not integrated" (it
+// was; only regulatory truly had zero callers, and recovery's
+// mechanism ran with zero real targets).
+func TestGoldenEvidenceSufficiencyIsGenuinelyAssessed(t *testing.T) {
+	gr, err := DriveGolden()
+	if err != nil {
+		t.Fatalf("DriveGolden: %v", err)
+	}
+	if gr.Dossier == nil || len(gr.Dossier.EvidenceSufficiency) == 0 {
+		t.Fatal("expected a non-empty evidence sufficiency assessment on the golden case's own dossier")
 	}
 }

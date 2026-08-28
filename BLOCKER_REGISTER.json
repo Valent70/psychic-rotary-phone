@@ -1,6 +1,6 @@
 {
   "schema": "veriqo.blocker_register/v2",
-  "generated_from": "READINESS_MANIFEST.json + this round's own re-verification",
+  "generated_from": "READINESS_MANIFEST.json + Round 8 re-verification",
   "assessment_date": "2026-08-27",
   "rule": "A blocker only ever leaves this register when real, external, signed evidence closes it through pkg/governance/qualification. No blocker's qualification_status may be edited by hand to make this register look better than the manifest it is generated from.",
   "living_register_note": "Per the Round 7 work order's \u00a7XIX: this register is a source-of-truth, not a one-time report. Every field it carries is either mechanically derived from READINESS_MANIFEST.json (engineering_status, qualification_status, qualification_level, blocking_production) or a stable, hand-authored requirement description that changes only when the blocker's own real-world requirements change -- never to inflate a status.",

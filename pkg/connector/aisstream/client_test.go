@@ -231,6 +231,14 @@ func TestConfigValidate_RejectsBadConfig(t *testing.T) {
 		{"multiplier_too_small", func(c Config) Config { c.BackoffMultiplier = 1; return c }},
 		{"negative_max_retries", func(c Config) Config { c.MaxRetries = -1; return c }},
 		{"negative_heartbeat_timeout", func(c Config) Config { c.HeartbeatTimeout = -1; return c }},
+		// SSRF guard (Round 8): disallowed scheme and literal
+		// internal/cloud-metadata addresses must all be refused at
+		// config-construction time, network-free.
+		{"disallowed_scheme_file", func(c Config) Config { c.URL = "file:///etc/passwd"; return c }},
+		{"disallowed_scheme_http_plain", func(c Config) Config { c.URL = "http://example.invalid/stream"; return c }},
+		{"literal_loopback", func(c Config) Config { c.URL = "wss://127.0.0.1:8080/stream"; return c }},
+		{"literal_cloud_metadata", func(c Config) Config { c.URL = "https://169.254.169.254/latest/meta-data/"; return c }},
+		{"literal_private_rfc1918", func(c Config) Config { c.URL = "wss://10.0.0.5/stream"; return c }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

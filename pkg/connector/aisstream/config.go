@@ -52,6 +52,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"veriqo/pkg/connector/ssrfguard"
 )
 
 // SecretProvider supplies the AISstream API key from wherever a
@@ -183,6 +185,18 @@ func (c Config) withDefaults() Config {
 func (c Config) validate() error {
 	if strings.TrimSpace(c.URL) == "" {
 		return fmt.Errorf("%w: url is empty", ErrConfigInvalid)
+	}
+	// SSRF guard (Round 8, closing the gap Round 7's own attack-surface
+	// inventory disclosed as NOT_YET_COVERED): refuses a disallowed
+	// scheme or a literal internal/loopback/cloud-metadata address —
+	// network-free, so this stays consistent with this package's own
+	// documented "zero real network access in tests" discipline. A
+	// hostname that only resolves to a blocked address at DNS time is a
+	// real Transport implementation's job to catch at actual connect
+	// time via ssrfguard.ValidateURL, not this package's job at
+	// config-construction time.
+	if err := ssrfguard.ValidateURLSchemeAndLiteralOnly(c.URL, []string{"wss", "https"}); err != nil {
+		return fmt.Errorf("%w: %v", ErrConfigInvalid, err)
 	}
 	if strings.TrimSpace(c.ProviderID) == "" {
 		return fmt.Errorf("%w: provider_id is empty", ErrConfigInvalid)

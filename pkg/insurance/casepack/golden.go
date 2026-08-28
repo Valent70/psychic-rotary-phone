@@ -8,6 +8,9 @@ import (
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/policy"
 	"veriqo/pkg/insurance/quantum"
+	"veriqo/pkg/insurance/recovery"
+	"veriqo/pkg/insurance/regulatory"
+	"veriqo/pkg/insurance/reserve"
 	"veriqo/pkg/insurance/salvage"
 )
 
@@ -97,6 +100,18 @@ type GoldenResult struct {
 
 	// ---- Dispute ----
 	DisputeMatter *dispute.Matter
+
+	// ---- Reserve (Round 8: claim reserve lifecycle) ----
+	Reserve *reserve.Reserve
+
+	// ---- Recovery / subrogation (Round 8: a REAL target, not the empty
+	// mechanism the base Drive() path exercises with nil targets) ----
+	RecoveryRegistry *recovery.Registry
+	RecoveryTargetID string
+
+	// ---- Regulatory (Round 8: genuinely wired for the first time —
+	// pkg/insurance/regulatory had zero callers anywhere before this) ----
+	RegulatoryMatter *regulatory.Matter
 }
 
 // DriveGolden drives CASE-INS-002 through the standard Drive() path,
@@ -131,6 +146,15 @@ func DriveGolden() (*GoldenResult, error) {
 	}
 	if err := gr.attachDispute(); err != nil {
 		return nil, fmt.Errorf("casepack: golden: dispute: %w", err)
+	}
+	if err := gr.attachReserve(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: reserve: %w", err)
+	}
+	if err := gr.attachRecovery(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: recovery: %w", err)
+	}
+	if err := gr.attachRegulatory(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: regulatory: %w", err)
 	}
 	return gr, nil
 }
@@ -373,6 +397,111 @@ func (gr *GoldenResult) attachDispute() error {
 	return nil
 }
 
+// ---- 6. Reserve (Round 8) ----
+//
+// Reserve closes the gap Round 7's Insurance System Completeness Audit
+// found: no claim reserve concept existed anywhere in pkg/insurance.
+// The initial reserve is set from the SAME QuantumWithSalvage figure
+// attachSalvage just computed (never a fresh, disconnected number),
+// then approved by a DIFFERENT party than the one who proposed it —
+// exercising the package's segregation-of-duties rule for real, not
+// merely proving it in reserve's own standalone unit tests.
+func (gr *GoldenResult) attachReserve() error {
+	r, err := reserve.New("RSV-GOLDEN-1", "CLM-"+string(gr.CaseID), string(gr.CaseID),
+		gr.QuantumWithSalvage.IndicativeClaimValue, "PTY-002-INSURER", party.RoleInsurer,
+		"initial reserve set from quantum-with-salvage indicative claim value", 900)
+	if err != nil {
+		return err
+	}
+	if err := r.Approve("PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, 910); err != nil {
+		return err
+	}
+	gr.Reserve = r
+	return nil
+}
+
+// ---- 7. Recovery / subrogation (Round 8) ----
+//
+// The base Drive() path already calls Facade.AnalyzeRecovery on every
+// case (drive.go), but always with nil targets — a real mechanism
+// exercised with zero content. This registers one REAL Target: the
+// carrier, pursued on a bailee-liability theory for the same
+// temperature-excursion evidence attachDispute already cites, proving
+// the recovery/subrogation domain actually operates end to end on this
+// case rather than merely running an empty loop.
+func (gr *GoldenResult) attachRecovery() error {
+	reg, err := recovery.NewRegistry(string(gr.CaseID))
+	if err != nil {
+		return err
+	}
+	basis := recovery.Basis{
+		Category: recovery.BasisBaileeLiability,
+		Detail:   "carrier held the cargo as bailee during the temperature-excursion custody interval per the secondary temperature log",
+	}
+	loss := recovery.Money{AmountMinor: int64(gr.QuantumWithSalvage.IndicativeClaimValue), Currency: "USD"}
+	target, err := recovery.New("RCV-GOLDEN-1", string(gr.CaseID), "PTY-002-CARRIER", basis, loss)
+	if err != nil {
+		return err
+	}
+	if err := reg.Register(target); err != nil {
+		return err
+	}
+	if err := reg.AddSupportingEvidence("RCV-GOLDEN-1", gr.Built.ID("TEMP_LOG_SECONDARY")); err != nil {
+		return err
+	}
+	if err := reg.SetNoticeStatus("RCV-GOLDEN-1", recovery.NoticeStatusSent); err != nil {
+		return err
+	}
+	if err := reg.SetLimitationDeadline("RCV-GOLDEN-1", 5000); err != nil {
+		return err
+	}
+	if _, err := reg.RefreshLimitationStatus("RCV-GOLDEN-1", 900); err != nil {
+		return err
+	}
+	if err := reg.SetRecoveryStatus("RCV-GOLDEN-1", recovery.RecoveryStatusPursuing); err != nil {
+		return err
+	}
+	gr.RecoveryRegistry = reg
+	gr.RecoveryTargetID = "RCV-GOLDEN-1"
+	return nil
+}
+
+// ---- 8. Regulatory (Round 8) ----
+//
+// pkg/insurance/regulatory had zero callers anywhere in this
+// repository before this round — a genuinely unintegrated package,
+// unlike recovery (wired but empty) or gap (already genuinely
+// integrated via Facade.ComputeGapAssessment). This opens one matter,
+// alleges a reefer-temperature-logging failure, advances it through a
+// real investigation, and records a NOT_PROVEN regulatory finding —
+// exercising RecordFinding's own settlement-cannot-prove rule against
+// this exact case for the first time anywhere in the codebase.
+func (gr *GoldenResult) attachRegulatory() error {
+	m, err := regulatory.NewMatter("REG-GOLDEN-1", string(gr.CaseID), "Port State Control Authority", "Jurisdiction A", 950)
+	if err != nil {
+		return err
+	}
+	alleg, err := regulatory.NewAllegation("ALG-GOLDEN-1", "alleged failure to maintain reefer temperature logs per regulation")
+	if err != nil {
+		return err
+	}
+	if err := m.AddAllegation(alleg); err != nil {
+		return err
+	}
+	if err := m.Advance(regulatory.StageInvestigation, "authority opened investigation", 960); err != nil {
+		return err
+	}
+	if err := m.RecordFinding("ALG-GOLDEN-1", regulatory.FindingRegulatory, regulatory.ResultNotProven,
+		"Port State Control Authority", "PSC-FINDING-2026-014"); err != nil {
+		return err
+	}
+	if err := m.Advance(regulatory.StageClosedNoAction, "no violation found; matter closed", 970); err != nil {
+		return err
+	}
+	gr.RegulatoryMatter = m
+	return nil
+}
+
 // ---- Cold replay of the Golden Case ----
 
 // GoldenColdReplay proves the Master Closure Mandate's own P0 §37
@@ -420,6 +549,15 @@ func GoldenColdReplay() (live *GoldenResult, coldReport ColdReplayReport, err er
 	if err := live.attachDispute(); err != nil {
 		return nil, report, err
 	}
+	if err := live.attachReserve(); err != nil {
+		return nil, report, err
+	}
+	if err := live.attachRecovery(); err != nil {
+		return nil, report, err
+	}
+	if err := live.attachRegulatory(); err != nil {
+		return nil, report, err
+	}
 	return live, report, nil
 }
 
@@ -444,7 +582,15 @@ type GoldenAssuranceSummary struct {
 	CoInsuranceAllocationExact     bool   `json:"co_insurance_allocation_exact"`
 	ReinsuranceAllocationExact     bool   `json:"reinsurance_allocation_exact"`
 	DisputeBothPositionsRecorded   bool   `json:"dispute_both_positions_recorded"`
-	ColdReplayMatches              bool   `json:"cold_replay_matches"`
+
+	// ---- Round 8 additions ----
+	ReserveAuthorized           bool `json:"reserve_authorized"`
+	ReserveReconciliationExact  bool `json:"reserve_reconciliation_exact"`
+	RecoveryTargetRegistered    bool `json:"recovery_target_registered"`
+	RegulatoryFindingRecorded   bool `json:"regulatory_finding_recorded"`
+	EvidenceSufficiencyAssessed bool `json:"evidence_sufficiency_assessed"`
+
+	ColdReplayMatches bool `json:"cold_replay_matches"`
 }
 
 // Pass is derived from Failures.
@@ -518,16 +664,59 @@ func RunGoldenAssurance() GoldenAssuranceSummary {
 		s.Failures = append(s.Failures, "dispute issue did not record both parties' positions with supporting and contradicting evidence")
 	}
 
+	s.ReserveAuthorized = live.Reserve != nil && live.Reserve.Status() == reserve.StatusApproved
+	if !s.ReserveAuthorized {
+		s.Failures = append(s.Failures, "reserve was not approved")
+	}
+	if live.Reserve != nil {
+		rec := live.Reserve.Reconcile(live.QuantumWithSalvage.IndicativeClaimValue)
+		s.ReserveReconciliationExact = rec.Adequacy == reserve.AdequacyAdequate
+		if !s.ReserveReconciliationExact {
+			s.Failures = append(s.Failures, fmt.Sprintf(
+				"reserve reconciliation against its own founding quantum figure was not exact: %s", rec.Adequacy))
+		}
+	}
+
+	s.RecoveryTargetRegistered = live.RecoveryRegistry != nil && live.RecoveryRegistry.Count() == 1
+	if !s.RecoveryTargetRegistered {
+		s.Failures = append(s.Failures, "recovery target was not registered")
+	}
+
+	s.RegulatoryFindingRecorded = live.RegulatoryMatter != nil &&
+		live.RegulatoryMatter.Stage() == regulatory.StageClosedNoAction &&
+		len(live.RegulatoryMatter.Allegations()) == 1
+	if !s.RegulatoryFindingRecorded {
+		s.Failures = append(s.Failures, "regulatory matter did not reach a recorded finding and closure")
+	}
+
+	s.EvidenceSufficiencyAssessed = live.Dossier != nil && len(live.Dossier.EvidenceSufficiency) > 0
+	if !s.EvidenceSufficiencyAssessed {
+		s.Failures = append(s.Failures, "evidence sufficiency (gap package) was not assessed for this case")
+	}
+
 	replayed, coldReport, err := GoldenColdReplay()
 	if err != nil {
 		s.Failures = append(s.Failures, fmt.Sprintf("GoldenColdReplay failed outright: %v", err))
 	} else if !coldReport.Pass() {
 		s.Failures = append(s.Failures, fmt.Sprintf("base cold replay did not pass: %v", coldReport.Failures))
 	} else {
+		reserveMatches := live.Reserve != nil && replayed.Reserve != nil &&
+			live.Reserve.CurrentAmount() == replayed.Reserve.CurrentAmount() &&
+			live.Reserve.Status() == replayed.Reserve.Status() &&
+			len(live.Reserve.History()) == len(replayed.Reserve.History())
+		recoveryMatches := live.RecoveryRegistry != nil && replayed.RecoveryRegistry != nil &&
+			live.RecoveryRegistry.Count() == replayed.RecoveryRegistry.Count()
+		regulatoryMatches := live.RegulatoryMatter != nil && replayed.RegulatoryMatter != nil &&
+			live.RegulatoryMatter.Stage() == replayed.RegulatoryMatter.Stage() &&
+			len(live.RegulatoryMatter.Allegations()) == len(replayed.RegulatoryMatter.Allegations())
+
 		s.ColdReplayMatches = live.Manifest.EvidenceRootHash == replayed.Manifest.EvidenceRootHash &&
-			live.QuantumWithSalvage.IndicativeClaimValue == replayed.QuantumWithSalvage.IndicativeClaimValue
+			live.QuantumWithSalvage.IndicativeClaimValue == replayed.QuantumWithSalvage.IndicativeClaimValue &&
+			reserveMatches && recoveryMatches && regulatoryMatches
 		if !s.ColdReplayMatches {
-			s.Failures = append(s.Failures, "cold-replayed golden case diverged from the live run")
+			s.Failures = append(s.Failures, fmt.Sprintf(
+				"cold-replayed golden case diverged from the live run (reserve=%v recovery=%v regulatory=%v)",
+				reserveMatches, recoveryMatches, regulatoryMatches))
 		}
 	}
 

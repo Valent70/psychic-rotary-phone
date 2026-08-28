@@ -749,11 +749,16 @@ func main() {
 			{
 				id: "insurance_golden_cross_domain",
 				desc: "one case (CASE-INS-002 extended) proves geospatial geofencing, the party relationship " +
-					"layer, salvage, and co-/reinsurance allocation are CONNECTED to the rest of the insurance " +
-					"domain -- salvage genuinely reduces the quantum figure by its own exact net value, both " +
-					"allocation layers sum to exactly their input, and the whole extension survives a cold " +
-					"replay of the underlying case (VERIQO Final Remaining Gap Closure Order P0 SS6/SS7/SS37)",
-				exit:     "geospatial + relationships + salvage + co-/reinsurance + dispute all verified on one driven case, cold-replay included",
+					"layer, salvage, co-/reinsurance allocation, claim reserve lifecycle, recovery/subrogation, " +
+					"regulatory matters, and evidence-sufficiency assessment are all CONNECTED to the rest of the " +
+					"insurance domain -- salvage genuinely reduces the quantum figure by its own exact net value, " +
+					"both allocation layers sum to exactly their input, the reserve is set from that same figure " +
+					"and approved under segregation of duties, a real recovery target and a real regulatory " +
+					"matter each reach a genuine outcome, and the whole extension survives a cold replay of the " +
+					"underlying case (VERIQO Final Remaining Gap Closure Order P0 SS6/SS7/SS37; Round 8 Master " +
+					"Final Closure order's P0 Insurance Completeness + Golden Insurance Case requirements)",
+				exit: "geospatial + relationships + salvage + co-/reinsurance + dispute + reserve + recovery + " +
+					"regulatory + evidence sufficiency all verified on one driven case, cold-replay included",
 				pass:     goldenSummary.Pass(),
 				failures: goldenSummary.Failures,
 			},

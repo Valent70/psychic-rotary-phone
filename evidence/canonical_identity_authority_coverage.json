@@ -1,5 +1,5 @@
 {
-  "scanned_files": 308,
+  "scanned_files": 311,
   "production_identity_writers": 1,
   "identity_writer_files": [
     "pkg/lifecycle/lifecycle.go"

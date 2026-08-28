@@ -1,15 +1,15 @@
 {
   "schema": "veriqo.insurance_completeness_audit/v1",
-  "generated_from": "manual code inspection this round (grep + read, see chat record) cross-checked against READINESS_MANIFEST.json",
+  "generated_from": "manual code inspection across Rounds 7-8 (grep + read, see chat record) cross-checked against READINESS_MANIFEST.json",
   "assessment_date": "2026-08-27",
   "rule": "status is IMPLEMENTED only when real code AND real tests exist; integrated is true only when the domain is actually imported and driven by pkg/insurance/casepack and/or pkg/insurance/caseroom (the Golden Cross-Domain Case's own drivers), not merely present with its own standalone tests; real_world_qualified is false for every row in this release, honestly, because no domain has real external qualification evidence yet.",
   "domain_count": 29,
   "summary": {
-    "implemented": 23,
-    "partial": 5,
-    "missing": 1,
-    "tested": 28,
-    "integrated_into_golden_case": 25,
+    "implemented": 26,
+    "partial": 3,
+    "missing": 0,
+    "tested": 29,
+    "integrated_into_golden_case": 28,
     "real_world_qualified": 0
   },
   "domains": [
@@ -188,12 +188,14 @@
     },
     {
       "domain": "Reserve",
-      "status": "MISSING",
-      "tested": false,
-      "integrated": false,
-      "packages": [],
-      "evidence": "grep for a claim/case financial reserve field across the whole pkg/insurance/* tree returns zero matches; claim.Claim has no reserve amount, reserve status, or reserve-change-history field at all.",
-      "gap_note": "A genuine, previously undisclosed gap: VERIQO has no concept of a claim reserve (the amount set aside against an anticipated payout), which is a core insurance-operations primitive. Not merely undertested -- structurally absent.",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/reserve"
+      ],
+      "evidence": "pkg/insurance/reserve (new, Round 8): versioned history (append-only Entry log), segregation-of-duties approval (proposer cannot approve their own amount), and pure Reconcile comparison against a quantum figure. Wired into the golden case's own attachReserve (casepack/golden.go): the reserve is set from the SAME QuantumWithSalvage figure attachSalvage computed, approved by a different party, and reconciles exactly.",
+      "gap_note": "",
       "real_world_qualified": false
     },
     {
@@ -260,26 +262,26 @@
     },
     {
       "domain": "Recovery",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "tested": true,
-      "integrated": false,
+      "integrated": true,
       "packages": [
         "pkg/insurance/recovery"
       ],
-      "evidence": "recovery.go exists with its own passing unit tests, but grep across pkg/insurance/casepack/*.go and pkg/insurance/caseroom/*.go finds zero imports of pkg/insurance/recovery -- the package is not driven by the Golden Cross-Domain Case.",
-      "gap_note": "Real code, real tests, but not proven connected end-to-end. This is exactly the 'engineering exists but end-to-end completeness is unproven' pattern this round's audit was asked to find.",
+      "evidence": "recovery.go's own unit tests still pass standalone, AND (Round 8) casepack/golden.go's attachRecovery now registers a REAL Target (the carrier, bailee-liability theory, citing real case evidence) -- the mechanism the base Drive() path always ran with nil targets is now exercised with real content on the golden case, proven identical across two independent runs by dossierverify's new golden_recovery_independent check.",
+      "gap_note": "",
       "real_world_qualified": false
     },
     {
       "domain": "Subrogation",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "tested": true,
-      "integrated": false,
+      "integrated": true,
       "packages": [
         "pkg/insurance/recovery"
       ],
-      "evidence": "Subrogation logic lives inside recovery.go and inherits the same non-integration finding as Recovery above.",
-      "gap_note": "Same root cause as Recovery: real, tested, but not wired into the golden end-to-end case.",
+      "evidence": "Same root package and same Round 8 closure as Recovery above -- subrogation logic lives inside recovery.go and is now exercised with the same real Target.",
+      "gap_note": "",
       "real_world_qualified": false
     },
     {
