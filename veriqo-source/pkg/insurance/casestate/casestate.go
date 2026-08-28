@@ -189,7 +189,34 @@ var (
 	ErrNoPaymentAttached        = errors.New("casestate: no Payment attached to this case")
 	ErrReserveAlreadyAttached   = errors.New("casestate: a Reserve is already attached to this case")
 	ErrPaymentAlreadyAttached   = errors.New("casestate: a Payment is already attached to this case")
+	// ErrMustUseDomainCoupledMethod is the FINAL INTERNAL CHECK item A
+	// fix: reaching RESERVED, PAYMENT_AUTHORIZED or PAYMENT_EXECUTED via
+	// the generic Transition() call bypasses the real
+	// reserve.New/Approve and payment.New/Authorize/Instruct/Settle
+	// calls entirely -- exactly the "bypass authority / bypass evidence
+	// / bypass payment authorization / bypass settlement evidence"
+	// failure mode a state-machine invariant audit must rule out
+	// structurally, not by convention. Only OpenReserve/AuthorizePayment/
+	// ExecutePayment (and Replay, which re-validates an ALREADY-recorded
+	// history through the same rules rather than admitting a new one)
+	// may reach these three states.
+	ErrMustUseDomainCoupledMethod = errors.New("casestate: this target state can only be reached via its own domain-coupled method (OpenReserve/AuthorizePayment/ExecutePayment), never via Transition() directly")
+	// ErrSettlementEvidenceRequired is the FINAL INTERNAL CHECK item A
+	// "bypass settlement evidence" fix: a case cannot leave
+	// PAYMENT_EXECUTED (to RECOVERY_OPEN, CLOSED, or DISPUTED) unless its
+	// own attached Payment has REAL, externally-recorded
+	// payment.SettlementEvidence -- PAID alone (payment.StatusPaid) is
+	// never sufficient to move a case past this point, matching
+	// payment/settlement.go's own PAID-is-never-Settled discipline
+	// applied here at the state-machine level.
+	ErrSettlementEvidenceRequired = errors.New("casestate: cannot leave PAYMENT_EXECUTED without recorded payment.SettlementEvidence -- PAID alone is a system state, not an externally evidenced settlement")
 )
+
+// domainCoupledTargets are the three states Transition() itself refuses
+// to reach directly -- see ErrMustUseDomainCoupledMethod.
+var domainCoupledTargets = map[State]bool{
+	StateReserved: true, StatePaymentAuthorized: true, StatePaymentExecuted: true,
+}
 
 // CaseLifecycle is the ONE authoritative governed-workflow state for
 // one case, across every one of G1 (Payment), G2 (Audit, via the
@@ -218,6 +245,12 @@ type CaseLifecycle struct {
 	// linkage this program's own §39 rule requires (never a duplicated
 	// figure).
 	QuantumCalculationID string
+
+	// replaying is true only for a CaseLifecycle constructed by Replay
+	// -- see transitionLocked's own settlement-evidence check and
+	// Replay's own doc comment for exactly what this does and does not
+	// change.
+	replaying bool
 }
 
 // New constructs a CaseLifecycle in StateInvited -- the reviewer's own
@@ -259,6 +292,9 @@ func (cl *CaseLifecycle) Transition(to State, by party.PartyID, role party.Role,
 	if !IsKnownState(to) {
 		return Transition{}, fmt.Errorf("casestate: unknown target state %q", to)
 	}
+	if domainCoupledTargets[to] {
+		return Transition{}, fmt.Errorf("%w: %s", ErrMustUseDomainCoupledMethod, to)
+	}
 	if by == "" {
 		return Transition{}, ErrEmptyActor
 	}
@@ -288,6 +324,26 @@ func (cl *CaseLifecycle) transitionLocked(to State, by party.PartyID, role party
 			return prior, nil
 		}
 		return Transition{}, ErrIdempotencyKeyReused
+	}
+
+	// The settlement-evidence invariant is checked LIVE only. A pure
+	// label Replay (see Replay below) never attaches a real
+	// payment.PaymentRecord -- it re-validates the state GRAPH, actor
+	// authority, and evidence-citation rules a recorded Transition
+	// itself carries, not a live domain object no longer in memory. This
+	// is documented, not silent: casepack.GoldenColdReplay is the
+	// FULL, object-level cold replay this program's own p0 requires for
+	// end-to-end verification, and it DOES reconstruct a real Payment
+	// (see casepack/golden.go's own attachPayment/attachLifecycle),
+	// which is where this exact invariant is independently re-proven
+	// against a genuinely reconstructed object.
+	if !cl.replaying && cl.state == StatePaymentExecuted && to != StatePaymentExecuted {
+		if cl.Payment == nil {
+			return Transition{}, ErrNoPaymentAttached
+		}
+		if _, settled := cl.Payment.SettlementEvidenceRecorded(); !settled {
+			return Transition{}, ErrSettlementEvidenceRequired
+		}
 	}
 
 	rules, ok := validTransitions[cl.state]
@@ -444,22 +500,53 @@ func (cl *CaseLifecycle) ExecutePayment(by party.PartyID, role party.Role, metho
 	return cl.transitionLocked(StatePaymentExecuted, by, role, "", idempotencyKey, "payment instructed and settled", tick)
 }
 
+// RecordSettlement calls the attached Payment's own
+// RecordSettlementEvidence -- the real external confirmation required
+// before this case may leave PAYMENT_EXECUTED (see
+// ErrSettlementEvidenceRequired). Does NOT itself change cl.State():
+// settlement evidence is a fact ABOUT the attached Payment, not a new
+// case-lifecycle label, matching ApproveReserve's own reasoning.
+func (cl *CaseLifecycle) RecordSettlement(ev payment.SettlementEvidence) error {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	if cl.Payment == nil {
+		return ErrNoPaymentAttached
+	}
+	return cl.Payment.RecordSettlementEvidence(ev)
+}
+
 // ---- Replay --------------------------------------------------------------
 
 // Replay reconstructs a CaseLifecycle purely from a recorded History,
-// re-running every transition through the SAME Transition/authority/
-// evidence checks rather than blindly assigning the final state --
-// the reviewer's own "replay semantics" requirement. If the recorded
-// history itself would not be legal to re-derive (e.g. it was tampered
-// with a transition Transition() would refuse today), Replay fails
-// rather than silently reproducing a state it cannot re-justify.
+// re-running every transition through the SAME state-graph, actor-
+// authority, and evidence-citation checks Transition itself enforces,
+// rather than blindly assigning the final state -- the reviewer's own
+// "replay semantics" requirement. If the recorded history itself would
+// not be legal to re-derive (e.g. it was tampered with a transition
+// these rules would refuse today), Replay fails rather than silently
+// reproducing a state it cannot re-justify.
+//
+// Replay deliberately calls the package-internal transitionLocked
+// rather than the exported Transition: a label-only replay never
+// attaches a real Reserve/Payment object (see CaseLifecycle.replaying),
+// so it must be able to re-reach RESERVED/PAYMENT_AUTHORIZED/
+// PAYMENT_EXECUTED as RECORDED FACTS even though Transition() itself
+// refuses a live caller from reaching those same states directly (see
+// ErrMustUseDomainCoupledMethod) -- the two are different questions:
+// "is it legal to CREATE this transition now" vs. "did this ALREADY-
+// RECORDED transition happen legally". casepack.GoldenColdReplay
+// remains the full object-level cold replay that re-verifies live
+// domain objects, including settlement evidence, from scratch.
 func Replay(caseID string, history []Transition) (*CaseLifecycle, error) {
 	cl, err := New(caseID)
 	if err != nil {
 		return nil, err
 	}
+	cl.replaying = true
 	for i, t := range history {
-		got, err := cl.Transition(t.To, t.ActorPartyID, t.ActorRole, t.EvidenceID, t.IdempotencyKey, t.Reason, t.Tick)
+		cl.mu.Lock()
+		got, err := cl.transitionLocked(t.To, t.ActorPartyID, t.ActorRole, t.EvidenceID, t.IdempotencyKey, t.Reason, t.Tick)
+		cl.mu.Unlock()
 		if err != nil {
 			return nil, fmt.Errorf("casestate: replay diverged at history index %d (%s -> %s): %w", i, t.From, t.To, err)
 		}

@@ -68,14 +68,32 @@ func TestAuthorityIsEnforcedPerTransition(t *testing.T) {
 	cl := mustNew(t)
 	driveToQuantified(t, cl)
 	// RoleInsured has no reserve authority -- QUANTIFIED -> RESERVED
-	// must be refused for that role.
-	_, err := cl.Transition(StateReserved, "PTY-1", party.RoleInsured, "", "IDEM-RESERVE", "attempt", 100)
+	// must be refused for that role, even via the real coupled method.
+	_, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(1000), "PTY-1", party.RoleInsured, "attempt", "IDEM-RESERVE", 100)
 	if err == nil {
 		t.Fatal("expected an unauthorized role to be refused for QUANTIFIED -> RESERVED")
 	}
 	// RoleInsurer DOES have reserve authority.
-	if _, err := cl.Transition(StateReserved, "PTY-INSURER", party.RoleInsurer, "", "IDEM-RESERVE-2", "authorized", 100); err != nil {
+	if _, err := cl.OpenReserve("RSV-1", "CLM-1", quantum.Amount(1000), "PTY-INSURER", party.RoleInsurer, "authorized", "IDEM-RESERVE-2", 100); err != nil {
 		t.Fatalf("expected an authorized role to succeed: %v", err)
+	}
+}
+
+// TestGenericTransitionCannotBypassDomainCoupledStates is the FINAL
+// INTERNAL CHECK item A structural proof: calling Transition() directly
+// for RESERVED/PAYMENT_AUTHORIZED/PAYMENT_EXECUTED -- even with a fully
+// authorized role and non-empty evidence -- must be refused. Only
+// OpenReserve/AuthorizePayment/ExecutePayment may reach these states,
+// because only they perform the REAL reserve/payment domain call
+// authority, evidence, and settlement evidence checks are gating.
+func TestGenericTransitionCannotBypassDomainCoupledStates(t *testing.T) {
+	for _, target := range []State{StateReserved, StatePaymentAuthorized, StatePaymentExecuted} {
+		cl := mustNew(t)
+		driveToQuantified(t, cl)
+		_, err := cl.Transition(target, "PTY-INSURER", party.RoleInsurer, "EVID-1", "IDEM-BYPASS-"+string(target), "attempted bypass", 100)
+		if err == nil {
+			t.Fatalf("expected Transition() to refuse reaching %s directly -- this is the bypass invariant a state-machine audit must rule out", target)
+		}
 	}
 }
 
@@ -200,6 +218,24 @@ func TestLifecycleLabelNeverDivergesFromRealDomainState(t *testing.T) {
 	}
 	if cl.Payment.Status() != payment.StatusPaid {
 		t.Fatalf("expected the real Payment to be PAID once the case reaches PAYMENT_EXECUTED, got %s", cl.Payment.Status())
+	}
+
+	// PAID alone (no settlement evidence yet) must not be enough to
+	// leave PAYMENT_EXECUTED -- the FINAL INTERNAL CHECK item A
+	// "bypass settlement evidence" invariant.
+	_, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE-EARLY", "attempt to close before settlement", 310)
+	if err != ErrSettlementEvidenceRequired {
+		t.Fatalf("expected ErrSettlementEvidenceRequired, got %v", err)
+	}
+
+	if err := cl.RecordSettlement(payment.SettlementEvidence{
+		PaymentID: cl.Payment.PaymentID, Reference: "REF-SETTLE-1", SourceDescription: "bank confirmation",
+		SettledAmount: cl.Payment.CurrentAmount(), ConfirmedAtTick: 320,
+	}); err != nil {
+		t.Fatalf("RecordSettlement: %v", err)
+	}
+	if _, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE", "closed after settlement", 330); err != nil {
+		t.Fatalf("expected close to succeed once settlement evidence is recorded: %v", err)
 	}
 }
 

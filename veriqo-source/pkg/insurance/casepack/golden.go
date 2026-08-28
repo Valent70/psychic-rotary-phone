@@ -710,6 +710,18 @@ func (gr *GoldenResult) attachLifecycle() error {
 	if _, err := cl.ExecutePayment("PTY-002-BANK", party.RoleBankTradeFinance, "SWIFT MT103", "REF-LC-GOLDEN-1", "IDEM-LC-7", 1160); err != nil {
 		return err
 	}
+	// FINAL INTERNAL CHECK item A: the case cannot leave PAYMENT_EXECUTED
+	// without recorded settlement evidence (ErrSettlementEvidenceRequired) --
+	// same clearly-labelled SYNTHETIC confirmation attachPayment already
+	// records on gr.Payment, recorded here against the lifecycle's own
+	// parallel Payment.
+	if err := cl.RecordSettlement(payment.SettlementEvidence{
+		PaymentID: cl.Payment.PaymentID, Reference: "REF-LC-GOLDEN-1",
+		SourceDescription: "golden-case synthetic settlement confirmation (no real bank adapter exists)",
+		SettledAmount:     insurerPrimary.Amount, ConfirmedAtTick: 1165,
+	}); err != nil {
+		return err
+	}
 	if _, err := cl.Transition(casestate.StateRecoveryOpen, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-8", "recovery opened against carrier", 1170); err != nil {
 		return err
 	}
