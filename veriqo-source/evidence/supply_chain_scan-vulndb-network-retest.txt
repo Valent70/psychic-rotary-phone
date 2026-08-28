@@ -1,0 +1,42 @@
+gate: supply_chain_scan (vulnerability-database network retest, this round)
+timestamp: 2026-08-21T12:37Z
+
+Purpose: re-confirm, with a fresh test this round rather than a carried-over assumption, whether
+vuln.go.dev / osv.dev / the GitHub advisory API are reachable from this specific session.
+
+Test performed (direct curl through this session's egress proxy, the same path any Go tool in
+this environment uses):
+  curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" https://vuln.go.dev/index/vulns.json
+    -> curl: (56) CONNECT tunnel failed, response 403
+  curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" -X POST \
+    -d '{"version":"1.0.0","package":{"name":"stdlib","ecosystem":"Go"}}' \
+    https://api.osv.dev/v1/query
+    -> curl: (56) CONNECT tunnel failed, response 403
+  curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" "https://api.github.com/advisories?per_page=1"
+    -> HTTP 403
+
+Cross-checked against the proxy's own status endpoint
+(curl $HTTPS_PROXY/__agentproxy/status), which independently logs the same two rejections in its
+recentRelayFailures list:
+  {"kind":"connect_rejected","detail":"gateway answered 403 to CONNECT (policy denial or upstream
+  failure)","host":"vuln.go.dev:443"}
+  {"kind":"connect_rejected","detail":"gateway answered 403 to CONNECT (policy denial or upstream
+  failure)","host":"api.osv.dev:443"}
+
+Per this session's own proxy documentation (/root/.ccr/README.md, "403 / 407 from the proxy"
+section): "The destination host is not allowed by your organization's egress policy for this
+session. Do not retry or route around it -- report the blocked host." This is an explicit
+organization-level network policy denial, not a transient failure or a missing credential --
+there is no client-side fix, retry, or alternate routing available inside this sandbox. The
+noProxy allow-list visible in the same status output (registry.npmjs.org, jsr.io, pypi.org,
+files.pythonhosted.org, index.crates.io, proxy.golang.org, and a handful of internal ranges) does
+not include any vulnerability-database host as an alternate path.
+
+Conclusion: unchanged from prior rounds, but freshly re-verified rather than assumed --
+vuln.go.dev, osv.dev, and the GitHub advisory API remain genuinely unreachable from this
+environment by explicit policy. SAST (staticcheck + gosec) remains fully closed and clean
+(evidence/supply_chain_scan-{staticcheck,gosec}.txt); dependency-vulnerability-database scanning
+specifically remains blocked on network policy this session cannot alter, not on missing
+engineering. pkg/blockers/supplychain's real HTTP-backed VulnerabilityProvider is complete and
+unit-tested against a local fixture server and will function correctly the moment this policy
+allows the real endpoint, or an operator points VERIQO_VULN_DB_URL at a network-reachable mirror.

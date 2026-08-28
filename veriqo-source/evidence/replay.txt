@@ -1,0 +1,5 @@
+gate: replay
+command: go test ./pkg/replay/
+exit: 0
+---
+ok  	veriqo/pkg/replay	(cached)

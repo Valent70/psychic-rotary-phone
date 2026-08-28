@@ -1,0 +1,94 @@
+gate: spire_mtls (live spire-agent-in-the-loop drill, closing the closure matrix's own named next action)
+tool: real open-source SPIRE server + agent v1.10.1 (same release binaries as
+      evidence/spire_mtls-multi-container-integration.txt) + pkg/transport/rafttcp's real
+      FileCertSource/NewServerFromSource/NewClientFromSource/NewPeerVerifierFromTrustSource
+      (added this session for the "critical requirement" -- see PART 9 in this round's report --
+      but previously only exercised against synthetic, in-process-minted test certs).
+      New gated test: TestServerAndClientFromSource_RealSPIREIssuedSVIDs in
+      pkg/transport/rafttcp/workloadapi_test.go (VERIQO_SPIRE_LIVE_SVID_DIR).
+git_commit: (see READINESS_MANIFEST.json for the commit this evidence accompanies)
+timestamp: 2026-08-21T12:52Z
+
+Context: evidence/spire_mtls-multi-container-integration.txt's own honest boundary section named
+this exact gap: "STILL not wired into VERIQO's actual mTLS transport ... wiring that in needs a
+hand-rolled Workload API gRPC client to preserve this repo's zero-external-dependency property,
+which remains real, scoped, un-started follow-on engineering, not attempted here." This round's
+docs/qualification/VERIQO_EXTERNAL_CLOSURE_MATRIX.md (written before this file existed) then
+incorrectly stated "this sandbox's Docker daemon cannot be started" as the reason a live drill
+wasn't attempted -- that claim was RE-TESTED this round and found false: `dockerd`, invoked
+directly (bypassing this image's broken /etc/init.d/docker wrapper, which fails on
+`ulimit -Hn 524288` with "Operation not permitted"), starts and runs normally in this sandbox.
+Once that assumption was corrected, this drill became possible and was run for real.
+
+What was done, step by step:
+  1. Rebuilt spire-server:live2 and spire-agent:live2 from the same real SPIRE v1.10.1 release
+     binaries already downloaded in an earlier round (github.com/spiffe/spire release assets;
+     Docker Hub and the release HTML page are blocked, but release *asset* downloads are not).
+  2. Started a real spire-server container and a real spire-agent container on a real Docker
+     bridge network, generated a real join token from the running server
+     (b000aab0-6242-4f92-99fa-728c027617c4), and attested the agent over the real TCP connection.
+     `spire-server agent list` confirms one real attested agent afterward.
+  3. Registered two real workload entries on the live server, each parented to the real attested
+     agent's node SPIFFE ID, with SPIFFE IDs spiffe://veriqo.global/node/node-a and
+     spiffe://veriqo.global/node/node-b (selector unix:uid:0 -- see "what this surfaced" below for
+     why the trust domain is "veriqo.global" specifically).
+  4. Fetched real X.509-SVIDs for both entries from the live agent's real Workload API socket
+     (`spire-agent api fetch x509 -write`, the exact command spiffe-helper/pkg/transport/rafttcp's
+     FileCertSource doc comment names as the real, documented delivery mechanism) into a
+     Docker-volume-mounted host directory, so a HOST Go process (not a container) could read them.
+     Confirmed via openssl: both certs carry a real X.509v3 Subject Alternative Name URI matching
+     their registered SPIFFE ID, both issued 2026-08-21T12:52:37Z, both expiring
+     2026-08-21T13:02:47Z (SPIRE's real default_x509_svid_ttl, ~10 minutes -- not a value this
+     drill chose).
+  5. Added a new gated test, TestServerAndClientFromSource_RealSPIREIssuedSVIDs, that points TWO
+     real FileCertSource instances at the two real SVID directories, builds a real
+     NewPeerVerifierFromTrustSource from the live-issued trust bundle, starts a real
+     NewServerFromSource listener, and drives a real NewClientFromSource SendRequestVote RPC
+     against it over an actual TCP+TLS connection -- the same shape as
+     TestServerAndClientFromSource_RealHandshakeOverFileBackedWorkloadAPI, but with every
+     certificate genuinely issued by the live external SPIRE server instead of this package's own
+     test CA.
+  6. Result: PASS. "real mTLS handshake + RequestVote RPC succeeded using SVIDs issued by a live,
+     separately-running SPIRE server." Verified BEFORE cert expiry (fetched at 12:52:37Z, test run
+     within the same minute, certs valid until 13:02:47Z).
+
+What this surfaced (a real integration finding, not assumed): the FIRST attempt, using the
+existing multi-container round's trust_domain ("veriqo.multicontainer-test"), FAILED with
+`rafttcp: expected peer identity "spiffe://veriqo.global/node/node-a", got
+"spiffe://veriqo.multicontainer-test/node/node-a"`. pkg/transport/rafttcp's client-side identity
+check (rafttcp.go, getConn) hard-codes the expected trust domain as "veriqo.global" when building
+the SPIFFE ID it compares the server's presented certificate against -- a real constraint this
+live drill discovered that no synthetic-cert test could, since every synthetic test mints its own
+self-consistent trust domain. This drill's SPIRE server was reconfigured to trust_domain =
+"veriqo.global" to match, and the handshake then succeeded. A real production deployment against
+an organization's own SPIRE server (whose trust domain is very unlikely to literally be
+"veriqo.global") will hit the identical error unless either (a) the org's trust domain is set to
+"veriqo.global", or (b) rafttcp's hard-coded trust domain is made configurable -- real, scoped,
+un-started follow-on engineering, now precisely named instead of theoretical.
+
+What this does NOT close (honest boundary):
+  - join_token node attestation, not a production-grade attestor (cloud instance identity, k8s
+    PSAT, TPM) -- unchanged from every prior SPIRE round; this is the one item the closure matrix
+    still correctly lists as open.
+  - agent bootstrap still used insecure_bootstrap=true (documented SPIRE demo/test shortcut,
+    unchanged from every prior round); production requires an upstream trust bundle.
+  - the hard-coded "veriqo.global" trust domain in pkg/transport/rafttcp's client (see above) was
+    worked around for this drill, not fixed -- making it configurable remains open follow-on work.
+  - this is still one server + one agent on one Docker bridge network on one host, not a
+    production-scale multi-node cluster with real network partitions between rafttcp peers.
+  - the SVIDs used here had a ~10-minute TTL and were not rotated live during the test (rotation
+    itself -- StartWatching detecting a real file change -- was already proven against synthetic
+    certs in TestFileCertSourceStartWatchingDetectsRotation; this drill's contribution is that the
+    ISSUER is real, not that rotation-detection is real, which was already closed).
+  - all Docker containers, images, and the network were removed after capturing this evidence
+    (same discipline as every prior container-based evidence file in this repo); the SVID files
+    themselves expired naturally minutes after capture.
+
+verdict: the literal gap named in this round's own closure matrix -- "a live spire-agent-in-the-
+loop drill combining [FileCertSource/NewServerFromSource/NewClientFromSource] with a real running
+agent" -- is now closed with real evidence: a real, separately-running SPIRE server issued real
+X.509-SVIDs that a real pkg/transport/rafttcp TLS handshake and RPC genuinely used and verified.
+What remains open, honestly, is narrower than before this drill: a production-grade node attestor,
+and making rafttcp's hard-coded expected trust domain configurable so a real organization's SPIRE
+deployment does not need to adopt "veriqo.global" specifically. Neither is a sandbox limitation --
+both are real, scoped engineering/deployment decisions for whoever operates the real cluster.

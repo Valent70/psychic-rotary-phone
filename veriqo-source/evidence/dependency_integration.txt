@@ -1,0 +1,5 @@
+gate: dependency_integration
+command: go test -run Dependency ./pkg/canonical/
+exit: 0
+---
+ok  	veriqo/pkg/canonical	(cached)

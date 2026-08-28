@@ -1,0 +1,5 @@
+gate: data_quality
+command: go test ./pkg/dataquality/
+exit: 0
+---
+ok  	veriqo/pkg/dataquality	(cached)

@@ -1,0 +1,5 @@
+gate: identity
+command: go test ./pkg/identity/
+exit: 0
+---
+ok  	veriqo/pkg/identity	(cached)

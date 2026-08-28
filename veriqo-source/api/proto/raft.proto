@@ -1,0 +1,213 @@
+// Veriqo Raft gRPC Transport Protocol
+// This proto defines the wire format for inter-node Raft RPC.
+// The actual transport implementation lives in pkg/consensus/transport/.
+//
+// Note: This proto is provided as the canonical API contract.
+// The Go gRPC stubs are NOT checked in (they require protoc + plugins).
+// Instruction: run `make proto` to regenerate.
+
+syntax = "proto3";
+
+package veriqo.raft.v1;
+
+option go_package = "veriqo/api/gen/raft/v1;raftv1";
+
+// ─── Message envelope ────────────────────────────────────────────────────────
+
+// MessageType mirrors the Raft message type enum in pkg/consensus/raft/types.go.
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED     = 0;
+  MESSAGE_TYPE_VOTE_REQUEST    = 1;
+  MESSAGE_TYPE_VOTE_RESPONSE   = 2;
+  MESSAGE_TYPE_APPEND_ENTRIES  = 3;
+  MESSAGE_TYPE_APPEND_RESPONSE = 4;
+  MESSAGE_TYPE_INSTALL_SNAPSHOT = 5;
+  MESSAGE_TYPE_SNAPSHOT_RESPONSE = 6;
+  MESSAGE_TYPE_HEARTBEAT       = 7;
+  MESSAGE_TYPE_READ_INDEX      = 8;
+  MESSAGE_TYPE_READ_INDEX_RESP = 9;
+  MESSAGE_TYPE_CONF_CHANGE     = 10;
+  MESSAGE_TYPE_LEADERSHIP_TRANSFER = 11;
+}
+
+// Entry is a single log entry.
+message Entry {
+  uint64 index    = 1;
+  uint64 term     = 2;
+  bytes  data     = 3;
+  uint32 type     = 4; // matches raft.EntryType
+}
+
+// SnapshotMetadata accompanies an InstallSnapshot RPC.
+message SnapshotMetadata {
+  uint64          last_included_index = 1;
+  uint64          last_included_term  = 2;
+  bytes           config              = 3; // JSON-encoded MembershipConfig
+  bytes           checksum            = 4; // SHA-256 of snapshot data
+}
+
+// RaftMessage is the transport-level envelope for any Raft RPC.
+message RaftMessage {
+  // Routing
+  string      from_id   = 1;
+  string      to_id     = 2;
+  uint64      term      = 3;
+  MessageType type      = 4;
+
+  // Leader fields (AppendEntries / Heartbeat)
+  uint64      leader_id         = 5;
+  uint64      prev_log_index    = 6;
+  uint64      prev_log_term     = 7;
+  uint64      leader_commit     = 8;
+  repeated Entry entries        = 9;
+
+  // Follower response fields
+  bool        success           = 10;
+  uint64      conflict_index    = 11;
+  uint64      conflict_term     = 12;
+
+  // Vote fields
+  uint64      last_log_index    = 13;
+  uint64      last_log_term     = 14;
+  bool        vote_granted      = 15;
+  bool        pre_vote          = 16; // true = PreVote round
+
+  // Snapshot fields
+  SnapshotMetadata snapshot_meta = 17;
+  bytes            snapshot_data = 18;
+  uint64           snapshot_offset = 19;
+  bool             snapshot_done  = 20;
+
+  // ReadIndex fields
+  bytes        read_index_ctx    = 21; // correlation ID
+  uint64       read_index        = 22;
+
+  // ConfChange fields
+  bytes        conf_change_data  = 23; // JSON-encoded JointConfig
+
+  // Leadership transfer
+  string       transfer_to       = 24;
+
+  // Timestamp (Unix milliseconds) for latency tracing.
+  int64        sent_at_ms        = 25;
+}
+
+// RaftAck is the acknowledgement for a Send RPC.
+message RaftAck {
+  bool   success = 1;
+  string error   = 2;
+}
+
+// ─── Transport service ───────────────────────────────────────────────────────
+
+// RaftTransport is the gRPC service exposed by each Raft node.
+service RaftTransport {
+  // Send delivers a single RaftMessage to the target node.
+  // Used for point-to-point RPCs (Vote, AppendEntries, etc.).
+  rpc Send(RaftMessage) returns (RaftAck);
+
+  // Stream is a bidirectional streaming RPC for high-throughput replication.
+  // Both ends send RaftMessages and receive RaftAcks.
+  rpc Stream(stream RaftMessage) returns (stream RaftAck);
+
+  // InstallSnapshot delivers a snapshot to a lagging follower in chunks.
+  // The client sends a stream of RaftMessage (type=INSTALL_SNAPSHOT) with
+  // increasing snapshot_offset; the final chunk has snapshot_done=true.
+  rpc InstallSnapshot(stream RaftMessage) returns (RaftAck);
+}
+
+// ─── Admin service ────────────────────────────────────────────────────────────
+
+// NodeStatus describes the current status of a Raft node.
+message NodeStatusResponse {
+  string  node_id          = 1;
+  string  state            = 2; // "leader", "follower", "candidate"
+  string  leader_id        = 3;
+  uint64  current_term     = 4;
+  uint64  commit_index     = 5;
+  uint64  applied_index    = 6;
+  uint64  log_last_index   = 7;
+  uint64  log_last_term    = 8;
+  repeated string voters   = 9;
+  repeated string learners = 10;
+  bool    is_leader        = 11;
+}
+
+message AddNodeRequest {
+  string node_id  = 1;
+  string address  = 2;
+  bool   as_learner = 3;
+}
+
+message RemoveNodeRequest {
+  string node_id = 1;
+}
+
+message TransferLeadershipRequest {
+  string target_node_id = 1;
+}
+
+message StatusRequest {}
+message GenericResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// RaftAdmin provides cluster management operations (intended for veriqoctl).
+service RaftAdmin {
+  // Status returns the current node status.
+  rpc Status(StatusRequest) returns (NodeStatusResponse);
+
+  // AddNode proposes adding a new voter or learner to the cluster.
+  rpc AddNode(AddNodeRequest) returns (GenericResponse);
+
+  // RemoveNode proposes removing a node from the cluster.
+  rpc RemoveNode(RemoveNodeRequest) returns (GenericResponse);
+
+  // TransferLeadership gracefully transfers leadership to another node.
+  rpc TransferLeadership(TransferLeadershipRequest) returns (GenericResponse);
+
+  // TriggerSnapshot forces the node to create a new snapshot.
+  rpc TriggerSnapshot(StatusRequest) returns (GenericResponse);
+}
+
+// ─── MOAT graph service ──────────────────────────────────────────────────────
+
+// MoatNodeResponse carries a knowledge graph node.
+message MoatNode {
+  string node_id     = 1;
+  string node_type   = 2;
+  string tenant_id   = 3;
+  bytes  props_json  = 4; // JSON-encoded props map
+  uint64 version     = 5;
+  int64  created_at  = 6;
+  int64  updated_at  = 7;
+}
+
+// MoatQuery is a predicate query on the knowledge graph.
+message MoatQuery {
+  string tenant_id  = 1;
+  string node_type  = 2; // optional: filter by type
+  string tag        = 3; // optional: filter by tag
+  string node_id    = 4; // optional: direct lookup
+}
+
+// MoatMutateRequest proposes a graph mutation via Raft consensus.
+message MoatMutateRequest {
+  string tenant_id    = 1;
+  string op           = 2; // "CreateNode", "UpdateNode", "DeleteNode", etc.
+  bytes  payload_json = 3;
+}
+
+// MoatGraph is the gRPC service for Knowledge Graph access.
+service MoatGraph {
+  // QueryNode returns a single graph node by ID.
+  rpc QueryNode(MoatQuery) returns (MoatNode);
+
+  // QueryMany returns all nodes matching the query predicate.
+  rpc QueryMany(MoatQuery) returns (stream MoatNode);
+
+  // Mutate proposes a graph mutation via Raft consensus.
+  // Returns after the mutation is committed and applied.
+  rpc Mutate(MoatMutateRequest) returns (GenericResponse);
+}

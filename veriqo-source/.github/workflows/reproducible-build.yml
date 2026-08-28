@@ -1,0 +1,72 @@
+name: reproducible-build
+on: [push, pull_request]
+
+# internal/reproducibility already proves bit-for-bit binary equality
+# across two independent *compiler invocations* on the same machine (see
+# that package's own header comment for the two real, CI-caught
+# reproducibility bugs -trimpath alone did not cover: cgo's system
+# compiler and go build's default VCS auto-stamping). What that package
+# cannot prove from inside a single `go test` process is the other half
+# of "independent build" an external audit named: two builds performed
+# by two genuinely SEPARATE builders. GitHub Actions jobs each run on
+# their own freshly-provisioned, isolated ephemeral VM -- no shared
+# filesystem, no shared GOCACHE, no shared process -- so running the
+# identical build in two parallel jobs and diffing the resulting binary
+# hashes is a real, meaningful narrowing of that gap: it is honestly
+# "two separate machines", even though both happen to be GitHub-hosted
+# ubuntu runners on the same toolchain vendor, not two independent CI
+# providers or operating systems. That remaining, narrower gap (a build
+# on a genuinely different provider/OS/toolchain lineage) is still
+# real and still unclosed -- this workflow does not claim otherwise.
+jobs:
+  build-independent-a:
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: 'stable' }
+      - name: independent build A (separate ephemeral runner, fresh GOCACHE)
+        env:
+          CGO_ENABLED: "0"
+        run: go build -trimpath -buildvcs=false -ldflags="-s -w" -o /tmp/veriqo-verify-a ./cmd/veriqo-verify
+      - name: hash build A
+        id: hash
+        run: echo "hash=$(sha256sum /tmp/veriqo-verify-a | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  build-independent-b:
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: 'stable' }
+      - name: independent build B (separate ephemeral runner, fresh GOCACHE)
+        env:
+          CGO_ENABLED: "0"
+        run: go build -trimpath -buildvcs=false -ldflags="-s -w" -o /tmp/veriqo-verify-b ./cmd/veriqo-verify
+      - name: hash build B
+        id: hash
+        run: echo "hash=$(sha256sum /tmp/veriqo-verify-b | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  compare:
+    needs: [build-independent-a, build-independent-b]
+    runs-on: ubuntu-latest
+    steps:
+      - name: compare hashes from two genuinely separate CI runners
+        run: |
+          A="${{ needs.build-independent-a.outputs.hash }}"
+          B="${{ needs.build-independent-b.outputs.hash }}"
+          echo "runner A: $A"
+          echo "runner B: $B"
+          if [ -z "$A" ] || [ -z "$B" ]; then
+            echo "one or both runners failed to produce a hash"
+            exit 1
+          fi
+          if [ "$A" != "$B" ]; then
+            echo "MISMATCH: two independent GitHub Actions runners (separate ephemeral VMs, no shared cache) produced DIFFERENT binaries from the identical source tree -- this repository's build is NOT reproducible across independent builders"
+            exit 1
+          fi
+          echo "MATCH: two genuinely separate CI runners produced a byte-identical binary from the identical source tree"

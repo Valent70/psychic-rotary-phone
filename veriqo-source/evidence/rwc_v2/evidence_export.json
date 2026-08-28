@@ -1,0 +1,123 @@
+{
+  "RWC-001-A": {
+    "arbitration_winner": "{\"loa_m\":140,\"draft_m\":7.2,\"geared\":true,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "contradiction": false,
+    "dependency_root_hash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "VESSEL_CONSTRAINT:AKONIKIEN",
+    "source_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "submission_count": 1
+  },
+  "RWC-001-B": {
+    "arbitration_winner": "{\"loa_m\":151,\"draft_m\":7.2,\"geared\":true,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "contradiction": false,
+    "dependency_root_hash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "VESSEL_CONSTRAINT:AKONIKIEN",
+    "source_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "submission_count": 1
+  },
+  "RWC-001-C": {
+    "arbitration_winner": "{\"loa_m\":140,\"draft_m\":8.4,\"geared\":true,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "contradiction": false,
+    "dependency_root_hash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "VESSEL_CONSTRAINT:AKONIKIEN",
+    "source_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "submission_count": 1
+  },
+  "RWC-001-D": {
+    "arbitration_winner": "{\"loa_m\":140,\"draft_m\":7.2,\"geared\":false,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "contradiction": false,
+    "dependency_root_hash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "VESSEL_CONSTRAINT:AKONIKIEN",
+    "source_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "submission_count": 1
+  },
+  "RWC-001-E": {
+    "arbitration_winner": "{\"loa_m\":140,\"draft_m\":7.2,\"geared\":true,\"crane_capacity_t\":30,\"grab_capacity_cbm\":12,\"bowthruster\":true}",
+    "contradiction": false,
+    "dependency_root_hash": "af457c4b9cad8fbd1386e4c4a3a8bd35211921725cda0d4318b280cc893e52ea",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "VESSEL_CONSTRAINT:DOUALA",
+    "source_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "submission_count": 1
+  },
+  "RWC-002-CARGO_IDENTITY": {
+    "arbitration_winner": "PRODUCT=EN590 10ppm;QUANTITY=50,000 MT;PRICE=630-10",
+    "contradiction": false,
+    "dependency_root_hash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "CARGO_IDENTITY",
+    "source_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "submission_count": 1
+  },
+  "RWC-002-DOCUMENT_EXISTENCE": {
+    "arbitration_winner": "Bill of Lading|Certificate of Product Origin|ETA|Freight/Cargo Manifest|Notice of Readiness|Q88|Ullage Report",
+    "contradiction": false,
+    "dependency_root_hash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "DOCUMENT_EXISTENCE_CLAIM",
+    "source_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "submission_count": 1
+  },
+  "RWC-002-TRANSACTION_SEQUENCE": {
+    "arbitration_winner": "CI|CICC|CIS/KYC|DTA|MATB|MT103/72 USD 390,000|PPOP|SGS/CIQ/CCIC|TTO contract|balance payment after inspection|consignee listed on documentation is seller|intermediary settlement",
+    "contradiction": false,
+    "dependency_root_hash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "TRANSACTION_STEP",
+    "source_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "submission_count": 1
+  },
+  "RWC-002-VESSEL_IDENTITY": {
+    "arbitration_winner": "IMO=8508292;MMSI=525008029;NAME=GUNUNG KEMALA / PERTAMINA 8003",
+    "contradiction": false,
+    "dependency_root_hash": "bbc6a9519830b80f63553cd36288bd4d7365ef9dc676520bcb2d98e654a74e11",
+    "independent_families": 2,
+    "max_dependency_discount": 0,
+    "predicate": "VESSEL_IDENTITY",
+    "source_ids": [
+      "BROKER_TRANSACTION_DOCS",
+      "VERIQO_STRUCTURAL_IDENTITY_VALIDATOR"
+    ],
+    "submission_count": 2
+  },
+  "RWC-002-VOYAGE_POSITION": {
+    "arbitration_winner": "Departed Poti, Georgia; currently reported at Lome anchorage",
+    "contradiction": false,
+    "dependency_root_hash": "d82660560328ddd671750e7ab30404694e6492f80006657aa29a3e72c7df1c76",
+    "independent_families": 1,
+    "max_dependency_discount": 0,
+    "predicate": "VOYAGE_POSITION_CLAIM",
+    "source_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "submission_count": 1
+  }
+}

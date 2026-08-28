@@ -1,0 +1,313 @@
+{
+  "RWC-001-A": {
+    "arbitration_winner_confidence": 0.95,
+    "provenance_evidence_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 0,
+        "Weight": 0.6,
+        "Contribution": 0
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 0,
+        "Weight": 0.4,
+        "Contribution": 0
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-001-B": {
+    "arbitration_winner_confidence": 0.95,
+    "provenance_evidence_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 1,
+        "Weight": 0.6,
+        "Contribution": 0.6
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 1,
+        "Weight": 0.4,
+        "Contribution": 0.4
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-001-C": {
+    "arbitration_winner_confidence": 0.95,
+    "provenance_evidence_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 1,
+        "Weight": 0.6,
+        "Contribution": 0.6
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 1,
+        "Weight": 0.4,
+        "Contribution": 0.4
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-001-D": {
+    "arbitration_winner_confidence": 0.95,
+    "provenance_evidence_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 1,
+        "Weight": 0.6,
+        "Contribution": 0.6
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 1,
+        "Weight": 0.4,
+        "Contribution": 0.4
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-001-E": {
+    "arbitration_winner_confidence": 0.95,
+    "provenance_evidence_ids": [
+      "RANCHAN_CHARTERER_VESSEL_DECLARATION"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 0.5,
+        "Weight": 0.6,
+        "Contribution": 0.3
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 0.5,
+        "Weight": 0.4,
+        "Contribution": 0.2
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "MEDIUM",
+    "risk_score": 0.5
+  },
+  "RWC-002-CARGO_IDENTITY": {
+    "arbitration_winner_confidence": 0.5,
+    "provenance_evidence_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 0,
+        "Weight": 0.6,
+        "Contribution": 0
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 0,
+        "Weight": 0.4,
+        "Contribution": 0
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-002-DOCUMENT_EXISTENCE": {
+    "arbitration_winner_confidence": 0.5,
+    "provenance_evidence_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 0,
+        "Weight": 0.6,
+        "Contribution": 0
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 0,
+        "Weight": 0.4,
+        "Contribution": 0
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-002-TRANSACTION_SEQUENCE": {
+    "arbitration_winner_confidence": 0.5,
+    "provenance_evidence_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 1,
+        "Weight": 0.6,
+        "Contribution": 0.6
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 1,
+        "Weight": 0.4,
+        "Contribution": 0.4
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "CRITICAL",
+    "risk_score": 1
+  },
+  "RWC-002-VESSEL_IDENTITY": {
+    "arbitration_winner_confidence": 0.96,
+    "provenance_evidence_ids": [
+      "BROKER_TRANSACTION_DOCS",
+      "VERIQO_STRUCTURAL_IDENTITY_VALIDATOR"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 0,
+        "Weight": 0.6,
+        "Contribution": 0
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 0,
+        "Weight": 0.4,
+        "Contribution": 0
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "LOW",
+    "risk_score": 0
+  },
+  "RWC-002-VOYAGE_POSITION": {
+    "arbitration_winner_confidence": 0.5,
+    "provenance_evidence_ids": [
+      "BROKER_TRANSACTION_DOCS"
+    ],
+    "provenance_score": 1,
+    "provenance_shared_ancestors": null,
+    "provenance_status": "UNKNOWN",
+    "risk_breakdown": [
+      {
+        "Name": "sanctions_evasion_pattern_score",
+        "RawValue": 0,
+        "Weight": 0.6,
+        "Contribution": 0
+      },
+      {
+        "Name": "price_anomaly_score",
+        "RawValue": 0,
+        "Weight": 0.4,
+        "Contribution": 0
+      },
+      {
+        "Name": "provenance_independence_discount",
+        "RawValue": 1,
+        "Weight": 0,
+        "Contribution": 1
+      }
+    ],
+    "risk_label": "LOW",
+    "risk_score": 0
+  }
+}

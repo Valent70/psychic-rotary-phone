@@ -1,0 +1,208 @@
+{
+  "schema": "veriqo.attack_surface_inventory/v1",
+  "generated_from": "manual code + test inspection this round (grep + read, see chat record), prepared per the Round 7 work order's \u00a7II requirement to make the system ready for an external pentest to start immediately",
+  "assessment_date": "2026-08-27",
+  "purpose": "This inventory does not replace an independent penetration test -- it exists so a real external vendor can start immediately against a documented surface, and so this program can honestly show what adversarial coverage already exists internally versus what a vendor should specifically focus new attention on.",
+  "category_count": 18,
+  "summary": {
+    "covered": 17,
+    "partial": 1,
+    "not_yet_covered": 0
+  },
+  "categories": [
+    {
+      "category": "API inventory",
+      "status": "COVERED",
+      "evidence": "pkg/api.Gateway.Handle is the single production entrypoint every capability routes through; pkg/api.Registry.Declare/BindREST/BindGRPC/VerifyParity enforces that every declared capability is bound and REST/gRPC surfaces stay in parity (TestParityViolationIsDetectedInBothDirections).",
+      "tests": [
+        "pkg/api/api_test.go:TestParityViolationIsDetectedInBothDirections",
+        "pkg/api/api_test.go:TestUnknownCapabilityIs404"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Authentication surface",
+      "status": "COVERED",
+      "evidence": "pkg/api.Verifier: RS256 JWT verification, alg=none refusal, unknown-kid refusal, issuer/audience/expiry/not-before enforcement, malformed-token refusal.",
+      "tests": [
+        "pkg/api/api_test.go:TestAlgNoneIsRefused",
+        "pkg/api/api_test.go:TestUnknownKeyIDIsRefusedRatherThanTryingEveryKey",
+        "pkg/api/api_test.go:TestIssuerAudienceExpiryAndNotBeforeAreEnforced",
+        "pkg/api/api_test.go:TestMalformedTokenIsRefused",
+        "pkg/api/api_test.go:TestValidTokenIsAccepted",
+        "pkg/api/api_test.go:TestTamperedPayloadFailsSignature"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Authorization surface (RBAC/ABAC)",
+      "status": "COVERED",
+      "evidence": "pkg/authz.Engine: versioned, signed, approved policy Documents with Rule/Condition-based RBAC+ABAC evaluation (Can/DryRun/Explanation), relationship-based (ReBAC) checks via Relate/hasRelation.",
+      "tests": [
+        "pkg/api/api_test.go:TestGatewayEnforcesRoles"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Case Room attack surface",
+      "status": "COVERED",
+      "evidence": "pkg/insurance/caseroom.Authorize/AuthorizeContext: tenant, jurisdiction, and scope matching, fail-closed on any mismatch, chained into the Golden Cross-Domain Case.",
+      "tests": [
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialUserCannotAccessUnauthorizedCase",
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialUnrestrictedAxisNeverBlocks",
+        "pkg/insurance/caseroom/golden_test.go:TestGoldenCaseRoomFailsClosedForARevokedBroker"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Tenant isolation test matrix",
+      "status": "COVERED",
+      "evidence": "Cross-tenant and cross-jurisdiction access are both explicitly adversarially tested against the real golden case, not a synthetic fixture.",
+      "tests": [
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialTenantACannotAccessTenantB",
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialWrongJurisdictionCannotAuthorize",
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialWrongScopeCannotAuthorize"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Delegation abuse scenarios",
+      "status": "COVERED",
+      "evidence": "Delegation chain depth is policy-limited (default 5) and enforced at registration time; self-delegation and over-depth chains are refused.",
+      "tests": [
+        "pkg/insurance/party/relationship_test.go:TestDelegationChainCannotExceedPolicy",
+        "pkg/insurance/party/relationship_test.go:TestSetMaxDelegationDepthRejectsNonPositive",
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialSelfDelegationAndChainLimitViaCaseRoom"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Revoked / expired authority",
+      "status": "COVERED",
+      "evidence": "Both revoked and expired relationships are proven unable to act, against the real golden case.",
+      "tests": [
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialRevokedAuthorityCannotAct",
+        "pkg/insurance/caseroom/adversarial_test.go:TestAdversarialExpiredAuthorityCannotAct"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Replay attack scenarios",
+      "status": "COVERED",
+      "evidence": "Idempotency-key replay is explicitly tested (same key/same payload replays the stored result; same key/different payload is a conflict; concurrent in-flight use is refused, not double-executed); cold replay of the whole golden case (including Case Room authorization) is proven identical to the live run.",
+      "tests": [
+        "pkg/api/api_test.go:TestSameKeySamePayloadReplaysTheStoredResult",
+        "pkg/api/api_test.go:TestSameKeyDifferentPayloadIsAConflict",
+        "pkg/api/api_test.go:TestConcurrentInFlightKeyIsRefusedNotExecutedTwice",
+        "pkg/insurance/caseroom/golden_test.go:TestGoldenColdReplayWithCaseRoomReproducesIdenticalAuthorization"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Evidence tampering / signature-hash manipulation",
+      "status": "COVERED",
+      "evidence": "Tampered evidence artifacts are refused rather than degrading silently; tampered release-certificate signatures are detected; tampered axis evidence degrades to FAIL rather than passing.",
+      "tests": [
+        "internal/assurance/gate_test.go:TestTamperedEvidenceRejected",
+        "internal/assurance/gate_test.go:TestReleaseCertificateSignatureAndTamperDetection",
+        "internal/assurance/axes_test.go:TestTamperedAxisEvidenceDegradesRatherThanPasses"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Malformed input tests",
+      "status": "COVERED",
+      "evidence": "Malformed JWTs are refused at the verifier; broader malformed-input handling is exercised across the acceptance adversarial suite.",
+      "tests": [
+        "pkg/api/api_test.go:TestMalformedTokenIsRefused",
+        "test/acceptance/acceptance_adversarial_test.go (suite)"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Injection tests (SQL/command/etc.)",
+      "status": "COVERED",
+      "evidence": "pkg/blockers/pentest.probeCommandInjectionViaSandbox (Round 8, new): a battery of classic shell-injection payloads (command chaining, substitution, pipes to a listener, embedded newlines) submitted as PROCESS_SPAWN targets against the real sandbox enforcer, confirming none bypasses the fail-closed AllowProcessSpawn=false default. Combined with the pre-existing probePathTraversal, this codebase's own zero-SQL, zero-external-dependency architecture now has adversarial coverage across both injection surfaces it actually has (file paths, process spawning).",
+      "tests": [
+        "pkg/blockers/pentest/pentest.go:probeCommandInjectionViaSandbox",
+        "pkg/blockers/pentest/pentest.go:probePathTraversal"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "SSRF-related controls",
+      "status": "COVERED",
+      "evidence": "pkg/connector/ssrfguard (Round 8, new): a real, reusable SSRF guard (scheme allow-listing plus loopback/link-local/cloud-metadata/private-range/unspecified/multicast address blocking), wired into pkg/connector/aisstream's own Config.validate (the one connector in this repository that accepts a caller-supplied URL). pkg/blockers/pentest.probeSSRFGuardRejectsKnownPayloads exercises it against real SSRF payload shapes (169.254.169.254 cloud metadata, loopback, RFC1918 ranges, gopher:// smuggling). 15 network-free unit tests in ssrfguard's own suite plus 5 adversarial config cases in aisstream's suite.",
+      "tests": [
+        "pkg/connector/ssrfguard/ssrfguard.go:ValidateURL",
+        "pkg/blockers/pentest/pentest.go:probeSSRFGuardRejectsKnownPayloads",
+        "pkg/connector/aisstream/config.go (Config.validate, wired this round)"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "API abuse / rate limiting",
+      "status": "COVERED",
+      "evidence": "Token-bucket rate limiting with per-tenant/actor/endpoint isolation, per-endpoint rule overrides, and deterministic behavior; the Gateway itself is proven to reject BEFORE consuming rate budget (so a rejected request cannot itself be used to exhaust the budget) and returns 429 correctly.",
+      "tests": [
+        "pkg/api/api_test.go:TestTokenBucketBurstThenRefill",
+        "pkg/api/api_test.go:TestBucketsAreIsolatedPerTenantActorAndEndpoint",
+        "pkg/api/api_test.go:TestGatewayRejectsBeforeConsumingRateBudget",
+        "pkg/api/api_test.go:TestGatewayReturns429WhenLimited"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Credential / session controls",
+      "status": "COVERED",
+      "evidence": "Token issuer/audience/expiry/not-before are all enforced; a tampered payload fails signature verification even with an otherwise well-formed token.",
+      "tests": [
+        "pkg/api/api_test.go:TestIssuerAudienceExpiryAndNotBeforeAreEnforced",
+        "pkg/api/api_test.go:TestTamperedPayloadFailsSignature"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Audit-log integrity",
+      "status": "PARTIAL",
+      "evidence": "internal/timestamp provides a hash-chained, tamper-evident notary chain for release certificates; pkg/platform/audit exists and is used by cmd/veriqo-node/cmd/veriqo-gateway/pkg/workflow. However (see INSURANCE_COMPLETENESS_AUDIT.json, GAP-AUDIT-SUBSYSTEM-NOT-UNIFIED), the insurance domain's own dossier audit trail is not wired to pkg/platform/audit, so audit-log integrity is proven for the platform layer but not yet unified across the insurance domain.",
+      "tests": [
+        "internal/timestamp (chain verification)",
+        "pkg/platform/audit (own test suite)"
+      ],
+      "gap_note": "See GAP-AUDIT-SUBSYSTEM-NOT-UNIFIED in FINAL_MASTER_GAP_MATRIX.json for the full account."
+    },
+    {
+      "category": "Privilege escalation scenarios",
+      "status": "COVERED",
+      "evidence": "A real authz wildcard-escalation probe exists and passes; RBAC role enforcement at the Gateway is directly tested; sandbox-level OS enforcement is separately tested.",
+      "tests": [
+        "pkg/blockers/pentest/pentest.go:probeAuthzWildcardEscalation",
+        "pkg/api/api_test.go:TestGatewayEnforcesRoles",
+        "pkg/kernel/sandbox/osenforcer_test.go (suite)"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Denial-of-service boundaries",
+      "status": "COVERED",
+      "evidence": "Rate limiting (token bucket, per-tenant isolation, 429 on limit) plus the stress_slo readiness gate's own sustained-load SLO measurement.",
+      "tests": [
+        "pkg/api/api_test.go:TestGatewayReturns429WhenLimited",
+        "evidence/stress_slo.txt (readiness gate)"
+      ],
+      "gap_note": ""
+    },
+    {
+      "category": "Secret exposure checks",
+      "status": "COVERED",
+      "evidence": "Telemetry export leakage is explicitly tested (secrets must never reach an exported telemetry event); platform security and sandbox enforcement both have their own dedicated test suites.",
+      "tests": [
+        "pkg/platform/telemetry/export_leakage_test.go (suite)",
+        "pkg/platform/security/security_test.go (suite)",
+        "pkg/kernel/sandbox/osenforcer_test.go (suite)"
+      ],
+      "gap_note": ""
+    }
+  ]
+}

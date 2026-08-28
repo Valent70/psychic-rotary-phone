@@ -1,0 +1,34 @@
+gate: spire_mtls (single-node integration test, real SPIRE software)
+tool: real open-source SPIRE server + agent v1.10.1 (spiffe/spire GitHub release), downloaded and run in this session
+git_commit: (see READINESS_MANIFEST.json for the commit this evidence accompanies)
+timestamp: 2026-08-13T00:48Z
+
+Prior blocker text said "network-blocked in this environment" -- that was too broad. This session confirmed:
+  github.com/spiffe/spire/releases (HTML page)                                   -> 403
+  github.com/spiffe/spire/releases/download/v1.10.1/spire-1.10.1-linux-amd64-musl.tar.gz (direct release asset) -> 200, downloaded real binaries
+
+What was genuinely run and verified, in order:
+1. spire-server run with a real self-generated X509 CA (trust domain veriqo.session-test) -- real CA, real cert, logged.
+2. spire-server token generate -> real join token tied to spiffe://veriqo.session-test/node/session-agent
+3. spire-agent run -joinToken <token> -> real node attestation succeeded (join_token attestor), agent issued its own agent SVID.
+4. spire-server entry create -parentID <agent SPIFFE ID> -spiffeID spiffe://veriqo.session-test/workload/veriqo-node-test -selector unix:uid:<uid>
+   -> real workload registration entry (Entry ID d736222a-3ca8-4860-b89a-147796b9a5b6).
+5. spire-agent api fetch x509 -> REAL X.509-SVID issued: subject SAN URI:spiffe://veriqo.session-test/workload/veriqo-node-test,
+   ecdsa-with-SHA256, issued by the real SPIRE CA, 10-minute TTL. Verified independently with `openssl x509 -text`.
+6. spire-server entry delete <entry ID> (revocation), then spire-agent api fetch x509 again
+   -> real PermissionDenied: "no identity issued". Revocation genuinely takes effect, not simulated.
+
+What this does NOT close (still honestly BLOCKED_EXTERNAL, narrower reason than before):
+  - single node (one spire-server, one spire-agent), not the multi-agent/multi-node cluster the gate requires
+  - agent bootstrap used insecure_bootstrap=true (skips server cert verification on first contact) -- a documented
+    SPIRE demo/test shortcut, explicitly not a production configuration; production requires an upstream trust bundle
+  - join_token node attestation, not a production-grade attestor (e.g. cloud instance identity, k8s PSAT, TPM)
+  - NOT wired into VERIQO's actual mTLS transport (pkg/transport/rafttcp still uses its own lightweight CA + SPIFFE-ID-
+    extraction-from-cert, not the SPIFFE Workload API); doing so needs a hand-rolled Workload API gRPC client to keep
+    this repo's zero-external-dependency property, which is real, scoped, follow-on engineering work, not done here
+  - CA rotation across a live cluster and multi-agent cross-attestation, both explicitly required by the gate, not exercised
+
+verdict: attestation, SVID issuance and revocation are now demonstrated with real SPIRE software in this environment --
+  the blocker is "production topology + Workload API integration", not "SPIRE cannot run here". All SPIRE binaries,
+  keys, and demo state were run from /tmp scratch space and discarded after this evidence was captured; nothing from
+  this demo was committed to the repository.

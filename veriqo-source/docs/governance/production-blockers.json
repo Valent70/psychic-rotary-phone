@@ -1,0 +1,142 @@
+{
+  "$schema_note": "Machine-readable contract for the 8 production blockers. Shape matches pkg/blockers.Contract exactly (encoding/json field names). This file is data, not code: pkg/blockers enforces the invariants (real_world_dependencies non-empty, real_qualification_required=true, production_mode_required_for_verification=true) on load via Contract.Validate, so this file cannot itself grant an exemption -- it can only be rejected if it tries. The 'status' field here is a documentation-level starting declaration, not a trusted claim: pkg/blockers/orchestrator.RunAll recomputes each blocker's real status fresh on every run (see evidence/blockers-qualification-report.json, the actual authoritative live result) and never trusts this field's value for pass/fail. It was found stale (7 of 8 still read IMPLEMENTED even though every real run since has independently reached READY_FOR_REAL_QUALIFICATION) and corrected to match the live evidence, matching this project's discipline of fixing exactly this class of two-artifacts-disagreeing drift wherever found -- not a status upgrade granted here, only a stale label corrected to match already-proven fact.",
+  "version": "v7.12.1",
+  "blockers": [
+    {
+      "id": "pentest",
+      "name": "Independent penetration test",
+      "version": "v1",
+      "required_capabilities": ["target_registry", "adversarial_test_harness", "evidence_adapter"],
+      "real_world_dependencies": ["independent_security_vendor", "signed_vendor_report"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["scope_document", "rules_of_engagement", "vendor_signed_report", "finding_remediation_trace"],
+      "failure_conditions": ["unscoped_target", "unsigned_report", "vendor_identity_not_in_trust_registry"],
+      "acceptance_criteria": ["all_critical_and_high_findings_remediated_or_waived_with_owner_signoff"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "scale_qualification",
+      "name": "100-node / 1M-evidence-record scale qualification",
+      "version": "v1",
+      "required_capabilities": ["node_provisioning", "workload_distribution", "evidence_integrity_check"],
+      "real_world_dependencies": ["100_real_nodes_or_cloud_equivalent"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["throughput", "p99_latency", "convergence_time", "evidence_loss_count", "duplicate_identity_count"],
+      "failure_conditions": ["lost_evidence", "duplicate_identity", "non_convergence"],
+      "acceptance_criteria": ["lost_evidence == 0", "duplicate_identity == 0", "convergence_under_slo"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "multi_region_dr",
+      "name": "Multi-region disaster recovery qualification",
+      "version": "v1",
+      "required_capabilities": ["region_provisioning", "partition_injection", "rpo_rto_measurement"],
+      "real_world_dependencies": ["real_multi_region_infrastructure"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["rpo_measurement", "rto_measurement", "failover_log", "data_integrity_check"],
+      "failure_conditions": ["rpo_exceeds_target", "rto_exceeds_target", "split_brain", "data_loss"],
+      "acceptance_criteria": ["rpo_within_target", "rto_within_target", "no_split_brain", "no_data_loss"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "hsm_kms",
+      "name": "HSM/KMS production key custody",
+      "version": "v1",
+      "required_capabilities": ["key_provider_abstraction", "fail_closed_enforcement", "key_lifecycle_management"],
+      "real_world_dependencies": ["procured_hsm_or_cloud_kms_tenancy"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["provider_attestation", "failure_matrix_results", "key_rotation_log"],
+      "failure_conditions": ["silent_fallback_to_software_keys", "unavailable_key_used_anyway", "revoked_key_accepted"],
+      "acceptance_criteria": ["all_failure_modes_fail_closed", "no_software_key_provider_reachable_in_production_env"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "live_data",
+      "name": "Live commercial data feed integration (SWIFT/AIS/SAR/BoL)",
+      "version": "v1",
+      "required_capabilities": ["feed_connector_abstraction", "normalization_pipeline", "anti_replay"],
+      "real_world_dependencies": ["commercial_data_contracts", "live_feed_credentials"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["connector_conformance_report", "dedup_verification", "data_mode_provenance_tag"],
+      "failure_conditions": ["fixture_data_tagged_as_live", "replay_accepted_as_new", "unauthenticated_source_accepted"],
+      "acceptance_criteria": ["every_record_carries_accurate_data_mode", "zero_replay_acceptance"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "soak_72h",
+      "name": "72-hour continuous soak test",
+      "version": "v1",
+      "required_capabilities": ["soak_harness", "leak_detection", "drift_detection", "signed_checkpoint_chain"],
+      "real_world_dependencies": ["72_continuous_wall_clock_hours_on_a_long_lived_host"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["checkpoint_chain", "goroutine_count_series", "memory_series", "error_count"],
+      "failure_conditions": ["goroutine_growth", "memory_growth", "error_rate_above_threshold", "duration_shorter_than_claimed"],
+      "acceptance_criteria": ["duration >= 259200s", "goroutines_flat", "memory_flat", "errors == 0"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "spire_mtls",
+      "name": "Production SPIRE/mTLS workload identity",
+      "version": "v1",
+      "required_capabilities": ["spiffe_identity_abstraction", "svid_rotation", "trust_bundle_validation"],
+      "real_world_dependencies": ["production_spire_cluster", "production_node_attestor"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["attestation_log", "svid_issuance_log", "rotation_log", "revocation_log"],
+      "failure_conditions": ["expired_svid_accepted", "untrusted_bundle_accepted", "rotation_failure_silent"],
+      "acceptance_criteria": ["all_peer_validation_rejects_untrusted_bundles", "rotation_verified_end_to_end"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    },
+    {
+      "id": "supply_chain_scan",
+      "name": "Supply-chain security scan (SAST + dependency vulnerability DB)",
+      "version": "v1",
+      "required_capabilities": ["sast_pipeline", "sbom_generation", "vulnerability_db_client"],
+      "real_world_dependencies": ["network_access_to_vulnerability_databases"],
+      "test_profile": {
+        "fixture_mode": true,
+        "synthetic_mode": true,
+        "production_mode_required_for_verification": true
+      },
+      "evidence_requirements": ["gosec_report", "staticcheck_report", "sbom", "vulnerability_db_query_log"],
+      "failure_conditions": ["unjustified_high_or_critical_finding", "sbom_stale_relative_to_release", "vulnerability_db_unreachable_and_unreported"],
+      "acceptance_criteria": ["sast_clean_or_justified", "vulnerability_db_query_succeeded_and_clean"],
+      "real_qualification_required": true,
+      "status": "READY_FOR_REAL_QUALIFICATION"
+    }
+  ]
+}

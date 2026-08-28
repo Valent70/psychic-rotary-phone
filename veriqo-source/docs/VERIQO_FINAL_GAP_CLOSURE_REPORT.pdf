@@ -1,0 +1,252 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 3705 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO FINAL GAP-CLOSURE AND READINESS REPORT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 25 August 2026) Tj
+0 -12 Td
+(Baseline: Veriqo kernel v7.12.1 R23 / RWC V2 audit baseline) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The repository is engineering-qualified for the locally executable scope.) Tj
+0 -12 Td
+(The canonical truth path is wired through source/provenance, rights, evidence,) Tj
+0 -12 Td
+(identity, trust, contradiction arbitration, native decision, explanation,) Tj
+0 -12 Td
+(durable evidence, certificate, cold replay, and independent verification.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The release is not production-ready. READINESS_MANIFEST.json correctly) Tj
+0 -12 Td
+(reports NOT_PRODUCTION_READY: all 58 engineering gates pass, 50 mandatory) Tj
+0 -12 Td
+(gates are currently passing in the manifest assessment, and eight mandatory) Tj
+0 -12 Td
+(production gates remain externally blocked. No local fixture or synthetic test) Tj
+0 -12 Td
+(is treated as equivalent to those external qualifications.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(GAP CLOSURE DELIVERED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Canonical lifecycle.RunUnified path reaches the native execution chain and) Tj
+0 -12 Td
+(returns decision, evidence, explanation, certificate, replay, and verification) Tj
+0 -12 Td
+(identifiers through the real HTTP gateway.) Tj
+0 -12 Td
+(- Evidence and provenance remain content-addressed and rights-aware; source) Tj
+0 -12 Td
+(status is not upgraded to corroborated without independent evidence.) Tj
+0 -12 Td
+(- Trust observations, temporal Bayesian processing, contradiction arbitration,) Tj
+0 -12 Td
+(economic consequence, knowledge/fusion components, and native decision are) Tj
+0 -12 Td
+(covered by deterministic tests and integration paths.) Tj
+0 -12 Td
+(- Durable WAL/state persistence, crash/restart behavior, ledger anchoring,) Tj
+0 -12 Td
+(cold replay, tamper detection, and independent verification are exercised.) Tj
+0 -12 Td
+(- RaftLite, TCP/mTLS transport, flow control, chaos, stress, and soak harness) Tj
+0 -12 Td
+(coverage are present and locally executable.) Tj
+0 -12 Td
+(- Gateway integration now reserves an ephemeral loopback port instead of using) Tj
+0 -12 Td
+(a fixed port, and captures child-process output on startup failure.) Tj
+0 -12 Td
+(- OS process lifecycle state is synchronized at the process boundary; callers) Tj
+0 -12 Td
+(receive snapshots rather than mutable internal process pointers.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION EVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Check    Result) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   go test ./... -count=1    PASS) Tj
+0 -12 Td
+(   go test -race ./...    PASS) Tj
+0 -12 Td
+(   go vet ./...    PASS) Tj
+0 -12 Td
+(   gofmt -l .    PASS; no output) Tj
+0 -12 Td
+(   ./scripts/verify.sh    PASS) Tj
+0 -12 Td
+(   Gateway integration repeated 10x    PASS) Tj
+0 -12 Td
+(   Cold replay HTTP boundary and tamper rejection    PASS) Tj
+0 -12 Td
+(   Eight-blocker fixture qualification    PASS for all eight pipelines) Tj
+0 -12 Td
+(   Readiness manifest generation    Correctly exits 1 with external blockers) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The repository's verify.sh also records the intentionally unavailable checks:) Tj
+0 -12 Td
+(network-dependent vulnerability feeds, live SPIRE production attestation,) Tj
+0 -12 Td
+(gosec/golangci-lint execution in this sandbox, and OPA/SPIRE external services.) Tj
+0 -12 Td
+(Existing evidence files are retained and referenced rather than regenerated) Tj
+0 -12 Td
+(into stronger claims.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(REMAINING MANDATORY PRODUCTION BLOCKERS) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 2478 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(1. HSM/KMS tenancy: production-owned key material, permissions, rotation,) Tj
+0 -12 Td
+(revocation, and provider evidence are still required.) Tj
+0 -12 Td
+(2. Authorized live data: contracted source access and live-data rights,) Tj
+0 -12 Td
+(freshness, anti-replay, and retention evidence are still required.) Tj
+0 -12 Td
+(3. Multi-region DR: real cross-region/cloud execution with measured RTO/RPO,) Tj
+0 -12 Td
+(WAN behavior, traffic-manager cutover, and recovery evidence is required.) Tj
+0 -12 Td
+(4. Independent pentest: an external, scoped penetration test and signed) Tj
+0 -12 Td
+(report are required.) Tj
+0 -12 Td
+(5. Scale qualification: the required production-like 100-node execution) Tj
+0 -12 Td
+(and measured SLO evidence are not externally qualified.) Tj
+0 -12 Td
+(6. 72-hour soak: a real production-like 72-hour run and signed evidence are) Tj
+0 -12 Td
+(still required; the local smoke harness is not a substitute.) Tj
+0 -12 Td
+(7. Production SPIFFE/mTLS: production node attestation \(not a demo) Tj
+0 -12 Td
+(join-token attestor\), SPIRE deployment, and operational revocation evidence) Tj
+0 -12 Td
+(are required.) Tj
+0 -12 Td
+(8. Supply-chain vulnerability qualification: a real vulnerability-feed) Tj
+0 -12 Td
+(scan is required; local SAST and dependency discovery do not replace it.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(RELEASE DISPOSITION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The correct disposition is hold for external qualification, not) Tj
+0 -12 Td
+(?Production Ready?. The source package is suitable for engineering review,) Tj
+0 -12 Td
+(controlled qualification, and evidence collection. Promotion requires updating) Tj
+0 -12 Td
+(the readiness manifest only after each named external gate has real,) Tj
+0 -12 Td
+(content-addressed evidence accepted by the qualification policy.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(REPRODUCTION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(From the veriqo/ repository root:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(bash) Tj
+0 -12 Td
+(go test ./... -count=1) Tj
+0 -12 Td
+(go test -race ./...) Tj
+0 -12 Td
+(go vet ./...) Tj
+0 -12 Td
+(test -z "$\(gofmt -l .\)") Tj
+0 -12 Td
+(./scripts/verify.sh) Tj
+0 -12 Td
+(go run ./cmd/veriqo-qualification .) Tj
+0 -12 Td
+(go run ./cmd/veriqo-readiness -out READINESS_MANIFEST.json) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The final command is expected to return exit code 1 until all eight external) Tj
+0 -12 Td
+(blockers are qualified. That non-zero result is an intentional safety gate.) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000078 00000 n 
+0000000148 00000 n 
+0000003905 00000 n 
+0000004031 00000 n 
+0000006561 00000 n 
+0000006687 00000 n 
+trailer
+<< /Size 8 /Root 7 0 R >>
+startxref
+6736
+%%EOF

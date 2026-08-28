@@ -1,0 +1,11 @@
+gate: case_room_access_control
+command: internal:caseroom.RunAssurance
+exit: 0
+---
+{
+  "unknown_relationship_refused": true,
+  "missing_permission_refused": true,
+  "pending_relationship_refused": true,
+  "sections_gated_independently": true,
+  "redacted_content_stays_zero": true
+}

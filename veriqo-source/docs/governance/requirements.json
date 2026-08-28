@@ -1,0 +1,686 @@
+[
+  {
+    "id": "R-000",
+    "phase": "0",
+    "title": "Assurance plane: gates, evidence artifacts, no false green",
+    "owner_package": "`internal/assurance`",
+    "tests": "`TestOneCriticalGapCannotBeCompensated`, `TestDeclaredStatusWithoutEvidenceDegrades`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-001",
+    "phase": "1",
+    "title": "Evidence dependency graph: record model, ledger, replay, tamper detection",
+    "owner_package": "`pkg/moat/evidencegraph`",
+    "tests": "`TestDependencyGraphTamperDetection`, `TestDependencyGraphReplayDeterministic`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-002",
+    "phase": "1",
+    "title": "Canonical **cannot fuse** without dependency evaluation",
+    "owner_package": "`pkg/canonical`",
+    "tests": "`TestCanonicalUsesEvidenceDependencyGraph`, `TestCanonicalCannotFuseWithoutDependencyEvaluation`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-003",
+    "phase": "1",
+    "title": "Shared satellite provider / producer / transformation / transitive discounts",
+    "owner_package": "`pkg/canonical`, `pkg/moat/evidencegraph`",
+    "tests": "`TestSharedSatelliteProviderCannotInflateConfidence`, `TestSharedProducerDiscount`, `TestSharedTransformationDiscount`, `TestTransitiveDependencyDiscount`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-004",
+    "phase": "2",
+    "title": "Formal evidence ontology, 16 types, bitemporal, signed, versioned",
+    "owner_package": "`pkg/evidence/ontology`",
+    "tests": "`TestNewIsContentAddressedAndDeterministic`, `TestBitemporalAsOf`, `TestSignatureRoundTripAndTamperDetection`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-005",
+    "phase": "3",
+    "title": "Unified evidence API facade; no direct engine access",
+    "owner_package": "`pkg/evidence/api`",
+    "tests": "`TestFacadeExposesNoInternalEngine`, `TestArbitrateThenReplayThroughFacade`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-006",
+    "phase": "4",
+    "title": "Enterprise identity: candidates, scoring, authority, conflict, merge/unmerge, history",
+    "owner_package": "`pkg/identity`",
+    "tests": "`TestUnmergePreservesHistoricalReplay`, `TestConflictDetectedBetweenCloseCandidates`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-007",
+    "phase": "5",
+    "title": "RS-CHDBN temporal: forward/backward, transition, decay, missing & contradictory obs, correlation",
+    "owner_package": "`pkg/moat/hbayes`",
+    "tests": "`TestBackwardSmoothingUsesFutureEvidence`, `TestMissingObservationsIncreaseUncertainty`, `TestCorrelatedObservationsCannotInflateBelief`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-008",
+    "phase": "5",
+    "title": "Causal edges between Bayesian nodes; do(X) intervention",
+    "owner_package": "`pkg/moat/hbayes`",
+    "tests": "`TestCausalInterventionShiftsDynamics`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-009",
+    "phase": "6",
+    "title": "Causal ↔ digital twin: SimulateDecision / Counterfactual / CausalIntervention with lineage",
+    "owner_package": "`pkg/moat/simulation`",
+    "tests": "`TestEverySimulationCarriesCompleteLineage`, `TestInterventionRaisesAndCounterfactualLowersOutcome`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-010",
+    "phase": "8",
+    "title": "Trust state, transitions, decay, revocation, escalation, governance reinstatement",
+    "owner_package": "`pkg/trust/state`",
+    "tests": "`TestRevocationIsTerminalUntilGovernanceReinstates`, `TestTrustDecaysTowardNeutralPrior`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-011",
+    "phase": "9",
+    "title": "IVF 2.0: full-lifecycle independent replay, 11 stages, divergence localisation",
+    "owner_package": "`pkg/replay`",
+    "tests": "`TestFullLifecycleReplayMatches`, `TestReplayDetectsTamperedEvidenceAndLocatesStage`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-012",
+    "phase": "10",
+    "title": "Replay identity separation (Execution/EvidencePackage/ReplayPackage/Result/Verification)",
+    "owner_package": "`pkg/replay`",
+    "tests": "`TestReplayIdentitiesAreAllDistinct`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-013",
+    "phase": "11",
+    "title": "KeyProvider interface, key lifecycle, rotation, revocation, expiry, purpose separation",
+    "owner_package": "`pkg/platform/security/keys`",
+    "tests": "`TestRotationPreservesHistoricalSignatures`, `TestRevocationInvalidatesRetroactively`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-014",
+    "phase": "28",
+    "title": "Envelope encryption, AES-GCM, AAD binding, KEK rotation without re-encryption",
+    "owner_package": "`pkg/platform/security/keys`",
+    "tests": "`TestEnvelopeEncryptDecryptAndAADBinding`, `TestKEKRotationDoesNotReencryptPayload`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-015",
+    "phase": "14",
+    "title": "Policy-as-data: versioned, signed, hashed, rollback, hot reload, dry-run, approval",
+    "owner_package": "`pkg/authz`",
+    "tests": "`TestAcceptance109`, `TestAcceptance110`, `TestAcceptance79`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-016",
+    "phase": "15",
+    "title": "RBAC + ABAC + ReBAC, deterministic, DENY-wins, explained",
+    "owner_package": "`pkg/authz`",
+    "tests": "`TestAcceptance68`, `TestAcceptance108`, `FuzzDenyAlwaysWins`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-017",
+    "phase": "34",
+    "title": "Acceptance suite governance: append-only, category minimums, mandatory tests",
+    "owner_package": "`internal/assurance`, `cmd/veriqo-readiness`",
+    "tests": "`TestAcceptanceManifestGovernance`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-018",
+    "phase": "35",
+    "title": "Acceptance suite expanded to 110 permanent tests incl. a security category",
+    "owner_package": "`test/acceptance`",
+    "tests": "whole suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-019",
+    "phase": "36",
+    "title": "Formal invariants document, each backed by a named test",
+    "owner_package": "`docs/governance`",
+    "tests": "see ARCHITECTURE_INVARIANTS.md",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-020",
+    "phase": "38",
+    "title": "Fuzz targets for ontology, dependency ledger and policy parser",
+    "owner_package": "`pkg/evidence/ontology`, `pkg/moat/evidencegraph`, `pkg/authz`",
+    "tests": "`go test -run Fuzz ./pkg/...`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-021",
+    "phase": "31/32",
+    "title": "SBOM, build metadata, release certificate with signature",
+    "owner_package": "`scripts/sbom.sh`, `internal/assurance`",
+    "tests": "`TestReleaseCertificateSignatureAndTamperDetection`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-022",
+    "phase": "33",
+    "title": "CI as a release gate (verify/security/release/chaos/performance)",
+    "owner_package": "`.github/workflows`",
+    "tests": "pipeline definitions",
+    "status": "IMPLEMENTED",
+    "note": "not executed in this environment"
+  },
+  {
+    "id": "R-023",
+    "phase": "52/53",
+    "title": "READINESS_MANIFEST.json produced by executing gates, not by assertion",
+    "owner_package": "`cmd/veriqo-readiness`",
+    "tests": "manifest artifact",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-024",
+    "phase": "54",
+    "title": "No false green: one critical gap cannot be compensated",
+    "owner_package": "`internal/assurance`",
+    "tests": "`TestOneCriticalGapCannotBeCompensated`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-025",
+    "phase": "55",
+    "title": "Signed release certificate whose verdict cannot be hand-set",
+    "owner_package": "`internal/assurance`",
+    "tests": "`TestReleaseCertificateVerdictCannotBeForged`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-026",
+    "phase": "7",
+    "title": "Unified Intelligence Execution Graph: explicit DAG, topological order, per-stage nodes, root hash, DAG replay",
+    "owner_package": "`pkg/execution`",
+    "tests": "`TestTopologicalOrderIsDeterministicAndComplete`, `TestOneExecutionProducesEveryRequiredArtifact`, `TestReplayLocalisesTheFirstDivergentStage`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-027",
+    "phase": "12/13",
+    "title": "Zero-trust controls, real SPIRE deployment, mTLS rotation",
+    "owner_package": "`deploy/spire`",
+    "tests": "—",
+    "status": "BLOCKED",
+    "note": "a real single-node SPIRE server+agent was run in this session with genuine attestation, SVID issuance and revocation (see evidence/spire_mtls-local-integration.txt); a later session extended this to a real multi-container cluster -- one spire-server and two spire-agent containers on a real Docker bridge network, each agent independently attested with its own join token, node-scoped workload identity isolation confirmed, and per-node revocation proven live (revoking agent-1's entry left agent-2 unaffected) -- see evidence/spire_mtls-multi-container-integration.txt. Narrows but does not close this: still needs a production node attestor (join_token is a test/demo attestor) and a Workload API client wired into pkg/transport/rafttcp"
+  },
+  {
+    "id": "R-028",
+    "phase": "16",
+    "title": "Sandbox policy engine: path/network/syscall/env allow-lists, resource ceilings, fail closed",
+    "owner_package": "`pkg/kernel/sandbox`",
+    "tests": "`TestUnenforceablePlatformDeniesExecutionEntirely`, `TestPathTraversalCannotEscapeThePrefix`, `TestUnknownRequestKindFailsClosed`",
+    "status": "VERIFIED",
+    "note": "OS-level seccomp/namespace enforcement remains BLOCKED"
+  },
+  {
+    "id": "R-029",
+    "phase": "17/19",
+    "title": "Raft membership reconfiguration, snapshot, log compaction, leader transfer",
+    "owner_package": "`pkg/consensus/raftlite`",
+    "tests": "`TestValidateConfChangeBatch_AtomicMixedBatchSucceeds`, `TestProposeJointConfChange_AtomicRemovalCommitsAndConverges`, `TestJointConsensus_FullQuorumFlip_NoSplitBrain`, `TestInstallSnapshot_StragglerCatchUpViaCompaction`, leadertransfer_stress_test.go (prior rounds); `TestValidateConfChangeBatch_AddLearnerSucceeds`, `TestValidateConfChangeBatch_RemoveVoterOnLearnerFailsClosed`, `TestValidateConfChangeBatch_RemoveLearnerOnVoterFailsClosed`, `TestValidateConfChangeBatch_PromoteLearnerSucceeds`, `TestValidateConfChangeBatch_PromoteLearnerOnVoterFailsClosed`, `TestValidateConfChangeBatch_RejectsAllLearnerResult`, `TestConfChange_LearnerReplicatesButNeverCountsTowardQuorum`, `TestConfChange_PromoteLearnerMakesItCountTowardQuorum` (learner/voter role distinction); `TestHandleInstallSnapshot_CorruptedBytesFailsClosed`, `TestHandleInstallSnapshot_TruncatedFailsClosed`, `TestHandleInstallSnapshot_StaleSnapshotInstallAttemptRefused`, `TestHandleInstallSnapshot_ValidSnapshotStillInstallsCleanly` (adversarial snapshot tests); `TestBecomeLeader_ResumesStrandedJointConsensusTransition`, `TestBecomeLeader_DoesNotResumeWhenNoJointTransitionIsActive` (leader-during-reconfiguration)",
+    "status": "VERIFIED",
+    "note": "was marked OPEN/no-test in the v7.12.0 matrix, which was stale: atomic joint membership changes (add/remove/mixed batch), leader transfer under stress, and snapshot install + straggler-catchup-via-compaction are all implemented and tested. This round closed the three specific gaps the caveat named honestly, all with real code changes, not relabeling: (1) an explicit learner/voter role distinction now exists -- confchange.go gains ADD_LEARNER/REMOVE_LEARNER/PROMOTE_LEARNER, backed by a real Node.learners set and a votingPeersLocked() helper that PreVote, RequestVote solicitation, CheckQuorum, ReadIndex and non-joint commit-majority calculation all now consult; a learner replicates fully but never counts toward any vote or commit majority (proven by partitioning one away mid-test and confirming the cluster still commits). Honestly still narrower than it could be: true two-phase joint consensus (ENTER_JOINT/LEAVE_JOINT) does not yet compose with learners -- documented at the one call site that matters (hasQuorumIndexLocked), not silently assumed. (2) adversarial corrupted/truncated/stale-snapshot tests now exist, using a real checksum-verifying Snapshotter fixture (sumFSM's own Restore silently resets on bad input rather than erroring, so it could not have proven this) -- all three fail closed with the underlying HandleInstallSnapshot machinery, which turned out to already be correct; these tests are the first real evidence of that. (3) a named leader-during-reconfiguration test found and closed a real gap: applyCommitted's own comment admitted proposing LEAVE_JOINT once ENTER_JOINT commits was best-effort and a new leader would have to re-drive it itself -- nothing did, so a leader failing in that exact window left every subsequent leader stuck on the stricter dual-majority quorum forever. becomeLeader now resumes a stranded transition it inherits. Honestly scoped: this is proven as a direct, deterministic same-package test of the mechanism (construct the stranded state, call becomeLeader, assert it resumes), not a live multi-node cluster killing a real leader mid-transition -- several such cluster-level attempts proved unreliable to make deterministic in this sandbox for reasons that turned out to be about Raft's own liveness properties (PreVote's leaderLive check, joint consensus's zero-slack dual quorum once a member is lost) rather than about the fix itself, and that limitation is recorded honestly rather than papered over with a flaky test."
+  },
+  {
+    "id": "R-030",
+    "phase": "18",
+    "title": "Deterministic multi-node chaos: partition, latency, loss, reorder, duplication, crash, restart, disk, clock skew, leader loss, plus invariant checking",
+    "owner_package": "`pkg/chaos`, `test/chaos`",
+    "tests": "`TestCombinedChaosAcceptance`, `TestConvergenceAfterFullHeal`, `TestRunIsBitForBitReplayable`",
+    "status": "VERIFIED",
+    "note": "in-process model; OS-process SIGKILL remains BLOCKED"
+  },
+  {
+    "id": "R-031",
+    "phase": "20/43",
+    "title": "WAL lifecycle: CRC, chained records, fsync policy, torn-write and corrupt-middle classification, compaction, retention, legal hold",
+    "owner_package": "`pkg/storage/wal`",
+    "tests": "`TestTornWriteAtTheTailIsTruncatedNotFatal`, `TestCorruptMiddleFailsClosed`, `TestChainTamperingIsDetected`, `TestRetentionRefusesToRemoveUncheckpointedState`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-032",
+    "phase": "21/22/23",
+    "title": "API semantics: idempotency with 409 conflict, deterministic token-bucket rate limiting, RS256 OIDC verification, REST/gRPC parity registry",
+    "owner_package": "`pkg/api`",
+    "tests": "`TestSameKeyDifferentPayloadIsAConflict`, `TestGatewayReturns429WhenLimited`, `TestAlgNoneIsRefused`, `TestParityViolationIsDetectedInBothDirections`",
+    "status": "VERIFIED",
+    "note": "mTLS termination is deployment-side"
+  },
+  {
+    "id": "R-033",
+    "phase": "24/25",
+    "title": "Telemetry schema: 13 VERIQO domains, 7-field trace correlation, 17 named business metrics, real recording Tracer",
+    "owner_package": "`pkg/platform/telemetry`",
+    "tests": "`TestMissingDomainsReportsUninstrumentedSubsystems`, `TestMissingMetricsIsTheObservabilityGate`, `TestSpansJoinByExecutionInOrder`",
+    "status": "VERIFIED",
+    "note": "OTLP network export remains BLOCKED"
+  },
+  {
+    "id": "R-034",
+    "phase": "26",
+    "title": "Consolidated DecisionExplanation: 12 sections, source→decision chain, rejected alternatives, generic-rationale refusal, content-addressed",
+    "owner_package": "`pkg/explanation`",
+    "tests": "`TestBrokenChainIsRefused`, `TestGenericPolicyRationaleIsRefused`, `TestModifyingOneStageChangesTheExplanationAndItsHash`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-035",
+    "phase": "27",
+    "title": "Data governance state machine: retention, TTL override, legal hold, PII redaction with pre-image proofs, purge with tombstones",
+    "owner_package": "`pkg/governance/data`",
+    "tests": "`TestLegalHoldBeatsRetention`, `TestRedactionRemovesValuesButKeepsProof`, `TestPurgeEmitsATombstoneThatSurvivesTheContent`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-036",
+    "phase": "29/30",
+    "title": "Backup, PITR, cross-region replication, restore drill, measured RPO/RTO",
+    "owner_package": "`deploy/`",
+    "tests": "—",
+    "status": "BLOCKED",
+    "note": "requires multi-region infrastructure for a real DR drill with measured RPO/RTO"
+  },
+  {
+    "id": "R-037",
+    "phase": "40/41",
+    "title": "100-node / 1M-evidence qualification, 72h soak",
+    "owner_package": "—",
+    "tests": "—",
+    "status": "BLOCKED",
+    "note": "requires physical multi-node infrastructure (100-node/1M-evidence -- genuinely cannot be produced by any sandbox, per the audit explicit prohibition on synthetic single-process substitution). soak: a real harness now exists (test/soak) and produced real evidence over a 90s smoke run (2188 iterations, 0 errors, goroutines flat) -- see evidence/soak-report.json -- but 72 continuous hours needs a long-lived host beyond this session"
+  },
+  {
+    "id": "R-038",
+    "phase": "46",
+    "title": "Calibration: log loss, Brier, ECE/MCE, Wilson-interval reliability curve, Platt and isotonic recalibration, PSI/KL/JS/KS drift",
+    "owner_package": "`pkg/moat/reliability`",
+    "tests": "reliability suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-039",
+    "phase": "47/48",
+    "title": "Model and source lifecycle state machines, approval requiring calibration, hash-chained event ledger, replay binding",
+    "owner_package": "`pkg/governance/lifecycle`",
+    "tests": "lifecycle suite, `TestGovernanceBindingIsCommittedAndEnforcedAtReplay`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-040",
+    "phase": "49",
+    "title": "HITL workflow: reviewer packet validation, self-review refusal, SLA breach recording, MachineDecision + HumanDecision = GovernedOutcome, override rate",
+    "owner_package": "`pkg/governance/hitl`",
+    "tests": "`TestHumanOverrideDoesNotMutateTheMachineDecision`, `TestIncompletePacketIsRefused`, `TestOverrideRateIsMeasurable`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-041",
+    "phase": "39",
+    "title": "External security testing: gosec, govulncheck, staticcheck, red team",
+    "owner_package": "`.github/workflows/security.yml`",
+    "tests": "wired, not executable offline",
+    "status": "BLOCKED",
+    "note": "staticcheck AND gosec both run clean (0 findings) -- see evidence/supply_chain_scan-gosec-full.txt; all 89 gosec findings individually triaged and fixed/justified, including correcting a real bug in the prior round own suppression syntax. govulncheck, osv.dev and the GitHub advisory API all return 403 under this environment network policy; independent pentest/red team requires an external vendor"
+  },
+  {
+    "id": "R-042",
+    "phase": "47",
+    "title": "Knowledge evolution: propose → validate → analyze → simulate → approve → activate, with time-windowed state",
+    "owner_package": "`pkg/governance/knowledge`",
+    "tests": "`TestKnowledgeStateAtT1IsUnchangedByAChangeAtT2`, `TestTwoConcurrentInFlightProposalsConflict`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-043",
+    "phase": "44",
+    "title": "Data quality vector and learned source reliability with bounded, replayable updates",
+    "owner_package": "`pkg/dataquality`",
+    "tests": "dataquality suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-044",
+    "phase": "45",
+    "title": "Economic consequence: expected value, variance, VaR, CVaR from declared scenarios",
+    "owner_package": "`pkg/moat/economic`",
+    "tests": "economic suite",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-045",
+    "phase": "V7.11.1 P0-1",
+    "title": "Bounded full-suite execution: per-package timeout, isolation, failure classification, hashed evidence artifact",
+    "owner_package": "`cmd/veriqo-testrunner`",
+    "tests": "`evidence/test-execution.json`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-046",
+    "phase": "V7.11.1 P0-2",
+    "title": "Formal multi-node chaos acceptance layer",
+    "owner_package": "`test/chaos`",
+    "tests": "7 acceptance scenarios, `evidence/chaos-acceptance.json`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-047",
+    "phase": "V7.11.1 P0-3/P0-5",
+    "title": "Stress layer producing throughput, p50/p95/p99, error rate, memory, goroutines; FAILS on SLO miss; 100 transfers yield 100/100 evidence",
+    "owner_package": "`test/stress`",
+    "tests": "`TestOneHundredTransfersProduceOneHundredEvidenceArtifacts`, `TestSLOEvaluationFailsWhenItShould`",
+    "status": "VERIFIED",
+    "note": "local scale only"
+  },
+  {
+    "id": "R-048",
+    "phase": "V7.11.1 P0-4",
+    "title": "100× deterministic replay acceptance over ReplayResultHash, Decision, Explanation and Certificate, plus perturbation sensitivity",
+    "owner_package": "`test/acceptance/replay`",
+    "tests": "`TestOneHundredReplaysAgreeOnEveryMaterialField`",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-049",
+    "phase": "V7.11.1 P0-6",
+    "title": "Untested security, durability and failure branches in authz, resource, storage and plugin",
+    "owner_package": "`pkg/authz`, `pkg/kernel/resource`, `pkg/storage`",
+    "tests": "`*_branches_test.go`; coverage 32.5→83.1%, 58.5→90.7%, 66.7→70.4%",
+    "status": "VERIFIED",
+    "note": ""
+  },
+  {
+    "id": "R-050",
+    "phase": "Wave 5",
+    "title": "Real-world ingestion contracts (AIS, SAR, BoL, insurance, payment)",
+    "owner_package": "`pkg/connector`, `pkg/connector/aisstream`, `pkg/connector/sar`, `pkg/connector/bol`, `pkg/connector/insurance`, `pkg/connector/payment`",
+    "tests": "`TestDrainAcrossAllFiveR050Sources`, `TestQualityVectorReflectsRejections` (pkg/connector); per-source `TestDecode_ValidFixtureRoundtrips`, `TestDecode_MalformedJSONFailsClosed`, `TestDecode_TruncatedJSONFailsClosed`, `TestDecode_WrongSchemaFailsClosed`, `TestDecode_MissingRequiredFieldFailsClosed`, `TestDecode_SemanticallyInvalidFailsClosed`, `TestSimulatedConnector_ContentHashDedup`, `TestSimulatedNeverAcceptedAsLive` (sar, bol, insurance, payment); `TestNormalizedEvent_ToOntologyEvidence_ValidAISObservation`, `TestConnector_MalformedMessages_RejectedAndCounted` (aisstream, pre-existing AIS contract)",
+    "status": "VERIFIED",
+    "note": "was genuinely OPEN (pkg/connector did not exist for 4 of the 5 named source types; only AIS had prior treatment via pkg/connector/aisstream). Closed for real: pkg/connector/{sar,bol,insurance,payment} each parse raw payloads, structurally validate them (malformed/truncated/wrong-schema/missing-field all fail closed before any semantic check runs), semantically validate them, and canonicalize into pkg/evidence/ontology.Evidence (TypeSARObservation, TypeTradeRecord, TypeDocument, TypeFinancialRecord respectively; AIS already used TypeAISObservation). pkg/connector.Drain composes pkg/blockers/livedata's existing FeedConnector/Pipeline (content-hash dedup, anti-replay, LIVE-refusal) with each source's new Decoder rather than duplicating any of that machinery. No live provider access exists in this sandbox for any of the five sources: every connector is SIMULATED-mode only, and TestSimulatedNeverAcceptedAsLive (one per new source package) plus TestDrainAcrossAllFiveR050Sources prove a SIMULATED connector's record tagged LIVE is refused, exactly mirroring livedata's own invariant. LIVE mode is structurally supported (Drain does not special-case FeedConnector.Mode(), only livedata.Pipeline's own check does) but never fabricated."
+  },
+  {
+    "id": "R-051",
+    "phase": "PRE-INS",
+    "title": "Evidence envelope: one format for external and internal qualification evidence, with explicit FIXTURE/LIVE classification",
+    "owner_package": "`pkg/governance/envelope`",
+    "tests": "`TestValidatorRejectsEveryNamedFailureMode`, `TestFixtureCanNeverSelfPromote`, `TestEnvelopeIDIsContentAddressedAndDetectsEveryFieldChange`",
+    "status": "VERIFIED",
+    "note": "PHASE E / P0-6. Reuses `pkg/governance/qualification.TrustRegistry` for providers/reviewers and `pkg/evidence/provenance`'s OriginClass/RightsState/AttestationState verbatim rather than defining second vocabularies. New here: release-identity quadruple (commit, source_hash, binary_hash, sbom_hash) carried together with the artifact set + root hash, validity window, declared limitations, and a FIXTURE/LIVE classification checked against OriginKind rather than believed."
+  },
+  {
+    "id": "R-052",
+    "phase": "PRE-INS",
+    "title": "Qualification evidence freshness gate reporting BLOCKED_STALE_EVIDENCE by name",
+    "owner_package": "`pkg/governance/envelope`",
+    "tests": "`TestFreshnessReportsBlockedStaleEvidenceByName`, `TestFreshnessReportsEveryDivergenceAtOnce`, `TestFreshnessRefusesAReleaseThatDeclaresNothingToCompareAgainst`",
+    "status": "VERIFIED",
+    "note": "PHASE E2 / P0-7. PASS requires report.commit == release.commit, source_hash, artifact_root and binary_hash all matching, and valid_until >= qualification time; anything else is the named BLOCKED_STALE_EVIDENCE, never a generic failure. A release that declares no value to compare against fails closed rather than silently passing."
+  },
+  {
+    "id": "R-053",
+    "phase": "PRE-INS",
+    "title": "Readiness engine separation: ENGINEERING / INTERNAL / EXTERNAL / FINAL as four distinct axes per gate",
+    "owner_package": "`internal/assurance`, `cmd/veriqo-readiness`",
+    "tests": "`TestBlockedGateReportsEngineeringAndInternalSeparatelyFromExternal`, `TestAxisSeparationNeverAdvancesTheGateItself`, `TestInternalQualifiedIsNeverExternalQualified`, `TestReadinessManifestCarriesTheAxes`",
+    "status": "VERIFIED",
+    "note": "PHASE E3 / P0-8. Axes are DERIVED from the same evidence artifacts `EffectiveStatus` reads; there is no setter that writes PASS into an axis. Retrofitted onto all 8 externally-blocked mandatory gates: their ENGINEERING axis is backed by a real in-process `pkg/blockers/orchestrator.RunAll` execution and their INTERNAL axis by the committed in-sandbox drill logs, while Status, Satisfied, Assess and the release Verdict are provably untouched (`TestAxisSeparationNeverAdvancesTheGateItself`). No amount of internal evidence can move the EXTERNAL axis."
+  },
+  {
+    "id": "R-054",
+    "phase": "PRE-INS",
+    "title": "Case lineage: ONE CaseID aggregating Intent, Evidence, Entity, Event, Contradiction, Hypothesis, Policy, Decision, Verification, Replay and Outcome",
+    "owner_package": "`pkg/lineage`, `pkg/lifecycle`",
+    "tests": "`TestFullCaseWalksEndToEndFromASingleCaseID`, `TestCaseLineageWalksARealRunEndToEndFromOneCaseID`, `TestCaseLineageIsTamperEvident`, `TestFromCorrelationAloneIsHonestlyIncomplete`",
+    "status": "VERIFIED",
+    "note": "PHASE D2 / P0-5, genuinely net-new (nothing here previously had a CaseID aggregating a whole investigation: `pkg/governance/hitl.Case` is a human-review workflow, `telemetry.Correlation.CaseID` is a span attribute nothing walks, `correlation.Key` joins ONE execution, and `pkg/insurance/*` is business logic this program excludes). CaseID is deliberately the Intent's own content-addressed ID, never a second identity. `Completeness` is derived, never declared: Complete requires all 8 structural kinds present, every declared upstream resolving, and a verifying hash chain. `pkg/lifecycle.Orchestrator.Lineage` is the real production caller (opt-in, nil-safe); the OUTCOME node is attached by `RecordOutcome`, not `RunUnified`, because ground truth does not exist at case-run time -- so a case honestly reports Complete=false until it does. NO insurance/claim/coverage/dispute concept is implemented here (program rule 8)."
+  },
+  {
+    "id": "R-055",
+    "phase": "PRE-INS",
+    "title": "Correlation context is locked start-to-end: dropping, replacing, swapping or altering an identifier fails verification and is never silently regenerated",
+    "owner_package": "`pkg/platform/correlation`, `pkg/execution`",
+    "tests": "`TestAdversarialDropEvidencePackageID`, `TestAdversarialAlterExecutionID`, `TestAdversarialSwapEntityID`, `TestAdversarialReplaceDecisionID`, `TestAdversarialAlterIdentityLedgerHead`, `TestAdversarialUntamperedBaselineVerifiesClean`",
+    "status": "VERIFIED",
+    "note": "PHASE D / P0-4. `correlation.Key` already carried all eight identifiers and already had a real production caller; what was missing was proof that tampering FAILS rather than being silently repaired. The suite runs through the real verification paths (`execution.Run`'s Context validation, `execution.ReplayDAGWithResult`'s node-by-node comparison, `pkg/replay.Engine.Replay`'s fingerprint chain), not on the struct in isolation, and every case asserts BOTH that the tampered run fails AND that the identifier was not rewritten. It found a real gap: `execution.Context.validate` did not require `EvidencePackageID`, so a governed execution could produce a decision with an empty evidence-package identity -- the one join tying a decision to its evidence. Now mandatory."
+  },
+  {
+    "id": "R-056",
+    "phase": "PRE-INS",
+    "title": "Canonical execution path: no governed decision outside the one execution engine; audited entrypoint matrix checked against the source",
+    "owner_package": "`internal/entrypoints`, `cmd/veriqo-readiness`",
+    "tests": "`TestNoGovernedDecisionOutsideCanonicalExecution`, `TestAuditDetectsAnInjectedBackDoor`, `TestAuditDetectsAMatrixRowThatLiesAboutItsPath`, `TestExactlyOneEntrypointProducesGovernedDecisions`",
+    "status": "VERIFIED",
+    "note": "PHASE C / P0-3. Extends, rather than duplicates, the two things that already existed: `internal/nobypass` (the evidence half) and `veriqo/gateway/rest.TestRegistryNeverProducesGovernedDecisionArtifacts` (a real test scanning exactly two files). This is the whole-tree version plus the entrypoint matrix covering all nine entrypoint kinds. `TestAuditDetectsAnInjectedBackDoor` proves the scanner actually detects rather than passing by never finding anything. Wired as the mandatory readiness gate `canonical_execution_entrypoint_coverage`. Honest limitation stated in the source: the ExecutionRootHash marker is assignment-shaped and cannot textually distinguish minting from copying, so each allowlisted file was read and classified individually -- its value is forcing that classification to recur in review for any new file."
+  },
+  {
+    "id": "R-057",
+    "phase": "PRE-INS",
+    "title": "Canonical evidence write authority: declared contract, lossless projection, and zero unauthorized ingestion paths",
+    "owner_package": "`pkg/evidence/api`, `internal/nobypass`, `cmd/veriqo-readiness`",
+    "tests": "`TestCanonicalContractVersionIsDeclared`, `TestCrossSubsystemRoundTrip`, `TestLosslessProjection`, `TestSourceHashPreservation`, `TestRightsPreservation`, `TestProvenancePreservation`, `TestCorrectionPreservation`, `TestContradictionMetadataPreservation`, `TestReplayEquality`, `TestCrossFacadeIdentityEquality`, `TestEvidenceProductionCoverageDetectsAnInjectedIngestionPath`",
+    "status": "VERIFIED",
+    "note": "PHASE A / P0-1. The facade, the five ingestion adapters and the single canonical pipeline all already existed and are NOT rebuilt. Two things did not exist. (1) The CONTRACT hop was never declared: `pkg/evidence/api.Contract()` now composes the versions the owning packages already publish, so a gate can report a contract version instead of inferring one, and its hash changes when any component does. (2) A second scan: `truth_arbitration_no_bypass` proved no second evidence AUTHORITY exists; `canonical_evidence_production_coverage` proves no second INGESTION PATH exists -- a caller that never touches an engine but mints canonical records still bypasses the contract. Both scans share one walk (`nobypass.checkSet`), not a second copy. Honest scoping on the rights property: `provenance.RightsState` is deliberately outside `ontology.Evidence`'s content hash (that package documents why), so `TestRightsPreservation` asserts what is actually true -- projection never UPGRADES rights and a REVOKED envelope permits nothing -- rather than a field-equality that would be false."
+  },
+  {
+    "id": "R-058",
+    "phase": "PRE-INS",
+    "title": "Canonical identity authority: one production identity writer, no independent legacy merges, explicit maritime mappings, UNMAPPED never guessed",
+    "owner_package": "`pkg/governance/entityconsistency`, `pkg/lifecycle`, `pkg/moat/domain/maritime`",
+    "tests": "`TestIdentityAuthorityCoverageOnTheRealTree`, `TestEveryMaritimeKindIsExplicitlyMappedOrExplicitlyUnmapped`, `TestScanIdentityAuthorityDetectsAnInjectedIdentityWriter`, `TestScanIdentityAuthorityDetectsAnIndependentLegacyMerge`, `TestLegacyIdentityFallbackIsLoudlyMarked`, `TestCanonicalIdentityPathIsNeverMarkedAsAFallback`",
+    "status": "VERIFIED",
+    "note": "PHASE B / P0-2. `ScanProductionAuthority` already proved no second entity REGISTRY is constructed; three stricter clauses were unproven and are now counted by `ScanIdentityAuthority`: production identity WRITERS = 1 (a registry built once can still be written from many places, and a write is what merges identities), independent legacy merges = 0, and every maritime entity kind explicitly mapped to an `identity.Kind` or explicitly marked UNMAPPED with a stated reason -- a kind with no row at all is a FAILURE, because \"we forgot\" and \"we decided not to model this\" must not look identical. Four of eleven maritime kinds are honestly UNMAPPED (VOYAGE, CARGO, SANCTION_ENTRY, OWNERSHIP), each with its reason recorded in the source. The legacy fallback in `RunUnified` now sets `LegacyIdentityFallbackUsed`/`HumanReviewRequired`/`UnmappedAliasKinds` on the Result and on the trace, and `TestLegacyIdentityFallbackIsLoudlyMarked` additionally proves it never writes the canonical identity ledger."
+  },
+  {
+    "id": "R-059",
+    "phase": "PRE-INS",
+    "title": "Temporal Bayesian production contract: model-risk metadata plus an explicit execution-state enum that cannot record a required calibration as a skip",
+    "owner_package": "`pkg/governance/calibration`",
+    "tests": "`TestRequiredCalibrationCanNeverBeRecordedAsASkip`, `TestMissingModelUnderARequiringPolicyFailsClosed`, `TestEveryContractMetadataFieldIsIndividuallyRequired`, `TestMislabelledObligationsAreRefused`, `TestContractHashDetectsEveryMeaningfulChange`",
+    "status": "VERIFIED",
+    "note": "PHASE F / P1-9. The Bayesian mechanism (`pkg/moat/hbayes`), the five-field `CalibrationRecord` contract and `corpus.go`'s real frequentist `Fit` all already existed and are NOT rebuilt. What was missing was the governance wrapper: fifteen model-risk metadata fields, each individually required (a defaulted governance field is indistinguishable from a real one once written down), and an `ExecutionState` enum that keeps REQUIRED_BUT_MISSING distinct from OPTIONAL_AND_SKIPPED. Before this, \"skipped because no model exists\" and \"skipped because the policy did not need one\" were the same observable outcome. `NewContract` refuses every combination that would let a required calibration be recorded as a skip, and `ContractFor` derives the state from what is genuinely registered rather than from a caller's claim."
+  },
+  {
+    "id": "R-060",
+    "phase": "PRE-INS",
+    "title": "Architecture coverage gates: six machine-readable gates over evidence, identity, execution entrypoints, policy usage, temporal calibration usage and correlation propagation",
+    "owner_package": "`cmd/veriqo-readiness`, `internal/nobypass`, `internal/entrypoints`, `pkg/governance/entityconsistency`, `pkg/execution`, `pkg/platform/correlation`",
+    "tests": "`TestPolicyRegistryUsageCoverageEveryDecisionCommitsToItsPolicy`, `TestPolicyRegistryUsageCoverageRefusesAMismatchedPolicy`, `TestTemporalCalibrationUsageCoverageFailsClosedWhenRequiredAndAbsent`, `TestCorrelationPropagationCoverageEveryIdentifierIsPopulated`, `TestCorrelationPropagationCoverageSurvivesAnIndependentReplay`",
+    "status": "VERIFIED",
+    "note": "PHASE E5 / P1-17. All six gates are registered mandatory in `cmd/veriqo-readiness`. Four are whole-tree source scans (`canonical_evidence_production_coverage`, `canonical_identity_authority_coverage`, `canonical_execution_entrypoint_coverage`, plus the pre-existing `truth_arbitration_no_bypass`/`canonical_entity_authority_coverage`). Two -- `policy_registry_usage_coverage` and `temporal_calibration_usage_coverage` -- are deliberately RUNTIME tests rather than scans: \"every governed decision commits to the policy that governed it\" is a fact about the DAG, and grepping for it would prove only that certain text appears in certain files, which is exactly the evidence standard this project refuses elsewhere. `correlation_propagation_coverage` additionally proves the identifiers are mutually distinct, catching the degenerate case where a correlation key carries one bit instead of eight."
+  },
+  {
+    "id": "R-061",
+    "phase": "PRE-INS",
+    "title": "Real-world calibration interface: deterministic holdout, held-out evaluation, and a status that stays EXTERNAL_DATA_REQUIRED until a real corpus arrives",
+    "owner_package": "`pkg/governance/calibration`",
+    "tests": "`TestFixtureCorpusAlwaysReportsExternalDataRequired`, `TestNoAmountOfRunningTheMachineryRaisesTheStatus`, `TestHoldoutIsDeterministicAndDisjoint`, `TestFitHappensOnTheTrainingHalfOnly`, `TestAnUndeclaredCorpusIsRefused`",
+    "status": "VERIFIED",
+    "note": "PHASE F2 / P1-10, explicitly infrastructure-only (\"do not go looking for real data\"). Five of the nine named stages already existed in `corpus.go` and are NOT rebuilt (Real Event, Ground Truth, Label, Dataset, Fit); Evaluation reuses `pkg/moat/reliability`'s existing LogLoss/Brier/ECE rather than a second metric implementation. Genuinely new: a deterministic hash-based Holdout (so a table is never scored on its own training data, and inserting one event does not reshuffle the split), a CalibratedModel binding corpus+fit+evaluation so none can be quoted without the others, and CorpusStatus. Status is derived from the operator's DECLARATION, not from performance -- `TestNoAmountOfRunningTheMachineryRaisesTheStatus` proves 10x more, perfectly-separable fixture data still reports EXTERNAL_DATA_REQUIRED. No code can declare a corpus REAL_INVESTIGATED; that is an operator action with a named owner."
+  },
+  {
+    "id": "R-062",
+    "phase": "PRE-INS",
+    "title": "Telemetry export pipeline (OTel-compatible) and the data-leakage boundary",
+    "owner_package": "`pkg/platform/telemetry`",
+    "tests": "`TestNoSensitiveValueLeavesTheProcessInATraceAttribute`, `TestSecretsInErrorMessagesDoNotLeak`, `TestCorrelationIdentifiersSurviveRedaction`, `TestDefaultPostureIsDenyNotAllow`, `TestExportPipelineDeliversPersistsAndQueries`, `TestPipelineQualificationIsHonestlyCapped`",
+    "status": "VERIFIED",
+    "note": "PHASE H / P1-11 + P1-12. Instrumentation already existed and is NOT rebuilt; this is the transport adapter `veriqo_telemetry.go`'s own comment anticipated. OTel-COMPATIBLE, not OTel: the wire shape is hand-built because the `zero_dependency` gate is a real enforced property. **VERIFIED covers the pipeline SEMANTICS only; the operational ceiling is INTERNAL_QUALIFIED** -- `telemetry.PipelineQualification()` states what is proven (conversion, redaction at the boundary, delivery, persistence, query-by-trace and by-execution, loud failure on a nil sink or closed exporter) and what is NOT (conformance against a real collector, real network delivery/backpressure/retry, production-volume retention and cardinality, and that any collector deployment exists at all -- it does not). Leakage: redaction is applied at the exporter, default-deny by allow-list, with value patterns as defence-in-depth for sensitive content arriving under an allow-listed key. The suite asserts the canary does not appear ANYWHERE in the collector, not merely that one field was redacted, and `TestCorrelationIdentifiersSurviveRedaction` is the counterweight that stops a redact-everything implementation passing trivially."
+  },
+  {
+    "id": "R-063",
+    "phase": "PRE-INS",
+    "title": "Replay completeness: thirteen named identities identical across a real Process A -> destroy -> Process B replay",
+    "owner_package": "`cmd/veriqo-cold-replay`, `test/integration`",
+    "tests": "`TestColdReplay_CrossProcess_AllThirteenIdentitiesMatch`, `TestColdReplay_CrossProcess_IdentityBlockAbsentOnDivergence`",
+    "status": "VERIFIED",
+    "note": "PHASE F3 / P1-13. No second replay engine is built: the test launches the SAME `cmd/veriqo-cold-replay` binary the pre-existing cross-process tests already use, and parses the machine-readable identity block that binary now emits alongside its unchanged human-readable report. All thirteen (IntentID, ExecutionID, EvidencePackageID, EntityID, IdentityLedgerHead, PolicyHash, TemporalModelHash, InferenceTraceHash, DecisionID, ExplanationHash, DigitalTwinConsequenceHash, VerificationCertificateID, ReplayPackageID) are asserted NON-EMPTY in the originating process before being compared, so the comparison cannot pass vacuously. Two derivations are documented in the source rather than left to inference: `temporal_model_hash` is the TEMPORAL_BAYESIAN node's own committed hash (there is no separate model-hash artifact), and `inference_trace_hash` is the ExecutionRootHash (naming it separately would imply a second commitment that does not exist). The identity block is deliberately NOT emitted on a diverged replay: those values describe a run that did not reproduce."
+  },
+  {
+    "id": "R-064",
+    "phase": "PRE-INS",
+    "title": "Reproducible build provenance: storage contract for source, dependency lock, builder, workflow, base image, OS inventory, compiler, flags, artifact, SBOM and attestation",
+    "owner_package": "`internal/reproducibility`",
+    "tests": "`TestUnanswerableFieldsAreReportedUnknownNotFabricated`, `TestEveryAlwaysDeterminableFieldIsIndividuallyRequired`, `TestProvenanceHashDetectsEveryStoredField`, `TestAttestationCoversTheRecordItSaysItCovers`, `TestCIIdentityHelpersReturnEmptyOutsideCI`",
+    "status": "VERIFIED",
+    "note": "PHASE I / P1-14. Binary equality already existed and is NOT rebuilt; `internal/environment.Identity` is embedded whole rather than restated, and `internal/sbom`'s document is cited by hash rather than copied. The program's scoping instruction is followed literally -- this is a storage-and-validation contract, NOT an attestation framework: no in-toto layouts, no DSSE envelopes, no SLSA level assessment, because nothing here has a contractual requirement for them. The honesty rule is enforced by test: an unanswerable field stays EMPTY in the Record and is reported UNKNOWN by `Describe()`; the UNKNOWN marker is report vocabulary and never enters stored provenance. Core fields (always determinable) are individually required; contextual fields (builder, workflow, base image, OS inventory) deliberately do NOT block Finalize, because refusing them would push a caller to invent one. `BuilderFromEnvironment` returns empty outside CI rather than falling back to a hostname -- a workstation hostname is not a builder identity, and writing one would make an UNKNOWN look answered."
+  },
+  {
+    "id": "R-065",
+    "phase": "PRE-INS",
+    "title": "Sandbox hardening: OS-level Enforcer consolidating the seccomp/no-new-privs/namespace work, with a negative test per escape vector",
+    "owner_package": "`pkg/kernel/sandbox`",
+    "tests": "`TestEscapeVectorHostFilesystemAccessIsDenied`, `TestEscapeVectorHostNetworkAccessIsDenied`, `TestEscapeVectorPrivilegeEscalationIsDenied`, `TestEscapeVectorSecretMountAccessIsDenied`, `TestEscapeVectorForbiddenSyscallIsDenied`, `TestEscapeVectorCgroupEscapeIsDenied`, `TestEscapeVectorNamespaceEscapeIsDenied`, `TestSupportedButUnappliedPrimitiveIsNotTreatedAsClosed`, `TestQualificationIsHonestlyCapped`",
+    "status": "VERIFIED",
+    "note": "PHASE J / P1-15. Closes exactly the gap R19's own audit note recorded and left open: the real seccomp-BPF and PR_SET_NO_NEW_PRIVS work lived in `cmd/veriqo-plugin-shim` and was not reachable through `pkg/kernel/sandbox`'s `Enforcer` interface. `OSEnforcer` is that missing implementation -- it reimplements NO confinement primitive (namespaces come from `pkg/kernel/plugin.SandboxRunner`, seccomp and no-new-privs from the shim, cgroup v2 from `pkg/kernel/resource`), it adds the honest mapping from a Policy clause to the primitive that must be present, and `Probe()` reads /proc and /sys rather than inferring from GOOS or a build tag. Seven negative tests, one per named escape vector, each proving BOTH that the policy engine denies the capability AND that the enforcer refuses the policy outright when the containing primitive is absent. `TestSupportedButUnappliedPrimitiveIsNotTreatedAsClosed` covers the subtlest case: a kernel that supports no-new-privs confines nothing if the shim that applies it is not deployed. **Ceiling: `sandbox.Qualification()` reports INTERNAL_QUALIFIED, not VERIFIED** -- proving a genuinely hostile binary is contained requires an adversarial execution drill on a production kernel, which no unit test performs; full filesystem confinement (pivot_root), user-namespace remapping and an allowlist-style seccomp profile all remain honestly open."
+  },
+  {
+    "id": "R-066",
+    "phase": "PRE-INS",
+    "title": "External evidence validator: the envelope wired through the existing signature/provider/reviewer/release-binding validator, with no promotion path",
+    "owner_package": "`pkg/governance/envelope`, `pkg/governance/qualification`",
+    "tests": "`TestValidatorRejectsEveryExternalEvidenceFailureMode`, `TestSubmitNeverPromotesAGateOnItsOwn`, `TestEnvelopeOnlyFieldsAreCoveredByTheSignature`, `TestHonestFixtureSubmissionIsStillRefusedForTheEightBlockers`, `TestRealSignedLiveEvidencePassesEveryCheck`",
+    "status": "VERIFIED",
+    "note": "PHASE E4 / P1-16, deliberately an INTEGRATION not a second validator. Nine of the ten checks the program names already existed in `qualification.Registry.Validate` (artifact hash recomputation, provider/reviewer resolution against an Ed25519 trust registry, both signatures, gate authorization, revocation, expiry, commit and source-hash binding) and are NOT reimplemented -- building a second validator would be exactly the duplicate abstraction rule 0 forbids. What was missing is the bridge: `Envelope.ToQualificationEvidence` folds the envelope-only fields (binary_hash, sbom_hash, artifact_root_hash, classification, origin_kind, rights_state, attestation, limitations) into the measurement map so they are covered by the artifact hash BOTH signatures are made over -- `TestEnvelopeOnlyFieldsAreCoveredByTheSignature` proves each one is, i.e. none can be edited after signing. Every negative case starts from PROPERLY SIGNED evidence and breaks exactly one thing, so each rejection is attributable. **`Submit` never calls Qualify or VerifyGate**: it stops at EVIDENCE_VALIDATED, because advancing a gate is an operator decision with a named person behind it. The eight blockers are unaffected -- with no real vendor evidence in existence, every one stays exactly as blocked as before."
+  },
+  {
+    "id": "R-067",
+    "phase": "PRE-INS",
+    "title": "External qualification harness: per-capability coverage register that cannot drift into fiction and cannot qualify anything",
+    "owner_package": "`pkg/blockers`, `cmd/veriqo-readiness`",
+    "tests": "`TestEveryCapabilityCitesRealCode`, `TestEveryGateStillNamesSomethingExternal`, `TestNoCapabilityStatusCanExpressQualification`, `TestHarnessCompletenessIsNotGateStatus`, `TestRegisterIsInternallyConsistent`",
+    "status": "VERIFIED",
+    "note": "PHASE K / P2-18, and reconciliation found it almost entirely ALREADY CLOSED: every harness the programme lists (scale/DR/soak/KMS/SPIRE/supply-chain/pentest/live-data) exists from prior rounds with real code and tests, and `orchestrator.RunAll` already drives all eight. None is rebuilt. What did NOT exist is per-CAPABILITY honesty: the orchestrator reports READY_FOR_REAL_QUALIFICATION per BLOCKER, which answers \"does a harness exist for DR\" but not \"does the DR harness exercise failback, or only failover\". `CapabilityRegister` answers the second question -- 33 rows, each naming the Go symbol that implements it, with `TestEveryCapabilityCitesRealCode` verifying the symbol is genuinely DECLARED in that package's non-test source so the register cannot decay into documentation about deleted code. `TestEveryGateStillNamesSomethingExternal` is the anti-false-green assertion: if any of the eight ever reported zero external-only capabilities, a harness would have quietly claimed to cover the very thing that makes the gate external. `TestNoCapabilityStatusCanExpressQualification` proves the vocabulary itself contains no value confusable with a gate status. Wired as the mandatory gate `external_harness_capability_coverage`, which is explicitly not a promotion path."
+  },
+  {
+    "id": "R-068",
+    "phase": "INS",
+    "title": "Insurance domain bound to the canonical foundation: one lineage CaseID, correlation key, evidence envelope, provenance rights",
+    "owner_package": "`pkg/insurance/canonical`, `pkg/insurance/evidence`, `pkg/insurance/api`",
+    "tests": "`TestFacadeBindsEveryStepToOneCanonicalCaseLineage`, `TestAttachEvidenceUsesTheContentAddressedID`, `TestAttachPartyRequiresACanonicalEntityRef`, `TestFixtureEnvelopeCannotEnterACaseAsExternalEvidence`, `TestNoForbiddenCanonicalDuplicateExists`, `TestInsuranceDeclaresNoSecondRightsVocabulary`, `TestRevokedRightsPermitNothing`, `TestSupersessionDeniesUseWithoutMutatingTheOriginal`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-2, the round's largest genuine gap, and X-3. `pkg/insurance` already OBEYED the non-duplication prohibition -- no second identity, evidence store, replay or decision engine exists anywhere in it -- but was bound to nothing: before this round it imported exactly two non-insurance VERIQO packages (`pkg/evidence/ontology`, `pkg/moat/contradiction`) and referenced `pkg/lineage`, `pkg/platform/correlation`, `pkg/governance/envelope` and `pkg/evidence/provenance` nowhere at all. `canonical.Binding` registers each insurance artifact as a lineage node under the insurance CaseID VERBATIM (one investigation, one CaseID), carrying the REAL ref its owning package produced and minting none. `AttachParty` refuses a PartyID with no `EntityRef`, so an insurance-local label can never become a canonical entity. `AttachExternalEvidence` fails closed three ways in order: envelope required, FIXTURE refused, rights must permit the use. Rights are `provenance.RightsState` -- the canonical vocabulary consulted through the single permitted-use table, not a second enum -- and `RightsState.Permits` was extracted so both `ExternalEvidence.Permits` and insurance consult one table. **Honest scope:** this is a binding, not a replay integration; per-case cold replay through `pkg/replay` is not attempted and is recorded as deferred."
+  },
+  {
+    "id": "R-069",
+    "phase": "INS",
+    "title": "Insurance state-machine reconciliation: the 9-stage vocabulary as a derived external view over the existing 16-state machine, with 5 orthogonal exception states",
+    "owner_package": "`pkg/insurance/case`",
+    "tests": "`TestStageMappingIsTotalAndSingleValued`, `TestEveryStageIsReachable`, `TestStageIsMonotonicAlongTheInternalSequence`, `TestStageIsDerivedNotSettable`, `TestExceptionNeverMovesTheLifecycle`, `TestExceptionsAreOrthogonalToStage`, `TestExceptionRequiresAReasonAndACitedArtifact`, `TestClearingAnExceptionPreservesTheHistory`, `TestStatusHasNoVerdictField`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-5, classified PARTIAL/CONFLICTING: the existing machine has sixteen forward-only states, the Final Design SS41 freezes nine stages plus five exception states, and they do not agree. Resolved deliberately and recorded in the Implementation Report rather than guessed silently: the nine-stage vocabulary becomes the canonical EXTERNALLY REPORTED stage, DERIVED on every call from a total mapping; the sixteen-state sequence stays as the internal step-ordering mechanism. Collapsing sixteen into nine would delete real ordering constraints (no boundary would remain between CONTRADICTIONS_ANALYZED and CAUSATION_ANALYZED) and weaken the one-step-forward-only invariant four existing tests assert -- deleting an enforcement to match a vocabulary is backwards. No existing test was weakened or removed. The five exception states are an append-only overlay, not sequence members, because they genuinely are orthogonal: a case can be ON_LEGAL_HOLD *and* RECONSTRUCTING. `RaiseException` does not touch the lifecycle state, does not call `Advance`, and does not take the lifecycle mutex."
+  },
+  {
+    "id": "R-070",
+    "phase": "INS",
+    "title": "I-08 Dispute / Legal Control: forum, issues, positions, legal holds, recorded outcomes -- metadata and workflow, never automatic legal advice",
+    "owner_package": "`pkg/insurance/dispute`",
+    "tests": "`TestSettlementNeverImpliesAllegationsProven`, `TestWithdrawnAndDiscontinuedAlsoProveNothing`, `TestAwardCanDetermineButOnlyWithACitedAuthority`, `TestLegalQuestionHasExactlyOneStatus`, `TestHistoricalReferenceCannotBecomeARule`, `TestForumRequiresACitedSource`, `TestForumRestatesNoDurations`, `TestIssueStatusVocabularyExpressesNoWinner`, `TestNoOpaqueConfidenceScore`, `TestNoTypeInThisPackageCarriesAVerdictField`",
+    "status": "VERIFIED",
+    "note": "The one domain of the eight classified entirely MISSING: no dispute stage machine, no forum/governing-law model, no legal-hold object existed anywhere. Modelled on the discipline `pkg/insurance/causation` already uses for a structurally identical problem -- a question the system must NOT answer. `LegalQuestionStatus` has exactly ONE value, LEGAL_INTERPRETATION_REQUIRED, so no code path answers a legal question and a caller-supplied status is overwritten. `HistoricalReference` is the ONLY shape in which a real decision may appear anywhere in this system: recorded text a human reads, proven by test to have no binding/weight/applies/rule field and no non-string field, so it cannot act as a rule -- the Final Design SS39 forbids hard-coding a real judgment as one. **Settlement != every allegation proven** is enforced from three directions: the constructor refuses it, `Validate` refuses a hand-built struct carrying it, and the aggregate re-validates. Withdrawal and discontinuance are covered by the same rule. `Forum` has no numeric field at all, so a limitation period must be a `deadline.Rule` reference -- which is how \"all maritime claims = 1 year\" gets hard-coded when it is not."
+  },
+  {
+    "id": "R-071",
+    "phase": "INS",
+    "title": "I-08 Regulatory Control: allegation to completion, with settlement != proven and monitor-requirement != monitor-completed enforced structurally",
+    "owner_package": "`pkg/insurance/regulatory`",
+    "tests": "`TestSettlementProvesNothing`, `TestSettlementOnlyFindingCannotProve`, `TestAPriorRealFindingSurvivesASubsequentSettlement`, `TestMonitorRequirementIsNotMonitorCompletion`, `TestMonitorRequirementHasNoCompletedField`, `TestImposeMonitorRefusesPreAttachedCertifications`, `TestCompletionBlockersNamesEveryUnfinishedObligation`, `TestRealFindingRequiresAuthorityAndSource`",
+    "status": "VERIFIED",
+    "note": "The Final Design SS36 chain, built to carry the two rules that section states as CRITICAL. `MonitorRequirement` has NO `Completed bool` -- `TestMonitorRequirementHasNoCompletedField` proves the type has no boolean field at all -- because a single boolean is exactly what invites the failure: a flag set at imposition time, or defaulted true, silently converts an ongoing obligation into a discharged one. Completion is DERIVED from a real `Certification` naming a certifier and a source document, and `ImposeMonitor` refuses a monitorship that arrives already certified so imposing and completing stay distinct events. `RecordSettlement` leaves every un-adjudicated allegation NOT_DETERMINED; a genuine prior regulatory or tribunal finding SURVIVES a later settlement, because the rule is \"settlement proves nothing\", not \"settlement unproves everything\". The package ships no list of real regulators, no jurisdiction table and no penalty schedule."
+  },
+  {
+    "id": "R-072",
+    "phase": "INS",
+    "title": "I-03 Notice & Obligation engine, with LATE NOTICE != COVERAGE DENIED made structural rather than true-by-absence",
+    "owner_package": "`pkg/insurance/obligation`, `pkg/insurance/coverage`",
+    "tests": "`TestComplianceVocabularyCannotExpressDenial`, `TestCoverageEffectHasExactlyOneValue`, `TestLateNoticeProducesReviewNotDenial`, `TestNoticeNotGivenAlsoProducesOnlyReview`, `TestAssessmentHasNoDenialField`, `TestLateNoticeNeverSetsACoverageOutcome`, `TestUnknownNoticeTimeIsInsufficientNotLate`, `TestNoDeadlineRuleYieldsUndeterminedNotAGuess`, `TestMissingTriggerTimeIsNamedNotAssumed`, `TestClauseBasisIsHonouredNotChosen`, `TestObligationRestatesNoDuration`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item I-03, classified PARTIAL. The DEADLINE half was already real and strong in `pkg/insurance/deadline` and is NOT reimplemented -- every deadline here is a `deadline.Rule` and every computed tick comes from `deadline.ComputeDeadline`. What did not exist: the Notice object (the spec SS11 eleven-field set, absent entirely) and the SS12 obligation graph. Before this round LATE != DENIED held only BY ABSENCE -- the coverage engine has no denial field to set -- which was true but unasserted, and an unasserted invariant is one a future field breaks silently. Now asserted three ways: the `Compliance` vocabulary is scanned by test for DENIED/FORFEIT/COVERAGE/VOID/BARRED; `Assessment.CoverageEffect` is a type with exactly ONE value; and a late notice yields one review requirement naming the policy wording and applicable law, with no denial language anywhere in the output. `TestLateNoticeNeverSetsACoverageOutcome` additionally proves a late notice leaves every OTHER coverage fact byte-identical to the timely run."
+  },
+  {
+    "id": "R-073",
+    "phase": "INS",
+    "title": "Evidence preservation: the fifth core claim question, with a tamper-evident order hash and a fail-closed rights gate",
+    "owner_package": "`pkg/insurance/preservation`",
+    "tests": "`TestHashChangesWhenThePreservedSetChanges`, `TestHashIsIndependentOfPreservationOrder`, `TestVerifyDetectsAHashMismatch`, `TestReleaseIsRefusedWhileAHoldIsInForce`, `TestPermitsUseRequiresBothTheRecordAndTheOrder`, `TestChainReportPassIsDerivedFromFailures`, `TestAnOrderCoveringNothingFails`, `TestAnOrderWithNoAccessEventsStillPasses`, `TestNewRequiresEveryStructuralField`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-4, classified MISSING: chain of custody existed on `evidence.Record`, but no preservation order, trigger, custodian assignment, legal-hold state or release did. Implements the spec SS19 field list verbatim and the SS20 workflow as the order's lifecycle. Three deliberate non-duplications: `RightsState` is provenance's; per-item custody stays on `evidence.Record`; retention and deletion stay with `pkg/governance/data` (an Order deletes nothing and expires nothing). `Order.Hash` is a hash-of-hashes over the sorted content-addressed EvidenceIDs plus the order's own fields, so any change to the preserved set is detectable and the hash is independent of the sequence items arrived in. `PermitsUse` requires BOTH the record's rights and the order's, so a permissive order can never widen a restricted record. `TestAnOrderWithNoAccessEventsStillPasses` is the deliberate non-requirement: an order nobody has touched is intact, and demanding an access event would push a caller to fabricate one."
+  },
+  {
+    "id": "R-074",
+    "phase": "INS",
+    "title": "The four insurance verification gates (spec SS54-SS57), registered as mandatory and driven by real synthetic cases",
+    "owner_package": "`pkg/insurance/verification`, `cmd/veriqo-readiness`",
+    "tests": "`TestThreeGatesPassOnEveryCase`, `TestCoverageTraceabilityActuallyChecked`, `TestQuantumIsGenuinelyRecomputed`, `TestPreservationCoversEveryRecord`, `TestHumanReviewGateFailsClosedOnEveryCase`, `TestHumanReviewGateOpensWithARealAuthorization`, `TestARubberStampAuthorizationIsRefused`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-6, classified PARTIAL: `pkg/insurance/verification` existed but did exactly one thing -- a deterministic evidence-root Manifest, which is reused unchanged. None of the four named gates existed and no insurance gate was registered in the assurance plane. Every report derives `Pass()` from a list of NAMED failures with no settable pass field, and every failure names the specific artifact rather than a count. The SS55 gate is a GENUINE recomputation of `quantum.Compute`, not a hash comparison. The SS57 gate does NOT re-derive whether review was required -- `dossier.Generate` already computed that and a second opinion would be a second authority. Registered as four mandatory gates in `cmd/veriqo-readiness`, each attaching a content-hashed artifact produced by actually running all seven cases; operand comparison and failure emission are order-stable because an artifact whose bytes vary between identical runs is not evidence. **Honest scope, not overclaimed:** these gates are ENGINEERING evidence over synthetic cases. They establish nothing about live customer data, and the eight external blockers are untouched."
+  },
+  {
+    "id": "R-075",
+    "phase": "INS",
+    "title": "Synthetic case pack CASE-INS-001..007: complete engineering coverage with no real-world entity anywhere",
+    "owner_package": "`pkg/insurance/casepack`",
+    "tests": "`TestNoRealWorldEntityAppearsInThePack`, `TestJurisdictionsAreGeneric`, `TestNoCaseOutputIsADetermination`, `TestAFixtureCaseCanNeverReportAsLive`, `TestEverySyntheticRecordCarriesItsOriginInItsContentHash`, `TestCasesAreDeterministicFixtures`, `TestEveryCaseDrivesTheFullFacadePath`, `TestEveryCaseUsesTheHistoricalPolicyVersion`, `TestEveryCaseBindsToOneCanonicalCaseLineage`, `TestCase002ProducesLateNoticeWithNoCoverageOutcome`, `TestCase004ProducesNoSingleAssertedCause`, `TestEveryCaseCausationIsHedged`, `TestFixtureEnvelopeIsRefusedAsExternalEvidence`",
+    "status": "VERIFIED",
+    "note": "Reconciliation item X-8, classified MISSING: a repository-wide search for `CASE-INS` returned nothing. All seven cases exist and are entirely fictional -- `TestNoRealWorldEntityAppearsInThePack` scans the package's own SOURCE, comments included, against real AIS vendors, commodity traders, carriers, regulators, P&I clubs and reported-judgment citation formats, because a real name in a comment is as much a problem as one in a string. CASE-INS-004 outputs only LEGAL_INTERPRETATION_REQUIRED with no real judgment present in any form; CASE-INS-005 is fully role-designated with four independently-evidenced red flags and NO_BRIBERY_DETERMINATION; CASE-INS-006 carries both SS36 separations. `Drive` runs every case through the REAL facade with no fixture-only code path -- the Final Design SS20 \"one engine, not two\" rule applied to fixtures. `internal/nobypass` correctly flagged the pack as an unauthorized canonical-evidence ingestion path; rather than widen that allowlist to accommodate test data, the construction moved INSIDE the canonical contract as `evidenceapi.SyntheticDocument`, which stamps SYNTHETIC into the hashed attributes so fixture provenance cannot be separated from the record."
+  }
+]

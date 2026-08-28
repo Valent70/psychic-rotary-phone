@@ -1,0 +1,5 @@
+gate: assurance_self
+command: go test ./internal/assurance/
+exit: 0
+---
+ok  	veriqo/internal/assurance	(cached)

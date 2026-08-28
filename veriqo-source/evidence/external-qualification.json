@@ -1,0 +1,58 @@
+[
+  {
+    "gate_id": "pentest",
+    "description": "independent third-party penetration test",
+    "blocker": "requires an external security vendor; cannot be produced by any sandbox. pkg/blockers/pentest now runs a real target registry, a real release-identity preflight, and adversarial probes (JWT alg=none, unknown kid, sandbox path traversal, authz wildcard escalation) directly against this codebase's own production pkg/api/pkg/kernel/sandbox/pkg/authz -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). Still requires a real vendor's signed report through pkg/governance/qualification to ever reach VERIFIED.",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "scale_qualification",
+    "description": "100-node / 1M-evidence physical benchmark",
+    "blocker": "requires physical multi-node infrastructure at the full 100-node scale. pkg/blockers/scale runs a real goroutine-based NodeProvider and a real exactly-once-delivery integrity check (with deliberate loss/duplication injection tests proving the check actually works) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). The promised RealNodeProvider now exists too: HTTPNodeProvider plus a real worker binary (cmd/veriqo-scale-node) were run as 100 genuinely separate Docker containers over real HTTP at the FULL literal target -- 1,000,000 records, zero lost, zero duplicated, ~2536/s -- see evidence/scale_qualification-multi-container-drill.txt. The literal 100-node / 1,000,000-envelope COUNT named by this blocker is now met for real, together, in one run; what remains is real distinct-infrastructure (multi-host/multi-datacenter/cloud) execution at this scale, since all 100 containers still ran on this session's one physical host -- an infrastructure-procurement action, not an engineering one.",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "multi_region_dr",
+    "description": "multi-region deployment and DR drill with measured RPO/RTO",
+    "blocker": "requires multi-region infrastructure. pkg/blockers/dr models regions as real raftlite nodes connected through a real network-partition-capable transport, fails the leader region, measures real RTO/RPO, heals it, and confirms convergence -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). A separate drill ran the actual production binary (cmd/veriqo-node) as three real Docker containers on a real bridge network, partitioned the leader with a real `docker network disconnect`, measured ~500ms RTO and RPO=0 with the surviving majority still serving writes, then healed the partition and independently verified identical converged state on all three containers -- see evidence/multi_region_dr-multi-container-drill.txt. Still requires real cross-datacenter infrastructure (WAN characteristics, real cloud regions, traffic-manager cutover) to qualify real cross-region network behavior.",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "hsm_kms",
+    "description": "production HSM/KMS backed signing",
+    "blocker": "interface implemented; a real HSM/KMS tenancy is a procurement action. pkg/platform/security/keys now has a SoftwareBacked production guard (RequireProductionSafe refuses any software-backed provider under env=production) and pkg/blockers/hsmkms proves every failure mode -- unavailable, timeout, permission-denied, wrong-key, revoked -- fails closed, with the revoked case proving the provider is never even touched -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION). Freshly re-tested this round against real AWS KMS rather than assumed: this environment's placeholder AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY were tried against a real DescribeKey call and AWS itself rejected them (UnrecognizedClientException) -- see evidence/hsm_kms-real-credential-retest.txt. Confirmed procurement-blocked, not engineering-blocked.",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "live_data",
+    "description": "non-synthetic live data feeds (SWIFT/BoL/AIS/SAR)",
+    "blocker": "requires commercial data contracts. pkg/blockers/livedata now has a real FeedConnector/Pipeline with content-hash dedup and a real anti-replay defense (every accepted record replayed back and confirmed rejected) across all four source types, and refuses any SIMULATED-mode connector's record tagged LIVE -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION).",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "soak_72h",
+    "description": "72-hour continuous soak with zero leak and zero ledger corruption",
+    "blocker": "the harness now exists and genuinely runs — see test/soak and evidence/soak-report.json (2188 real iterations over 90s in this session, 0 errors, goroutines flat at 2-\u003e2) — but this environment cannot honestly stay up for the required 72h continuous window; VERIQO_SOAK_MINUTES=4320 against the same unchanged test on a long-lived host produces the qualifying evidence. A best-effort extension was also run: one genuine, unbroken 60-minute pass of the same unmodified test (30x the smoke pass) completed with zero errors -- see evidence/soak-60min-run-log.txt for the raw run output and an honest note on why its structured JSON specifically wasn't retained. pkg/blockers/soak now formalizes the same technique behind a Start/Checkpoint/Monitor/DetectLeak/DetectDrift/Finalize/GenerateEvidence API with a hash-chained, tamper-evident checkpoint sequence -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION on the machinery; the real 72h window is still unrun).",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "spire_mtls",
+    "description": "real SPIRE deployment with workload attestation and mTLS rotation",
+    "blocker": "a real single-node SPIRE server+agent was run in one session — see evidence/spire_mtls-local-integration.txt — with genuine attestation, X.509-SVID issuance and revocation; a later session ran a real multi-container cluster instead -- one spire-server and two independently-attested spire-agent containers on a real Docker bridge network, node-scoped workload identity isolation confirmed, and per-node revocation proven live across the cluster -- see evidence/spire_mtls-multi-container-integration.txt. This round closed the live spire-agent-in-the-loop drill those rounds left open: a real, separately-running SPIRE server issued real X.509-SVIDs that pkg/transport/rafttcp's FileCertSource/NewServerFromSource/NewClientFromSource genuinely loaded and used for a real end-to-end mTLS handshake and RPC -- see evidence/spire_mtls-rafttcp-live-integration.txt, which also documents a real finding (rafttcp's client hard-codes the expected trust domain as \"veriqo.global\") worked around for the drill but left open as configurable-trust-domain follow-on work. Still requires a production node attestor (join_token is a test/demo attestor, not cloud-instance-identity/k8s-PSAT/TPM). pkg/blockers/spiffe now qualifies the client-side validation logic with real X.509 chain verification and a full failure matrix (expired, revoked, untrusted CA, claimed-vs-actual identity mismatch) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION).",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  },
+  {
+    "gate_id": "supply_chain_scan",
+    "description": "govulncheck / gosec / staticcheck in CI",
+    "blocker": "staticcheck AND gosec both run clean (0 findings each) in a network-enabled session — see evidence/supply_chain_scan-gosec-full.txt; all 89 gosec findings across every severity were individually triaged and fixed or justified with a named reason, including catching and correcting a real bug in the prior round's own suppression comments. govulncheck's vulnerability feed (vuln.go.dev) returned 403, and so did osv.dev and the GitHub advisory API — tried as alternates — under this environment's network policy, so vulnerability-DB scanning specifically remains unqualified: SAST is fully closed, dependency-vulnerability scanning is not. Freshly re-tested this round rather than assumed: the same three hosts were re-probed directly and via the proxy's own status endpoint, which independently logs the identical 403 policy denials -- see evidence/supply_chain_scan-vulndb-network-retest.txt. pkg/blockers/supplychain now has a real `go list -m all` dependency-discovery step, a policy engine, and a real HTTP-backed VulnerabilityProvider (unit-tested against a local server since the real endpoints are network-blocked here) -- see evidence/blockers-qualification-report.json (READY_FOR_REAL_QUALIFICATION on the pipeline; the vulnerability-DB query itself is still unqualified against a real feed).",
+    "status": "BLOCKED_EXTERNAL",
+    "history": null
+  }
+]

@@ -1,0 +1,366 @@
+package assurance
+
+import (
+	"crypto/ed25519"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"sort"
+)
+
+// --- PHASE 34: acceptance suite governance ---------------------------
+
+// AcceptanceCategory is one required category of permanent acceptance
+// tests.
+type AcceptanceCategory struct {
+	Name    string `json:"name"`
+	Minimum int    `json:"minimum"`
+	Actual  int    `json:"actual"`
+}
+
+// AcceptanceManifest encodes the audit's rule that the acceptance suite
+// may only ever GROW. CI fails when a count decreases, a category
+// disappears, or the central lifecycle test goes missing.
+type AcceptanceManifest struct {
+	Categories []AcceptanceCategory `json:"categories"`
+	// MandatoryTests must all be present by name. Deleting one is a
+	// release-blocking event, not a refactor.
+	MandatoryTests []string `json:"mandatory_tests"`
+	PresentTests   []string `json:"present_tests"`
+	TotalMinimum   int      `json:"total_minimum"`
+	Hash           string   `json:"hash"`
+}
+
+// Errors for manifest governance.
+var (
+	ErrCategoryBelowMinimum = errors.New("assurance: acceptance category below its permanent minimum")
+	ErrCategoryMissing      = errors.New("assurance: acceptance category disappeared from the suite")
+	ErrMandatoryTestMissing = errors.New("assurance: mandatory acceptance test is missing")
+	ErrSuiteShrank          = errors.New("assurance: acceptance suite total decreased")
+)
+
+// Validate enforces every governance rule at once and reports ALL
+// violations, not just the first — a CI run should tell you everything
+// that is wrong in one pass.
+func (m AcceptanceManifest) Validate() error {
+	var problems []string
+	total := 0
+	for _, c := range m.Categories {
+		total += c.Actual
+		if c.Actual == 0 && c.Minimum > 0 {
+			problems = append(problems, fmt.Sprintf("%v: category %q", ErrCategoryMissing, c.Name))
+			continue
+		}
+		if c.Actual < c.Minimum {
+			problems = append(problems, fmt.Sprintf("%v: %q has %d, minimum %d",
+				ErrCategoryBelowMinimum, c.Name, c.Actual, c.Minimum))
+		}
+	}
+	present := map[string]bool{}
+	for _, t := range m.PresentTests {
+		present[t] = true
+	}
+	for _, t := range m.MandatoryTests {
+		if !present[t] {
+			problems = append(problems, fmt.Sprintf("%v: %s", ErrMandatoryTestMissing, t))
+		}
+	}
+	if total < m.TotalMinimum {
+		problems = append(problems, fmt.Sprintf("%v: %d < %d", ErrSuiteShrank, total, m.TotalMinimum))
+	}
+	if len(problems) > 0 {
+		sort.Strings(problems)
+		return errors.New("acceptance manifest violations:\n  - " + joinLines(problems))
+	}
+	return nil
+}
+
+func joinLines(s []string) string {
+	out := ""
+	for i, v := range s {
+		if i > 0 {
+			out += "\n  - "
+		}
+		out += v
+	}
+	return out
+}
+
+// ComputeHash content-addresses the manifest.
+func (m AcceptanceManifest) ComputeHash() string {
+	h := sha256.New()
+	fmt.Fprintf(h, "veriqo.acceptance_manifest/v1|min=%d|", m.TotalMinimum)
+	cats := append([]AcceptanceCategory(nil), m.Categories...)
+	sort.Slice(cats, func(i, j int) bool { return cats[i].Name < cats[j].Name })
+	for _, c := range cats {
+		fmt.Fprintf(h, "%s=%d/%d|", c.Name, c.Actual, c.Minimum)
+	}
+	mand := append([]string(nil), m.MandatoryTests...)
+	sort.Strings(mand)
+	for _, t := range mand {
+		fmt.Fprintf(h, "must=%s|", t)
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// --- PHASE 55: release certificate -----------------------------------
+
+// ReleaseCertificate is the signed artifact every VERIQO release
+// produces. Its fields are exactly those the audit enumerated, plus
+// BuildID/BinaryHash/EvidenceRootHash added to close audit item P0-01,
+// which named those three as required and absent.
+type ReleaseCertificate struct {
+	Version                string     `json:"version"`
+	GitCommit              string     `json:"git_commit"`
+	BuildHash              string     `json:"build_hash"`
+	BuildID                string     `json:"build_id"`
+	BinaryHash             string     `json:"binary_hash"`
+	SourceHash             string     `json:"source_hash"`
+	SBOMHash               string     `json:"sbom_hash"`
+	EvidenceRootHash       string     `json:"evidence_root_hash"`
+	TestManifestHash       string     `json:"test_manifest_hash"`
+	AcceptanceManifestHash string     `json:"acceptance_manifest_hash"`
+	SecurityManifestHash   string     `json:"security_manifest_hash"`
+	BenchmarkManifestHash  string     `json:"benchmark_manifest_hash"`
+	ChaosManifestHash      string     `json:"chaos_manifest_hash"`
+	ReplayManifestHash     string     `json:"replay_manifest_hash"`
+	Operator               string     `json:"operator"`
+	Timestamp              uint64     `json:"timestamp"`
+	SigningKeyID           string     `json:"signing_key_id"`
+	GoVersion              string     `json:"go_version"`
+	Verdict                Verdict    `json:"verdict"`
+	Assessment             Assessment `json:"assessment"`
+
+	CertificateHash string `json:"certificate_hash"`
+	Signature       string `json:"signature,omitempty"`
+	PublicKey       string `json:"public_key,omitempty"`
+
+	// Timestamp attestation (audit item P1-09): a self-hosted, hash-
+	// chained notary entry (internal/timestamp) attesting to
+	// CertificateHash, signed by a key deliberately separate from the
+	// release-signing key above. Like Signature/PublicKey, these are
+	// attached AFTER Finalize/Sign and are deliberately excluded from
+	// canonical() -- the entry timestamps an already-finalized
+	// certificate, so it cannot be folded into the hash it attests to
+	// without a circular dependency. Their own tamper-evidence comes
+	// from the timestamp chain's independent hash-linkage and
+	// signature, verifiable via internal/timestamp.VerifyChain against
+	// evidence/timestamp-chain.json, not from this struct's own hash.
+	TimestampChainSeq           uint64 `json:"timestamp_chain_seq,omitempty"`
+	TimestampEntryHash          string `json:"timestamp_entry_hash,omitempty"`
+	TimestampAuthorityKeyID     string `json:"timestamp_authority_key_id,omitempty"`
+	TimestampAuthoritySignature string `json:"timestamp_authority_signature,omitempty"`
+
+	// EnvironmentHash (master implementation directive, P1-B
+	// "Qualification Environment Identity"): a content hash over the
+	// real internal/environment.Identity that produced this exact
+	// release -- OS/arch/compiler/Go toolchain, hostname, kernel
+	// version, container-runtime heuristic, and a real build-
+	// configuration hash (see internal/environment's own package
+	// comment for which fields this sandbox can and cannot honestly
+	// answer). Like the timestamp-attestation fields above, this is
+	// attached AFTER Finalize/Sign and deliberately excluded from
+	// canonical(): folding a NEW field into the signed hash would
+	// change canonical()'s byte format for every certificate, making
+	// every historically-signed manifest fail re-verification against
+	// this same codebase -- a real regression Rule 0.4 forbids, not a
+	// hypothetical one. A future certificate SCHEMA VERSION bump (an
+	// explicit, larger migration, not attempted here) is the correct
+	// vehicle for making environment identity itself signature-
+	// covered; this round makes it real, populated, and independently
+	// re-derivable evidence, consistent with the wiring-vs-corpus
+	// scoping discipline this codebase already applies elsewhere. The
+	// full Identity JSON this hash commits to is persisted separately
+	// (evidence/environment_identity.json), the same hash-then-embed
+	// pattern already used for SBOMHash/EvidenceRootHash.
+	EnvironmentHash string `json:"environment_hash,omitempty"`
+}
+
+// WithTimestampAttestation attaches a self-hosted timestamp-authority
+// entry's identity to the certificate for display/audit purposes. It
+// does not affect CertificateHash or Signature: the entry itself
+// (persisted separately, e.g. in evidence/timestamp-chain.json) is
+// what an independent verifier actually checks via
+// internal/timestamp.VerifyChain.
+func (c ReleaseCertificate) WithTimestampAttestation(seq uint64, entryHash, authorityKeyID, authoritySignature string) ReleaseCertificate {
+	c.TimestampChainSeq = seq
+	c.TimestampEntryHash = entryHash
+	c.TimestampAuthorityKeyID = authorityKeyID
+	c.TimestampAuthoritySignature = authoritySignature
+	return c
+}
+
+// WithEnvironmentIdentity attaches a real internal/environment.Identity
+// content hash to the certificate -- see EnvironmentHash's own doc
+// comment for exactly what this does and does not cover.
+func (c ReleaseCertificate) WithEnvironmentIdentity(hash string) ReleaseCertificate {
+	c.EnvironmentHash = hash
+	return c
+}
+
+// canonical is the deterministic byte form used for hash and signature.
+func (c ReleaseCertificate) canonical() []byte {
+	h := fmt.Sprintf(
+		"veriqo.release_certificate/v1\nversion=%s\ncommit=%s\nbuild=%s\nbuild_id=%s\nbinary=%s\nsource=%s\nsbom=%s\nevidence_root=%s\n"+
+			"test=%s\nacceptance=%s\nsecurity=%s\nbenchmark=%s\nchaos=%s\nreplay=%s\n"+
+			"operator=%s\nts=%d\nkey=%s\ngo=%s\nverdict=%s\nmandatory=%d/%d\n",
+		c.Version, c.GitCommit, c.BuildHash, c.BuildID, c.BinaryHash, c.SourceHash, c.SBOMHash, c.EvidenceRootHash,
+		c.TestManifestHash, c.AcceptanceManifestHash, c.SecurityManifestHash,
+		c.BenchmarkManifestHash, c.ChaosManifestHash, c.ReplayManifestHash,
+		c.Operator, c.Timestamp, c.SigningKeyID, c.GoVersion, c.Verdict,
+		c.Assessment.MandatoryPassing, c.Assessment.MandatoryTotal)
+	return []byte(h)
+}
+
+// Finalize computes the certificate hash. The verdict is taken from
+// the assessment, never set by the caller — a release certificate
+// cannot claim a verdict the gates did not produce.
+func (c ReleaseCertificate) Finalize(a Assessment) ReleaseCertificate {
+	c.Assessment = a
+	c.Verdict = a.Verdict
+	sum := sha256.Sum256(c.canonical())
+	c.CertificateHash = hex.EncodeToString(sum[:])
+	return c
+}
+
+// Sign attaches an Ed25519 signature over the canonical bytes.
+func (c ReleaseCertificate) Sign(priv ed25519.PrivateKey, keyID string) ReleaseCertificate {
+	c.SigningKeyID = keyID
+	sum := sha256.Sum256(c.canonical())
+	c.CertificateHash = hex.EncodeToString(sum[:])
+	sig := ed25519.Sign(priv, c.canonical())
+	c.Signature = hex.EncodeToString(sig)
+	c.PublicKey = hex.EncodeToString(priv.Public().(ed25519.PublicKey))
+	return c
+}
+
+// Verify checks the hash and, when present, that the embedded
+// signature is internally self-consistent (it was produced by
+// whichever key PublicKey names). This is necessary but not
+// sufficient: it catches a certificate whose hash or signature was
+// edited after Sign, but it does NOT catch a forger who regenerates a
+// brand-new keypair, signs a different certificate with it, and embeds
+// their own PublicKey to match — a self-consistent document is not
+// automatically an authorized one. Verify exists for that narrower
+// tamper-detection use; production and release-gate callers should use
+// VerifyTrusted instead.
+func (c ReleaseCertificate) Verify() error {
+	sum := sha256.Sum256(c.canonical())
+	if hex.EncodeToString(sum[:]) != c.CertificateHash {
+		return ErrManifestTampered
+	}
+	if c.Signature == "" {
+		return nil
+	}
+	sig, err := hex.DecodeString(c.Signature)
+	if err != nil {
+		return ErrManifestTampered
+	}
+	pub, err := hex.DecodeString(c.PublicKey)
+	if err != nil || len(pub) != ed25519.PublicKeySize {
+		return ErrManifestTampered
+	}
+	if !ed25519.Verify(ed25519.PublicKey(pub), c.canonical(), sig) {
+		return ErrManifestTampered
+	}
+	return nil
+}
+
+// ErrUntrustedSigningKey is returned by VerifyTrusted when a
+// certificate's embedded key is not — or no longer — in the caller's
+// trust anchor set, whether or not the embedded signature is
+// internally consistent.
+var ErrUntrustedSigningKey = errors.New("assurance: signing key is not a trusted anchor")
+
+// TrustedKeys maps a signing key ID (as named in ReleaseCertificate.
+// SigningKeyID) to the public key an operator has independently
+// decided to trust for that ID — never read from the certificate being
+// verified itself. This is the trust anchor VerifyTrusted checks
+// against, closing the audit's "Internal Gap III": a signature is
+// verified against a trust anchor, not merely checked for internal
+// self-consistency.
+type TrustedKeys map[string]ed25519.PublicKey
+
+// VerifyTrusted performs every check Verify does, and additionally
+// requires that c.SigningKeyID is present in trusted and that
+// trusted[c.SigningKeyID] — not c.PublicKey — is the key whose
+// signature validates. A certificate signed by an unlisted or revoked
+// key fails here even if its embedded PublicKey and Signature are
+// perfectly self-consistent, because self-consistency is exactly what
+// a forger who mints a fresh keypair can always produce.
+func (c ReleaseCertificate) VerifyTrusted(trusted TrustedKeys) error {
+	if c.Signature == "" {
+		return fmt.Errorf("%w: certificate is unsigned", ErrManifestTampered)
+	}
+	sum := sha256.Sum256(c.canonical())
+	if hex.EncodeToString(sum[:]) != c.CertificateHash {
+		return ErrManifestTampered
+	}
+	anchor, ok := trusted[c.SigningKeyID]
+	if !ok {
+		return fmt.Errorf("%w: key id %q", ErrUntrustedSigningKey, c.SigningKeyID)
+	}
+	sig, err := hex.DecodeString(c.Signature)
+	if err != nil {
+		return ErrManifestTampered
+	}
+	if !ed25519.Verify(anchor, c.canonical(), sig) {
+		return ErrManifestTampered
+	}
+	return nil
+}
+
+// ReadinessManifest is the machine-readable "production ready is not
+// an opinion" artifact (PHASE 52) — the whole assurance plane in one
+// serializable document.
+type ReadinessManifest struct {
+	SchemaVersion string             `json:"schema_version"`
+	Release       ReleaseCertificate `json:"release"`
+	Acceptance    AcceptanceManifest `json:"acceptance"`
+	Gates         []Gate             `json:"gates"`
+	Assessment    Assessment         `json:"assessment"`
+	// Axes is PHASE E3 (P0-8)'s four-axis readiness separation, derived
+	// from the same gates above. It is additive reporting only: it is
+	// computed from Gates, it feeds nothing back into Assessment, and
+	// it is deliberately NOT part of ReleaseCertificate.canonical(), so
+	// adding it leaves every historically-signed certificate verifiable
+	// byte-for-byte (the same discipline EnvironmentHash documents).
+	Axes AxesReport `json:"axes"`
+	// TemporaryReadiness is the Round 4 work order's own required
+	// aggregate: the twelve named categories, each gate's canonical
+	// status rolled up into one composed-per-category verdict, and one
+	// final TemporaryReadinessVerdict. Like Axes, it is purely derived
+	// from Gates (via Axes itself) and feeds nothing back — adding it
+	// changes no certificate, no Status, no release Verdict.
+	TemporaryReadiness TemporaryReadinessReport `json:"temporary_production_readiness"`
+	// ProductionReadiness is the Round 7 work order's own required
+	// three-level hierarchy (ENGINEERING_READY /
+	// TEMPORARY_PRODUCTION_READINESS / PRODUCTION_QUALIFIED), derived
+	// purely from Axes and TemporaryReadiness — like both, it feeds
+	// nothing back into any certificate, Status, or release Verdict.
+	ProductionReadiness ProductionReadinessReport `json:"production_readiness_level"`
+}
+
+// ManifestSchemaVersion identifies the readiness manifest contract.
+const ManifestSchemaVersion = "veriqo.readiness_manifest/v1"
+
+// BuildReadinessManifest assembles the manifest from live state.
+func BuildReadinessManifest(r *Registry, acc AcceptanceManifest, cert ReleaseCertificate) ReadinessManifest {
+	a := r.Assess()
+	acc.Hash = acc.ComputeHash()
+	cert.AcceptanceManifestHash = acc.Hash
+	cert = cert.Finalize(a)
+	axes := r.Axes()
+	tpr := ComposeTemporaryReadiness(axes)
+	return ReadinessManifest{
+		SchemaVersion: ManifestSchemaVersion, Release: cert,
+		Acceptance: acc, Gates: r.Gates(), Assessment: a, Axes: axes,
+		TemporaryReadiness:  tpr,
+		ProductionReadiness: ComposeProductionReadinessLevel(axes, tpr),
+	}
+}
+
+// JSON renders the manifest deterministically.
+func (m ReadinessManifest) JSON() ([]byte, error) { return json.MarshalIndent(m, "", "  ") }

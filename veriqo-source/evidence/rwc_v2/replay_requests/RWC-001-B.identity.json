@@ -1,0 +1,14 @@
+{
+  "ledger": [],
+  "authorities": null,
+  "queries": [
+    {
+      "alias": {
+        "kind": "NAME",
+        "value": "RWC-001-CANDIDATE-B"
+      },
+      "as_of_tick": 1,
+      "expected_entity_id": "ENT:f9bd5604ef16efa205eec9c5c9433e37"
+    }
+  ]
+}

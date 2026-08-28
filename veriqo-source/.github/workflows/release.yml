@@ -1,0 +1,25 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version: 'stable' }
+      - name: sbom
+        run: ./scripts/sbom.sh > SBOM.json
+      - name: production readiness gate
+        # PHASE 54: this step is ALLOWED to fail the release. A tag does
+        # not make a system ready; passing gates do.
+        run: ./scripts/production-readiness.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: |
+            READINESS_MANIFEST.json
+            SBOM.json
+            evidence/

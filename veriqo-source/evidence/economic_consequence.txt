@@ -1,0 +1,5 @@
+gate: economic_consequence
+command: go test ./pkg/moat/economic/
+exit: 0
+---
+ok  	veriqo/pkg/moat/economic	(cached)

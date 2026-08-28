@@ -1,0 +1,374 @@
+{
+  "schema": "veriqo.insurance_completeness_audit/v1",
+  "generated_from": "manual code inspection across Rounds 7-8 (grep + read, see chat record) cross-checked against READINESS_MANIFEST.json",
+  "assessment_date": "2026-08-27",
+  "rule": "status is IMPLEMENTED only when real code AND real tests exist; integrated is true only when the domain is actually imported and driven by pkg/insurance/casepack and/or pkg/insurance/caseroom (the Golden Cross-Domain Case's own drivers), not merely present with its own standalone tests; real_world_qualified is false for every row in this release, honestly, because no domain has real external qualification evidence yet.",
+  "domain_count": 29,
+  "summary": {
+    "implemented": 26,
+    "partial": 3,
+    "missing": 0,
+    "tested": 29,
+    "integrated_into_golden_case": 28,
+    "real_world_qualified": 0
+  },
+  "domains": [
+    {
+      "domain": "Policy",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy"
+      ],
+      "evidence": "policy.go: full lifecycle (Original/Endorsement/Amendment/Renewal/Special), versioning, effective-date resolution.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Coverage",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/coverage"
+      ],
+      "evidence": "coverage.go: coverage determination with guardrail-enforced no-opaque-confidence-score discipline.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Endorsement",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy"
+      ],
+      "evidence": "policy.Kind enum: KindEndorsement is one of five tracked policy-history kinds, covered by policy_test.go.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Insured",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/party"
+      ],
+      "evidence": "party.RoleInsured is a known role in the 45-role registry, used throughout casepack/golden.go.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Broker",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/party",
+        "pkg/insurance/caseroom"
+      ],
+      "evidence": "party.RoleBroker; the golden case's own broker relationship drives Case Room authorization.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Insurer",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/party",
+        "pkg/insurance/policy"
+      ],
+      "evidence": "party.RoleInsurer; policy/participation.go's co-insurance allocation is insurer-indexed.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Reinsurer",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/party",
+        "pkg/insurance/policy"
+      ],
+      "evidence": "party.RoleReinsurer; policy/participation.go models reinsurance participation shares.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "P&I Club",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/party"
+      ],
+      "evidence": "party.RolePAndIClub is a known role; used in the maritime-specific responsible-counterparty chain.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Surveyor",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/party",
+        "pkg/insurance/recovery"
+      ],
+      "evidence": "party.RoleSurveyor is a known role and appears in recovery.go's salvage/recovery workflow.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Claim",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/claim"
+      ],
+      "evidence": "claim.go: typed claim registry, status lifecycle, policy-version binding.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Notice",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy",
+        "pkg/insurance/timeline"
+      ],
+      "evidence": "policy.NoticeRequirements field; timeline.TypeNotice with a dedicated notice-before-incident conflict detector (category 10).",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Evidence",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/evidence"
+      ],
+      "evidence": "9-dimension Strength assessment, 7-value Status lifecycle, QualificationStatus translation layer, SourceIndependent check.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Causation",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/causation"
+      ],
+      "evidence": "causation.go, driven by casepack's golden case.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Quantum",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/quantum"
+      ],
+      "evidence": "Fixed-point (int64 minor units) calculation, deductible/limit application, discrepancy detection -- never float64.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Reserve",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/reserve"
+      ],
+      "evidence": "pkg/insurance/reserve (new, Round 8): versioned history (append-only Entry log), segregation-of-duties approval (proposer cannot approve their own amount), and pure Reconcile comparison against a quantum figure. Wired into the golden case's own attachReserve (casepack/golden.go): the reserve is set from the SAME QuantumWithSalvage figure attachSalvage computed, approved by a different party, and reconciles exactly.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Deductible",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy",
+        "pkg/insurance/quantum"
+      ],
+      "evidence": "policy.go carries the deductible; quantum.go applies it in fixed-point arithmetic.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Limit",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy",
+        "pkg/insurance/dispute"
+      ],
+      "evidence": "policy.go carries the limit; dispute.go references it in quantum-dispute scenarios.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Co-insurance",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy"
+      ],
+      "evidence": "policy/participation.go: Version.AllocateCoInsurance computes real per-insurer allocations from participation shares.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Reinsurance",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy"
+      ],
+      "evidence": "policy/participation.go models reinsurance participation alongside co-insurance in the same allocation structure.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Salvage",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/salvage"
+      ],
+      "evidence": "salvage.go, directly imported and driven by casepack/golden.go's Golden Cross-Domain Case.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Recovery",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/recovery"
+      ],
+      "evidence": "recovery.go's own unit tests still pass standalone, AND (Round 8) casepack/golden.go's attachRecovery now registers a REAL Target (the carrier, bailee-liability theory, citing real case evidence) -- the mechanism the base Drive() path always ran with nil targets is now exercised with real content on the golden case, proven identical across two independent runs by dossierverify's new golden_recovery_independent check.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Subrogation",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/recovery"
+      ],
+      "evidence": "Same root package and same Round 8 closure as Recovery above -- subrogation logic lives inside recovery.go and is now exercised with the same real Target.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Payment",
+      "status": "PARTIAL",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/policy"
+      ],
+      "evidence": "policy/participation.go's AllocateCoInsurance computes payment allocation amounts and is exercised by the golden case, but there is no PaymentStatus/PaymentRecord type anywhere in pkg/insurance -- no pending/paid/disputed lifecycle, no payment record separate from the allocation calculation itself.",
+      "gap_note": "Allocation math is real and integrated; a payment execution/status lifecycle on top of it does not exist yet.",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Dispute",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/dispute"
+      ],
+      "evidence": "dispute.go, driven by casepack's golden case.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Arbitration",
+      "status": "PARTIAL",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/dispute"
+      ],
+      "evidence": "dispute.StageArbitration and dispute.ArbitrationSeat model arbitration as one stage plus a seat field within the dispute-resolution lifecycle; there is no dedicated arbitration rules/award-computation engine.",
+      "gap_note": "This is likely correct BY DESIGN rather than a true gap: the work order's own \u00a7XV (Contract-First Insurance) requires VERIQO never to decide who wins a dispute -- only a human/legal decision-maker may. A full automated 'arbitration engine' that produced an award would violate that principle. Flagged here as a completeness-audit row per the requested format, not as a recommended build item.",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Dossier",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/dossier",
+        "pkg/insurance/dossierverify"
+      ],
+      "evidence": "dossier.go plus the Independent Dossier Verifier (cmd/veriqo-dossier-verify) that recomputes everything from raw inputs rather than trusting the producer.",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Case Room",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/caseroom"
+      ],
+      "evidence": "Fail-closed permissioned view, tenant/jurisdiction/scope authorization matrix, 8 adversarial tests, chained into the golden case (DriveGoldenWithCaseRoom).",
+      "gap_note": "",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Audit",
+      "status": "PARTIAL",
+      "tested": true,
+      "integrated": false,
+      "packages": [
+        "pkg/insurance/dossier"
+      ],
+      "evidence": "dossier.go carries its own AuditTrail concept, but grep for pkg/platform/audit imports anywhere under pkg/insurance/* returns zero matches -- the insurance domain's audit trail is not wired to the repository's shared platform audit subsystem (pkg/platform/audit, used by cmd/veriqo-node, cmd/veriqo-gateway, pkg/workflow, etc.).",
+      "gap_note": "Two audit mechanisms exist in the repository (dossier's own trail, and platform/audit) with no integration between them for the insurance domain -- a real, disclosed architectural gap, not a fabricated pass.",
+      "real_world_qualified": false
+    },
+    {
+      "domain": "Replay",
+      "status": "IMPLEMENTED",
+      "tested": true,
+      "integrated": true,
+      "packages": [
+        "pkg/insurance/casepack",
+        "pkg/insurance/caseroom"
+      ],
+      "evidence": "casepack/replay.go (GoldenColdReplay) and caseroom/golden.go (GoldenColdReplayWithCaseRoom) both prove live==cold-replayed state, including the case room authorization chain.",
+      "gap_note": "",
+      "real_world_qualified": false
+    }
+  ]
+}

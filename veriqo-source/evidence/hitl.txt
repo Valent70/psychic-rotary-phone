@@ -1,0 +1,5 @@
+gate: hitl
+command: go test ./pkg/governance/hitl/
+exit: 0
+---
+ok  	veriqo/pkg/governance/hitl	(cached)

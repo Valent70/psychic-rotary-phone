@@ -1,0 +1,41 @@
+# TrustContract — canonical, machine-readable description of the Trust
+# engine's callable surface. This file is the single source of truth:
+# veriqo/generator reads it and emits the CLI subcommands and Go SDK
+# bindings, so the CLI/SDK never hand-write a second copy of this
+# surface (per the API/SDK/CLI architecture doc's "one contract, many
+# derived artifacts" principle).
+engine: trust
+description: "Trust Governance Layer — Trust Policy -> Validator -> Rule -> Evidence -> Score -> Certificate"
+methods:
+  - name: evaluate
+    description: "Compute a trust score for a subject from win_rate/contradiction_rate evidence, without issuing a certificate."
+    params:
+      - name: subject_id
+        type: string
+      - name: win_rate
+        type: float
+      - name: contradiction_rate
+        type: float
+      - name: tick
+        type: uint
+    returns: TrustScore
+  - name: certify
+    description: "Evaluate, and issue a hash-chained TrustCertificate if the score clears the policy threshold."
+    params:
+      - name: subject_id
+        type: string
+      - name: win_rate
+        type: float
+      - name: contradiction_rate
+        type: float
+      - name: tick
+        type: uint
+    returns: TrustScore
+  - name: ledger
+    description: "Return the full hash-chained certificate history."
+    params: []
+    returns: TrustCertificateList
+  - name: verify_ledger
+    description: "Re-derive every certificate's hash and confirm chain linkage (tamper detection)."
+    params: []
+    returns: string

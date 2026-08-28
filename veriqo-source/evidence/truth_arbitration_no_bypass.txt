@@ -1,0 +1,8 @@
+gate: truth_arbitration_no_bypass
+command: internal:nobypass.Check
+exit: 0
+---
+{
+  "scanned_files": 311,
+  "violations": null
+}
