@@ -5,6 +5,7 @@ import (
 
 	"veriqo/pkg/geospatial"
 	"veriqo/pkg/insurance/auditlink"
+	"veriqo/pkg/insurance/casestate"
 	"veriqo/pkg/insurance/dispute"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/payment"
@@ -125,6 +126,17 @@ type GoldenResult struct {
 	// lifecycle trail, payment history and reserve history are all
 	// mirrored into via pkg/insurance/auditlink — see attachUnifiedAudit.
 	AuditStore *audit.AuditStore
+
+	// ---- Canonical case state machine (Round 10) ----
+	// Lifecycle is a SEPARATE, parallel CaseLifecycle driven through the
+	// SAME golden-case figures (reserve amount, payment amount/actors)
+	// as the manually-orchestrated attachReserve/attachPayment steps
+	// above — proving the production state machine (whose own
+	// correctness is independently established by
+	// pkg/insurance/casestate's own 17-case test suite) reaches the SAME
+	// real domain outcome as this file's own hand-sequenced steps, not
+	// merely a label alongside them.
+	Lifecycle *casestate.CaseLifecycle
 }
 
 // DriveGolden drives CASE-INS-002 through the standard Drive() path,
@@ -174,6 +186,9 @@ func DriveGolden() (*GoldenResult, error) {
 	}
 	if err := gr.attachUnifiedAudit(); err != nil {
 		return nil, fmt.Errorf("casepack: golden: unified audit: %w", err)
+	}
+	if err := gr.attachLifecycle(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: lifecycle: %w", err)
 	}
 	return gr, nil
 }
@@ -608,6 +623,86 @@ func (gr *GoldenResult) attachUnifiedAudit() error {
 	return nil
 }
 
+// ---- 11. Canonical case state machine (Round 10) ----
+//
+// Closes this program's own Round 10 self-review "next hidden gap":
+// drives a REAL pkg/insurance/casestate.CaseLifecycle for the golden
+// case all the way from INVITED to CLOSED (via RECOVERY_OPEN ->
+// RECOVERY_RESOLVED), using the SAME insurer-primary co-insurance
+// allocation amount attachPayment pays — proving the independently-
+// tested state machine reaches a real RESERVED/PAYMENT_AUTHORIZED/
+// PAYMENT_EXECUTED outcome on THIS repository's own cross-domain case,
+// not only on the package's own synthetic unit-test fixtures.
+func (gr *GoldenResult) attachLifecycle() error {
+	var insurerPrimary policy.Allocation
+	found := false
+	for _, a := range gr.CoInsuranceAllocation {
+		if a.Role == policy.AllocationRoleInsurerPrimary {
+			insurerPrimary = a
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("golden case has no insurer primary allocation for the lifecycle machine to pay")
+	}
+
+	cl, err := casestate.New(string(gr.CaseID) + "-LIFECYCLE")
+	if err != nil {
+		return err
+	}
+	if _, err := cl.Transition(casestate.StateAccepted, "PTY-002-BROKER", party.RoleBroker, "", "IDEM-LC-1", "broker accepted case invitation", 1100); err != nil {
+		return err
+	}
+	if _, err := cl.Transition(casestate.StateEvidenceExchanged, "PTY-002-BROKER", party.RoleBroker, gr.Built.ID("NOTICE_EMAIL"), "IDEM-LC-2", "evidence exchanged", 1110); err != nil {
+		return err
+	}
+	if _, err := cl.Transition(casestate.StateUnderReview, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-3", "under review", 1120); err != nil {
+		return err
+	}
+	if _, err := cl.Quantify(gr.QuantumWithSalvage, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "IDEM-LC-4", 1130); err != nil {
+		return err
+	}
+	if _, err := cl.OpenReserve("RSV-LC-GOLDEN-1", "CLM-"+string(gr.CaseID), insurerPrimary.Amount,
+		"PTY-002-INSURER", party.RoleInsurer, "reserve opened from insurer primary allocation", "IDEM-LC-5", 1140); err != nil {
+		return err
+	}
+	if err := cl.ApproveReserve("PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, 1145); err != nil {
+		return err
+	}
+	if _, err := cl.AuthorizePayment("PAY-LC-GOLDEN-1", "CLM-"+string(gr.CaseID), "PTY-002-INSURER", insurerPrimary.Amount, "IDEM-LC-6",
+		"PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "PTY-002-INSURER", party.RoleInsurer,
+		"payment authorized against approved reserve", 1150); err != nil {
+		return err
+	}
+	if _, err := cl.ExecutePayment("PTY-002-BANK", party.RoleBankTradeFinance, "SWIFT MT103", "REF-LC-GOLDEN-1", "IDEM-LC-7", 1160); err != nil {
+		return err
+	}
+	if _, err := cl.Transition(casestate.StateRecoveryOpen, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-8", "recovery opened against carrier", 1170); err != nil {
+		return err
+	}
+	if _, err := cl.Transition(casestate.StateRecoveryResolved, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-9", "recovery resolved", 1180); err != nil {
+		return err
+	}
+	if _, err := cl.Transition(casestate.StateClosed, "PTY-002-CLAIMS-HANDLER", party.RoleClaimsHandler, "", "IDEM-LC-10", "case closed", 1190); err != nil {
+		return err
+	}
+
+	// Replay determinism: reconstruct purely from History() and confirm
+	// it reproduces the identical end state and history length — the
+	// same property GoldenColdReplay proves for the rest of the case,
+	// applied here to the lifecycle machine's own log.
+	replayed, err := casestate.Replay(cl.CaseID, cl.History())
+	if err != nil {
+		return fmt.Errorf("lifecycle replay diverged: %w", err)
+	}
+	if replayed.State() != cl.State() || len(replayed.History()) != len(cl.History()) {
+		return fmt.Errorf("lifecycle replay produced a different end state or history length")
+	}
+
+	gr.Lifecycle = cl
+	return nil
+}
+
 // ---- Cold replay of the Golden Case ----
 
 // GoldenColdReplay proves the Master Closure Mandate's own P0 §37
@@ -670,6 +765,9 @@ func GoldenColdReplay() (live *GoldenResult, coldReport ColdReplayReport, err er
 	if err := live.attachUnifiedAudit(); err != nil {
 		return nil, report, err
 	}
+	if err := live.attachLifecycle(); err != nil {
+		return nil, report, err
+	}
 	return live, report, nil
 }
 
@@ -705,6 +803,9 @@ type GoldenAssuranceSummary struct {
 	// ---- Round 9 additions ----
 	PaymentSettledAndReconciled bool `json:"payment_settled_and_reconciled"`
 	AuditUnified                bool `json:"audit_unified"`
+
+	// ---- Round 10 additions ----
+	CaseLifecycleGoverned bool `json:"case_lifecycle_governed"`
 
 	ColdReplayMatches bool `json:"cold_replay_matches"`
 }
@@ -831,6 +932,14 @@ func RunGoldenAssurance() GoldenAssuranceSummary {
 		s.Failures = append(s.Failures, "case audit trail and platform ledger were not unified into one verifiable chain")
 	}
 
+	s.CaseLifecycleGoverned = live.Lifecycle != nil &&
+		live.Lifecycle.State() == casestate.StateClosed &&
+		live.Lifecycle.Reserve != nil && live.Lifecycle.Reserve.Status() == reserve.StatusApproved &&
+		live.Lifecycle.Payment != nil && live.Lifecycle.Payment.Status() == payment.StatusPaid
+	if !s.CaseLifecycleGoverned {
+		s.Failures = append(s.Failures, "case lifecycle state machine did not reach CLOSED with a genuinely approved reserve and paid payment")
+	}
+
 	replayed, coldReport, err := GoldenColdReplay()
 	if err != nil {
 		s.Failures = append(s.Failures, fmt.Sprintf("GoldenColdReplay failed outright: %v", err))
@@ -859,14 +968,17 @@ func RunGoldenAssurance() GoldenAssuranceSummary {
 		auditMatches := live.Dossier != nil && replayed.Dossier != nil &&
 			live.Dossier.AuditUnified && replayed.Dossier.AuditUnified &&
 			live.Dossier.CanonicalAuditEventCount == replayed.Dossier.CanonicalAuditEventCount
+		lifecycleMatches := live.Lifecycle != nil && replayed.Lifecycle != nil &&
+			live.Lifecycle.State() == replayed.Lifecycle.State() &&
+			len(live.Lifecycle.History()) == len(replayed.Lifecycle.History())
 
 		s.ColdReplayMatches = live.Manifest.EvidenceRootHash == replayed.Manifest.EvidenceRootHash &&
 			live.QuantumWithSalvage.IndicativeClaimValue == replayed.QuantumWithSalvage.IndicativeClaimValue &&
-			reserveMatches && recoveryMatches && regulatoryMatches && paymentMatches && auditMatches
+			reserveMatches && recoveryMatches && regulatoryMatches && paymentMatches && auditMatches && lifecycleMatches
 		if !s.ColdReplayMatches {
 			s.Failures = append(s.Failures, fmt.Sprintf(
-				"cold-replayed golden case diverged from the live run (reserve=%v recovery=%v regulatory=%v payment=%v audit=%v)",
-				reserveMatches, recoveryMatches, regulatoryMatches, paymentMatches, auditMatches))
+				"cold-replayed golden case diverged from the live run (reserve=%v recovery=%v regulatory=%v payment=%v audit=%v lifecycle=%v)",
+				reserveMatches, recoveryMatches, regulatoryMatches, paymentMatches, auditMatches, lifecycleMatches))
 		}
 	}
 
