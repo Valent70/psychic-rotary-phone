@@ -247,7 +247,7 @@ func TestRegistryByRecoveryStatus(t *testing.T) {
 	if got := reg.ByRecoveryStatus(RecoveryStatusIdentified); len(got) != 1 {
 		t.Fatalf("expected 1 identified target, got %d", len(got))
 	}
-	if err := reg.SetRecoveryStatus("RT-001", RecoveryStatusPursuing); err != nil {
+	if err := reg.SetRecoveryStatus("RT-001", RecoveryStatusPursuing, "PTY-1", 10); err != nil {
 		t.Fatalf("SetRecoveryStatus: %v", err)
 	}
 	if got := reg.ByRecoveryStatus(RecoveryStatusIdentified); len(got) != 0 {
@@ -262,14 +262,14 @@ func TestSetRecoveryStatusRejectsUnknown(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
-	if err := reg.SetRecoveryStatus("RT-001", RecoveryStatus("BOGUS")); !errors.Is(err, ErrUnknownRecoveryStatus) {
+	if err := reg.SetRecoveryStatus("RT-001", RecoveryStatus("BOGUS"), "PTY-1", 10); !errors.Is(err, ErrUnknownRecoveryStatus) {
 		t.Fatalf("expected ErrUnknownRecoveryStatus, got %v", err)
 	}
 }
 
 func TestSetRecoveryStatusRejectsUnknownTarget(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
-	if err := reg.SetRecoveryStatus("RT-999", RecoveryStatusPursuing); !errors.Is(err, ErrTargetNotFound) {
+	if err := reg.SetRecoveryStatus("RT-999", RecoveryStatusPursuing, "PTY-1", 10); !errors.Is(err, ErrTargetNotFound) {
 		t.Fatalf("expected ErrTargetNotFound, got %v", err)
 	}
 }
@@ -278,7 +278,7 @@ func TestSetNoticeStatus(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
-	if err := reg.SetNoticeStatus("RT-001", NoticeStatusSent); err != nil {
+	if err := reg.SetNoticeStatus("RT-001", NoticeStatusSent, "PTY-1", 10); err != nil {
 		t.Fatalf("SetNoticeStatus: %v", err)
 	}
 	got, _ := reg.Get("RT-001")
@@ -291,7 +291,7 @@ func TestSetNoticeStatusRejectsUnknown(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
-	if err := reg.SetNoticeStatus("RT-001", NoticeStatus("BOGUS")); !errors.Is(err, ErrUnknownNoticeStatus) {
+	if err := reg.SetNoticeStatus("RT-001", NoticeStatus("BOGUS"), "PTY-1", 10); !errors.Is(err, ErrUnknownNoticeStatus) {
 		t.Fatalf("expected ErrUnknownNoticeStatus, got %v", err)
 	}
 }
@@ -300,7 +300,7 @@ func TestSetLimitationStatusDirect(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
-	if err := reg.SetLimitationStatus("RT-001", LimitationExpired); err != nil {
+	if err := reg.SetLimitationStatus("RT-001", LimitationExpired, "PTY-1", 10); err != nil {
 		t.Fatalf("SetLimitationStatus: %v", err)
 	}
 	got, _ := reg.Get("RT-001")
@@ -313,7 +313,7 @@ func TestSetLimitationStatusRejectsUnknown(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
-	if err := reg.SetLimitationStatus("RT-001", LimitationStatus("BOGUS")); !errors.Is(err, ErrUnknownLimitationStatus) {
+	if err := reg.SetLimitationStatus("RT-001", LimitationStatus("BOGUS"), "PTY-1", 10); !errors.Is(err, ErrUnknownLimitationStatus) {
 		t.Fatalf("expected ErrUnknownLimitationStatus, got %v", err)
 	}
 }
@@ -344,7 +344,7 @@ func TestAddSupportingEvidence(t *testing.T) {
 		t.Fatalf("insuranceevidence.New: %v", err)
 	}
 
-	if err := reg.AddSupportingEvidence("RT-001", rec.EvidenceID()); err != nil {
+	if err := reg.AddSupportingEvidence("RT-001", rec.EvidenceID(), "PTY-1", 10); err != nil {
 		t.Fatalf("AddSupportingEvidence: %v", err)
 	}
 	got, _ := reg.Get("RT-001")
@@ -357,14 +357,14 @@ func TestAddSupportingEvidenceRejectsEmpty(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
-	if err := reg.AddSupportingEvidence("RT-001", ""); !errors.Is(err, ErrEmptyEvidenceID) {
+	if err := reg.AddSupportingEvidence("RT-001", "", "PTY-1", 10); !errors.Is(err, ErrEmptyEvidenceID) {
 		t.Fatalf("expected ErrEmptyEvidenceID, got %v", err)
 	}
 }
 
 func TestAddSupportingEvidenceRejectsUnknownTarget(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
-	if err := reg.AddSupportingEvidence("RT-999", "EV-1"); !errors.Is(err, ErrTargetNotFound) {
+	if err := reg.AddSupportingEvidence("RT-999", "EV-1", "PTY-1", 10); !errors.Is(err, ErrTargetNotFound) {
 		t.Fatalf("expected ErrTargetNotFound, got %v", err)
 	}
 }
@@ -429,7 +429,7 @@ func TestRegistryRefreshLimitationStatus(t *testing.T) {
 	tgt, _ := New("RT-001", "CASE-1", "PTY-1", validBasis(), validMoney())
 	reg.Register(tgt)
 
-	if err := reg.SetLimitationDeadline("RT-001", 1000); err != nil {
+	if err := reg.SetLimitationDeadline("RT-001", 1000, "PTY-1", 10); err != nil {
 		t.Fatalf("SetLimitationDeadline: %v", err)
 	}
 
@@ -474,7 +474,7 @@ func TestRegistryRefreshLimitationStatusRejectsUnknownTarget(t *testing.T) {
 
 func TestSetLimitationDeadlineRejectsUnknownTarget(t *testing.T) {
 	reg, _ := NewRegistry("CASE-1")
-	if err := reg.SetLimitationDeadline("RT-999", 100); !errors.Is(err, ErrTargetNotFound) {
+	if err := reg.SetLimitationDeadline("RT-999", 100, "PTY-1", 10); !errors.Is(err, ErrTargetNotFound) {
 		t.Fatalf("expected ErrTargetNotFound, got %v", err)
 	}
 }
@@ -713,13 +713,13 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 				t.Errorf("Register(%s): %v", id, err)
 				return
 			}
-			if err := reg.SetNoticeStatus(id, NoticeStatusSent); err != nil {
+			if err := reg.SetNoticeStatus(id, NoticeStatusSent, "PTY-1", 10); err != nil {
 				t.Errorf("SetNoticeStatus(%s): %v", id, err)
 			}
-			if err := reg.SetRecoveryStatus(id, RecoveryStatusPursuing); err != nil {
+			if err := reg.SetRecoveryStatus(id, RecoveryStatusPursuing, "PTY-1", 10); err != nil {
 				t.Errorf("SetRecoveryStatus(%s): %v", id, err)
 			}
-			if err := reg.AddSupportingEvidence(id, "EV-CONCURRENT"); err != nil {
+			if err := reg.AddSupportingEvidence(id, "EV-CONCURRENT", "PTY-1", 10); err != nil {
 				t.Errorf("AddSupportingEvidence(%s): %v", id, err)
 			}
 			_ = reg.Count()

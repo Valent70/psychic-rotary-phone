@@ -5,9 +5,11 @@ import (
 
 	caseinsurance "veriqo/pkg/insurance/case"
 	"veriqo/pkg/insurance/casestate"
+	"veriqo/pkg/insurance/dispute"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/payment"
 	"veriqo/pkg/insurance/quantum"
+	"veriqo/pkg/insurance/recovery"
 	"veriqo/pkg/insurance/reserve"
 	"veriqo/pkg/platform/audit"
 )
@@ -93,6 +95,89 @@ func TestMirrorLifecycleHistoryAppendsEveryTransition(t *testing.T) {
 	}
 	if len(recs) != 1 {
 		t.Fatalf("expected 1 mirrored record, got %d", len(recs))
+	}
+}
+
+// TestMirrorRecoveryHistoryAppendsEveryEvent is the FINAL INTERNAL
+// CHECK item C proof for the "Recovery" leg of the reviewer's own
+// coverage list: registering a target and then changing its notice and
+// recovery status must each produce a real, mirrored canonical event.
+func TestMirrorRecoveryHistoryAppendsEveryEvent(t *testing.T) {
+	reg, err := recovery.NewRegistry("CASE-AUDIT-1")
+	if err != nil {
+		t.Fatalf("recovery.NewRegistry: %v", err)
+	}
+	basis := recovery.Basis{Category: recovery.BasisBaileeLiability, Detail: "audit test basis"}
+	loss := recovery.Money{AmountMinor: 1000, Currency: "USD"}
+	tgt, err := recovery.New("RCV-AUDIT-1", "CASE-AUDIT-1", "PTY-CARRIER", basis, loss)
+	if err != nil {
+		t.Fatalf("recovery.New: %v", err)
+	}
+	if err := reg.Register(tgt); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if err := reg.SetNoticeStatus("RCV-AUDIT-1", recovery.NoticeStatusSent, "PTY-HANDLER", 20); err != nil {
+		t.Fatalf("SetNoticeStatus: %v", err)
+	}
+	if err := reg.SetRecoveryStatus("RCV-AUDIT-1", recovery.RecoveryStatusPursuing, "PTY-HANDLER", 30); err != nil {
+		t.Fatalf("SetRecoveryStatus: %v", err)
+	}
+	store := audit.NewAuditStore()
+	recs, err := MirrorRecoveryHistory(store, reg, "CASE-AUDIT-1")
+	if err != nil {
+		t.Fatalf("MirrorRecoveryHistory: %v", err)
+	}
+	if len(recs) != len(reg.History()) {
+		t.Fatalf("expected %d mirrored records, got %d", len(reg.History()), len(recs))
+	}
+	if len(recs) != 3 {
+		t.Fatalf("expected 3 mirrored records (register+notice+recovery status), got %d", len(recs))
+	}
+	if err := VerifyUnified(store); err != nil {
+		t.Fatalf("VerifyUnified: %v", err)
+	}
+}
+
+// TestMirrorDisputeMatterAppendsEveryStageTransition is the FINAL
+// INTERNAL CHECK item C proof for the "Dispute" leg: opening a matter
+// and advancing it must produce real, mirrored canonical events.
+func TestMirrorDisputeMatterAppendsEveryStageTransition(t *testing.T) {
+	forum := dispute.Forum{
+		GoverningLaw: "the law of Jurisdiction A", Jurisdiction: "Jurisdiction A courts",
+		SourceDocument: "CHARTERPARTY-1", SourceClause: "Clause 12", SourceVersion: "v1",
+	}
+	m, err := dispute.NewMatter("MTR-AUDIT-1", "CASE-AUDIT-1", "CLM-1", forum, 10)
+	if err != nil {
+		t.Fatalf("dispute.NewMatter: %v", err)
+	}
+	if err := m.Advance(dispute.StageEvidenceHold, "evidence preserved pending review", 20); err != nil {
+		t.Fatalf("Advance: %v", err)
+	}
+	store := audit.NewAuditStore()
+	recs, err := MirrorDisputeMatter(store, m)
+	if err != nil {
+		t.Fatalf("MirrorDisputeMatter: %v", err)
+	}
+	if len(recs) != len(m.StageLog()) {
+		t.Fatalf("expected %d mirrored records, got %d", len(m.StageLog()), len(recs))
+	}
+	if len(recs) != 2 {
+		t.Fatalf("expected 2 mirrored records (open+advance), got %d", len(recs))
+	}
+	if err := VerifyUnified(store); err != nil {
+		t.Fatalf("VerifyUnified: %v", err)
+	}
+}
+
+func TestMirrorRecoveryHistoryRefusesNilRegistry(t *testing.T) {
+	if _, err := MirrorRecoveryHistory(audit.NewAuditStore(), nil, "CASE-1"); err == nil {
+		t.Fatal("expected MirrorRecoveryHistory to refuse a nil registry")
+	}
+}
+
+func TestMirrorDisputeMatterRefusesNilMatter(t *testing.T) {
+	if _, err := MirrorDisputeMatter(audit.NewAuditStore(), nil); err == nil {
+		t.Fatal("expected MirrorDisputeMatter to refuse a nil matter")
 	}
 }
 

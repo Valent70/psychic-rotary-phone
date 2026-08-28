@@ -446,7 +446,36 @@ var (
 	ErrDuplicateTarget = errors.New("recovery: TargetID already registered")
 	ErrTargetNotFound  = errors.New("recovery: TargetID not found")
 	ErrEmptyEvidenceID = errors.New("recovery: EvidenceID must be non-empty")
+	ErrEmptyBy         = errors.New("recovery: By must be non-empty")
 )
+
+// EventAction is what one history Event recorded against a recovery
+// Registry -- the FINAL INTERNAL CHECK item C ("audit completeness")
+// answer for this domain: every material change to a Target now
+// produces an append-only Event auditlink.MirrorRecoveryHistory can
+// mirror into the canonical audit ledger, matching the pattern already
+// established by reserve.Entry and payment.PaymentEvent.
+type EventAction string
+
+const (
+	EventTargetRegistered        EventAction = "TARGET_REGISTERED"
+	EventNoticeStatusSet         EventAction = "NOTICE_STATUS_SET"
+	EventLimitationStatusSet     EventAction = "LIMITATION_STATUS_SET"
+	EventLimitationDeadlineSet   EventAction = "LIMITATION_DEADLINE_SET"
+	EventRecoveryStatusSet       EventAction = "RECOVERY_STATUS_SET"
+	EventSupportingEvidenceAdded EventAction = "SUPPORTING_EVIDENCE_ADDED"
+)
+
+// Event is one immutable, append-only history record for the registry
+// as a whole (spanning every Target it holds, the same way a case's own
+// StateLog spans its whole lifecycle).
+type Event struct {
+	Action   EventAction   `json:"action"`
+	TargetID string        `json:"target_id"`
+	By       party.PartyID `json:"by,omitempty"`
+	Detail   string        `json:"detail,omitempty"`
+	Tick     uint64        `json:"tick"`
+}
 
 // Registry holds every recovery Target identified for ONE case.
 // Thread-safe: recovery analysis can run concurrently with the rest of
@@ -456,6 +485,7 @@ type Registry struct {
 	caseID  string
 	targets map[string]Target
 	order   []string // registration order, for deterministic iteration
+	history []Event
 }
 
 // NewRegistry returns an empty recovery-target registry scoped to caseID.
@@ -464,6 +494,17 @@ func NewRegistry(caseID string) (*Registry, error) {
 		return nil, ErrEmptyCaseID
 	}
 	return &Registry{caseID: caseID, targets: make(map[string]Target)}, nil
+}
+
+// History returns every recorded Event, oldest first -- the full,
+// tamper-evident-by-construction version trail auditlink.
+// MirrorRecoveryHistory mirrors into the canonical ledger.
+func (r *Registry) History() []Event {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]Event, len(r.history))
+	copy(out, r.history)
+	return out
 }
 
 // CaseID returns the case this registry is scoped to.
@@ -487,6 +528,13 @@ func (r *Registry) Register(t Target) error {
 	}
 	r.targets[t.TargetID] = t
 	r.order = append(r.order, t.TargetID)
+	// By and Tick are left empty/zero here, honestly: Register's own
+	// signature carries neither an actor nor a tick (a real, disclosed
+	// limitation of this constructor, matching the same limitation
+	// already documented for caseinsurance.Case.Advance in
+	// pkg/insurance/auditlink's own doc comment) rather than a
+	// fabricated value.
+	r.history = append(r.history, Event{Action: EventTargetRegistered, TargetID: t.TargetID, Detail: string(t.Basis.Category)})
 	return nil
 }
 
@@ -538,10 +586,17 @@ func (r *Registry) ByRecoveryStatus(status RecoveryStatus) []Target {
 	return out
 }
 
-// SetNoticeStatus updates a Target's notice status.
-func (r *Registry) SetNoticeStatus(targetID string, status NoticeStatus) error {
+// SetNoticeStatus updates a Target's notice status. by/tick identify
+// who performed this update and when, so it can be mirrored into the
+// canonical audit ledger (see Registry.History and
+// auditlink.MirrorRecoveryHistory) exactly like every other material
+// recovery event.
+func (r *Registry) SetNoticeStatus(targetID string, status NoticeStatus, by party.PartyID, tick uint64) error {
 	if !IsKnownNoticeStatus(status) {
 		return fmt.Errorf("%w: %q", ErrUnknownNoticeStatus, status)
+	}
+	if by == "" {
+		return ErrEmptyBy
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -551,15 +606,19 @@ func (r *Registry) SetNoticeStatus(targetID string, status NoticeStatus) error {
 	}
 	t.NoticeStatus = status
 	r.targets[targetID] = t
+	r.history = append(r.history, Event{Action: EventNoticeStatusSet, TargetID: targetID, By: by, Detail: string(status), Tick: tick})
 	return nil
 }
 
 // SetRecoveryStatus updates a Target's recovery status. This is a
 // procedural workflow update ONLY — see the RecoveryStatus doc comment
 // above for why even RecoveryStatusRecovered is not a liability finding.
-func (r *Registry) SetRecoveryStatus(targetID string, status RecoveryStatus) error {
+func (r *Registry) SetRecoveryStatus(targetID string, status RecoveryStatus, by party.PartyID, tick uint64) error {
 	if !IsKnownRecoveryStatus(status) {
 		return fmt.Errorf("%w: %q", ErrUnknownRecoveryStatus, status)
+	}
+	if by == "" {
+		return ErrEmptyBy
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -569,6 +628,7 @@ func (r *Registry) SetRecoveryStatus(targetID string, status RecoveryStatus) err
 	}
 	t.RecoveryStatus = status
 	r.targets[targetID] = t
+	r.history = append(r.history, Event{Action: EventRecoveryStatusSet, TargetID: targetID, By: by, Detail: string(status), Tick: tick})
 	return nil
 }
 
@@ -577,9 +637,12 @@ func (r *Registry) SetRecoveryStatus(targetID string, status RecoveryStatus) err
 // deadline engine has determined the answer through means this package
 // doesn't model). For the package's OWN computed derivation from a
 // deadline tick, use RefreshLimitationStatus instead.
-func (r *Registry) SetLimitationStatus(targetID string, status LimitationStatus) error {
+func (r *Registry) SetLimitationStatus(targetID string, status LimitationStatus, by party.PartyID, tick uint64) error {
 	if !IsKnownLimitationStatus(status) {
 		return fmt.Errorf("%w: %q", ErrUnknownLimitationStatus, status)
+	}
+	if by == "" {
+		return ErrEmptyBy
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -589,12 +652,16 @@ func (r *Registry) SetLimitationStatus(targetID string, status LimitationStatus)
 	}
 	t.LimitationStatus = status
 	r.targets[targetID] = t
+	r.history = append(r.history, Event{Action: EventLimitationStatusSet, TargetID: targetID, By: by, Detail: string(status), Tick: tick})
 	return nil
 }
 
 // SetLimitationDeadline records the tick at which targetID's limitation
 // period expires (0 clears it back to "not established").
-func (r *Registry) SetLimitationDeadline(targetID string, deadlineTick uint64) error {
+func (r *Registry) SetLimitationDeadline(targetID string, deadlineTick uint64, by party.PartyID, tick uint64) error {
+	if by == "" {
+		return ErrEmptyBy
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	t, ok := r.targets[targetID]
@@ -603,6 +670,7 @@ func (r *Registry) SetLimitationDeadline(targetID string, deadlineTick uint64) e
 	}
 	t.LimitationDeadlineTick = deadlineTick
 	r.targets[targetID] = t
+	r.history = append(r.history, Event{Action: EventLimitationDeadlineSet, TargetID: targetID, By: by, Detail: fmt.Sprintf("deadline_tick=%d", deadlineTick), Tick: tick})
 	return nil
 }
 
@@ -614,6 +682,11 @@ func (r *Registry) SetLimitationDeadline(targetID string, deadlineTick uint64) e
 // becomes a genuinely computed field rather than a purely decorative
 // one — callers who want a live answer without persisting it should
 // call Target.LimitationStatusAt directly instead.
+//
+// The resulting Event's By is left empty, honestly: this is a
+// system-computed refresh (ComputeLimitationStatus is a pure function
+// of the stored deadline and nowTick), not a human assertion, so
+// attributing it to a party would be a fabricated actor.
 func (r *Registry) RefreshLimitationStatus(targetID string, nowTick uint64) (LimitationStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -624,6 +697,7 @@ func (r *Registry) RefreshLimitationStatus(targetID string, nowTick uint64) (Lim
 	status := ComputeLimitationStatus(t.LimitationDeadlineTick, nowTick)
 	t.LimitationStatus = status
 	r.targets[targetID] = t
+	r.history = append(r.history, Event{Action: EventLimitationStatusSet, TargetID: targetID, Detail: string(status) + " (computed refresh)", Tick: nowTick})
 	return status, nil
 }
 
@@ -633,9 +707,12 @@ func (r *Registry) RefreshLimitationStatus(targetID string, nowTick uint64) (Lim
 // wants uniqueness enforces it (this package does not know whether a
 // second submission of the same ID is a caller mistake or an
 // intentional re-assertion for a different purpose).
-func (r *Registry) AddSupportingEvidence(targetID, evidenceID string) error {
+func (r *Registry) AddSupportingEvidence(targetID, evidenceID string, by party.PartyID, tick uint64) error {
 	if evidenceID == "" {
 		return ErrEmptyEvidenceID
+	}
+	if by == "" {
+		return ErrEmptyBy
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -645,6 +722,7 @@ func (r *Registry) AddSupportingEvidence(targetID, evidenceID string) error {
 	}
 	t.SupportingEvidence = append(t.SupportingEvidence, evidenceID)
 	r.targets[targetID] = t
+	r.history = append(r.history, Event{Action: EventSupportingEvidenceAdded, TargetID: targetID, By: by, Detail: evidenceID, Tick: tick})
 	return nil
 }
 

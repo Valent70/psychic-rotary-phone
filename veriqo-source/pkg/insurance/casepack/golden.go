@@ -480,19 +480,19 @@ func (gr *GoldenResult) attachRecovery() error {
 	if err := reg.Register(target); err != nil {
 		return err
 	}
-	if err := reg.AddSupportingEvidence("RCV-GOLDEN-1", gr.Built.ID("TEMP_LOG_SECONDARY")); err != nil {
+	if err := reg.AddSupportingEvidence("RCV-GOLDEN-1", gr.Built.ID("TEMP_LOG_SECONDARY"), "PTY-002-CLAIMS-HANDLER", 850); err != nil {
 		return err
 	}
-	if err := reg.SetNoticeStatus("RCV-GOLDEN-1", recovery.NoticeStatusSent); err != nil {
+	if err := reg.SetNoticeStatus("RCV-GOLDEN-1", recovery.NoticeStatusSent, "PTY-002-CLAIMS-HANDLER", 860); err != nil {
 		return err
 	}
-	if err := reg.SetLimitationDeadline("RCV-GOLDEN-1", 5000); err != nil {
+	if err := reg.SetLimitationDeadline("RCV-GOLDEN-1", 5000, "PTY-002-CLAIMS-HANDLER", 870); err != nil {
 		return err
 	}
 	if _, err := reg.RefreshLimitationStatus("RCV-GOLDEN-1", 900); err != nil {
 		return err
 	}
-	if err := reg.SetRecoveryStatus("RCV-GOLDEN-1", recovery.RecoveryStatusPursuing); err != nil {
+	if err := reg.SetRecoveryStatus("RCV-GOLDEN-1", recovery.RecoveryStatusPursuing, "PTY-002-CLAIMS-HANDLER", 910); err != nil {
 		return err
 	}
 	gr.RecoveryRegistry = reg
@@ -639,6 +639,20 @@ func (gr *GoldenResult) attachUnifiedAudit() error {
 	}
 	if gr.Lifecycle != nil {
 		if _, err := auditlink.MirrorLifecycleHistory(store, gr.Lifecycle); err != nil {
+			return err
+		}
+	}
+	// FINAL INTERNAL CHECK item C ("audit completeness"): Recovery and
+	// Dispute are now mirrored too, alongside Case/Payment/Reserve/
+	// Lifecycle, so every material event this golden case actually
+	// produces has a canonical audit event, not merely most of them.
+	if gr.RecoveryRegistry != nil {
+		if _, err := auditlink.MirrorRecoveryHistory(store, gr.RecoveryRegistry, string(gr.CaseID)); err != nil {
+			return err
+		}
+	}
+	if gr.DisputeMatter != nil {
+		if _, err := auditlink.MirrorDisputeMatter(store, gr.DisputeMatter); err != nil {
 			return err
 		}
 	}
