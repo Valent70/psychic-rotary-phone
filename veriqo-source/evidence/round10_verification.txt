@@ -1,0 +1,555 @@
+=== Round 10 (L99 Level 3 assessment) verification — 2026-08-28T05:01:54Z ===
+
+--- go build/vet/gofmt/zero-dep/test -race -cover/race-repeat (scripts/verify.sh) ---
+== 1/6  go build ./... ==
+== 2/6  go vet ./... ==
+== 3/6  gofmt (must produce no output) ==
+== 4/6  zero-external-dependency invariant ==
+== 5/6  go test ./... -race -cover ==
+	veriqo/cmd/veriqo-cold-replay		coverage: 0.0% of statements
+ok  	veriqo/cmd/veriqo-demo	(cached)	coverage: 82.4% of statements
+	veriqo/cmd/veriqo-dossier-verify		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-gateway		coverage: 0.0% of statements
+ok  	veriqo/cmd/veriqo-insurance-cold-replay	1.075s	coverage: 46.4% of statements
+	veriqo/cmd/veriqo-kernel-demo		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-live-demo		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-node		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-plugin-shim		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-qualification		coverage: 0.0% of statements
+ok  	veriqo/cmd/veriqo-readiness	1.681s	coverage: 12.5% of statements
+	veriqo/cmd/veriqo-release-keygen		coverage: 0.0% of statements
+ok  	veriqo/cmd/veriqo-requirements	(cached)	coverage: 61.4% of statements
+	veriqo/cmd/veriqo-rwc-v2		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-scale-node		coverage: 0.0% of statements
+ok  	veriqo/cmd/veriqo-soak-report	(cached)	coverage: 84.0% of statements
+ok  	veriqo/cmd/veriqo-soak-run	(cached)	coverage: 84.9% of statements
+ok  	veriqo/cmd/veriqo-soak-verify	(cached)	coverage: 87.0% of statements
+	veriqo/cmd/veriqo-testrunner		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-verify		coverage: 0.0% of statements
+	veriqo/cmd/veriqo-verify-release		coverage: 0.0% of statements
+ok  	veriqo/cmd/veriqo-verify-release-identity	(cached)	coverage: 74.3% of statements
+ok  	veriqo/internal/assurance	(cached)	coverage: 91.2% of statements
+ok  	veriqo/internal/determinism	(cached)	coverage: 78.6% of statements
+ok  	veriqo/internal/entrypoints	1.283s	coverage: 82.3% of statements
+ok  	veriqo/internal/environment	(cached)	coverage: 82.9% of statements
+ok  	veriqo/internal/nobypass	2.318s	coverage: 85.2% of statements
+ok  	veriqo/internal/reproducibility	24.618s	coverage: 91.7% of statements
+ok  	veriqo/internal/sbom	(cached)	coverage: 81.2% of statements
+ok  	veriqo/internal/sourcehash	(cached)	coverage: 87.2% of statements
+ok  	veriqo/internal/telemetrycoverage	(cached)	coverage: 85.7% of statements
+ok  	veriqo/internal/timestamp	(cached)	coverage: 96.3% of statements
+ok  	veriqo/internal/version	(cached)	coverage: [no statements]
+ok  	veriqo/pkg/api	(cached)	coverage: 83.9% of statements
+ok  	veriqo/pkg/authz	(cached)	coverage: 83.6% of statements
+ok  	veriqo/pkg/blockers	(cached)	coverage: 86.3% of statements
+ok  	veriqo/pkg/blockers/dr	(cached)	coverage: 82.9% of statements
+ok  	veriqo/pkg/blockers/hsmkms	(cached)	coverage: 67.7% of statements
+ok  	veriqo/pkg/blockers/livedata	(cached)	coverage: 85.7% of statements
+	veriqo/pkg/blockers/orchestrator		coverage: 0.0% of statements
+ok  	veriqo/pkg/blockers/pentest	6.165s	coverage: 81.0% of statements
+ok  	veriqo/pkg/blockers/scale	49.893s	coverage: 90.5% of statements
+ok  	veriqo/pkg/blockers/soak	(cached)	coverage: 88.6% of statements
+ok  	veriqo/pkg/blockers/spiffe	(cached)	coverage: 81.7% of statements
+ok  	veriqo/pkg/blockers/supplychain	1.055s	coverage: 86.2% of statements
+ok  	veriqo/pkg/canonical	(cached)	coverage: 80.1% of statements
+ok  	veriqo/pkg/chaos	(cached)	coverage: 92.4% of statements
+ok  	veriqo/pkg/cluster	(cached)	coverage: 67.6% of statements
+ok  	veriqo/pkg/connector	(cached)	coverage: 81.8% of statements
+ok  	veriqo/pkg/connector/aisstream	(cached)	coverage: 92.1% of statements
+ok  	veriqo/pkg/connector/bol	(cached)	coverage: 90.1% of statements
+ok  	veriqo/pkg/connector/insurance	(cached)	coverage: 88.3% of statements
+ok  	veriqo/pkg/connector/payment	(cached)	coverage: 90.1% of statements
+ok  	veriqo/pkg/connector/sar	(cached)	coverage: 83.1% of statements
+ok  	veriqo/pkg/connector/ssrfguard	(cached)	coverage: 80.6% of statements
+ok  	veriqo/pkg/consensus/raftlite	(cached)	coverage: 82.4% of statements
+ok  	veriqo/pkg/core	(cached)	coverage: 81.2% of statements
+ok  	veriqo/pkg/core/trustcalc	(cached)	coverage: 80.5% of statements
+ok  	veriqo/pkg/dataplatform/ingest	(cached)	coverage: 100.0% of statements
+ok  	veriqo/pkg/dataquality	(cached)	coverage: 90.9% of statements
+	veriqo/pkg/domain/commodity		coverage: 0.0% of statements
+ok  	veriqo/pkg/domain/maritime	(cached)	coverage: 81.4% of statements
+	veriqo/pkg/domain/supplychain		coverage: 0.0% of statements
+	veriqo/pkg/domain/trade		coverage: 0.0% of statements
+ok  	veriqo/pkg/engine	(cached)	coverage: 88.2% of statements
+ok  	veriqo/pkg/evidence/api	(cached)	coverage: 87.5% of statements
+ok  	veriqo/pkg/evidence/graph	(cached)	coverage: 74.6% of statements
+ok  	veriqo/pkg/evidence/ontology	(cached)	coverage: 90.6% of statements
+ok  	veriqo/pkg/evidence/provenance	(cached)	coverage: 91.1% of statements
+ok  	veriqo/pkg/evidence/semantics	(cached)	coverage: 100.0% of statements
+ok  	veriqo/pkg/execution	(cached)	coverage: 89.8% of statements
+ok  	veriqo/pkg/explanation	(cached)	coverage: 96.8% of statements
+ok  	veriqo/pkg/geospatial	(cached)	coverage: 69.9% of statements
+ok  	veriqo/pkg/governance/calibration	(cached)	coverage: 94.6% of statements
+ok  	veriqo/pkg/governance/data	(cached)	coverage: 89.6% of statements
+ok  	veriqo/pkg/governance/entityconsistency	1.609s	coverage: 83.3% of statements
+ok  	veriqo/pkg/governance/envelope	(cached)	coverage: 91.9% of statements
+ok  	veriqo/pkg/governance/hitl	(cached)	coverage: 88.3% of statements
+ok  	veriqo/pkg/governance/knowledge	(cached)	coverage: 88.1% of statements
+ok  	veriqo/pkg/governance/lifecycle	(cached)	coverage: 69.6% of statements
+ok  	veriqo/pkg/governance/precedence	(cached)	coverage: 92.5% of statements
+ok  	veriqo/pkg/governance/qualification	(cached)	coverage: 87.0% of statements
+ok  	veriqo/pkg/identity	(cached)	coverage: 90.8% of statements
+ok  	veriqo/pkg/insurance/api	(cached)	coverage: 71.1% of statements
+ok  	veriqo/pkg/insurance/auditlink	1.034s	coverage: 83.1% of statements
+ok  	veriqo/pkg/insurance/canonical	1.689s	coverage: 43.2% of statements
+ok  	veriqo/pkg/insurance/case	(cached)	coverage: 95.3% of statements
+ok  	veriqo/pkg/insurance/casepack	1.799s	coverage: 70.5% of statements
+ok  	veriqo/pkg/insurance/caseroom	1.125s	coverage: 79.1% of statements
+ok  	veriqo/pkg/insurance/casestate	1.072s	coverage: 71.9% of statements
+ok  	veriqo/pkg/insurance/causation	(cached)	coverage: 95.1% of statements
+ok  	veriqo/pkg/insurance/claim	(cached)	coverage: 79.5% of statements
+ok  	veriqo/pkg/insurance/contradiction	(cached)	coverage: 94.0% of statements
+ok  	veriqo/pkg/insurance/coverage	(cached)	coverage: 97.2% of statements
+ok  	veriqo/pkg/insurance/credential	1.051s	coverage: 88.8% of statements
+ok  	veriqo/pkg/insurance/deadline	(cached)	coverage: 96.7% of statements
+ok  	veriqo/pkg/insurance/dispute	(cached)	coverage: 76.3% of statements
+ok  	veriqo/pkg/insurance/dossier	(cached)	coverage: 72.5% of statements
+ok  	veriqo/pkg/insurance/dossierverify	1.538s	coverage: 77.3% of statements
+ok  	veriqo/pkg/insurance/evidence	(cached)	coverage: 91.7% of statements
+ok  	veriqo/pkg/insurance/gap	(cached)	coverage: 97.6% of statements
+ok  	veriqo/pkg/insurance/guardrails	3.721s	coverage: [no statements]
+ok  	veriqo/pkg/insurance/historicalreplay	1.181s	coverage: 91.7% of statements
+ok  	veriqo/pkg/insurance/mitigation	(cached)	coverage: 91.1% of statements
+ok  	veriqo/pkg/insurance/network	(cached)	coverage: 84.8% of statements
+ok  	veriqo/pkg/insurance/obligation	(cached)	coverage: 77.4% of statements
+ok  	veriqo/pkg/insurance/party	(cached)	coverage: 93.2% of statements
+ok  	veriqo/pkg/insurance/payment	1.016s	coverage: 81.3% of statements
+ok  	veriqo/pkg/insurance/policy	(cached)	coverage: 89.9% of statements
+ok  	veriqo/pkg/insurance/preservation	(cached)	coverage: 80.9% of statements
+ok  	veriqo/pkg/insurance/quantum	(cached)	coverage: 100.0% of statements
+ok  	veriqo/pkg/insurance/recovery	(cached)	coverage: 97.7% of statements
+ok  	veriqo/pkg/insurance/regulatory	(cached)	coverage: 91.2% of statements
+ok  	veriqo/pkg/insurance/reserve	(cached)	coverage: 81.0% of statements
+ok  	veriqo/pkg/insurance/salvage	(cached)	coverage: 92.2% of statements
+ok  	veriqo/pkg/insurance/timeline	(cached)	coverage: 94.4% of statements
+ok  	veriqo/pkg/insurance/verification	(cached)	coverage: 11.5% of statements
+ok  	veriqo/pkg/kernel/distributed	(cached)	coverage: 87.2% of statements
+ok  	veriqo/pkg/kernel/execgraph	(cached)	coverage: 93.8% of statements
+ok  	veriqo/pkg/kernel/fsm	(cached)	coverage: 81.0% of statements
+ok  	veriqo/pkg/kernel/intent	(cached)	coverage: 66.7% of statements
+ok  	veriqo/pkg/kernel/intentgraph	(cached)	coverage: 90.8% of statements
+ok  	veriqo/pkg/kernel/mission	(cached)	coverage: 90.0% of statements
+ok  	veriqo/pkg/kernel/ontology	(cached)	coverage: 100.0% of statements
+ok  	veriqo/pkg/kernel/plugin	(cached)	coverage: 87.6% of statements
+ok  	veriqo/pkg/kernel/policy	(cached)	coverage: 78.1% of statements
+ok  	veriqo/pkg/kernel/reasoning	(cached)	coverage: 85.5% of statements
+ok  	veriqo/pkg/kernel/resource	(cached)	coverage: 90.9% of statements
+ok  	veriqo/pkg/kernel/runtime	(cached)	coverage: 91.1% of statements
+ok  	veriqo/pkg/kernel/sandbox	(cached)	coverage: 85.8% of statements
+ok  	veriqo/pkg/kernel/selfheal	(cached)	coverage: 93.7% of statements
+ok  	veriqo/pkg/lifecycle	(cached)	coverage: 87.3% of statements
+ok  	veriqo/pkg/lineage	(cached)	coverage: 94.7% of statements
+ok  	veriqo/pkg/moat/calibration	(cached)	coverage: 89.4% of statements
+ok  	veriqo/pkg/moat/causal	(cached)	coverage: 92.6% of statements
+ok  	veriqo/pkg/moat/contradiction	(cached)	coverage: 93.7% of statements
+ok  	veriqo/pkg/moat/decision	(cached)	coverage: 87.8% of statements
+ok  	veriqo/pkg/moat/digitaltwin	(cached)	coverage: 89.6% of statements
+ok  	veriqo/pkg/moat/domain/maritime	(cached)	coverage: 82.8% of statements
+ok  	veriqo/pkg/moat/economic	(cached)	coverage: 96.6% of statements
+ok  	veriqo/pkg/moat/entity	(cached)	coverage: 88.2% of statements
+ok  	veriqo/pkg/moat/evidencegraph	(cached)	coverage: 75.2% of statements
+ok  	veriqo/pkg/moat/fusion	(cached)	coverage: 93.6% of statements
+ok  	veriqo/pkg/moat/fusion/hbayes	(cached)	coverage: 87.7% of statements
+ok  	veriqo/pkg/moat/hbayes	(cached)	coverage: 87.2% of statements
+ok  	veriqo/pkg/moat/intelligence/patterns	(cached)	coverage: 89.2% of statements
+ok  	veriqo/pkg/moat/intelligence/pricing	(cached)	coverage: 91.7% of statements
+ok  	veriqo/pkg/moat/intelligence/risk	(cached)	coverage: 92.6% of statements
+ok  	veriqo/pkg/moat/kg	(cached)	coverage: 86.0% of statements
+ok  	veriqo/pkg/moat/metaintelligence	(cached)	coverage: 85.4% of statements
+ok  	veriqo/pkg/moat/provenance	(cached)	coverage: 90.2% of statements
+ok  	veriqo/pkg/moat/reliability	(cached)	coverage: 90.5% of statements
+ok  	veriqo/pkg/moat/simulation	(cached)	coverage: 91.3% of statements
+ok  	veriqo/pkg/moat/temporal	(cached)	coverage: 93.7% of statements
+ok  	veriqo/pkg/os	(cached)	coverage: 65.8% of statements
+ok  	veriqo/pkg/platform/audit	(cached)	coverage: 92.7% of statements
+ok  	veriqo/pkg/platform/config	(cached)	coverage: 84.9% of statements
+ok  	veriqo/pkg/platform/correlation	(cached)	coverage: 100.0% of statements
+ok  	veriqo/pkg/platform/observability	(cached)	coverage: 98.8% of statements
+ok  	veriqo/pkg/platform/security	(cached)	coverage: 71.7% of statements
+ok  	veriqo/pkg/platform/security/keys	(cached)	coverage: 78.5% of statements
+ok  	veriqo/pkg/platform/security/keys/awskms	(cached)	coverage: 80.7% of statements
+ok  	veriqo/pkg/platform/telemetry	(cached)	coverage: 95.8% of statements
+ok  	veriqo/pkg/plugin	(cached)	coverage: 80.1% of statements
+ok  	veriqo/pkg/replay	(cached)	coverage: 87.1% of statements
+ok  	veriqo/pkg/rwc	(cached)	coverage: 86.7% of statements
+	veriqo/pkg/security/identity		coverage: 0.0% of statements
+ok  	veriqo/pkg/security/policy	(cached)	coverage: 76.3% of statements
+ok  	veriqo/pkg/storage	(cached)	coverage: 72.4% of statements
+ok  	veriqo/pkg/storage/evidence	(cached)	coverage: 88.6% of statements
+ok  	veriqo/pkg/storage/snapshot	(cached)	coverage: 80.9% of statements
+ok  	veriqo/pkg/storage/wal	(cached)	coverage: 84.9% of statements
+ok  	veriqo/pkg/traceability	(cached)	coverage: 91.5% of statements
+ok  	veriqo/pkg/transport/flowcontrol	(cached)	coverage: 93.6% of statements
+ok  	veriqo/pkg/transport/rafttcp	(cached)	coverage: 87.5% of statements
+ok  	veriqo/pkg/trust	(cached)	coverage: 84.7% of statements
+ok  	veriqo/pkg/trust/state	(cached)	coverage: 91.2% of statements
+ok  	veriqo/pkg/ucr	(cached)	coverage: 93.1% of statements
+ok  	veriqo/pkg/verification	(cached)	coverage: 86.5% of statements
+ok  	veriqo/pkg/workflow	(cached)	coverage: 97.6% of statements
+ok  	veriqo/test/acceptance	(cached)	coverage: [no statements]
+ok  	veriqo/test/acceptance/replay	2.363s	coverage: [no statements]
+ok  	veriqo/test/chaos	(cached)	coverage: [no statements]
+ok  	veriqo/test/e2e/eight_blockers	27.295s	coverage: [no statements]
+ok  	veriqo/test/integration	5.634s	coverage: [no statements]
+ok  	veriqo/test/soak	121.257s	coverage: [no statements]
+ok  	veriqo/test/stress	1.695s	coverage: [no statements]
+ok  	veriqo/veriqo/cli	(cached)	coverage: 0.0% of statements
+ok  	veriqo/veriqo/core/evidence	(cached)	coverage: 92.4% of statements
+ok  	veriqo/veriqo/core/execution	(cached)	coverage: 95.2% of statements
+ok  	veriqo/veriqo/core/intelligence	(cached)	coverage: 90.3% of statements
+ok  	veriqo/veriqo/core/knowledge	(cached)	coverage: 88.9% of statements
+ok  	veriqo/veriqo/core/runtime	(cached)	coverage: 82.7% of statements
+ok  	veriqo/veriqo/examples	(cached)	coverage: [no statements]
+ok  	veriqo/veriqo/gateway/rest	5.056s	coverage: 17.3% of statements
+ok  	veriqo/veriqo/generator	(cached)	coverage: 89.4% of statements
+	veriqo/veriqo/generator/cmd/gen		coverage: 0.0% of statements
+ok  	veriqo/veriqo/kernel	(cached)	coverage: 75.0% of statements
+ok  	veriqo/veriqo/moat/scorecard	(cached)	coverage: 94.3% of statements
+ok  	veriqo/veriqo/registry	(cached)	coverage: 80.1% of statements
+ok  	veriqo/veriqo/sdk/go	(cached)	coverage: 12.5% of statements
+== 6/6  race-repeat on consensus-critical packages (5x) ==
+ok  	veriqo/pkg/consensus/raftlite	61.464s
+ok  	veriqo/pkg/workflow	1.021s
+ok  	veriqo/pkg/platform/audit	1.066s
+
+ALL CHECKS PASSED.
+
+NOT run by this script (require network access this sandbox blocks
+to proxy.golang.org / package registries — see repo README):
+  - golangci-lint (would need to be vendored or fetched)
+  - govulncheck / Go vulnerability database lookups
+  - SPIRE / SPIFFE identity attestation (needs a running SPIRE server)
+  - OPA policy bundle validation (needs the opa binary)
+  - gosec static analysis
+
+--- Direct race+coverage re-check of every Round 10 new/touched package ---
+=== RUN   TestNewStartsAtInvited
+--- PASS: TestNewStartsAtInvited (0.00s)
+=== RUN   TestValidTransitionSucceeds
+--- PASS: TestValidTransitionSucceeds (0.00s)
+=== RUN   TestInvalidTransitionIsRefused
+--- PASS: TestInvalidTransitionIsRefused (0.00s)
+=== RUN   TestTransitionRequiringEvidenceIsRefusedWithout
+--- PASS: TestTransitionRequiringEvidenceIsRefusedWithout (0.00s)
+=== RUN   TestAuthorityIsEnforcedPerTransition
+--- PASS: TestAuthorityIsEnforcedPerTransition (0.00s)
+=== RUN   TestIdempotentRetrySameTargetReturnsSameTransition
+--- PASS: TestIdempotentRetrySameTargetReturnsSameTransition (0.00s)
+=== RUN   TestIdempotencyKeyReuseWithDifferentTargetIsRefused
+--- PASS: TestIdempotencyKeyReuseWithDifferentTargetIsRefused (0.00s)
+=== RUN   TestOpenReserveCouplesRealDomainCall
+--- PASS: TestOpenReserveCouplesRealDomainCall (0.00s)
+=== RUN   TestAuthorizePaymentRefusesMismatchedAmount
+--- PASS: TestAuthorizePaymentRefusesMismatchedAmount (0.00s)
+=== RUN   TestLifecycleLabelNeverDivergesFromRealDomainState
+--- PASS: TestLifecycleLabelNeverDivergesFromRealDomainState (0.00s)
+=== RUN   TestReplayReproducesLiveHistoryThroughTheSameRules
+--- PASS: TestReplayReproducesLiveHistoryThroughTheSameRules (0.00s)
+=== RUN   TestReplayRefusesATamperedHistory
+--- PASS: TestReplayRefusesATamperedHistory (0.00s)
+=== RUN   TestConcurrentTransitionsAreSerializedSafely
+--- PASS: TestConcurrentTransitionsAreSerializedSafely (0.00s)
+=== RUN   TestStateVocabularyIsClosed
+--- PASS: TestStateVocabularyIsClosed (0.00s)
+=== RUN   TestDisputeReachableFromEveryMidLifecycleState
+--- PASS: TestDisputeReachableFromEveryMidLifecycleState (0.00s)
+=== RUN   TestClosedCanReopen
+--- PASS: TestClosedCanReopen (0.00s)
+=== RUN   TestReserveAuthorityCheckIsReusedNotRederived
+--- PASS: TestReserveAuthorityCheckIsReusedNotRederived (0.00s)
+PASS
+coverage: 71.9% of statements
+ok  	veriqo/pkg/insurance/casestate	1.020s	coverage: 71.9% of statements
+=== RUN   TestMirrorCaseAppendsEveryTransition
+--- PASS: TestMirrorCaseAppendsEveryTransition (0.00s)
+=== RUN   TestMirrorPaymentHistoryAppendsEveryEvent
+--- PASS: TestMirrorPaymentHistoryAppendsEveryEvent (0.00s)
+=== RUN   TestMirrorReserveHistoryAppendsEveryEntry
+--- PASS: TestMirrorReserveHistoryAppendsEveryEntry (0.00s)
+=== RUN   TestMirrorLifecycleHistoryAppendsEveryTransition
+--- PASS: TestMirrorLifecycleHistoryAppendsEveryTransition (0.00s)
+=== RUN   TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain
+--- PASS: TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain (0.00s)
+=== RUN   TestMirrorCaseRefusesNilCase
+--- PASS: TestMirrorCaseRefusesNilCase (0.00s)
+=== RUN   TestReconstructionRequiresOnlyTheLedgerRecord
+--- PASS: TestReconstructionRequiresOnlyTheLedgerRecord (0.00s)
+=== RUN   TestVerifyCanonicalAuthorityReconstructsTheWholeChain
+--- PASS: TestVerifyCanonicalAuthorityReconstructsTheWholeChain (0.00s)
+=== RUN   TestVerifyCanonicalAuthorityDetectsTamperedPayload
+--- PASS: TestVerifyCanonicalAuthorityDetectsTamperedPayload (0.00s)
+=== RUN   TestReconstructCanonicalEventRefusesUndecodablePayload
+--- PASS: TestReconstructCanonicalEventRefusesUndecodablePayload (0.00s)
+PASS
+coverage: 83.1% of statements
+ok  	veriqo/pkg/insurance/auditlink	1.019s	coverage: 83.1% of statements
+=== RUN   TestNewValidatesRequiredFields
+--- PASS: TestNewValidatesRequiredFields (0.00s)
+=== RUN   TestFullLifecycleHappyPath
+--- PASS: TestFullLifecycleHappyPath (0.00s)
+=== RUN   TestSegregationOfDutiesRefusesSelfAuthorization
+--- PASS: TestSegregationOfDutiesRefusesSelfAuthorization (0.00s)
+=== RUN   TestAuthorizeRefusesWrongRole
+--- PASS: TestAuthorizeRefusesWrongRole (0.00s)
+=== RUN   TestInstructRefusesWrongRole
+--- PASS: TestInstructRefusesWrongRole (0.00s)
+=== RUN   TestInstructRefusesBeforeAuthorization
+--- PASS: TestInstructRefusesBeforeAuthorization (0.00s)
+=== RUN   TestSettleRefusesBeforeInstruction
+--- PASS: TestSettleRefusesBeforeInstruction (0.00s)
+=== RUN   TestReverseRefusesUnpaid
+--- PASS: TestReverseRefusesUnpaid (0.00s)
+=== RUN   TestDisputeLifecycle
+--- PASS: TestDisputeLifecycle (0.00s)
+=== RUN   TestReconcileReportsAdequacy
+--- PASS: TestReconcileReportsAdequacy (0.00s)
+=== RUN   TestLinkAllocationAndQuantum
+--- PASS: TestLinkAllocationAndQuantum (0.00s)
+=== RUN   TestRegistryIdempotentCreate
+--- PASS: TestRegistryIdempotentCreate (0.00s)
+=== RUN   TestRegistryRefusesDuplicatePaymentIDWithDifferentIdempotencyKey
+--- PASS: TestRegistryRefusesDuplicatePaymentIDWithDifferentIdempotencyKey (0.00s)
+=== RUN   TestPaymentAuthorityAndExecutionAuthorityAreDisjoint
+--- PASS: TestPaymentAuthorityAndExecutionAuthorityAreDisjoint (0.00s)
+=== RUN   TestStatusVocabularyIsClosed
+--- PASS: TestStatusVocabularyIsClosed (0.00s)
+=== RUN   TestRecordSettlementEvidenceRequiresPaidStatus
+--- PASS: TestRecordSettlementEvidenceRequiresPaidStatus (0.00s)
+=== RUN   TestRecordSettlementEvidenceHappyPath
+--- PASS: TestRecordSettlementEvidenceHappyPath (0.00s)
+=== RUN   TestRecordSettlementEvidenceRefusesDoubleRecording
+--- PASS: TestRecordSettlementEvidenceRefusesDoubleRecording (0.00s)
+=== RUN   TestRecordSettlementEvidenceRefusesMismatchedPaymentID
+--- PASS: TestRecordSettlementEvidenceRefusesMismatchedPaymentID (0.00s)
+=== RUN   TestSettlementEvidenceValidateRequiresFields
+--- PASS: TestSettlementEvidenceValidateRequiresFields (0.00s)
+=== RUN   TestReconcileSettlementRequiresEvidence
+--- PASS: TestReconcileSettlementRequiresEvidence (0.00s)
+=== RUN   TestReconcileSettlementExactMatch
+--- PASS: TestReconcileSettlementExactMatch (0.00s)
+=== RUN   TestReconcileSettlementDetectsUnderAndOverSettlement
+--- PASS: TestReconcileSettlementDetectsUnderAndOverSettlement (0.00s)
+=== RUN   TestPaidNeverImpliesSettled
+--- PASS: TestPaidNeverImpliesSettled (0.00s)
+=== RUN   TestReferenceBankAdapterNeverFabricatesSuccess
+--- PASS: TestReferenceBankAdapterNeverFabricatesSuccess (0.00s)
+PASS
+coverage: 81.3% of statements
+ok  	veriqo/pkg/insurance/payment	1.023s	coverage: 81.3% of statements
+=== RUN   TestCredentialValidateRequiresEvidence
+--- PASS: TestCredentialValidateRequiresEvidence (0.00s)
+=== RUN   TestCredentialValidateRequiresIssuingAuthority
+--- PASS: TestCredentialValidateRequiresIssuingAuthority (0.00s)
+=== RUN   TestCredentialValidateRejectsExpiresBeforeIssued
+--- PASS: TestCredentialValidateRejectsExpiresBeforeIssued (0.00s)
+=== RUN   TestCredentialStatusLifecycle
+--- PASS: TestCredentialStatusLifecycle (0.00s)
+=== RUN   TestRegistryRegisterAndRevoke
+--- PASS: TestRegistryRegisterAndRevoke (0.00s)
+=== RUN   TestEffectiveCredentialFindsActiveKind
+--- PASS: TestEffectiveCredentialFindsActiveKind (0.00s)
+=== RUN   TestQualificationRecordValidateRequiresSourceWhenExternallyVerified
+--- PASS: TestQualificationRecordValidateRequiresSourceWhenExternallyVerified (0.00s)
+=== RUN   TestQualificationRecordValidateRefusesMisroutedSource
+--- PASS: TestQualificationRecordValidateRefusesMisroutedSource (0.00s)
+=== RUN   TestQualificationRecordSelfAttestedNeedsNoSource
+--- PASS: TestQualificationRecordSelfAttestedNeedsNoSource (0.00s)
+=== RUN   TestRegistryQualificationHistoryIsAppendOnly
+--- PASS: TestRegistryQualificationHistoryIsAppendOnly (0.00s)
+=== RUN   TestKindAndStatusVocabulariesAreClosed
+--- PASS: TestKindAndStatusVocabulariesAreClosed (0.00s)
+=== RUN   TestQualificationRecordValidateRequiresRevocationReasonWhenRevoked
+--- PASS: TestQualificationRecordValidateRequiresRevocationReasonWhenRevoked (0.00s)
+=== RUN   TestQualificationRecordValidateRejectsExpiresBeforeEffective
+--- PASS: TestQualificationRecordValidateRejectsExpiresBeforeEffective (0.00s)
+=== RUN   TestQualificationRecordEffectiveAtWindow
+--- PASS: TestQualificationRecordEffectiveAtWindow (0.00s)
+=== RUN   TestQualificationRecordRevokedIsNeverEffective
+--- PASS: TestQualificationRecordRevokedIsNeverEffective (0.00s)
+=== RUN   TestEffectiveQualificationAtIsRequalificationAware
+--- PASS: TestEffectiveQualificationAtIsRequalificationAware (0.00s)
+=== RUN   TestEffectiveQualificationAtHonorsRevocation
+--- PASS: TestEffectiveQualificationAtHonorsRevocation (0.00s)
+PASS
+coverage: 88.8% of statements
+ok  	veriqo/pkg/insurance/credential	1.023s	coverage: 88.8% of statements
+=== RUN   TestAllSevenCasesExistAndValidate
+--- PASS: TestAllSevenCasesExistAndValidate (0.00s)
+=== RUN   TestGetReturnsEachCaseAndRefusesUnknown
+--- PASS: TestGetReturnsEachCaseAndRefusesUnknown (0.00s)
+=== RUN   TestEveryCaseDeclaresItsEngineeringPurpose
+--- PASS: TestEveryCaseDeclaresItsEngineeringPurpose (0.00s)
+=== RUN   TestNoRealWorldEntityAppearsInThePack
+--- PASS: TestNoRealWorldEntityAppearsInThePack (0.02s)
+=== RUN   TestJurisdictionsAreGeneric
+--- PASS: TestJurisdictionsAreGeneric (0.00s)
+=== RUN   TestNoCaseOutputIsADetermination
+--- PASS: TestNoCaseOutputIsADetermination (0.00s)
+=== RUN   TestAFixtureCaseCanNeverReportAsLive
+--- PASS: TestAFixtureCaseCanNeverReportAsLive (0.00s)
+=== RUN   TestEverySyntheticRecordCarriesItsOriginInItsContentHash
+--- PASS: TestEverySyntheticRecordCarriesItsOriginInItsContentHash (0.01s)
+=== RUN   TestCasesAreDeterministicFixtures
+--- PASS: TestCasesAreDeterministicFixtures (0.02s)
+=== RUN   TestEachCaseHasDistinctEvidence
+--- PASS: TestEachCaseHasDistinctEvidence (0.01s)
+=== RUN   TestContentHashChangesWithContent
+--- PASS: TestContentHashChangesWithContent (0.00s)
+=== RUN   TestCase004ExpectsOnlyLegalInterpretationRequired
+--- PASS: TestCase004ExpectsOnlyLegalInterpretationRequired (0.00s)
+=== RUN   TestCase005ExpectsTheExactSection35Output
+--- PASS: TestCase005ExpectsTheExactSection35Output (0.00s)
+=== RUN   TestCase006ExpectsTheTwoCriticalSeparations
+--- PASS: TestCase006ExpectsTheTwoCriticalSeparations (0.00s)
+=== RUN   TestCase003ExpectsInconsistencyNotFraud
+--- PASS: TestCase003ExpectsInconsistencyNotFraud (0.00s)
+=== RUN   TestEvidenceTypesAreDeclaredForPreservation
+--- PASS: TestEvidenceTypesAreDeclaredForPreservation (0.00s)
+=== RUN   TestBuiltEvidenceLookupHelpers
+--- PASS: TestBuiltEvidenceLookupHelpers (0.00s)
+=== RUN   TestValidateCatchesMalformedDescriptors
+--- PASS: TestValidateCatchesMalformedDescriptors (0.00s)
+=== RUN   TestEveryCaseDrivesTheFullFacadePath
+--- PASS: TestEveryCaseDrivesTheFullFacadePath (0.02s)
+=== RUN   TestEveryCaseUsesTheHistoricalPolicyVersion
+--- PASS: TestEveryCaseUsesTheHistoricalPolicyVersion (0.03s)
+=== RUN   TestEveryCaseBindsToOneCanonicalCaseLineage
+--- PASS: TestEveryCaseBindsToOneCanonicalCaseLineage (0.02s)
+=== RUN   TestThreeGatesPassOnEveryCase
+--- PASS: TestThreeGatesPassOnEveryCase (0.01s)
+=== RUN   TestCoverageTraceabilityActuallyChecked
+--- PASS: TestCoverageTraceabilityActuallyChecked (0.02s)
+=== RUN   TestQuantumIsGenuinelyRecomputed
+--- PASS: TestQuantumIsGenuinelyRecomputed (0.02s)
+=== RUN   TestPreservationCoversEveryRecord
+--- PASS: TestPreservationCoversEveryRecord (0.02s)
+=== RUN   TestHumanReviewGateFailsClosedOnEveryCase
+--- PASS: TestHumanReviewGateFailsClosedOnEveryCase (0.01s)
+=== RUN   TestHumanReviewGateOpensWithARealAuthorization
+--- PASS: TestHumanReviewGateOpensWithARealAuthorization (0.01s)
+=== RUN   TestARubberStampAuthorizationIsRefused
+--- PASS: TestARubberStampAuthorizationIsRefused (0.01s)
+=== RUN   TestCase002ProducesLateNoticeWithNoCoverageOutcome
+--- PASS: TestCase002ProducesLateNoticeWithNoCoverageOutcome (0.02s)
+=== RUN   TestCase004ProducesNoSingleAssertedCause
+--- PASS: TestCase004ProducesNoSingleAssertedCause (0.01s)
+=== RUN   TestEveryCaseCausationIsHedged
+--- PASS: TestEveryCaseCausationIsHedged (0.01s)
+=== RUN   TestEveryCaseSurfacesItsContradiction
+--- PASS: TestEveryCaseSurfacesItsContradiction (0.02s)
+=== RUN   TestEveryCaseDossierRequiresReviewAndCarriesNoVerdict
+--- PASS: TestEveryCaseDossierRequiresReviewAndCarriesNoVerdict (0.01s)
+=== RUN   TestEveryCaseClosesWithOpenIssues
+--- PASS: TestEveryCaseClosesWithOpenIssues (0.02s)
+=== RUN   TestDrivingIsDeterministic
+--- PASS: TestDrivingIsDeterministic (0.03s)
+=== RUN   TestFixtureEnvelopeIsRefusedAsExternalEvidence
+--- PASS: TestFixtureEnvelopeIsRefusedAsExternalEvidence (0.01s)
+=== RUN   TestEveryCaseRecordsAMitigationActionWithNoReasonablenessJudgment
+--- PASS: TestEveryCaseRecordsAMitigationActionWithNoReasonablenessJudgment (0.02s)
+=== RUN   TestMitigationSupportingEvidenceIsReal
+--- PASS: TestMitigationSupportingEvidenceIsReal (0.01s)
+=== RUN   TestDriveGoldenSucceeds
+--- PASS: TestDriveGoldenSucceeds (0.00s)
+=== RUN   TestGoldenGeospatialResolvesIncidentInsideItsOwnTerminal
+--- PASS: TestGoldenGeospatialResolvesIncidentInsideItsOwnTerminal (0.00s)
+=== RUN   TestGoldenRelationshipIsEffectiveAndPermissioned
+--- PASS: TestGoldenRelationshipIsEffectiveAndPermissioned (0.00s)
+=== RUN   TestGoldenSalvageGenuinelyReducesQuantum
+--- PASS: TestGoldenSalvageGenuinelyReducesQuantum (0.00s)
+=== RUN   TestGoldenCoInsuranceAndReinsuranceAllocationsAreExact
+--- PASS: TestGoldenCoInsuranceAndReinsuranceAllocationsAreExact (0.00s)
+=== RUN   TestGoldenDisputePreservesBothPositionsUnreconciled
+--- PASS: TestGoldenDisputePreservesBothPositionsUnreconciled (0.00s)
+=== RUN   TestDriveGoldenIsDeterministic
+--- PASS: TestDriveGoldenIsDeterministic (0.01s)
+=== RUN   TestGoldenColdReplay
+--- PASS: TestGoldenColdReplay (0.01s)
+=== RUN   TestRunGoldenAssurancePasses
+--- PASS: TestRunGoldenAssurancePasses (0.01s)
+=== RUN   TestGoldenReserveIsApprovedAndReconciled
+--- PASS: TestGoldenReserveIsApprovedAndReconciled (0.00s)
+=== RUN   TestGoldenRecoveryTargetRegisteredAgainstCarrier
+--- PASS: TestGoldenRecoveryTargetRegisteredAgainstCarrier (0.00s)
+=== RUN   TestGoldenRegulatoryMatterReachesFindingAndClosure
+--- PASS: TestGoldenRegulatoryMatterReachesFindingAndClosure (0.00s)
+=== RUN   TestGoldenEvidenceSufficiencyIsGenuinelyAssessed
+--- PASS: TestGoldenEvidenceSufficiencyIsGenuinelyAssessed (0.00s)
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-001
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-002
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-003
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-004
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-005
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-006
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-007
+--- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase (0.04s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-001 (0.01s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-002 (0.01s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-003 (0.01s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-004 (0.01s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-005 (0.00s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-006 (0.00s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-007 (0.01s)
+=== RUN   TestReplayFromSnapshotNeverTouchesTheOriginalCase
+--- PASS: TestReplayFromSnapshotNeverTouchesTheOriginalCase (0.00s)
+=== RUN   TestSnapshotIsDeterministicBytes
+--- PASS: TestSnapshotIsDeterministicBytes (0.00s)
+=== RUN   TestReplayFromEmptySnapshotFails
+--- PASS: TestReplayFromEmptySnapshotFails (0.00s)
+=== RUN   TestColdReplayDetectsADivergedSnapshot
+--- PASS: TestColdReplayDetectsADivergedSnapshot (0.01s)
+PASS
+coverage: 70.5% of statements
+ok  	veriqo/pkg/insurance/casepack	1.543s	coverage: 70.5% of statements
+=== RUN   TestNoDeterminationFieldAnywhereInTheInsuranceDomain
+--- PASS: TestNoDeterminationFieldAnywhereInTheInsuranceDomain (0.20s)
+=== RUN   TestTheVerdictAllowlistIsStillAccurate
+--- PASS: TestTheVerdictAllowlistIsStillAccurate (0.20s)
+=== RUN   TestNoOpaqueConfidenceScoreAnywhereInTheInsuranceDomain
+--- PASS: TestNoOpaqueConfidenceScoreAnywhereInTheInsuranceDomain (0.20s)
+=== RUN   TestTheConfidenceAllowlistIsStillAccurate
+--- PASS: TestTheConfidenceAllowlistIsStillAccurate (0.19s)
+=== RUN   TestNoForbiddenCanonicalDuplicateIsDeclaredAnywhere
+--- PASS: TestNoForbiddenCanonicalDuplicateIsDeclaredAnywhere (0.19s)
+=== RUN   TestNoVendorJudgmentOrCompanyIsHardCodedAnywhere
+--- PASS: TestNoVendorJudgmentOrCompanyIsHardCodedAnywhere (0.09s)
+=== RUN   TestTheScanReachesEveryInsurancePackage
+--- PASS: TestTheScanReachesEveryInsurancePackage (0.00s)
+PASS
+coverage: [no statements]
+ok  	veriqo/pkg/insurance/guardrails	2.083s	coverage: [no statements]
+
+--- cmd/veriqo-dossier-verify -case golden ---
+===== VERIQO INDEPENDENT DOSSIER VERIFIER =====
+Don't trust VERIQO. Verify VERIQO.
+case: GOLDEN
+
+[PASS] independent_reproduction     two independent runs agree exactly (evidence_root_hash=39cca8a97fd50f9464df7a365a72bfa358d919a8172e68faeaca43906457194a)
+[PASS] evidence_chain_integrity     root hash recomputed from 10 raw evidence records, matches the manifest
+[PASS] quantum_recomputation        recomputed 150000.00 from ComputeInput via the pure quantum.Compute function, matches
+[PASS] golden_salvage_recomputation independently recomputed both figures from ComputeInput; drop of exactly 7600.00 matches the salvage net value
+[PASS] golden_reserve_independent   reserve amount 173400.00 independently recomputed from ComputeInput and reproduced across two independent runs
+[PASS] golden_recovery_independent  recovery target against PTY-002-CARRIER (basis=BAILEE_LIABILITY) reproduced identically across two independent runs
+[PASS] golden_regulatory_independent regulatory matter (stage=CLOSED_NO_ACTION, allegation result=NOT_PROVEN) reproduced identically across two independent runs
+[PASS] cold_replay                  cold-replayed golden case matches the live run
+[PASS] no_verdict_field             scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict
+
+verdict: INDEPENDENTLY VERIFIED — every claim above was recomputed, not read.
+
+--- cmd/veriqo-insurance-cold-replay -case golden ---
+===== VERIQO INSURANCE COLD REPLAY =====
+case: GOLDEN   snapshot: INSREPLAY-e80f82bd5250e10b2d55a69e09d3459587a5e7d9db74891cc9563acceb5ba0c5
+
+[PASS] evidence_root_hash_match
+[PASS] preservation_hash_match
+[PASS] quantum_result_match
+[PASS] policy_version_match
+[PASS] coverage_fact_count_match
+
+[PASS] evidence_differences: none
+[PASS] policy_differences: none
+[PASS] rule_differences: none
+[PASS] authorization_differences: none
+
+verdict: COLD REPLAY REPRODUCES THE LIVE RESULT EXACTLY.
