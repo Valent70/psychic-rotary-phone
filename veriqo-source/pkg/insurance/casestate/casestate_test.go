@@ -2,6 +2,7 @@ package casestate
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -314,6 +315,166 @@ func TestConcurrentTransitionsAreSerializedSafely(t *testing.T) {
 	}
 	if len(cl.History()) != 1 {
 		t.Fatalf("expected exactly 1 history entry despite 20 concurrent callers, got %d", len(cl.History()))
+	}
+}
+
+// driveToUnderReview drives cl to StateUnderReview via real transitions
+// (ACCEPTED -> EVIDENCE_EXCHANGED -> UNDER_REVIEW), the common starting
+// point every FINAL INTERNAL CHECK item E concurrent-actor test races
+// from -- UNDER_REVIEW is the reviewer's own example junction where
+// Insurer, Broker, Surveyor and P&I might plausibly all act at once
+// (QUANTIFIED, CLARIFICATION_REQUIRED and DISPUTED are all legal from
+// here).
+func driveToUnderReview(t *testing.T, cl *CaseLifecycle) {
+	t.Helper()
+	if _, err := cl.Transition(StateAccepted, "PTY-1", party.RoleInsured, "", "IDEM-A", "accepted", 10); err != nil {
+		t.Fatalf("driveToUnderReview: %v", err)
+	}
+	if _, err := cl.Transition(StateEvidenceExchanged, "PTY-1", party.RoleInsured, "EVID-1", "IDEM-B", "evidence exchanged", 10); err != nil {
+		t.Fatalf("driveToUnderReview: %v", err)
+	}
+	if _, err := cl.Transition(StateUnderReview, "PTY-1", party.RoleInsured, "", "IDEM-C", "under review", 10); err != nil {
+		t.Fatalf("driveToUnderReview: %v", err)
+	}
+}
+
+// TestConcurrentActorsRacingSameTargetHaveExactlyOneWinner is the FINAL
+// INTERNAL CHECK item E proof: Insurer, Broker, Surveyor and P&I all
+// authorized (anyKnownRole), each with a DISTINCT idempotency key,
+// simultaneously trying to move the SAME case from UNDER_REVIEW to the
+// SAME target state. This is a genuine conflict (unlike the identical-
+// idempotency-key case TestConcurrentTransitionsAreSerializedSafely
+// already covers): the mutex must let exactly one caller actually
+// perform the transition, and every other caller must be refused with
+// a deterministic, typed error (ErrInvalidTransition -- the state has
+// already moved away from UNDER_REVIEW by the time they run), never a
+// double transition, a corrupted state, or a silently-accepted second
+// write. Run across many trials to prove this is deterministic
+// behaviour, not a race that merely happened not to fail today.
+func TestConcurrentActorsRacingSameTargetHaveExactlyOneWinner(t *testing.T) {
+	actors := []struct {
+		id   party.PartyID
+		role party.Role
+	}{
+		{"PTY-INSURER", party.RoleInsurer},
+		{"PTY-BROKER", party.RoleBroker},
+		{"PTY-SURVEYOR", party.RoleSurveyor},
+		{"PTY-PANDI", party.RolePAndIClub},
+	}
+	const trials = 25
+	for trial := 0; trial < trials; trial++ {
+		cl := mustNew(t)
+		driveToUnderReview(t, cl)
+
+		var wg sync.WaitGroup
+		results := make(chan error, len(actors))
+		for i, a := range actors {
+			wg.Add(1)
+			go func(n int, id party.PartyID, role party.Role) {
+				defer wg.Done()
+				_, err := cl.Transition(StateQuantified, id, role, "", fmt.Sprintf("IDEM-RACE-%d-%d", trial, n), "racing to quantify", uint64(n))
+				results <- err
+			}(i, a.id, a.role)
+		}
+		wg.Wait()
+		close(results)
+
+		var successes, invalidTransitionFailures int
+		for err := range results {
+			switch {
+			case err == nil:
+				successes++
+			case errors.Is(err, ErrInvalidTransition):
+				invalidTransitionFailures++
+			default:
+				t.Fatalf("trial %d: unexpected error from a racing actor: %v", trial, err)
+			}
+		}
+		if successes != 1 {
+			t.Fatalf("trial %d: expected exactly 1 winner among %d racing actors, got %d", trial, len(actors), successes)
+		}
+		if invalidTransitionFailures != len(actors)-1 {
+			t.Fatalf("trial %d: expected %d deterministic ErrInvalidTransition losers, got %d", trial, len(actors)-1, invalidTransitionFailures)
+		}
+		if cl.State() != StateQuantified {
+			t.Fatalf("trial %d: expected the case to end in QUANTIFIED, got %s", trial, cl.State())
+		}
+		if len(cl.History()) != 4 {
+			t.Fatalf("trial %d: expected exactly 4 history entries (3 to drive to review + 1 winning race), got %d", trial, len(cl.History()))
+		}
+	}
+}
+
+// TestConcurrentActorsRacingDifferentTargetsHaveExactlyOneWinner covers
+// the reviewer's own scenario more literally: Insurer, Broker, Surveyor
+// and P&I each send a DIFFERENT event at the same time, proposing one
+// of two independently-legal-from-UNDER_REVIEW outcomes (CLARIFICATION_
+// REQUIRED or DISPUTED). These two targets are deliberately used rather
+// than QUANTIFIED: QUANTIFIED -> DISPUTED is itself a legal further
+// transition, so a losing DISPUTED attempt scheduled AFTER a winning
+// QUANTIFIED one could legitimately succeed a moment later -- a real
+// two-step sequence, not a conflict, which would make "exactly one
+// winner" a false assertion. CLARIFICATION_REQUIRED and DISPUTED chain
+// to neither each other nor themselves (see validTransitions), so
+// whichever wins the race, every other attempt is refused, deterministically,
+// regardless of scheduling order. Only the first to acquire the lock can
+// possibly succeed; by the time every other goroutine's transitionLocked
+// call actually runs, the case has already left UNDER_REVIEW, so their
+// own (individually legal) target is no longer reachable from the new
+// current state and they are refused deterministically -- proving
+// cross-actor conflicts over DIFFERENT proposed outcomes, not just
+// identical ones, resolve safely.
+func TestConcurrentActorsRacingDifferentTargetsHaveExactlyOneWinner(t *testing.T) {
+	type attempt struct {
+		id     party.PartyID
+		role   party.Role
+		target State
+	}
+	attempts := []attempt{
+		{"PTY-INSURER", party.RoleInsurer, StateDisputed},
+		{"PTY-BROKER", party.RoleBroker, StateClarificationRequired},
+		{"PTY-SURVEYOR", party.RoleSurveyor, StateDisputed},
+		{"PTY-PANDI", party.RolePAndIClub, StateClarificationRequired},
+	}
+	const trials = 25
+	for trial := 0; trial < trials; trial++ {
+		cl := mustNew(t)
+		driveToUnderReview(t, cl)
+
+		var wg sync.WaitGroup
+		results := make(chan error, len(attempts))
+		for i, a := range attempts {
+			wg.Add(1)
+			go func(n int, at attempt) {
+				defer wg.Done()
+				_, err := cl.Transition(at.target, at.id, at.role, "", fmt.Sprintf("IDEM-DIFF-%d-%d", trial, n), "racing with a different proposed outcome", uint64(n))
+				results <- err
+			}(i, a)
+		}
+		wg.Wait()
+		close(results)
+
+		var successes, failures int
+		for err := range results {
+			if err == nil {
+				successes++
+			} else {
+				failures++
+			}
+		}
+		if successes != 1 {
+			t.Fatalf("trial %d: expected exactly 1 winner among 4 actors proposing different outcomes, got %d", trial, successes)
+		}
+		if failures != len(attempts)-1 {
+			t.Fatalf("trial %d: expected %d deterministic losers, got %d", trial, len(attempts)-1, failures)
+		}
+		finalState := cl.State()
+		if finalState != StateClarificationRequired && finalState != StateDisputed {
+			t.Fatalf("trial %d: final state %s is not one of the four actors' own proposed outcomes", trial, finalState)
+		}
+		if len(cl.History()) != 4 {
+			t.Fatalf("trial %d: expected exactly 4 history entries (3 to drive to review + 1 winning race), got %d", trial, len(cl.History()))
+		}
 	}
 }
 
