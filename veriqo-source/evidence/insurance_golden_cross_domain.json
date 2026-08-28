@@ -16,5 +16,7 @@
   "evidence_sufficiency_assessed": true,
   "payment_settled_and_reconciled": true,
   "audit_unified": true,
+  "case_lifecycle_governed": true,
+  "payment_settlement_reconciled": true,
   "cold_replay_matches": true
 }
