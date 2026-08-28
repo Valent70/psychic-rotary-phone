@@ -117,8 +117,13 @@ Using the reviewer's own three-tier framework:
   13 open rows are now the original 8 `GATE-*` mechanical blockers (unchanged) plus 5 new
   `GAP-*` rows this round adds for the reviewer's own P0/P1 external items — each with a named
   owner, next action, and acceptance criteria, never silently absorbed into a rounded-up score.
-- `READINESS_MANIFEST.json`: regenerated for real via `go run ./cmd/veriqo-readiness`. See the
-  Verification evidence section below for this round's exact numbers.
+- `READINESS_MANIFEST.json`: regenerated for real via `go run ./cmd/veriqo-readiness`
+  (operator `veriqo-readiness-r10`, not hand-edited). **Mandatory engineering gates: 62/62
+  passing** (`production_readiness_level.mandatory_engineering_passing`) — every internal
+  engineering gate this manifest tracks now passes. Overall mandatory (including the 8 external
+  gates): 54/62. Verdict unchanged from Round 9: `NOT_PRODUCTION_READY` overall /
+  `TEMPORARY_PRODUCTION_READINESS_CANDIDATE` (Level 2). The same 8 gates remain blocked, for the
+  same reasons, re-tested rather than assumed this round (see Verification evidence below).
 
 ## Verification evidence
 

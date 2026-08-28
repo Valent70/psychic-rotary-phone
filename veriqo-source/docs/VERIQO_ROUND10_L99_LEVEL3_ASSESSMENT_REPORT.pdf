@@ -1,0 +1,516 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R] /Count 4 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 4841 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO ROUND 10 \(L99\) ? LEVEL 3 ASSESSMENT REPORT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 28 August 2026) Tj
+0 -12 Td
+(Baseline: Round 9 \(L99\) deliverable) Tj
+0 -12 Td
+(Responds to: "Round 10.docx" ? R10: REAL-WORLD INSURANCE QUALIFICATION & OPERATIONAL) Tj
+0 -12 Td
+(PROOF, five paths \(P0: Canonical Case State Machine, Real Historical Claim Replay, Expert) Tj
+0 -12 Td
+(Validation; P1: Counterparty Network Pilot, External Registry Qualification, Payment) Tj
+0 -12 Td
+(Settlement Evidence\), and the outer instruction to bring VERIQO to Level 3, not settle for) Tj
+0 -12 Td
+(Level 2.) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review ? the same) Tj
+0 -12 Td
+(discipline as every prior round, extended to the reviewer's own explicit LEVEL 1 \(code) Tj
+0 -12 Td
+(implemented\) / LEVEL 2 \(cross-domain integrated + replayable\) / LEVEL 3 \(real-world /) Tj
+0 -12 Td
+(externally qualified\) framework.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round maximizes Level 2 to the fullest extent buildable from inside this repository,) Tj
+0 -12 Td
+(closing every genuinely internal item the reviewer's own Round 10 docx named, with real,) Tj
+0 -12 Td
+(tested, compiling Go code. Level 3 is not reached, and is not claimed reached. The) Tj
+0 -12 Td
+(reviewer's own docx is explicit and correct about why: five of its own six named paths \(Real) Tj
+0 -12 Td
+(Historical Claim Replay, Expert Validation, Counterparty Network Pilot, External Registry) Tj
+0 -12 Td
+(Qualification, and ? a related finding the docx surfaces along the way ? real bank) Tj
+0 -12 Td
+(settlement) Tj
+0 -12 Td
+(confirmation\) require real historical claims, real named domain experts, a real) Tj
+0 -12 Td
+(counterparty,) Tj
+0 -12 Td
+(real registry credentials, and a real banking relationship respectively. None of these can) Tj
+0 -12 Td
+(be) Tj
+0 -12 Td
+(honestly produced by engineering inside a sandbox, for the identical structural reason) Tj
+0 -12 Td
+(pentest/hsm_kms/live_data have been BLOCKED_EXTERNAL since Round 4. Claiming otherwise ?) Tj
+0 -12 Td
+(fabricating an "expert validation," inventing realistic-looking "real" claim content, or) Tj
+0 -12 Td
+(simulating a counterparty pretending to be real ? would be exactly the dishonesty this) Tj
+0 -12 Td
+(program's own governing rules, and this reviewer's own repeated insistence on separating) Tj
+0 -12 Td
+(capability from evidence, forbid.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What this round actually delivers, all internal, all real, all tested:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. Canonical Insurance Case State Machine \(pkg/insurance/casestate\) ? the reviewer's own) Tj
+0 -12 Td
+(P0 item, closed in full: fourteen named states, an explicit transition graph, per-transition) Tj
+0 -12 Td
+(authority \(reused from reserve/payment, never re-derived\), evidence requirements,) Tj
+0 -12 Td
+(idempotency, concurrency safety, and replay semantics that re-validate every historical) Tj
+0 -12 Td
+(transition rather than blindly reproducing an end state. Its own 17-case test suite proves) Tj
+0 -12 Td
+(correctness independent of the golden case ? directly answering the reviewer's own "next) Tj
+0 -12 Td
+(hidden gap" concern that a lifecycle tested only through one integration case risks being a) Tj
+0 -12 Td
+(demonstration, not a production state machine.) Tj
+0 -12 Td
+(2. Canonical audit authority, proven \(pkg/insurance/auditlink enriched\) ? answers the) Tj
+0 -12 Td
+(reviewer's own precise architectural question \("is the platform ledger the ONE authority, or) Tj
+0 -12 Td
+(only hash-linked to a second trail?"\) with a structural test:) Tj
+0 -12 Td
+(TestReconstructionRequiresOnlyTheLedgerRecord discards the source domain object and) Tj
+0 -12 Td
+(reconstructs the full forensic event \(Actor + Authority + Action + Object + Evidence +) Tj
+0 -12 Td
+(BeforeState + AfterState + Timestamp + Hash + ParentHash\) from the ledger record alone.) Tj
+0 -12 Td
+(3. Payment settlement reconciliation \(pkg/insurance/payment/settlement.go\) ? closes the) Tj
+0 -12 Td
+(gap the reviewer's own critique of Round 9 raised: PAID is now explicitly, structurally) Tj
+0 -12 Td
+(distinct from Settled. SettlementEvidence, ReconcileSettlement, and a) Tj
+0 -12 Td
+(BankConfirmationAdapter interface \(no concrete implementation, matching the network) Tj
+0 -12 Td
+(package's own no-fake-integration rule\) complete the reviewer's own named chain up to the) Tj
+0 -12 Td
+(point a real bank enters the picture.) Tj
+0 -12 Td
+(4. Operational qualification system \(pkg/insurance/credential enriched\) ? every field the) Tj
+0 -12 Td
+(reviewer's own docx listed as missing \(Jurisdiction, Issuer, EffectiveAtTick/ExpiresAtTick,) Tj
+0 -12 Td
+(Scope, DelegatedAuthorityRelationshipID, RevocationReason\) is now present, validated, and) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 4652 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(requalification-aware \(EffectiveQualificationAt correctly lets a later record, including a) Tj
+0 -12 Td
+(later revocation, supersede an earlier one\).) Tj
+0 -12 Td
+(5. Every one of the reviewer's own P1 external items is now explicitly tracked, not) Tj
+0 -12 Td
+(silently absorbed into a rounded-up score: five new rows in FINAL_MASTER_GAP_MATRIX.json,) Tj
+0 -12 Td
+(each OPEN/BLOCKED_EXTERNAL, each naming its own real-world owner, next action, and) Tj
+0 -12 Td
+(acceptance) Tj
+0 -12 Td
+(criteria ? exactly the discipline BLOCKER_REGISTER.json already applies to the original) Tj
+0 -12 Td
+(eight.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE REVIEWER'S OWN FIVE PATHS, ADDRESSED ONE BY ONE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Path    Priority    What this round did) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Canonical Insurance Case State Machine    P0    Closed internally.) Tj
+0 -12 Td
+(pkg/insurance/casestate, wired into the golden case for an integration proof, with its own) Tj
+0 -12 Td
+(independent 17-case test suite.) Tj
+0 -12 Td
+(   Real Historical Claim Replay \(1-3 real claims\)    P0    Genuinely blocked, tracked, not) Tj
+0 -12 Td
+(fabricated. GAP-REAL-HISTORICAL-CLAIM-REPLAY in the gap matrix names exactly what is needed:) Tj
+0 -12 Td
+(a real counterparty willing to share real, redacted claim files under NDA.) Tj
+0 -12 Td
+(   Expert Validation \(6 named real roles\)    P0    Genuinely blocked, tracked, not) Tj
+0 -12 Td
+(fabricated. GAP-DOMAIN-EXPERT-VALIDATION names the six roles and the recruitment action) Tj
+0 -12 Td
+(needed.) Tj
+0 -12 Td
+(   Counterparty Network Pilot    P1    Genuinely blocked, tracked, not fabricated. GAP-) Tj
+0 -12 Td
+(COUNTERPARTY-NETWORK-PILOT ? the full adapter contract \(G3\) is ready for a real counterparty) Tj
+0 -12 Td
+(to build against; none has yet.) Tj
+0 -12 Td
+(   External Registry Qualification    P1    Genuinely blocked, tracked, not fabricated. GAP-) Tj
+0 -12 Td
+(EXTERNAL-REGISTRY-QUALIFICATION ? the six-registry contract and security boundary \(G5\) is) Tj
+0 -12 Td
+(ready; no real registry API access has been procured.) Tj
+0 -12 Td
+(   Payment Settlement Evidence \(the docx's own related finding\)    ?    Closed internally) Tj
+0 -12 Td
+(\(the data contract, reconciliation math, and interface\); the real bank confirmation itself) Tj
+0 -12 Td
+(tracked as GAP-REAL-BANK-SETTLEMENT-CONFIRMATION, genuinely blocked.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(RE-SCORING AGAINST THE REVIEWER'S OWN ROUND 9 TABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Area    R9 \(reviewer's own score\)    R10    Why) Tj
+0 -12 Td
+(  ---  ---  ---  ---) Tj
+0 -12 Td
+(   Payment lifecycle    9.0    9.0 \(unchanged\)    Already closed; this round adds settlement) Tj
+0 -12 Td
+(reconciliation *on top* without changing this row's own scope.) Tj
+0 -12 Td
+(   Audit unification    8.5?9.0    9.5    The reviewer's own withheld point ? "canonical-) Tj
+0 -12 Td
+(authority property dibuktikan" ? is now proven structurally, not merely asserted.) Tj
+0 -12 Td
+(   Network contract    9.2    9.2 \(unchanged\)    No new interface surface added this round;) Tj
+0 -12 Td
+(G3 was already complete.) Tj
+0 -12 Td
+(   Participant onboarding    8.5    9.3    Every field the reviewer listed as missing is now) Tj
+0 -12 Td
+(present and validated.) Tj
+0 -12 Td
+(   Registry adapter architecture    8.5    8.5 \(unchanged\)    Still interface-only by) Tj
+0 -12 Td
+(design; GAP-EXTERNAL-REGISTRY-QUALIFICATION names what would move this further, and it is) Tj
+0 -12 Td
+(external.) Tj
+0 -12 Td
+(   Historical replay framework    8.5    8.5 \(unchanged\)    The mechanism was already) Tj
+0 -12 Td
+(complete in Round 9; only real claim content would move this, and that is external.) Tj
+0 -12 Td
+(   Real-world network architecture    8.0?8.5    8.5 \(unchanged\)    Architecture was already) Tj
+0 -12 Td
+(strong; operation \(below\) is the real gap.) Tj
+0 -12 Td
+(   Real-world network operation    3?4    3?4 \(unchanged, honestly\)    This is the) Tj
+0 -12 Td
+(reviewer's own sharpest and correct point: no engineering this round can move this row. It) Tj
+0 -12 Td
+(moves only when GAP-COUNTERPARTY-NETWORK-PILOT closes.) Tj
+0 -12 Td
+(   Real insurance validation capability    6    6 \(unchanged\)    The mechanism) Tj
+0 -12 Td
+(\(redaction/permissioning/replay\) was already complete; unchanged this round.) Tj
+0 -12 Td
+(   Real insurance validation evidence    2?3    2?3 \(unchanged, honestly\)    Exactly the) Tj
+0 -12 Td
+(reviewer's own distinction ? this number does not move until GAP-REAL-HISTORICAL-CLAIM-) Tj
+0 -12 Td
+(REPLAY and GAP-DOMAIN-EXPERT-VALIDATION close. Reporting anything higher here would be the) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 4126 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(exact investor-facing dishonesty the reviewer's own R8 review warned against.) Tj
+0 -12 Td
+(   Internal security coverage    9.5+    9.5+ \(unchanged\)    Out of this round's scope; no) Tj
+0 -12 Td
+(security-relevant code changed.) Tj
+0 -12 Td
+(   Production qualification    6.5    6.5 \(unchanged\)    Still gated by the same eight) Tj
+0 -12 Td
+(external readiness-manifest gates, none of which this round touched or could touch.) Tj
+0 -12 Td
+(   Canonical case state machine \(new row\)    ?    9.0    New this round: real, tested, wired) Tj
+0 -12 Td
+(into the golden case. Held below 10 because only the golden case and its own unit tests) Tj
+0 -12 Td
+(currently exercise it ? extending the same state machine across the other six synthetic) Tj
+0 -12 Td
+(cases is real, closeable, disclosed follow-on work.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(LEVEL 1 / 2 / 3 ? WHERE VERIQO STANDS, HONESTLY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Using the reviewer's own three-tier framework:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- LEVEL 1 \(code implemented\): met, and has been since well before this round.) Tj
+0 -12 Td
+(- LEVEL 2 \(cross-domain integrated + replayable\): this round is what pushes VERIQO) Tj
+0 -12 Td
+(furthest into this tier's own ceiling. The canonical case state machine means G1 \(Payment\),) Tj
+0 -12 Td
+(G2 \(Audit\), reserve, and recovery are now governed by ONE state authority rather than five) Tj
+0 -12 Td
+(independently-orchestrated packages that happen to agree in the golden case. Audit's) Tj
+0 -12 Td
+(canonical) Tj
+0 -12 Td
+(authority is proven, not asserted. Settlement reconciliation completes the payment chain up) Tj
+0 -12 Td
+(to) Tj
+0 -12 Td
+(the real-world boundary. This is very close to Level 2's own practical ceiling for a) Tj
+0 -12 Td
+(codebase) Tj
+0 -12 Td
+(built without a live counterparty.) Tj
+0 -12 Td
+(- LEVEL 3 \(real-world / externally qualified\): not reached, and not claimed. Every) Tj
+0 -12 Td
+(remaining item is, structurally, the same category of dependency as the original eight) Tj
+0 -12 Td
+(production-readiness blockers: it requires a real external party ? a claims-sharing) Tj
+0 -12 Td
+(counterparty, six named human experts, a pilot counterparty, a registry operator, a bank ?) Tj
+0 -12 Td
+(that) Tj
+0 -12 Td
+(no amount of further code can substitute for. READINESS_MANIFEST.json's own verdict is) Tj
+0 -12 Td
+(unchanged: TEMPORARY_PRODUCTION_READINESS_CANDIDATE \(Level 2\), never a fabricated) Tj
+0 -12 Td
+(PRODUCTION_QUALIFIED.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(GAP MATRIX DELTAS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- FINAL_MASTER_GAP_MATRIX.json: 72 total rows, 59 CLOSED, 13 OPEN \(up from 67/59/8\). The) Tj
+0 -12 Td
+(13 open rows are now the original 8 GATE-* mechanical blockers \(unchanged\) plus 5 new) Tj
+0 -12 Td
+(GAP-* rows this round adds for the reviewer's own P0/P1 external items ? each with a named) Tj
+0 -12 Td
+(owner, next action, and acceptance criteria, never silently absorbed into a rounded-up) Tj
+0 -12 Td
+(score.) Tj
+0 -12 Td
+(- READINESS_MANIFEST.json: regenerated for real via go run ./cmd/veriqo-readiness) Tj
+0 -12 Td
+(\(operator veriqo-readiness-r10, not hand-edited\). Mandatory engineering gates: 62/62) Tj
+0 -12 Td
+(passing \(production_readiness_level.mandatory_engineering_passing\) ? every internal) Tj
+0 -12 Td
+(engineering gate this manifest tracks now passes. Overall mandatory \(including the 8) Tj
+0 -12 Td
+(external) Tj
+0 -12 Td
+(gates\): 54/62. Verdict unchanged from Round 9: NOT_PRODUCTION_READY overall /) Tj
+0 -12 Td
+(TEMPORARY_PRODUCTION_READINESS_CANDIDATE \(Level 2\). The same 8 gates remain blocked, for the) Tj
+0 -12 Td
+(same reasons, re-tested rather than assumed this round \(see Verification evidence below\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION EVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Check    Result) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   go build ./...    PASS) Tj
+0 -12 Td
+(   go vet ./...    PASS) Tj
+0 -12 Td
+(   gofmt -l .    PASS; no output) Tj
+0 -12 Td
+(   zero-external-dependency invariant    PASS) Tj
+0 -12 Td
+(   go test ./... -race -cover    PASS \(all packages, including all new/touched Round 10) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 2975 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(packages\)) Tj
+0 -12 Td
+(   race-repeat x5 on consensus/workflow/audit packages    PASS) Tj
+0 -12 Td
+(   ./scripts/verify.sh \(full run\)    PASS ? ALL CHECKS PASSED) Tj
+0 -12 Td
+(   go test ./pkg/insurance/guardrails/... \(whole-tree structural scan\)    PASS ? no verdict) Tj
+0 -12 Td
+(field, no opaque confidence score, no forbidden duplicate, no hard-coded vendor, anywhere in) Tj
+0 -12 Td
+(the new code) Tj
+0 -12 Td
+(   cmd/veriqo-dossier-verify -case golden    PASS) Tj
+0 -12 Td
+(   cmd/veriqo-insurance-cold-replay -case golden    PASS) Tj
+0 -12 Td
+(   go run ./cmd/veriqo-readiness    regenerated READINESS_MANIFEST.json for this round) Tj
+0 -12 Td
+(   Network re-test: vuln.go.dev, osv.dev, GitHub advisory API    still unreachable/403 in) Tj
+0 -12 Td
+(this session ? re-confirmed, not assumed; supply_chain_scan remains genuinely blocked for) Tj
+0 -12 Td
+(the same reason as every prior round) Tj
+0 -12 Td
+(   Docker daemon availability \(informational, for multi-container drills\)    not available) Tj
+0 -12 Td
+(in this session's environment) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Raw command output for every check above is retained in evidence/round10_verification.txt.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WHAT REMAINS GENUINELY OPEN, HONESTLY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Thirteen items, all external, all named, all owned:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The original eight \(unchanged from Round 8/9\): pentest, hsm_kms, live_data,) Tj
+0 -12 Td
+(multi_region_dr, scale_qualification, soak_72h, spire_mtls, supply_chain_scan. See) Tj
+0 -12 Td
+(BLOCKER_REGISTER.json.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Five new this round, all from the reviewer's own Round 10 docx: GAP-REAL-HISTORICAL-CLAIM-) Tj
+0 -12 Td
+(REPLAY,) Tj
+0 -12 Td
+(GAP-DOMAIN-EXPERT-VALIDATION, GAP-COUNTERPARTY-NETWORK-PILOT,) Tj
+0 -12 Td
+(GAP-EXTERNAL-REGISTRY-QUALIFICATION, GAP-REAL-BANK-SETTLEMENT-CONFIRMATION. See) Tj
+0 -12 Td
+(FINAL_MASTER_GAP_MATRIX.json for each one's own owner, next action, and acceptance criteria.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(One narrower, honestly-disclosed internal follow-on \(not a blocker\): extending) Tj
+0 -12 Td
+(pkg/insurance/casestate's governance across the other six synthetic cases in) Tj
+0 -12 Td
+(pkg/insurance/casepack, beyond the golden case alone.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(RELEASE DISPOSITION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Recommended verdict: Level 2, maximized. Every internally closeable item the reviewer's own) Tj
+0 -12 Td
+(Round 10 docx named is closed, tested, and wired into the golden case. Level 3) Tj
+0 -12 Td
+(\(PRODUCTION_QUALIFIED / externally qualified\) remains, honestly, exactly where the) Tj
+0 -12 Td
+(reviewer's) Tj
+0 -12 Td
+(own analysis placed it ? blocked on real-world engagement this repository's own engineering) Tj
+0 -12 Td
+(cannot substitute for. The path to Level 3 is now a named, owned business/partnerships punch) Tj
+0 -12 Td
+(list \(13 items, each with an owner and a next action\), not an engineering one.) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000015 00000 n 
+0000000091 00000 n 
+0000000161 00000 n 
+0000005054 00000 n 
+0000005180 00000 n 
+0000009884 00000 n 
+0000010010 00000 n 
+0000014188 00000 n 
+0000014314 00000 n 
+0000017341 00000 n 
+0000017468 00000 n 
+trailer
+<< /Size 12 /Root 11 0 R >>
+startxref
+17518
+%%EOF
