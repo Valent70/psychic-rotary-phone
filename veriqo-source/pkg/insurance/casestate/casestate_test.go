@@ -1,6 +1,7 @@
 package casestate
 
 import (
+	"errors"
 	"sync"
 	"testing"
 
@@ -349,8 +350,125 @@ func TestClosedCanReopen(t *testing.T) {
 	if _, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE", "declined", 10); err != nil {
 		t.Fatalf("expected INVITED -> CLOSED to be legal (declined invitation): %v", err)
 	}
-	if _, err := cl.Transition(StateReopened, "PTY-1", party.RoleInsured, "", "IDEM-REOPEN", "reopened", 20); err != nil {
-		t.Fatalf("expected CLOSED -> REOPENED to be legal: %v", err)
+	if _, err := cl.Transition(StateReopened, "PTY-1", party.RoleInsured, "EVID-NEW-1", "IDEM-REOPEN", "reopened", 20); err != nil {
+		t.Fatalf("expected CLOSED -> REOPENED (with new evidence) to be legal: %v", err)
+	}
+}
+
+// TestReopenRequiresNewEvidence is the FINAL INTERNAL CHECK item D
+// structural proof: "CLOSED -> new evidence -> REOPENED" is not merely
+// documented, a reopen citing no evidence is refused exactly like any
+// other evidence-requiring transition.
+func TestReopenRequiresNewEvidence(t *testing.T) {
+	cl := mustNew(t)
+	if _, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE", "declined", 10); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	_, err := cl.Transition(StateReopened, "PTY-1", party.RoleInsured, "", "IDEM-REOPEN-NOEV", "reopened with nothing new", 20)
+	if !errors.Is(err, ErrEvidenceRequired) {
+		t.Fatalf("expected ErrEvidenceRequired for a reopen citing no evidence, got %v", err)
+	}
+}
+
+// TestReopenIncrementsVersionWithoutRewritingHistory is the FINAL
+// INTERNAL CHECK item D proof for "new version -> new audit chain ->
+// new decision lineage -- never rewriting old history": every
+// transition already recorded under the case's first decision lineage
+// must be byte-for-byte unchanged after a reopen, the REOPENED record
+// itself and everything after it must carry the incremented Version,
+// and a second reopen increments it again.
+func TestReopenIncrementsVersionWithoutRewritingHistory(t *testing.T) {
+	cl := mustNew(t)
+	if cl.Version() != 1 {
+		t.Fatalf("expected a new case to start at Version 1, got %d", cl.Version())
+	}
+	if _, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE", "declined", 10); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	beforeReopen := cl.History()
+	if len(beforeReopen) != 1 {
+		t.Fatalf("expected 1 recorded transition before reopen, got %d", len(beforeReopen))
+	}
+	for i, tr := range beforeReopen {
+		if tr.Version != 1 {
+			t.Fatalf("expected pre-reopen transition %d to carry Version 1, got %d", i, tr.Version)
+		}
+	}
+
+	reopenTr, err := cl.Transition(StateReopened, "PTY-1", party.RoleInsured, "EVID-NEW-1", "IDEM-REOPEN-1", "new evidence surfaced", 30)
+	if err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	if cl.Version() != 2 {
+		t.Fatalf("expected Version 2 after the first reopen, got %d", cl.Version())
+	}
+	if reopenTr.Version != 2 {
+		t.Fatalf("expected the REOPENED record itself to carry the NEW Version 2, got %d", reopenTr.Version)
+	}
+
+	afterReopen := cl.History()
+	if len(afterReopen) != 2 {
+		t.Fatalf("expected 2 recorded transitions after reopen (append, not rewrite), got %d", len(afterReopen))
+	}
+	for i := range beforeReopen {
+		if afterReopen[i] != beforeReopen[i] {
+			t.Fatalf("transition %d changed after reopen -- old history must never be rewritten: before=%+v after=%+v", i, beforeReopen[i], afterReopen[i])
+		}
+	}
+
+	if _, err := cl.Transition(StateUnderReview, "PTY-1", party.RoleInsured, "", "IDEM-BACK-2", "back under review, second lineage", 40); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	// UNDER_REVIEW has no direct edge to CLOSED -- route through DISPUTED
+	// (UNDER_REVIEW -> DISPUTED -> CLOSED), both legal per validTransitions.
+	if _, err := cl.Transition(StateDisputed, "PTY-1", party.RoleInsured, "", "IDEM-DISP-2", "disputed, second lineage", 45); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	if _, err := cl.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE-2", "closed again", 50); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	secondClose := cl.History()[len(cl.History())-1]
+	if secondClose.Version != 2 {
+		t.Fatalf("expected the post-reopen CLOSED to still carry Version 2, got %d", secondClose.Version)
+	}
+
+	// A second reopen must increment again, to a THIRD distinct lineage.
+	secondReopen, err := cl.Transition(StateReopened, "PTY-1", party.RoleInsured, "EVID-NEW-2", "IDEM-REOPEN-2", "more new evidence surfaced", 60)
+	if err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	if cl.Version() != 3 || secondReopen.Version != 3 {
+		t.Fatalf("expected the second reopen to reach Version 3, got cl.Version()=%d record.Version=%d", cl.Version(), secondReopen.Version)
+	}
+	if len(cl.History()) != 6 {
+		t.Fatalf("expected 6 recorded transitions total (append-only across both reopens), got %d", len(cl.History()))
+	}
+}
+
+// TestReplayReproducesVersionAcrossAReopen proves Replay -- which must
+// re-derive every fact purely from a recorded History, never trust a
+// stored field -- reproduces the SAME Version sequence a live case
+// produced, including across a reopen.
+func TestReplayReproducesVersionAcrossAReopen(t *testing.T) {
+	live := mustNew(t)
+	if _, err := live.Transition(StateClosed, "PTY-1", party.RoleInsured, "", "IDEM-CLOSE", "declined", 10); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	if _, err := live.Transition(StateReopened, "PTY-1", party.RoleInsured, "EVID-NEW-1", "IDEM-REOPEN-1", "new evidence surfaced", 20); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	replayed, err := Replay(live.CaseID, live.History())
+	if err != nil {
+		t.Fatalf("Replay: %v", err)
+	}
+	if replayed.Version() != live.Version() {
+		t.Fatalf("expected replay to reproduce Version %d, got %d", live.Version(), replayed.Version())
+	}
+	liveHist, replayedHist := live.History(), replayed.History()
+	for i := range liveHist {
+		if liveHist[i].Version != replayedHist[i].Version {
+			t.Fatalf("transition %d: live Version %d != replayed Version %d", i, liveHist[i].Version, replayedHist[i].Version)
+		}
 	}
 }
 

@@ -125,6 +125,16 @@ type detail struct {
 	AfterState  string `json:"after_state,omitempty"`
 	Reason      string `json:"reason,omitempty"`
 	Tick        uint64 `json:"tick"`
+	// Version is FINAL INTERNAL CHECK item D's own decision lineage
+	// (casestate.Transition.Version) — populated only by
+	// MirrorLifecycleHistory, left at its zero value (0, omitted) for
+	// every other domain, none of which models reopen/version semantics.
+	// Never recomputed here: this is casestate's own already-computed
+	// value, carried through so a reader of the canonical ledger alone
+	// can tell which decision lineage (pre- or post-reopen) a mirrored
+	// lifecycle transition belongs to, without a second lookup into
+	// casestate itself.
+	Version uint64 `json:"version,omitempty"`
 }
 
 func appendCanonical(store *audit.AuditStore, actor, action string, d detail) (audit.AuditRecord, error) {
@@ -227,6 +237,7 @@ func MirrorLifecycleHistory(store *audit.AuditStore, cl *casestate.CaseLifecycle
 			Domain: DomainLifecycle, Object: cl.CaseID,
 			ActorID: string(t.ActorPartyID), Authority: string(t.ActorRole), EvidenceID: t.EvidenceID,
 			BeforeState: string(t.From), AfterState: string(t.To), Reason: t.Reason, Tick: t.Tick,
+			Version: t.Version,
 		})
 		if err != nil {
 			return out, err
@@ -316,8 +327,12 @@ type CanonicalAuditEvent struct {
 	BeforeState string `json:"before_state,omitempty"`
 	AfterState  string `json:"after_state,omitempty"`
 	Timestamp   uint64 `json:"timestamp"`
-	Hash        string `json:"hash"`
-	ParentHash  string `json:"parent_hash"`
+	// Version is FINAL INTERNAL CHECK item D's own decision lineage —
+	// see detail.Version's own doc comment. 0 for every domain that does
+	// not model reopen/version semantics.
+	Version    uint64 `json:"version,omitempty"`
+	Hash       string `json:"hash"`
+	ParentHash string `json:"parent_hash"`
 	// Signature is left empty by every reconstruction: this program has
 	// never fabricated a cryptographic signature anywhere (matching
 	// network.ExchangeReceipt.ReceiptSignature's own discipline) — a
@@ -349,6 +364,7 @@ func ReconstructCanonicalEvent(rec audit.AuditRecord) (CanonicalAuditEvent, erro
 		BeforeState: d.BeforeState,
 		AfterState:  d.AfterState,
 		Timestamp:   d.Tick,
+		Version:     d.Version,
 		Hash:        rec.Hash,
 		ParentHash:  rec.PrevHash,
 	}, nil

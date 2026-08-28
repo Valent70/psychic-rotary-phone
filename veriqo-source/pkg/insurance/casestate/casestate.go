@@ -156,7 +156,12 @@ var validTransitions = map[State][]rule{
 		{To: StateClosed, Authorize: anyKnownRole},
 	},
 	StateClosed: {
-		{To: StateReopened, Authorize: anyKnownRole},
+		// FINAL INTERNAL CHECK item D ("reopen semantics"): the reviewer's
+		// own named chain is CLOSED -> new evidence -> REOPENED, not a
+		// bare reopen -- RequiresEvidence structurally refuses a reopen
+		// citing no new material, the same way ErrEvidenceRequired already
+		// refuses ACCEPTED -> EVIDENCE_EXCHANGED with nothing cited.
+		{To: StateReopened, RequiresEvidence: true, Authorize: anyKnownRole},
 	},
 	StateReopened: {
 		{To: StateUnderReview, Authorize: anyKnownRole},
@@ -174,6 +179,17 @@ type Transition struct {
 	Reason         string        `json:"reason"`
 	IdempotencyKey string        `json:"idempotency_key"`
 	Tick           uint64        `json:"tick"`
+	// Version is the FINAL INTERNAL CHECK item D ("reopen semantics")
+	// decision lineage this Transition belongs to. Every case starts at
+	// Version 1; each CLOSED -> REOPENED transition -- always with new
+	// evidence, see validTransitions[StateClosed] above -- increments it
+	// BEFORE recording itself, so the REOPENED record and every
+	// transition after it (a new UNDER_REVIEW, a new QUANTIFIED, a new
+	// CLOSED, ...) carry the new, higher Version, while every transition
+	// already recorded under the prior Version is left byte-for-byte
+	// untouched in cl.history: reopening APPENDS a new lineage, it never
+	// rewrites the old one.
+	Version uint64 `json:"version"`
 }
 
 var (
@@ -230,6 +246,11 @@ type CaseLifecycle struct {
 	CaseID  string
 	state   State
 	history []Transition
+	// version is the current decision lineage -- see Transition.Version's
+	// own doc comment. Starts at 1 (New's own zero-value-plus-one, set in
+	// New) and is incremented only by a successful CLOSED -> REOPENED
+	// transition.
+	version uint64
 
 	seenIdempotencyKeys map[string]Transition
 
@@ -269,7 +290,7 @@ func New(caseID string) (*CaseLifecycle, error) {
 		return nil, ErrEmptyCaseID
 	}
 	return &CaseLifecycle{
-		CaseID: caseID, state: StateInvited,
+		CaseID: caseID, state: StateInvited, version: 1,
 		seenIdempotencyKeys: make(map[string]Transition),
 	}, nil
 }
@@ -279,6 +300,14 @@ func (cl *CaseLifecycle) State() State {
 	cl.mu.RLock()
 	defer cl.mu.RUnlock()
 	return cl.state
+}
+
+// Version returns the case's current decision lineage -- see
+// Transition.Version's own doc comment.
+func (cl *CaseLifecycle) Version() uint64 {
+	cl.mu.RLock()
+	defer cl.mu.RUnlock()
+	return cl.version
 }
 
 // History returns every recorded Transition, oldest first.
@@ -375,9 +404,19 @@ func (cl *CaseLifecycle) transitionLocked(to State, by party.PartyID, role party
 		return Transition{}, fmt.Errorf("%w: %s -> %s", ErrEvidenceRequired, cl.state, to)
 	}
 
+	// FINAL INTERNAL CHECK item D: a CLOSED -> REOPENED transition opens
+	// a NEW decision lineage -- the version increments here, before t is
+	// built, so REOPENED itself and every transition recorded after it
+	// carry the new Version, while cl.history's own prior entries (still
+	// Version 1, or whichever came before) are never touched.
+	if cl.state == StateClosed && to == StateReopened {
+		cl.version++
+	}
+
 	t := Transition{
 		From: cl.state, To: to, ActorPartyID: by, ActorRole: role,
 		EvidenceID: evidenceID, Reason: reason, IdempotencyKey: idempotencyKey, Tick: tick,
+		Version: cl.version,
 	}
 	cl.history = append(cl.history, t)
 	cl.state = to
