@@ -29,11 +29,20 @@
 // HypothesisSet alone -- CRE forbids inventing them -- so FindingInput
 // requires the caller to supply them from their own already-computed
 // obligation.Obligation / timeline.Event / quantum.Calculation objects.
+//
+// GenerateFindings/BuildFinding are only half the story. A Finding at
+// finding.StatusFinding is a well-evidenced CANDIDATE, not yet an
+// AUTHORIZED one -- see authorized.go for AuthorizedFinding and
+// Authorize, the Finding Verification Gate every candidate is required
+// to pass through before this package will hand it to a caller as
+// something usable. GenerateFindings itself always runs that gate; a
+// caller cannot obtain an unauthorized result from it.
 package cre
 
 import (
 	"fmt"
 
+	"veriqo/pkg/inference"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/evidence"
 	"veriqo/pkg/insurance/finding"
@@ -116,18 +125,39 @@ func BuildFinding(hs *causation.HypothesisSet, h causation.Hypothesis, dg *evide
 // GenerateFindings runs BuildFinding for every candidate hypothesis in
 // hs (per CandidateHypotheses), assigning each a FindingID derived from
 // findingIDPrefix and the hypothesis's own ID -- deterministic, never a
-// random UUID. An empty result means causation produced no supported or
+// random UUID -- and then immediately runs each one through the Finding
+// Verification Gate (Authorize), so the production path this function
+// represents can never hand a caller a bare, unauthorized
+// finding.Finding. This is deliberate: BuildFinding alone would let a
+// caller keep an unauthorized Finding around and use it as if it were
+// final; GenerateFindings is the entry point real callers should use
+// precisely because it does not offer that option -- its return type is
+// []AuthorizedFinding, not []finding.Finding, so "skip the gate" is not
+// merely discouraged here, it does not typecheck. traces is passed
+// straight through to Authorize/VerifyFindingProvenance for every
+// candidate (typically an inference.Recorder's own Traces()); pass nil
+// when no candidate cites an InferenceTrace.
+//
+// An empty result means causation produced no supported or
 // partially-supported hypothesis; that is reported, not hidden behind
-// an error.
+// an error. Authorize failing for any individual candidate (which
+// should never happen here, since every candidate was just built by
+// this same function's own call to BuildFinding against the same hs)
+// is treated as a genuine error and aborts the whole call, rather than
+// silently dropping the offending candidate.
 func GenerateFindings(hs *causation.HypothesisSet, dg *evidence.DependencyGraph, in FindingInput,
-	findingIDPrefix string, tick uint64) ([]finding.Finding, error) {
-	var out []finding.Finding
+	traces []inference.InferenceTrace, findingIDPrefix string, tick uint64) ([]AuthorizedFinding, error) {
+	var out []AuthorizedFinding
 	for _, h := range CandidateHypotheses(hs) {
 		f, err := BuildFinding(hs, h, dg, in, findingIDPrefix+"-"+string(h.ID), tick)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, f)
+		a, err := Authorize(f, hs, h.ID, traces, tick)
+		if err != nil {
+			return nil, fmt.Errorf("cre: authorizing finding for hypothesis %s: %w", h.ID, err)
+		}
+		out = append(out, a)
 	}
 	return out, nil
 }

@@ -38,7 +38,7 @@ func TestAdversarial_UnprovenHypothesisCanNeverReachFinding(t *testing.T) {
 		t.Fatalf("expected zero candidates for a zero-evidence hypothesis, got %v", got)
 	}
 	dg := evidence.NewDependencyGraph()
-	findings, err := cre.GenerateFindings(hs, dg, cre.FindingInput{CaseID: "case-adv-1"}, "adv1", 1)
+	findings, err := cre.GenerateFindings(hs, dg, cre.FindingInput{CaseID: "case-adv-1"}, nil, "adv1", 1)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -76,6 +76,13 @@ func TestAdversarial_HandForgedFindingCaughtByHypothesisReverification(t *testin
 	}
 	if err := cre.VerifyFindingAgainstHypothesis(forged, hs, "H1"); !errors.Is(err, cre.ErrFindingDoesNotMatchHypothesis) {
 		t.Fatalf("expected the forged Finding to be caught by re-derivation against the real hypothesis, got %v", err)
+	}
+	// The stronger, production-relevant claim: the same forged Finding
+	// cannot be turned into an AuthorizedFinding either -- the actual
+	// gate any real downstream consumer (CRE / Dossier / Decision)
+	// would require.
+	if _, err := cre.Authorize(forged, hs, "H1", nil, 1); !errors.Is(err, cre.ErrFindingDoesNotMatchHypothesis) {
+		t.Fatalf("expected Authorize to refuse the forged Finding too, got %v", err)
 	}
 }
 

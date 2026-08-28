@@ -112,15 +112,18 @@ func TestGenerateFindingsProducesOneFindingPerCandidate(t *testing.T) {
 	findings, err := GenerateFindings(hs, dg, FindingInput{
 		CaseID: "case-1", ContractBasis: "clause-9.3", ObligationRef: "obl-1",
 		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
-	}, "case-1-finding", 100)
+	}, nil, "case-1-finding", 100)
 	if err != nil {
 		t.Fatalf("GenerateFindings: %v", err)
 	}
 	if len(findings) != 1 {
 		t.Fatalf("expected exactly 1 finding (only H1 qualifies), got %d", len(findings))
 	}
-	if findings[0].FindingID != "case-1-finding-H1" {
-		t.Fatalf("expected a deterministic FindingID derived from the hypothesis ID, got %s", findings[0].FindingID)
+	if findings[0].IsZero() {
+		t.Fatal("expected a populated, authorized finding")
+	}
+	if findings[0].Finding().FindingID != "case-1-finding-H1" {
+		t.Fatalf("expected a deterministic FindingID derived from the hypothesis ID, got %s", findings[0].Finding().FindingID)
 	}
 }
 
@@ -133,7 +136,7 @@ func TestGenerateFindingsOnNoQualifyingHypothesisReturnsEmptyNotError(t *testing
 		t.Fatal(err)
 	}
 	dg := evidence.NewDependencyGraph()
-	findings, err := GenerateFindings(hs, dg, FindingInput{CaseID: "case-2"}, "case-2-finding", 1)
+	findings, err := GenerateFindings(hs, dg, FindingInput{CaseID: "case-2"}, nil, "case-2-finding", 1)
 	if err != nil {
 		t.Fatalf("expected no error for a genuinely unresolved case, got %v", err)
 	}
@@ -147,15 +150,18 @@ func TestGenerateFindingsIsDeterministic(t *testing.T) {
 	dg := evidence.NewDependencyGraph()
 	in := FindingInput{CaseID: "case-1", ContractBasis: "clause-9.3", ObligationRef: "obl-1",
 		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true}
-	f1, err := GenerateFindings(hs, dg, in, "prefix", 100)
+	f1, err := GenerateFindings(hs, dg, in, nil, "prefix", 100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f2, err := GenerateFindings(hs, dg, in, "prefix", 100)
+	f2, err := GenerateFindings(hs, dg, in, nil, "prefix", 100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(f1) != len(f2) || f1[0].Hash != f2[0].Hash {
+	if len(f1) != len(f2) || f1[0].Finding().Hash != f2[0].Finding().Hash {
 		t.Fatal("expected identical inputs to produce identical Finding hashes")
+	}
+	if f1[0].AuthorizationHash() != f2[0].AuthorizationHash() {
+		t.Fatal("expected identical inputs to produce identical AuthorizationHash too")
 	}
 }

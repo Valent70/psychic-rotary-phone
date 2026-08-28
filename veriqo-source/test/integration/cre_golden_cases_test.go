@@ -44,26 +44,26 @@ func TestGoldenCase_CommodityContaminationDispute(t *testing.T) {
 	}
 
 	dg := evidence.NewDependencyGraph()
-	findings, err := cre.GenerateFindings(hs, dg, cre.FindingInput{
+	authorized, err := cre.GenerateFindings(hs, dg, cre.FindingInput{
 		CaseID: "case-crude-042", ContractBasis: "clause-12.1-quality-warranty",
 		ObligationRef: "obl-quality-notice-042", EventRef: "event-discharge-sampling-042",
 		QuantumRef: "calc-rejection-loss-042", HumanReviewRequired: true, HumanReviewedBy: "surveyor-lead-1",
-	}, "case-042-finding", 500)
+	}, nil, "case-042-finding", 500)
 	if err != nil {
 		t.Fatalf("GenerateFindings: %v", err)
 	}
-	if len(findings) != 1 {
-		t.Fatalf("expected exactly 1 candidate finding (only the transfer-contamination hypothesis qualifies), got %d", len(findings))
+	if len(authorized) != 1 {
+		t.Fatalf("expected exactly 1 candidate finding (only the transfer-contamination hypothesis qualifies), got %d", len(authorized))
 	}
-	f := findings[0]
+	if authorized[0].IsZero() {
+		t.Fatal("expected a populated, authorized finding")
+	}
+	f := authorized[0].Finding()
 	if f.Status != finding.StatusFinding {
 		t.Fatalf("expected StatusFinding, got %s (missing=%v)", f.Status, finding.MissingFields(f))
 	}
-	if err := cre.VerifyFindingAgainstHypothesis(f, hs, hTransfer); err != nil {
-		t.Fatalf("VerifyFindingAgainstHypothesis: %v", err)
-	}
-	if err := cre.VerifyFindingProvenance(f, nil); err != nil {
-		t.Fatalf("VerifyFindingProvenance: %v", err)
+	if authorized[0].HypothesisID() != hTransfer {
+		t.Fatalf("expected the AuthorizedFinding to be authorized against %s, got %s", hTransfer, authorized[0].HypothesisID())
 	}
 	// The load-port hypothesis must appear as a considered alternative,
 	// not be silently dropped.
@@ -106,20 +106,19 @@ func TestGoldenCase_WarehouseFireElectricalVsArson(t *testing.T) {
 	// Deliberately no evidence added for hArson at all.
 
 	dg := evidence.NewDependencyGraph()
-	findings, err := cre.GenerateFindings(hs, dg, cre.FindingInput{
+	authorized, err := cre.GenerateFindings(hs, dg, cre.FindingInput{
 		CaseID: "case-fire-777", ContractBasis: "clause-5.2-fire-peril",
 		ObligationRef: "obl-notice-of-loss-777", EventRef: "event-fire-discovery-777",
 		QuantumRef: "calc-warehouse-loss-777", HumanReviewRequired: true, HumanReviewedBy: "claims-lead-2",
-	}, "case-777-finding", 900)
+	}, nil, "case-777-finding", 900)
 	if err != nil {
 		t.Fatalf("GenerateFindings: %v", err)
 	}
-	if len(findings) != 1 {
-		t.Fatalf("expected exactly 1 finding (arson has zero evidence and must not qualify), got %d", len(findings))
+	if len(authorized) != 1 {
+		t.Fatalf("expected exactly 1 finding (arson has zero evidence and must not qualify), got %d", len(authorized))
 	}
-	f := findings[0]
-	if err := cre.VerifyFindingAgainstHypothesis(f, hs, hElectrical); err != nil {
-		t.Fatalf("VerifyFindingAgainstHypothesis: %v", err)
+	if authorized[0].HypothesisID() != hElectrical {
+		t.Fatalf("expected the AuthorizedFinding to be authorized against %s, got %s", hElectrical, authorized[0].HypothesisID())
 	}
 	// Explicitly confirm arson was never silently promoted.
 	arson, ok := hs.Get(hArson)
@@ -129,8 +128,8 @@ func TestGoldenCase_WarehouseFireElectricalVsArson(t *testing.T) {
 	if arson.Status == causation.StatusSupported || arson.Status == causation.StatusPartiallySupported {
 		t.Fatalf("expected the zero-evidence arson hypothesis to remain unsupported, got status %s", arson.Status)
 	}
-	for _, got := range findings {
-		if got.ConfidenceBasis == causation.StatusUnproven {
+	for _, got := range authorized {
+		if got.Finding().ConfidenceBasis == causation.StatusUnproven {
 			t.Fatal("expected no finding to be built from the unproven arson hypothesis")
 		}
 	}

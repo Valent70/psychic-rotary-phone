@@ -41,6 +41,7 @@ import (
 	"veriqo/pkg/governance/lifecycle"
 	"veriqo/pkg/inference"
 	"veriqo/pkg/insurance/causation"
+	"veriqo/pkg/insurance/cre"
 	"veriqo/pkg/insurance/evidence"
 	"veriqo/pkg/insurance/finding"
 	"veriqo/pkg/insurance/obligation"
@@ -271,6 +272,21 @@ func TestVTECPCapabilitiesIntegrateAsOneSystem(t *testing.T) {
 	}
 	if f.ConfidenceBasis != causation.StatusSupported && f.ConfidenceBasis != causation.StatusPartiallySupported {
 		t.Fatalf("expected H1 to be at least partially supported given its supporting evidence, got %s", f.ConfidenceBasis)
+	}
+
+	// A StatusFinding Finding is still only a candidate until it passes
+	// the Finding Verification Gate -- Authorize is the only way to turn
+	// it into something a downstream consumer (CRE / Dossier / Decision)
+	// may treat as final.
+	authorized, err := cre.Authorize(f, hs, hWaterIngress, recorder.Traces(), tick)
+	if err != nil {
+		t.Fatalf("Authorize: %v", err)
+	}
+	if authorized.IsZero() {
+		t.Fatal("expected a populated AuthorizedFinding")
+	}
+	if authorized.Finding().Hash != f.Hash {
+		t.Fatal("expected the AuthorizedFinding to carry the same Finding that was authorized")
 	}
 
 	// ---- Capability 4: seal the SHARED ledger and prove one record's inclusion ----
