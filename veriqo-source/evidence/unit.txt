@@ -6,13 +6,13 @@ exit: 0
 ok  	veriqo/cmd/veriqo-demo	(cached)
 ?   	veriqo/cmd/veriqo-dossier-verify	[no test files]
 ?   	veriqo/cmd/veriqo-gateway	[no test files]
-ok  	veriqo/cmd/veriqo-insurance-cold-replay	0.043s
+ok  	veriqo/cmd/veriqo-insurance-cold-replay	(cached)
 ?   	veriqo/cmd/veriqo-kernel-demo	[no test files]
 ?   	veriqo/cmd/veriqo-live-demo	[no test files]
 ?   	veriqo/cmd/veriqo-node	[no test files]
 ?   	veriqo/cmd/veriqo-plugin-shim	[no test files]
 ?   	veriqo/cmd/veriqo-qualification	[no test files]
-ok  	veriqo/cmd/veriqo-readiness	0.789s
+ok  	veriqo/cmd/veriqo-readiness	0.675s
 ?   	veriqo/cmd/veriqo-release-keygen	[no test files]
 ok  	veriqo/cmd/veriqo-requirements	(cached)
 ?   	veriqo/cmd/veriqo-rwc-v2	[no test files]
@@ -26,10 +26,10 @@ ok  	veriqo/cmd/veriqo-soak-verify	(cached)
 ok  	veriqo/cmd/veriqo-verify-release-identity	(cached)
 ok  	veriqo/internal/assurance	(cached)
 ok  	veriqo/internal/determinism	(cached)
-ok  	veriqo/internal/entrypoints	0.076s
+ok  	veriqo/internal/entrypoints	0.086s
 ok  	veriqo/internal/environment	(cached)
-ok  	veriqo/internal/nobypass	0.529s
-ok  	veriqo/internal/reproducibility	24.499s
+ok  	veriqo/internal/nobypass	0.471s
+ok  	veriqo/internal/reproducibility	21.940s
 ok  	veriqo/internal/sbom	(cached)
 ok  	veriqo/internal/sourcehash	(cached)
 ok  	veriqo/internal/telemetrycoverage	(cached)
@@ -42,11 +42,11 @@ ok  	veriqo/pkg/blockers/dr	(cached)
 ok  	veriqo/pkg/blockers/hsmkms	(cached)
 ok  	veriqo/pkg/blockers/livedata	(cached)
 ?   	veriqo/pkg/blockers/orchestrator	[no test files]
-ok  	veriqo/pkg/blockers/pentest	3.152s
-ok  	veriqo/pkg/blockers/scale	10.413s
+ok  	veriqo/pkg/blockers/pentest	4.264s
+ok  	veriqo/pkg/blockers/scale	8.110s
 ok  	veriqo/pkg/blockers/soak	(cached)
 ok  	veriqo/pkg/blockers/spiffe	(cached)
-ok  	veriqo/pkg/blockers/supplychain	0.030s
+ok  	veriqo/pkg/blockers/supplychain	0.014s
 ok  	veriqo/pkg/canonical	(cached)
 ok  	veriqo/pkg/chaos	(cached)
 ok  	veriqo/pkg/cluster	(cached)
@@ -77,7 +77,7 @@ ok  	veriqo/pkg/explanation	(cached)
 ok  	veriqo/pkg/geospatial	(cached)
 ok  	veriqo/pkg/governance/calibration	(cached)
 ok  	veriqo/pkg/governance/data	(cached)
-ok  	veriqo/pkg/governance/entityconsistency	0.138s
+ok  	veriqo/pkg/governance/entityconsistency	0.151s
 ok  	veriqo/pkg/governance/envelope	(cached)
 ok  	veriqo/pkg/governance/hitl	(cached)
 ok  	veriqo/pkg/governance/knowledge	(cached)
@@ -86,30 +86,32 @@ ok  	veriqo/pkg/governance/precedence	(cached)
 ok  	veriqo/pkg/governance/qualification	(cached)
 ok  	veriqo/pkg/identity	(cached)
 ok  	veriqo/pkg/insurance/api	(cached)
-ok  	veriqo/pkg/insurance/auditlink	0.013s
-ok  	veriqo/pkg/insurance/canonical	0.168s
+ok  	veriqo/pkg/insurance/auditlink	(cached)
+ok  	veriqo/pkg/insurance/canonical	(cached)
 ok  	veriqo/pkg/insurance/case	(cached)
-ok  	veriqo/pkg/insurance/casepack	0.468s
-ok  	veriqo/pkg/insurance/caseroom	0.033s
-ok  	veriqo/pkg/insurance/casestate	0.008s
+ok  	veriqo/pkg/insurance/casepack	(cached)
+ok  	veriqo/pkg/insurance/caseroom	(cached)
+ok  	veriqo/pkg/insurance/casestate	(cached)
 ok  	veriqo/pkg/insurance/causation	(cached)
 ok  	veriqo/pkg/insurance/claim	(cached)
 ok  	veriqo/pkg/insurance/contradiction	(cached)
 ok  	veriqo/pkg/insurance/coverage	(cached)
-ok  	veriqo/pkg/insurance/credential	0.017s
+ok  	veriqo/pkg/insurance/credential	(cached)
 ok  	veriqo/pkg/insurance/deadline	(cached)
 ok  	veriqo/pkg/insurance/dispute	(cached)
 ok  	veriqo/pkg/insurance/dossier	(cached)
-ok  	veriqo/pkg/insurance/dossierverify	0.156s
+ok  	veriqo/pkg/insurance/dossierverify	(cached)
 ok  	veriqo/pkg/insurance/evidence	(cached)
 ok  	veriqo/pkg/insurance/gap	(cached)
 ok  	veriqo/pkg/insurance/guardrails	(cached)
-ok  	veriqo/pkg/insurance/historicalreplay	0.044s
+ok  	veriqo/pkg/insurance/historicalreplay	(cached)
+ok  	veriqo/pkg/insurance/ingestion	(cached)
+ok  	veriqo/pkg/insurance/invariants	(cached)
 ok  	veriqo/pkg/insurance/mitigation	(cached)
 ok  	veriqo/pkg/insurance/network	(cached)
 ok  	veriqo/pkg/insurance/obligation	(cached)
 ok  	veriqo/pkg/insurance/party	(cached)
-ok  	veriqo/pkg/insurance/payment	0.005s
+ok  	veriqo/pkg/insurance/payment	(cached)
 ok  	veriqo/pkg/insurance/policy	(cached)
 ok  	veriqo/pkg/insurance/preservation	(cached)
 ok  	veriqo/pkg/insurance/quantum	(cached)
@@ -183,12 +185,12 @@ ok  	veriqo/pkg/ucr	(cached)
 ok  	veriqo/pkg/verification	(cached)
 ok  	veriqo/pkg/workflow	(cached)
 ok  	veriqo/test/acceptance	(cached)
-ok  	veriqo/test/acceptance/replay	0.345s
+ok  	veriqo/test/acceptance/replay	0.698s
 ok  	veriqo/test/chaos	(cached)
-ok  	veriqo/test/e2e/eight_blockers	22.468s
-ok  	veriqo/test/integration	7.629s
-ok  	veriqo/test/soak	30.038s
-ok  	veriqo/test/stress	9.574s
+ok  	veriqo/test/e2e/eight_blockers	21.883s
+ok  	veriqo/test/integration	5.108s
+ok  	veriqo/test/soak	30.048s
+ok  	veriqo/test/stress	9.313s
 ok  	veriqo/veriqo/cli	(cached)
 ok  	veriqo/veriqo/core/evidence	(cached)
 ok  	veriqo/veriqo/core/execution	(cached)
@@ -196,7 +198,7 @@ ok  	veriqo/veriqo/core/intelligence	(cached)
 ok  	veriqo/veriqo/core/knowledge	(cached)
 ok  	veriqo/veriqo/core/runtime	(cached)
 ok  	veriqo/veriqo/examples	(cached)
-ok  	veriqo/veriqo/gateway/rest	3.617s
+ok  	veriqo/veriqo/gateway/rest	2.723s
 ok  	veriqo/veriqo/generator	(cached)
 ?   	veriqo/veriqo/generator/cmd/gen	[no test files]
 ok  	veriqo/veriqo/kernel	(cached)
