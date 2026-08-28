@@ -1,0 +1,420 @@
+=== Round 9 (L99 gap closure) verification — 2026-08-28T03:47:27Z ===
+
+--- go build/vet/gofmt/zero-dep/test -race -cover/race-repeat (scripts/verify.sh) ---
+ok  	veriqo/pkg/moat/contradiction	1.019s	coverage: 93.7% of statements
+ok  	veriqo/pkg/moat/decision	1.021s	coverage: 87.8% of statements
+ok  	veriqo/pkg/moat/digitaltwin	1.018s	coverage: 89.6% of statements
+ok  	veriqo/pkg/moat/domain/maritime	1.020s	coverage: 82.8% of statements
+ok  	veriqo/pkg/moat/economic	1.020s	coverage: 96.6% of statements
+ok  	veriqo/pkg/moat/entity	1.015s	coverage: 88.2% of statements
+ok  	veriqo/pkg/moat/evidencegraph	1.016s	coverage: 75.2% of statements
+ok  	veriqo/pkg/moat/fusion	1.023s	coverage: 93.6% of statements
+ok  	veriqo/pkg/moat/fusion/hbayes	1.017s	coverage: 87.7% of statements
+ok  	veriqo/pkg/moat/hbayes	1.039s	coverage: 87.2% of statements
+ok  	veriqo/pkg/moat/intelligence/patterns	1.016s	coverage: 89.2% of statements
+ok  	veriqo/pkg/moat/intelligence/pricing	1.016s	coverage: 91.7% of statements
+ok  	veriqo/pkg/moat/intelligence/risk	1.017s	coverage: 92.6% of statements
+ok  	veriqo/pkg/moat/kg	1.022s	coverage: 86.0% of statements
+ok  	veriqo/pkg/moat/metaintelligence	1.014s	coverage: 85.4% of statements
+ok  	veriqo/pkg/moat/provenance	1.017s	coverage: 90.2% of statements
+ok  	veriqo/pkg/moat/reliability	1.025s	coverage: 90.5% of statements
+ok  	veriqo/pkg/moat/simulation	1.016s	coverage: 91.3% of statements
+ok  	veriqo/pkg/moat/temporal	1.015s	coverage: 93.7% of statements
+ok  	veriqo/pkg/os	1.030s	coverage: 65.8% of statements
+ok  	veriqo/pkg/platform/audit	1.027s	coverage: 92.7% of statements
+ok  	veriqo/pkg/platform/config	1.017s	coverage: 84.9% of statements
+ok  	veriqo/pkg/platform/correlation	1.115s	coverage: 100.0% of statements
+ok  	veriqo/pkg/platform/observability	1.025s	coverage: 98.8% of statements
+ok  	veriqo/pkg/platform/security	1.030s	coverage: 71.7% of statements
+ok  	veriqo/pkg/platform/security/keys	1.025s	coverage: 78.5% of statements
+ok  	veriqo/pkg/platform/security/keys/awskms	1.030s	coverage: 80.7% of statements
+ok  	veriqo/pkg/platform/telemetry	1.034s	coverage: 95.8% of statements
+ok  	veriqo/pkg/plugin	1.015s	coverage: 80.1% of statements
+ok  	veriqo/pkg/replay	1.054s	coverage: 87.1% of statements
+ok  	veriqo/pkg/rwc	1.114s	coverage: 86.7% of statements
+	veriqo/pkg/security/identity		coverage: 0.0% of statements
+ok  	veriqo/pkg/security/policy	1.020s	coverage: 76.3% of statements
+ok  	veriqo/pkg/storage	1.189s	coverage: 72.4% of statements
+ok  	veriqo/pkg/storage/evidence	1.024s	coverage: 88.6% of statements
+ok  	veriqo/pkg/storage/snapshot	1.025s	coverage: 80.9% of statements
+ok  	veriqo/pkg/storage/wal	1.094s	coverage: 84.9% of statements
+ok  	veriqo/pkg/traceability	1.021s	coverage: 91.5% of statements
+ok  	veriqo/pkg/transport/flowcontrol	1.172s	coverage: 93.6% of statements
+ok  	veriqo/pkg/transport/rafttcp	1.530s	coverage: 87.5% of statements
+ok  	veriqo/pkg/trust	1.014s	coverage: 84.7% of statements
+ok  	veriqo/pkg/trust/state	1.021s	coverage: 91.2% of statements
+ok  	veriqo/pkg/ucr	1.017s	coverage: 93.1% of statements
+ok  	veriqo/pkg/verification	1.036s	coverage: 86.5% of statements
+ok  	veriqo/pkg/workflow	1.024s	coverage: 97.6% of statements
+ok  	veriqo/test/acceptance	1.525s	coverage: [no statements]
+ok  	veriqo/test/acceptance/replay	2.030s	coverage: [no statements]
+ok  	veriqo/test/chaos	1.170s	coverage: [no statements]
+ok  	veriqo/test/e2e/eight_blockers	24.247s	coverage: [no statements]
+ok  	veriqo/test/integration	5.055s	coverage: [no statements]
+ok  	veriqo/test/soak	121.095s	coverage: [no statements]
+ok  	veriqo/test/stress	1.586s	coverage: [no statements]
+ok  	veriqo/veriqo/cli	1.988s	coverage: 0.0% of statements
+ok  	veriqo/veriqo/core/evidence	1.015s	coverage: 92.4% of statements
+ok  	veriqo/veriqo/core/execution	1.031s	coverage: 95.2% of statements
+ok  	veriqo/veriqo/core/intelligence	1.015s	coverage: 90.3% of statements
+ok  	veriqo/veriqo/core/knowledge	1.014s	coverage: 88.9% of statements
+ok  	veriqo/veriqo/core/runtime	1.019s	coverage: 82.7% of statements
+ok  	veriqo/veriqo/examples	1.014s	coverage: [no statements]
+ok  	veriqo/veriqo/gateway/rest	3.748s	coverage: 17.3% of statements
+ok  	veriqo/veriqo/generator	1.110s	coverage: 89.4% of statements
+	veriqo/veriqo/generator/cmd/gen		coverage: 0.0% of statements
+ok  	veriqo/veriqo/kernel	1.016s	coverage: 75.0% of statements
+ok  	veriqo/veriqo/moat/scorecard	1.011s	coverage: 94.3% of statements
+ok  	veriqo/veriqo/registry	1.024s	coverage: 80.1% of statements
+ok  	veriqo/veriqo/sdk/go	1.017s	coverage: 12.5% of statements
+== 6/6  race-repeat on consensus-critical packages (5x) ==
+ok  	veriqo/pkg/consensus/raftlite	60.883s
+ok  	veriqo/pkg/workflow	1.018s
+ok  	veriqo/pkg/platform/audit	1.069s
+
+ALL CHECKS PASSED.
+
+NOT run by this script (require network access this sandbox blocks
+to proxy.golang.org / package registries — see repo README):
+  - golangci-lint (would need to be vendored or fetched)
+  - govulncheck / Go vulnerability database lookups
+  - SPIRE / SPIFFE identity attestation (needs a running SPIRE server)
+  - OPA policy bundle validation (needs the opa binary)
+  - gosec static analysis
+
+[exited with code 0]
+
+--- Direct race+coverage re-check of every Round 9 new/touched package ---
+=== RUN   TestNewValidatesRequiredFields
+--- PASS: TestNewValidatesRequiredFields (0.00s)
+=== RUN   TestFullLifecycleHappyPath
+--- PASS: TestFullLifecycleHappyPath (0.00s)
+=== RUN   TestSegregationOfDutiesRefusesSelfAuthorization
+--- PASS: TestSegregationOfDutiesRefusesSelfAuthorization (0.00s)
+=== RUN   TestAuthorizeRefusesWrongRole
+--- PASS: TestAuthorizeRefusesWrongRole (0.00s)
+=== RUN   TestInstructRefusesWrongRole
+--- PASS: TestInstructRefusesWrongRole (0.00s)
+=== RUN   TestInstructRefusesBeforeAuthorization
+--- PASS: TestInstructRefusesBeforeAuthorization (0.00s)
+=== RUN   TestSettleRefusesBeforeInstruction
+--- PASS: TestSettleRefusesBeforeInstruction (0.00s)
+=== RUN   TestReverseRefusesUnpaid
+--- PASS: TestReverseRefusesUnpaid (0.00s)
+=== RUN   TestDisputeLifecycle
+--- PASS: TestDisputeLifecycle (0.00s)
+=== RUN   TestReconcileReportsAdequacy
+--- PASS: TestReconcileReportsAdequacy (0.00s)
+=== RUN   TestLinkAllocationAndQuantum
+--- PASS: TestLinkAllocationAndQuantum (0.00s)
+=== RUN   TestRegistryIdempotentCreate
+--- PASS: TestRegistryIdempotentCreate (0.00s)
+=== RUN   TestRegistryRefusesDuplicatePaymentIDWithDifferentIdempotencyKey
+--- PASS: TestRegistryRefusesDuplicatePaymentIDWithDifferentIdempotencyKey (0.00s)
+=== RUN   TestPaymentAuthorityAndExecutionAuthorityAreDisjoint
+--- PASS: TestPaymentAuthorityAndExecutionAuthorityAreDisjoint (0.00s)
+=== RUN   TestStatusVocabularyIsClosed
+--- PASS: TestStatusVocabularyIsClosed (0.00s)
+PASS
+coverage: 78.2% of statements
+ok  	veriqo/pkg/insurance/payment	1.019s	coverage: 78.2% of statements
+=== RUN   TestCredentialValidateRequiresEvidence
+--- PASS: TestCredentialValidateRequiresEvidence (0.00s)
+=== RUN   TestCredentialValidateRequiresIssuingAuthority
+--- PASS: TestCredentialValidateRequiresIssuingAuthority (0.00s)
+=== RUN   TestCredentialValidateRejectsExpiresBeforeIssued
+--- PASS: TestCredentialValidateRejectsExpiresBeforeIssued (0.00s)
+=== RUN   TestCredentialStatusLifecycle
+--- PASS: TestCredentialStatusLifecycle (0.00s)
+=== RUN   TestRegistryRegisterAndRevoke
+--- PASS: TestRegistryRegisterAndRevoke (0.00s)
+=== RUN   TestEffectiveCredentialFindsActiveKind
+--- PASS: TestEffectiveCredentialFindsActiveKind (0.00s)
+=== RUN   TestQualificationRecordValidateRequiresSourceWhenExternallyVerified
+--- PASS: TestQualificationRecordValidateRequiresSourceWhenExternallyVerified (0.00s)
+=== RUN   TestQualificationRecordValidateRefusesMisroutedSource
+--- PASS: TestQualificationRecordValidateRefusesMisroutedSource (0.00s)
+=== RUN   TestQualificationRecordSelfAttestedNeedsNoSource
+--- PASS: TestQualificationRecordSelfAttestedNeedsNoSource (0.00s)
+=== RUN   TestRegistryQualificationHistoryIsAppendOnly
+--- PASS: TestRegistryQualificationHistoryIsAppendOnly (0.00s)
+=== RUN   TestKindAndStatusVocabulariesAreClosed
+--- PASS: TestKindAndStatusVocabulariesAreClosed (0.00s)
+PASS
+coverage: 86.2% of statements
+ok  	veriqo/pkg/insurance/credential	1.018s	coverage: 86.2% of statements
+=== RUN   TestReferenceLifecycleAdapterNeverFabricatesSuccess
+--- PASS: TestReferenceLifecycleAdapterNeverFabricatesSuccess (0.00s)
+=== RUN   TestOutcomeKindVocabularyIsClosed
+--- PASS: TestOutcomeKindVocabularyIsClosed (0.00s)
+=== RUN   TestRevocationValidate
+--- PASS: TestRevocationValidate (0.00s)
+=== RUN   TestRevocationSubjectVocabularyIsClosed
+--- PASS: TestRevocationSubjectVocabularyIsClosed (0.00s)
+=== RUN   TestReferenceAdapterNeverFabricatesSuccess
+--- PASS: TestReferenceAdapterNeverFabricatesSuccess (0.00s)
+=== RUN   TestIsNetworkParticipantRoleCoversTheWorkOrdersOwnList
+--- PASS: TestIsNetworkParticipantRoleCoversTheWorkOrdersOwnList (0.00s)
+=== RUN   TestIsNetworkParticipantRoleRefusesUnrelatedRoles
+--- PASS: TestIsNetworkParticipantRoleRefusesUnrelatedRoles (0.00s)
+=== RUN   TestQualificationStateVocabularyIsClosed
+--- PASS: TestQualificationStateVocabularyIsClosed (0.00s)
+=== RUN   TestRegistrySourceVocabularyIsClosed
+--- PASS: TestRegistrySourceVocabularyIsClosed (0.00s)
+=== RUN   TestRegistryQueryValidateRefusesMisroute
+--- PASS: TestRegistryQueryValidateRefusesMisroute (0.00s)
+=== RUN   TestRegistryDirectoryRefusesUnregisteredSource
+--- PASS: TestRegistryDirectoryRefusesUnregisteredSource (0.00s)
+=== RUN   TestRegistryDirectoryRoutesToTheDeclaredSourceOnly
+--- PASS: TestRegistryDirectoryRoutesToTheDeclaredSourceOnly (0.00s)
+=== RUN   TestRegistrySourceRoutesRoleIsNotUniversal
+--- PASS: TestRegistrySourceRoutesRoleIsNotUniversal (0.00s)
+PASS
+coverage: 84.8% of statements
+ok  	veriqo/pkg/insurance/network	1.018s	coverage: 84.8% of statements
+=== RUN   TestMirrorCaseAppendsEveryTransition
+--- PASS: TestMirrorCaseAppendsEveryTransition (0.00s)
+=== RUN   TestMirrorPaymentHistoryAppendsEveryEvent
+--- PASS: TestMirrorPaymentHistoryAppendsEveryEvent (0.00s)
+=== RUN   TestMirrorReserveHistoryAppendsEveryEntry
+--- PASS: TestMirrorReserveHistoryAppendsEveryEntry (0.00s)
+=== RUN   TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain
+--- PASS: TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain (0.00s)
+=== RUN   TestMirrorCaseRefusesNilCase
+--- PASS: TestMirrorCaseRefusesNilCase (0.00s)
+PASS
+coverage: 82.9% of statements
+ok  	veriqo/pkg/insurance/auditlink	1.016s	coverage: 82.9% of statements
+=== RUN   TestBuildRedactedCaseRefusesNilResult
+--- PASS: TestBuildRedactedCaseRefusesNilResult (0.00s)
+=== RUN   TestBuildRedactedCaseRefusesUnknownLevel
+--- PASS: TestBuildRedactedCaseRefusesUnknownLevel (0.01s)
+=== RUN   TestBuildRedactedCaseAllStagesPresentAtEveryLevel
+--- PASS: TestBuildRedactedCaseAllStagesPresentAtEveryLevel (0.01s)
+=== RUN   TestFullLevelIncludesPartyPseudonymsAndExactAmount
+--- PASS: TestFullLevelIncludesPartyPseudonymsAndExactAmount (0.01s)
+=== RUN   TestRedactedLevelHidesIdentitiesButKeepsAmount
+--- PASS: TestRedactedLevelHidesIdentitiesButKeepsAmount (0.01s)
+=== RUN   TestSummaryOnlyLevelHidesIdentitiesAndExactAmount
+--- PASS: TestSummaryOnlyLevelHidesIdentitiesAndExactAmount (0.01s)
+=== RUN   TestPermissionLevelVocabularyIsClosed
+--- PASS: TestPermissionLevelVocabularyIsClosed (0.00s)
+=== RUN   TestReplayVerifiedCarriesThroughEveryLevel
+--- PASS: TestReplayVerifiedCarriesThroughEveryLevel (0.01s)
+PASS
+coverage: 91.7% of statements
+ok  	veriqo/pkg/insurance/historicalreplay	1.079s	coverage: 91.7% of statements
+=== RUN   TestAllSevenCasesExistAndValidate
+--- PASS: TestAllSevenCasesExistAndValidate (0.00s)
+=== RUN   TestGetReturnsEachCaseAndRefusesUnknown
+--- PASS: TestGetReturnsEachCaseAndRefusesUnknown (0.00s)
+=== RUN   TestEveryCaseDeclaresItsEngineeringPurpose
+--- PASS: TestEveryCaseDeclaresItsEngineeringPurpose (0.00s)
+=== RUN   TestNoRealWorldEntityAppearsInThePack
+--- PASS: TestNoRealWorldEntityAppearsInThePack (0.02s)
+=== RUN   TestJurisdictionsAreGeneric
+--- PASS: TestJurisdictionsAreGeneric (0.00s)
+=== RUN   TestNoCaseOutputIsADetermination
+--- PASS: TestNoCaseOutputIsADetermination (0.00s)
+=== RUN   TestAFixtureCaseCanNeverReportAsLive
+--- PASS: TestAFixtureCaseCanNeverReportAsLive (0.00s)
+=== RUN   TestEverySyntheticRecordCarriesItsOriginInItsContentHash
+--- PASS: TestEverySyntheticRecordCarriesItsOriginInItsContentHash (0.01s)
+=== RUN   TestCasesAreDeterministicFixtures
+--- PASS: TestCasesAreDeterministicFixtures (0.02s)
+=== RUN   TestEachCaseHasDistinctEvidence
+--- PASS: TestEachCaseHasDistinctEvidence (0.01s)
+=== RUN   TestContentHashChangesWithContent
+--- PASS: TestContentHashChangesWithContent (0.00s)
+=== RUN   TestCase004ExpectsOnlyLegalInterpretationRequired
+--- PASS: TestCase004ExpectsOnlyLegalInterpretationRequired (0.00s)
+=== RUN   TestCase005ExpectsTheExactSection35Output
+--- PASS: TestCase005ExpectsTheExactSection35Output (0.00s)
+=== RUN   TestCase006ExpectsTheTwoCriticalSeparations
+--- PASS: TestCase006ExpectsTheTwoCriticalSeparations (0.00s)
+=== RUN   TestCase003ExpectsInconsistencyNotFraud
+--- PASS: TestCase003ExpectsInconsistencyNotFraud (0.00s)
+=== RUN   TestEvidenceTypesAreDeclaredForPreservation
+--- PASS: TestEvidenceTypesAreDeclaredForPreservation (0.00s)
+=== RUN   TestBuiltEvidenceLookupHelpers
+--- PASS: TestBuiltEvidenceLookupHelpers (0.00s)
+=== RUN   TestValidateCatchesMalformedDescriptors
+--- PASS: TestValidateCatchesMalformedDescriptors (0.00s)
+=== RUN   TestEveryCaseDrivesTheFullFacadePath
+--- PASS: TestEveryCaseDrivesTheFullFacadePath (0.02s)
+=== RUN   TestEveryCaseUsesTheHistoricalPolicyVersion
+--- PASS: TestEveryCaseUsesTheHistoricalPolicyVersion (0.02s)
+=== RUN   TestEveryCaseBindsToOneCanonicalCaseLineage
+--- PASS: TestEveryCaseBindsToOneCanonicalCaseLineage (0.02s)
+=== RUN   TestThreeGatesPassOnEveryCase
+--- PASS: TestThreeGatesPassOnEveryCase (0.01s)
+=== RUN   TestCoverageTraceabilityActuallyChecked
+--- PASS: TestCoverageTraceabilityActuallyChecked (0.01s)
+=== RUN   TestQuantumIsGenuinelyRecomputed
+--- PASS: TestQuantumIsGenuinelyRecomputed (0.01s)
+=== RUN   TestPreservationCoversEveryRecord
+--- PASS: TestPreservationCoversEveryRecord (0.01s)
+=== RUN   TestHumanReviewGateFailsClosedOnEveryCase
+--- PASS: TestHumanReviewGateFailsClosedOnEveryCase (0.01s)
+=== RUN   TestHumanReviewGateOpensWithARealAuthorization
+--- PASS: TestHumanReviewGateOpensWithARealAuthorization (0.01s)
+=== RUN   TestARubberStampAuthorizationIsRefused
+--- PASS: TestARubberStampAuthorizationIsRefused (0.01s)
+=== RUN   TestCase002ProducesLateNoticeWithNoCoverageOutcome
+--- PASS: TestCase002ProducesLateNoticeWithNoCoverageOutcome (0.01s)
+=== RUN   TestCase004ProducesNoSingleAssertedCause
+--- PASS: TestCase004ProducesNoSingleAssertedCause (0.01s)
+=== RUN   TestEveryCaseCausationIsHedged
+--- PASS: TestEveryCaseCausationIsHedged (0.01s)
+=== RUN   TestEveryCaseSurfacesItsContradiction
+--- PASS: TestEveryCaseSurfacesItsContradiction (0.02s)
+=== RUN   TestEveryCaseDossierRequiresReviewAndCarriesNoVerdict
+--- PASS: TestEveryCaseDossierRequiresReviewAndCarriesNoVerdict (0.01s)
+=== RUN   TestEveryCaseClosesWithOpenIssues
+--- PASS: TestEveryCaseClosesWithOpenIssues (0.01s)
+=== RUN   TestDrivingIsDeterministic
+--- PASS: TestDrivingIsDeterministic (0.02s)
+=== RUN   TestFixtureEnvelopeIsRefusedAsExternalEvidence
+--- PASS: TestFixtureEnvelopeIsRefusedAsExternalEvidence (0.01s)
+=== RUN   TestEveryCaseRecordsAMitigationActionWithNoReasonablenessJudgment
+--- PASS: TestEveryCaseRecordsAMitigationActionWithNoReasonablenessJudgment (0.01s)
+=== RUN   TestMitigationSupportingEvidenceIsReal
+--- PASS: TestMitigationSupportingEvidenceIsReal (0.00s)
+=== RUN   TestDriveGoldenSucceeds
+--- PASS: TestDriveGoldenSucceeds (0.00s)
+=== RUN   TestGoldenGeospatialResolvesIncidentInsideItsOwnTerminal
+--- PASS: TestGoldenGeospatialResolvesIncidentInsideItsOwnTerminal (0.00s)
+=== RUN   TestGoldenRelationshipIsEffectiveAndPermissioned
+--- PASS: TestGoldenRelationshipIsEffectiveAndPermissioned (0.00s)
+=== RUN   TestGoldenSalvageGenuinelyReducesQuantum
+--- PASS: TestGoldenSalvageGenuinelyReducesQuantum (0.00s)
+=== RUN   TestGoldenCoInsuranceAndReinsuranceAllocationsAreExact
+--- PASS: TestGoldenCoInsuranceAndReinsuranceAllocationsAreExact (0.00s)
+=== RUN   TestGoldenDisputePreservesBothPositionsUnreconciled
+--- PASS: TestGoldenDisputePreservesBothPositionsUnreconciled (0.00s)
+=== RUN   TestDriveGoldenIsDeterministic
+--- PASS: TestDriveGoldenIsDeterministic (0.01s)
+=== RUN   TestGoldenColdReplay
+--- PASS: TestGoldenColdReplay (0.01s)
+=== RUN   TestRunGoldenAssurancePasses
+--- PASS: TestRunGoldenAssurancePasses (0.01s)
+=== RUN   TestGoldenReserveIsApprovedAndReconciled
+--- PASS: TestGoldenReserveIsApprovedAndReconciled (0.00s)
+=== RUN   TestGoldenRecoveryTargetRegisteredAgainstCarrier
+--- PASS: TestGoldenRecoveryTargetRegisteredAgainstCarrier (0.00s)
+=== RUN   TestGoldenRegulatoryMatterReachesFindingAndClosure
+--- PASS: TestGoldenRegulatoryMatterReachesFindingAndClosure (0.00s)
+=== RUN   TestGoldenEvidenceSufficiencyIsGenuinelyAssessed
+--- PASS: TestGoldenEvidenceSufficiencyIsGenuinelyAssessed (0.00s)
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-001
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-002
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-003
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-004
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-005
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-006
+=== RUN   TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-007
+--- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase (0.03s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-001 (0.00s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-002 (0.01s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-003 (0.00s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-004 (0.00s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-005 (0.00s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-006 (0.01s)
+    --- PASS: TestColdReplayReproducesIdenticalResultOnEveryCase/CASE-INS-007 (0.00s)
+=== RUN   TestReplayFromSnapshotNeverTouchesTheOriginalCase
+--- PASS: TestReplayFromSnapshotNeverTouchesTheOriginalCase (0.00s)
+=== RUN   TestSnapshotIsDeterministicBytes
+--- PASS: TestSnapshotIsDeterministicBytes (0.00s)
+=== RUN   TestReplayFromEmptySnapshotFails
+--- PASS: TestReplayFromEmptySnapshotFails (0.00s)
+=== RUN   TestColdReplayDetectsADivergedSnapshot
+--- PASS: TestColdReplayDetectsADivergedSnapshot (0.01s)
+PASS
+coverage: 71.1% of statements
+ok  	veriqo/pkg/insurance/casepack	1.453s	coverage: 71.1% of statements
+=== RUN   TestGenerateRejectsNilCase
+--- PASS: TestGenerateRejectsNilCase (0.00s)
+=== RUN   TestGenerateCapturesAuditTrailFromStateLog
+--- PASS: TestGenerateCapturesAuditTrailFromStateLog (0.00s)
+=== RUN   TestHumanReviewRequiredIsRealAggregationNotPlaceholder
+--- PASS: TestHumanReviewRequiredIsRealAggregationNotPlaceholder (0.00s)
+=== RUN   TestTimelineConflictAlwaysTriggersReview
+--- PASS: TestTimelineConflictAlwaysTriggersReview (0.00s)
+=== RUN   TestDossierHasNoVerdictField
+--- PASS: TestDossierHasNoVerdictField (0.00s)
+=== RUN   TestGenerateIsReproducible
+--- PASS: TestGenerateIsReproducible (0.00s)
+PASS
+coverage: 72.5% of statements
+ok  	veriqo/pkg/insurance/dossier	1.022s	coverage: 72.5% of statements
+=== RUN   TestNoDeterminationFieldAnywhereInTheInsuranceDomain
+--- PASS: TestNoDeterminationFieldAnywhereInTheInsuranceDomain (0.17s)
+=== RUN   TestTheVerdictAllowlistIsStillAccurate
+--- PASS: TestTheVerdictAllowlistIsStillAccurate (0.18s)
+=== RUN   TestNoOpaqueConfidenceScoreAnywhereInTheInsuranceDomain
+--- PASS: TestNoOpaqueConfidenceScoreAnywhereInTheInsuranceDomain (0.17s)
+=== RUN   TestTheConfidenceAllowlistIsStillAccurate
+--- PASS: TestTheConfidenceAllowlistIsStillAccurate (0.16s)
+=== RUN   TestNoForbiddenCanonicalDuplicateIsDeclaredAnywhere
+--- PASS: TestNoForbiddenCanonicalDuplicateIsDeclaredAnywhere (0.17s)
+=== RUN   TestNoVendorJudgmentOrCompanyIsHardCodedAnywhere
+--- PASS: TestNoVendorJudgmentOrCompanyIsHardCodedAnywhere (0.08s)
+=== RUN   TestTheScanReachesEveryInsurancePackage
+--- PASS: TestTheScanReachesEveryInsurancePackage (0.00s)
+PASS
+coverage: [no statements]
+ok  	veriqo/pkg/insurance/guardrails	1.957s	coverage: [no statements]
+=== RUN   TestAppend_Basic
+--- PASS: TestAppend_Basic (0.00s)
+=== RUN   TestConcurrentAppend_Serialized
+--- PASS: TestConcurrentAppend_Serialized (0.00s)
+=== RUN   TestVerifyChain_RejectsTamperedPayload
+--- PASS: TestVerifyChain_RejectsTamperedPayload (0.00s)
+=== RUN   TestVerifySnapshot_MatchesRootHash
+--- PASS: TestVerifySnapshot_MatchesRootHash (0.00s)
+=== RUN   TestVerifyChain_RejectsBrokenLinkage
+--- PASS: TestVerifyChain_RejectsBrokenLinkage (0.00s)
+=== RUN   TestVerifySnapshot_EmptyLog
+--- PASS: TestVerifySnapshot_EmptyLog (0.00s)
+=== RUN   TestAppend_SequentialIndicesUnderLoad
+--- PASS: TestAppend_SequentialIndicesUnderLoad (0.01s)
+=== RUN   TestRootHash_ChangesOnEveryAppend
+--- PASS: TestRootHash_ChangesOnEveryAppend (0.00s)
+PASS
+coverage: 92.7% of statements
+ok  	veriqo/pkg/platform/audit	1.028s	coverage: 92.7% of statements
+
+--- cmd/veriqo-dossier-verify -case golden ---
+===== VERIQO INDEPENDENT DOSSIER VERIFIER =====
+Don't trust VERIQO. Verify VERIQO.
+case: GOLDEN
+
+[PASS] independent_reproduction     two independent runs agree exactly (evidence_root_hash=39cca8a97fd50f9464df7a365a72bfa358d919a8172e68faeaca43906457194a)
+[PASS] evidence_chain_integrity     root hash recomputed from 10 raw evidence records, matches the manifest
+[PASS] quantum_recomputation        recomputed 150000.00 from ComputeInput via the pure quantum.Compute function, matches
+[PASS] golden_salvage_recomputation independently recomputed both figures from ComputeInput; drop of exactly 7600.00 matches the salvage net value
+[PASS] golden_reserve_independent   reserve amount 173400.00 independently recomputed from ComputeInput and reproduced across two independent runs
+[PASS] golden_recovery_independent  recovery target against PTY-002-CARRIER (basis=BAILEE_LIABILITY) reproduced identically across two independent runs
+[PASS] golden_regulatory_independent regulatory matter (stage=CLOSED_NO_ACTION, allegation result=NOT_PROVEN) reproduced identically across two independent runs
+[PASS] cold_replay                  cold-replayed golden case matches the live run
+[PASS] no_verdict_field             scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict
+
+verdict: INDEPENDENTLY VERIFIED — every claim above was recomputed, not read.
+
+--- cmd/veriqo-insurance-cold-replay -case golden ---
+===== VERIQO INSURANCE COLD REPLAY =====
+case: GOLDEN   snapshot: INSREPLAY-e80f82bd5250e10b2d55a69e09d3459587a5e7d9db74891cc9563acceb5ba0c5
+
+[PASS] evidence_root_hash_match
+[PASS] preservation_hash_match
+[PASS] quantum_result_match
+[PASS] policy_version_match
+[PASS] coverage_fact_count_match
+
+[PASS] evidence_differences: none
+[PASS] policy_differences: none
+[PASS] rule_differences: none
+[PASS] authorization_differences: none
+
+verdict: COLD REPLAY REPRODUCES THE LIVE RESULT EXACTLY.

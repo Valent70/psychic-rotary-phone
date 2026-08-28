@@ -2,4 +2,4 @@ gate: temporal_calibration_usage_coverage
 command: go test -run TemporalCalibrationUsageCoverage ./pkg/execution/
 exit: 0
 ---
-ok  	veriqo/pkg/execution	(cached)
+ok  	veriqo/pkg/execution	0.005s

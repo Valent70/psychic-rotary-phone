@@ -1,12 +1,12 @@
 {
   "schema": "veriqo.attack_surface_inventory/v1",
   "generated_from": "manual code + test inspection this round (grep + read, see chat record), prepared per the Round 7 work order's \u00a7II requirement to make the system ready for an external pentest to start immediately",
-  "assessment_date": "2026-08-27",
+  "assessment_date": "2026-08-28",
   "purpose": "This inventory does not replace an independent penetration test -- it exists so a real external vendor can start immediately against a documented surface, and so this program can honestly show what adversarial coverage already exists internally versus what a vendor should specifically focus new attention on.",
   "category_count": 18,
   "summary": {
-    "covered": 17,
-    "partial": 1,
+    "covered": 18,
+    "partial": 0,
     "not_yet_covered": 0
   },
   "categories": [
@@ -164,13 +164,14 @@
     },
     {
       "category": "Audit-log integrity",
-      "status": "PARTIAL",
-      "evidence": "internal/timestamp provides a hash-chained, tamper-evident notary chain for release certificates; pkg/platform/audit exists and is used by cmd/veriqo-node/cmd/veriqo-gateway/pkg/workflow. However (see INSURANCE_COMPLETENESS_AUDIT.json, GAP-AUDIT-SUBSYSTEM-NOT-UNIFIED), the insurance domain's own dossier audit trail is not wired to pkg/platform/audit, so audit-log integrity is proven for the platform layer but not yet unified across the insurance domain.",
+      "status": "COVERED",
+      "evidence": "internal/timestamp provides a hash-chained, tamper-evident notary chain for release certificates; pkg/platform/audit exists and is used by cmd/veriqo-node/cmd/veriqo-gateway/pkg/workflow. Round 9: pkg/insurance/auditlink (new) mirrors the insurance domain's own case/payment/reserve events into the SAME pkg/platform/audit.AuditStore in canonical event shape, and casepack/golden.go's attachUnifiedAudit proves this end to end on the golden case (verified as one hash-chained ledger via auditlink.VerifyUnified) -- audit-log integrity is now unified across the platform and insurance-domain layers, not merely proven for the platform layer alone.",
       "tests": [
         "internal/timestamp (chain verification)",
-        "pkg/platform/audit (own test suite)"
+        "pkg/platform/audit (own test suite)",
+        "pkg/insurance/auditlink (own test suite, incl. multi-domain unification)"
       ],
-      "gap_note": "See GAP-AUDIT-SUBSYSTEM-NOT-UNIFIED in FINAL_MASTER_GAP_MATRIX.json for the full account."
+      "gap_note": ""
     },
     {
       "category": "Privilege escalation scenarios",

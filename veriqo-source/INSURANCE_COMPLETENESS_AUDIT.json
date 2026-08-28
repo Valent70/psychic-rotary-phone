@@ -1,15 +1,15 @@
 {
   "schema": "veriqo.insurance_completeness_audit/v1",
-  "generated_from": "manual code inspection across Rounds 7-8 (grep + read, see chat record) cross-checked against READINESS_MANIFEST.json",
-  "assessment_date": "2026-08-27",
+  "generated_from": "manual code inspection across Rounds 7-9 (grep + read, see chat record) cross-checked against READINESS_MANIFEST.json",
+  "assessment_date": "2026-08-28",
   "rule": "status is IMPLEMENTED only when real code AND real tests exist; integrated is true only when the domain is actually imported and driven by pkg/insurance/casepack and/or pkg/insurance/caseroom (the Golden Cross-Domain Case's own drivers), not merely present with its own standalone tests; real_world_qualified is false for every row in this release, honestly, because no domain has real external qualification evidence yet.",
   "domain_count": 29,
   "summary": {
-    "implemented": 26,
-    "partial": 3,
+    "implemented": 28,
+    "partial": 1,
     "missing": 0,
     "tested": 29,
-    "integrated_into_golden_case": 28,
+    "integrated_into_golden_case": 29,
     "real_world_qualified": 0
   },
   "domains": [
@@ -286,14 +286,15 @@
     },
     {
       "domain": "Payment",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "tested": true,
       "integrated": true,
       "packages": [
-        "pkg/insurance/policy"
+        "pkg/insurance/policy",
+        "pkg/insurance/payment"
       ],
-      "evidence": "policy/participation.go's AllocateCoInsurance computes payment allocation amounts and is exercised by the golden case, but there is no PaymentStatus/PaymentRecord type anywhere in pkg/insurance -- no pending/paid/disputed lifecycle, no payment record separate from the allocation calculation itself.",
-      "gap_note": "Allocation math is real and integrated; a payment execution/status lifecycle on top of it does not exist yet.",
+      "evidence": "Round 9: pkg/insurance/payment adds PaymentRecord/PaymentStatus/PaymentAuthorization/PaymentInstruction/PaymentEvent/PaymentReversal/PaymentDispute with immutable history, two-stage segregation of duties (authorize vs. instruct, disjoint role sets), idempotent creation via PaymentRegistry, and reconciliation against policy.Allocation by reference. casepack/golden.go's attachPayment drives the golden case's insurer-primary co-insurance allocation through the full create -> authorize -> instruct -> settle lifecycle and reconciles it exactly against the SAME allocation policy/participation.go computed -- see TestFullLifecycleHappyPath and GoldenAssuranceSummary.PaymentSettledAndReconciled.",
+      "gap_note": "",
       "real_world_qualified": false
     },
     {
@@ -347,14 +348,16 @@
     },
     {
       "domain": "Audit",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "tested": true,
-      "integrated": false,
+      "integrated": true,
       "packages": [
-        "pkg/insurance/dossier"
+        "pkg/insurance/dossier",
+        "pkg/insurance/auditlink",
+        "pkg/platform/audit"
       ],
-      "evidence": "dossier.go carries its own AuditTrail concept, but grep for pkg/platform/audit imports anywhere under pkg/insurance/* returns zero matches -- the insurance domain's audit trail is not wired to the repository's shared platform audit subsystem (pkg/platform/audit, used by cmd/veriqo-node, cmd/veriqo-gateway, pkg/workflow, etc.).",
-      "gap_note": "Two audit mechanisms exist in the repository (dossier's own trail, and platform/audit) with no integration between them for the insurance domain -- a real, disclosed architectural gap, not a fabricated pass.",
+      "evidence": "Round 9: pkg/insurance/auditlink mirrors a Case's own StateLog, a PaymentRecord's history, and a Reserve's history into ONE shared pkg/platform/audit.AuditStore in canonical event shape. casepack/golden.go's attachUnifiedAudit mirrors the golden case's own case+payment+reserve events into one AuditStore, verifies the whole chain (auditlink.VerifyUnified), and records the result on dossier.Dossier via the new SetUnifiedAudit/AuditUnified/CanonicalAuditRootHash/CanonicalAuditEventCount fields -- see TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain and GoldenAssuranceSummary.AuditUnified. The dossier's own audit trail and the platform's shared ledger are now views over the same hash-chained record rather than two independent truths.",
+      "gap_note": "",
       "real_world_qualified": false
     },
     {
