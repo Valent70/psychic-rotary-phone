@@ -89,6 +89,39 @@ type Dossier struct {
 	// already raised; this package invents none of its own.
 	HumanReviewQuestions []string `json:"human_review_questions"`
 	HumanReviewRequired  bool     `json:"human_review_required"`
+
+	// ---- Unified audit (closes this program's own Round 8 self-review
+	// gap G2) ----
+	//
+	// These three fields are OPTIONAL and populated by the CALLER, never
+	// by Generate itself — matching this package's own "no analysis of
+	// its own" discipline: a caller that mirrors this case's
+	// LifecycleAuditTrail (and any linked payment/reserve history) into
+	// a shared pkg/platform/audit.AuditStore via
+	// pkg/insurance/auditlink sets these AFTER calling Generate, so the
+	// Dossier can state whether its own audit trail and the platform's
+	// shared ledger are genuinely ONE verifiable chain rather than two
+	// independent truths. A Dossier that never had a shared ledger
+	// attached leaves all three at their zero value and reports
+	// AuditUnified=false — never a fabricated unification that did not
+	// happen.
+	CanonicalAuditRootHash   string `json:"canonical_audit_root_hash,omitempty"`
+	CanonicalAuditEventCount int    `json:"canonical_audit_event_count,omitempty"`
+	AuditUnified             bool   `json:"audit_unified"`
+}
+
+// SetUnifiedAudit records that d's own LifecycleAuditTrail (and
+// whatever else the caller mirrored alongside it, e.g. payment/reserve
+// history) now lives in a shared audit ledger with root hash rootHash
+// holding eventCount total records. AuditUnified is derived, never
+// caller-set directly: it requires a non-empty rootHash AND at least as
+// many mirrored events as this Dossier's own LifecycleAuditTrail has —
+// proof the case's own trail is actually a SUBSET of what was mirrored,
+// not merely a hash handed in alongside an unrelated count.
+func (d *Dossier) SetUnifiedAudit(rootHash string, eventCount int) {
+	d.CanonicalAuditRootHash = rootHash
+	d.CanonicalAuditEventCount = eventCount
+	d.AuditUnified = rootHash != "" && eventCount >= len(d.LifecycleAuditTrail)
 }
 
 // Generate assembles the Dossier for c from in.

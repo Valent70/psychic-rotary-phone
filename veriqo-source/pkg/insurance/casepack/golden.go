@@ -4,14 +4,17 @@ import (
 	"fmt"
 
 	"veriqo/pkg/geospatial"
+	"veriqo/pkg/insurance/auditlink"
 	"veriqo/pkg/insurance/dispute"
 	"veriqo/pkg/insurance/party"
+	"veriqo/pkg/insurance/payment"
 	"veriqo/pkg/insurance/policy"
 	"veriqo/pkg/insurance/quantum"
 	"veriqo/pkg/insurance/recovery"
 	"veriqo/pkg/insurance/regulatory"
 	"veriqo/pkg/insurance/reserve"
 	"veriqo/pkg/insurance/salvage"
+	"veriqo/pkg/platform/audit"
 )
 
 // This file closes the VERIQO Final Remaining Gap Closure Order's P0
@@ -112,6 +115,16 @@ type GoldenResult struct {
 	// ---- Regulatory (Round 8: genuinely wired for the first time —
 	// pkg/insurance/regulatory had zero callers anywhere before this) ----
 	RegulatoryMatter *regulatory.Matter
+
+	// ---- Payment lifecycle (Round 9: closes gap G1, "Payment
+	// Lifecycle") ----
+	Payment *payment.PaymentRecord
+
+	// ---- Unified audit (Round 9: closes gap G2, "Unified Audit") ----
+	// AuditStore is the ONE shared platform/audit ledger this case's own
+	// lifecycle trail, payment history and reserve history are all
+	// mirrored into via pkg/insurance/auditlink — see attachUnifiedAudit.
+	AuditStore *audit.AuditStore
 }
 
 // DriveGolden drives CASE-INS-002 through the standard Drive() path,
@@ -155,6 +168,12 @@ func DriveGolden() (*GoldenResult, error) {
 	}
 	if err := gr.attachRegulatory(); err != nil {
 		return nil, fmt.Errorf("casepack: golden: regulatory: %w", err)
+	}
+	if err := gr.attachPayment(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: payment: %w", err)
+	}
+	if err := gr.attachUnifiedAudit(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: unified audit: %w", err)
 	}
 	return gr, nil
 }
@@ -502,6 +521,93 @@ func (gr *GoldenResult) attachRegulatory() error {
 	return nil
 }
 
+// ---- 9. Payment lifecycle (Round 9) ----
+//
+// Closes gap G1 ("Payment Lifecycle"): pkg/insurance/policy already
+// computes WHO gets paid HOW MUCH (attachParticipation's own
+// CoInsuranceAllocation), but nothing tracked whether that amount was
+// ever authorized, instructed, or paid. This drives the named
+// insurer's own primary allocation share through the FULL lifecycle —
+// create, authorize (by a different party — segregation of duties),
+// instruct (by a party with EXECUTION authority — the second,
+// disjoint segregation), settle — linking the resulting PaymentRecord
+// back to the SAME allocation and quantum figure by reference, never a
+// second computed amount.
+func (gr *GoldenResult) attachPayment() error {
+	var insurerPrimary policy.Allocation
+	found := false
+	for _, a := range gr.CoInsuranceAllocation {
+		if a.Role == policy.AllocationRoleInsurerPrimary {
+			insurerPrimary = a
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("golden case has no insurer primary allocation to pay")
+	}
+
+	p, err := payment.New("PAY-GOLDEN-1", "CLM-"+string(gr.CaseID), string(gr.CaseID),
+		"PTY-002-INSURER", insurerPrimary.Amount, "IDEM-GOLDEN-1",
+		"PTY-002-CLAIMS-HANDLER", "payment created from insurer primary co-insurance allocation", 1000)
+	if err != nil {
+		return err
+	}
+	p.LinkAllocation(string(insurerPrimary.Role), insurerPrimary.PartyID)
+	p.LinkQuantum(gr.QuantumWithSalvage.CalculationID)
+
+	if _, err := p.Authorize("PTY-002-INSURER", party.RoleInsurer, "authorized for payment to co-insurer", 1010); err != nil {
+		return err
+	}
+	if _, err := p.Instruct("PTY-002-BANK", party.RoleBankTradeFinance, "SWIFT MT103", "REF-GOLDEN-1", 1020); err != nil {
+		return err
+	}
+	if err := p.Settle("PTY-002-BANK", "confirmed by SWIFT acknowledgement", 1030); err != nil {
+		return err
+	}
+
+	rec := p.Reconcile(insurerPrimary.Amount)
+	if rec.Adequacy != payment.AdequacyExact {
+		return fmt.Errorf("golden case payment did not reconcile exactly against its own allocation: %s", rec.Adequacy)
+	}
+	gr.Payment = p
+	return nil
+}
+
+// ---- 10. Unified audit (Round 9) ----
+//
+// Closes gap G2 ("Unified Audit"): mirrors this case's own lifecycle
+// trail (gr.Facade.Case().StateLog(), the same data
+// gr.Dossier.LifecycleAuditTrail was built from), the golden payment's
+// history, and the golden reserve's history into ONE shared
+// pkg/platform/audit.AuditStore via pkg/insurance/auditlink, then
+// records the resulting root hash on the Dossier — proof the
+// dossier's own audit trail and the platform's shared ledger are one
+// verifiable chain, not two independent truths.
+func (gr *GoldenResult) attachUnifiedAudit() error {
+	store := audit.NewAuditStore()
+	if _, err := auditlink.MirrorCase(store, gr.Facade.Case(), string(gr.CaseID)); err != nil {
+		return err
+	}
+	if gr.Payment != nil {
+		if _, err := auditlink.MirrorPaymentHistory(store, gr.Payment); err != nil {
+			return err
+		}
+	}
+	if gr.Reserve != nil {
+		if _, err := auditlink.MirrorReserveHistory(store, gr.Reserve); err != nil {
+			return err
+		}
+	}
+	if err := auditlink.VerifyUnified(store); err != nil {
+		return fmt.Errorf("unified audit ledger failed its own verification: %w", err)
+	}
+	gr.AuditStore = store
+	if gr.Dossier != nil {
+		gr.Dossier.SetUnifiedAudit(store.RootHash(), len(store.Snapshot()))
+	}
+	return nil
+}
+
 // ---- Cold replay of the Golden Case ----
 
 // GoldenColdReplay proves the Master Closure Mandate's own P0 §37
@@ -558,6 +664,12 @@ func GoldenColdReplay() (live *GoldenResult, coldReport ColdReplayReport, err er
 	if err := live.attachRegulatory(); err != nil {
 		return nil, report, err
 	}
+	if err := live.attachPayment(); err != nil {
+		return nil, report, err
+	}
+	if err := live.attachUnifiedAudit(); err != nil {
+		return nil, report, err
+	}
 	return live, report, nil
 }
 
@@ -589,6 +701,10 @@ type GoldenAssuranceSummary struct {
 	RecoveryTargetRegistered    bool `json:"recovery_target_registered"`
 	RegulatoryFindingRecorded   bool `json:"regulatory_finding_recorded"`
 	EvidenceSufficiencyAssessed bool `json:"evidence_sufficiency_assessed"`
+
+	// ---- Round 9 additions ----
+	PaymentSettledAndReconciled bool `json:"payment_settled_and_reconciled"`
+	AuditUnified                bool `json:"audit_unified"`
 
 	ColdReplayMatches bool `json:"cold_replay_matches"`
 }
@@ -694,6 +810,27 @@ func RunGoldenAssurance() GoldenAssuranceSummary {
 		s.Failures = append(s.Failures, "evidence sufficiency (gap package) was not assessed for this case")
 	}
 
+	if live.Payment != nil {
+		var insurerPrimary quantum.Amount
+		for _, a := range live.CoInsuranceAllocation {
+			if a.Role == policy.AllocationRoleInsurerPrimary {
+				insurerPrimary = a.Amount
+			}
+		}
+		rec := live.Payment.Reconcile(insurerPrimary)
+		s.PaymentSettledAndReconciled = live.Payment.Status() == payment.StatusPaid &&
+			rec.Adequacy == payment.AdequacyExact &&
+			live.Payment.AllocationPartyID != "" && live.Payment.QuantumCalculationID != ""
+	}
+	if !s.PaymentSettledAndReconciled {
+		s.Failures = append(s.Failures, "golden payment was not settled, linked, and exactly reconciled against its own allocation")
+	}
+
+	s.AuditUnified = live.Dossier != nil && live.Dossier.AuditUnified
+	if !s.AuditUnified {
+		s.Failures = append(s.Failures, "case audit trail and platform ledger were not unified into one verifiable chain")
+	}
+
 	replayed, coldReport, err := GoldenColdReplay()
 	if err != nil {
 		s.Failures = append(s.Failures, fmt.Sprintf("GoldenColdReplay failed outright: %v", err))
@@ -709,14 +846,27 @@ func RunGoldenAssurance() GoldenAssuranceSummary {
 		regulatoryMatches := live.RegulatoryMatter != nil && replayed.RegulatoryMatter != nil &&
 			live.RegulatoryMatter.Stage() == replayed.RegulatoryMatter.Stage() &&
 			len(live.RegulatoryMatter.Allegations()) == len(replayed.RegulatoryMatter.Allegations())
+		paymentMatches := live.Payment != nil && replayed.Payment != nil &&
+			live.Payment.CurrentAmount() == replayed.Payment.CurrentAmount() &&
+			live.Payment.Status() == replayed.Payment.Status() &&
+			len(live.Payment.History()) == len(replayed.Payment.History())
+		// AuditUnified (a boolean) matching, not the root hash itself:
+		// the two runs mirror into two DIFFERENT AuditStore instances
+		// (each with its own fresh hash chain starting from empty), so
+		// their root hashes are expected to differ in VALUE while both
+		// independently verify and both cover the same event COUNT —
+		// checked here — never the same literal hash.
+		auditMatches := live.Dossier != nil && replayed.Dossier != nil &&
+			live.Dossier.AuditUnified && replayed.Dossier.AuditUnified &&
+			live.Dossier.CanonicalAuditEventCount == replayed.Dossier.CanonicalAuditEventCount
 
 		s.ColdReplayMatches = live.Manifest.EvidenceRootHash == replayed.Manifest.EvidenceRootHash &&
 			live.QuantumWithSalvage.IndicativeClaimValue == replayed.QuantumWithSalvage.IndicativeClaimValue &&
-			reserveMatches && recoveryMatches && regulatoryMatches
+			reserveMatches && recoveryMatches && regulatoryMatches && paymentMatches && auditMatches
 		if !s.ColdReplayMatches {
 			s.Failures = append(s.Failures, fmt.Sprintf(
-				"cold-replayed golden case diverged from the live run (reserve=%v recovery=%v regulatory=%v)",
-				reserveMatches, recoveryMatches, regulatoryMatches))
+				"cold-replayed golden case diverged from the live run (reserve=%v recovery=%v regulatory=%v payment=%v audit=%v)",
+				reserveMatches, recoveryMatches, regulatoryMatches, paymentMatches, auditMatches))
 		}
 	}
 
