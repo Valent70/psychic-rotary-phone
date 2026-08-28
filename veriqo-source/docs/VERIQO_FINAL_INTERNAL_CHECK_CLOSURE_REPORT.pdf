@@ -1,0 +1,448 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R] /Count 4 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 4155 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO FINAL INTERNAL CHECK ? CLOSURE REPORT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 28 August 2026) Tj
+0 -12 Td
+(Baseline: Round 10 \(L99\) Level 3 Assessment deliverable) Tj
+0 -12 Td
+(Responds to: "FINAL_INTERNAL_CHECK.docx" ? seven named items \(A?G\), all explicitly scoped) Tj
+0 -12 Td
+(by the reviewer as purely internal engineering requiring no external resources, plus one) Tj
+0 -12 Td
+(item) Tj
+0 -12 Td
+(the docx names as hidden ? "hidden P0 terakhir" \(the last hidden P0\) ? item #12, External) Tj
+0 -12 Td
+(Event) Tj
+0 -12 Td
+(Ingestion ? Canonical Case State.) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review, extended to) Tj
+0 -12 Td
+(this round's own explicit instruction: "pastikan semua system diatas dapat berjalan sesuai) Tj
+0 -12 Td
+(skema yang diharapkan" \(ensure all the above systems run according to the expected scheme\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every one of the seven named items \(A?G\) and the hidden P0 is closed this round, with real,) Tj
+0 -12 Td
+(tested, compiling Go code ? no fabricated external validation, no invented counterparties or) Tj
+0 -12 Td
+(experts, matching the discipline every prior round has held to. Two of the eight items) Tj
+0 -12 Td
+(\(A and G\) surfaced real, previously-undetected defects in existing code while being) Tj
+0 -12 Td
+(addressed ? not merely gaps in test coverage, but genuine bugs that would have misbehaved in) Tj
+0 -12 Td
+(production had they shipped:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Item A found that casestate.Transition\(\) could reach RESERVED/PAYMENT_AUTHORIZED/) Tj
+0 -12 Td
+(PAYMENT_EXECUTED directly, bypassing the real reserve/payment domain calls those states are) Tj
+0 -12 Td
+(supposed to be gated on ? a structural authority/evidence bypass.) Tj
+0 -12 Td
+(- Item G, while proving "duplicate message" handling, found that OpenReserve,) Tj
+0 -12 Td
+(AuthorizePayment, and ExecutePayment each performed their real side-effecting domain call) Tj
+0 -12 Td
+(\(reserve.New, payment.New/Authorize, Payment.Instruct/Settle\) *before* reaching the) Tj
+0 -12 Td
+(idempotency check ? so a genuine retry \(exactly what a caller does after a timeout or) Tj
+0 -12 Td
+(network) Tj
+0 -12 Td
+(failure\) hit the real domain object a second time and errored outright, rather than) Tj
+0 -12 Td
+(returning) Tj
+0 -12 Td
+(the original result as the rest of the system already promised.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Both are fixed, and both fixes are covered by direct regression tests that fail without the) Tj
+0 -12 Td
+(fix) Tj
+0 -12 Td
+(and pass with it.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round does not change the Level 2 / Level 3 posture Round 10 established. Every item in) Tj
+0 -12 Td
+(this docx was explicitly internal; none of the 13 genuinely external gates already tracked) Tj
+0 -12 Td
+(in) Tj
+0 -12 Td
+(FINAL_MASTER_GAP_MATRIX.json \(hsm_kms, live_data, pentest, real historical claim) Tj
+0 -12 Td
+(replay, domain expert validation, counterparty network pilot, external registry) Tj
+0 -12 Td
+(qualification,) Tj
+0 -12 Td
+(real bank settlement confirmation, and the five operational/infrastructure gates\) changed) Tj
+0 -12 Td
+(status. They remain honestly BLOCKED_EXTERNAL / READY_FOR_EXTERNAL_QUALIFICATION for the) Tj
+0 -12 Td
+(same structural reasons documented since Round 4: they require a real HSM/KMS tenancy, real) Tj
+0 -12 Td
+(commercial data contracts, a real independent security vendor, real historical claims, real) Tj
+0 -12 Td
+(named domain experts, a real counterparty, real registry credentials, and real physical/) Tj
+0 -12 Td
+(multi-node infrastructure respectively ? none of which a sandboxed engineering session can) Tj
+0 -12 Td
+(honestly produce.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ITEMS A?G, ADDRESSED ONE BY ONE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Item    What the docx asked    What this round did) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   A. State-machine invariant audit    No transition may bypass authority, evidence, audit,) Tj
+0 -12 Td
+(payment authorization, or settlement evidence    Closed. Found and fixed a real bypass \(see) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 5286 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(above\). pkg/insurance/casestate: domainCoupledTargets + ErrMustUseDomainCoupledMethod refuse) Tj
+0 -12 Td
+(Transition\(\) from reaching the three domain-coupled states directly;) Tj
+0 -12 Td
+(ErrSettlementEvidenceRequired refuses leaving PAYMENT_EXECUTED without recorded) Tj
+0 -12 Td
+(payment.SettlementEvidence.) Tj
+0 -12 Td
+(   B. Cross-domain invariant    Payment ? authorized quantum; Reserve == quantum basis;) Tj
+0 -12 Td
+(Settlement == payment ± documented adjustment; Recovery ? recoverable amount    Closed. New) Tj
+0 -12 Td
+(pkg/insurance/invariants package, four pure check functions, wired into) Tj
+0 -12 Td
+(casestate.OpenReserve/AuthorizePayment/RecordSettlement at acceptance time. Found and fixed) Tj
+0 -12 Td
+(a real basis mismatch in the golden case's per-insurer lifecycle \(was quantifying against) Tj
+0 -12 Td
+(the full co-insurance total while reserving only its own allocated share\).) Tj
+0 -12 Td
+(   C. Audit completeness    Every material event ? a canonical audit event, across all 13) Tj
+0 -12 Td
+(named domains including Recovery and Dispute    Closed. pkg/insurance/recovery.Registry) Tj
+0 -12 Td
+(gained a real append-only Event history \(it had none before ? every mutation was silent\);) Tj
+0 -12 Td
+(pkg/insurance/auditlink gained MirrorRecoveryHistory and MirrorDisputeMatter, wired into the) Tj
+0 -12 Td
+(golden case's unified audit alongside Case/Payment/Reserve/Lifecycle.) Tj
+0 -12 Td
+(   D. Reopen semantics    CLOSED ? new evidence ? REOPENED ? new version ? new audit chain ?) Tj
+0 -12 Td
+(new decision lineage, never rewriting old history    Closed. CLOSED ? REOPENED now requires) Tj
+0 -12 Td
+(evidence \(it previously required none\). New Transition.Version, incremented only on a) Tj
+0 -12 Td
+(successful reopen, carried through into the canonical ledger; every prior transition's own) Tj
+0 -12 Td
+(Version is provably untouched across a reopen.) Tj
+0 -12 Td
+(   E. Concurrent actor test    Insurer/Broker/Surveyor/P&I sending events simultaneously ?) Tj
+0 -12 Td
+(deterministic conflict handling    Closed. Two new tests race four distinct actors under) Tj
+0 -12 Td
+(-race, 25 trials each, for both the same proposed outcome and different proposed outcomes:) Tj
+0 -12 Td
+(exactly one winner every time, every loser refused with a deterministic, typed error.) Tj
+0 -12 Td
+(   F. External evidence receipt    Every external exchange must carry source, timestamp,) Tj
+0 -12 Td
+(issuer, content hash, signature/credential, receipt, verification status    Closed.) Tj
+0 -12 Td
+(network.ExchangeReceipt enriched with Source, IssuerPartyID, ReceiptReference, CredentialID,) Tj
+0 -12 Td
+(and a new ReceiptVerificationStatus vocabulary, plus a Validate\(\) method ? generalizing) Tj
+0 -12 Td
+(payment/settlement.go's own SettlementEvidence receipt shape to every external exchange.) Tj
+0 -12 Td
+(   G. Failure/retry/idempotency    Duplicate, late, out-of-order, timeout, partial exchange,) Tj
+0 -12 Td
+(revoked credential, invalid signature, network failure, retry ? never a double transition or) Tj
+0 -12 Td
+(double payment    Closed. Found and fixed a real double-execution bug \(see above\). Added) Tj
+0 -12 Td
+(ErrOutOfOrderTick \(late/out-of-order message\) and an opt-in credential.Registry check) Tj
+0 -12 Td
+(\(ErrActorCredentialNotEffective, revoked credential\) alongside the idempotency fix.) Tj
+0 -12 Td
+(   Hidden P0 \(#12\). External Event Ingestion ? Canonical Case State    A real, deterministic) Tj
+0 -12 Td
+(pipeline: external event ? network adapter ? credential verification ? evidence verification) Tj
+0 -12 Td
+(? canonical event ? case state machine ? SETTLED ? audit ledger ? replayable    Closed. New) Tj
+0 -12 Td
+(pkg/insurance/ingestion package. IngestExternalSettlement runs all seven named stages in) Tj
+0 -12 Td
+(order, fail-closed, on an already-live case, calling only real, already-existing package) Tj
+0 -12 Td
+(APIs. Proven by a full-pipeline success test \(independently re-verified via a fresh) Tj
+0 -12 Td
+(VerifyCanonicalAuthority and Replay call\) plus five stage-specific refusal tests, each) Tj
+0 -12 Td
+(confirming no partial effect was left behind.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE TWO REAL DEFECTS FOUND AND FIXED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Both were found not by inspection but by *writing the test the docx asked for and watching) Tj
+0 -12 Td
+(it) Tj
+0 -12 Td
+(fail* ? the same discipline that found the Round 10 idempotency and segregation-of-duties) Tj
+0 -12 Td
+(bugs.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A. THE DOMAIN-COUPLED BYPASS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Before this round, casestate.Transition\(StateReserved, ...\) \(or PAYMENT_AUTHORIZED/) Tj
+0 -12 Td
+(PAYMENT_EXECUTED\) would succeed as long as the caller supplied an authorized role and, where) Tj
+0 -12 Td
+(required, an EvidenceID ? with no real reserve.Reserve or payment.PaymentRecord ever) Tj
+0 -12 Td
+(created. A case could be observed in RESERVED with no reserve behind it at all. Fixed by) Tj
+0 -12 Td
+(refusing these three targets in the exported Transition\(\) outright; only OpenReserve/) Tj
+0 -12 Td
+(AuthorizePayment/ExecutePayment \(which perform the real domain call first, under the same) Tj
+0 -12 Td
+(lock\) may reach them. Replay retains access via the unexported transitionLocked path, since) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 4302 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(replaying an *already-recorded* transition is a different question from *creating* a new) Tj
+0 -12 Td
+(one.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(G. THE RETRY-AFTER-TIMEOUT BUG) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(OpenReserve, AuthorizePayment, and ExecutePayment each called their real domain method) Tj
+0 -12 Td
+(\(reserve.New, payment.New+Authorize, Payment.Instruct+Settle\) and only *then* called) Tj
+0 -12 Td
+(transitionLocked, which is where the idempotency check actually lived. A caller retrying) Tj
+0 -12 Td
+(ExecutePayment with the same idempotency key after a timeout ? the single most ordinary) Tj
+0 -12 Td
+(retry) Tj
+0 -12 Td
+(scenario in a real payment system ? would have Payment.Instruct refuse a second call \(the) Tj
+0 -12 Td
+(payment was already PAID, not AUTHORIZED\), surfacing a confusing domain error instead of the) Tj
+0 -12 Td
+(idempotent success every other transition in this package already provides. Fixed by adding) Tj
+0 -12 Td
+(idempotencyPrelude, checked first in all three methods: a genuine retry now returns the) Tj
+0 -12 Td
+(original Transition immediately, never touching the domain object again. Covered by) Tj
+0 -12 Td
+(TestFailureModesNeverProduceDoubleTransitionOrDoublePayment, which retries ExecutePayment) Tj
+0 -12 Td
+(five times with the same key and confirms the underlying Payment is instructed and settled) Tj
+0 -12 Td
+(exactly once.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(LEVEL 1 / 2 / 3 STATUS \(UNCHANGED FRAMEWORK, FROM ROUND 10\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Level 1 \(code implemented\): every item A?G and the hidden P0 ? met, with real, compiling,) Tj
+0 -12 Td
+(tested Go code.) Tj
+0 -12 Td
+(- Level 2 \(cross-domain integrated + replayable\): met for every item ? each is wired into) Tj
+0 -12 Td
+(the golden case, the canonical audit ledger, or both, and where a state machine is involved) Tj
+0 -12 Td
+(\(A, D, G, hidden P0\), casestate.Replay independently reproduces the same result from) Tj
+0 -12 Td
+(recorded history alone.) Tj
+0 -12 Td
+(- Level 3 \(real-world / externally qualified\): not claimed, not reached, for the same) Tj
+0 -12 Td
+(reason Round 10 stated: this docx's own items are explicitly internal, and the 13 genuinely) Tj
+0 -12 Td
+(external gates this repository has tracked since Round 4/10 remain open for real-world) Tj
+0 -12 Td
+(reasons no engineering session can close.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION PERFORMED THIS ROUND) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- go build ./... ? clean.) Tj
+0 -12 Td
+(- go vet ./... ? clean.) Tj
+0 -12 Td
+(- gofmt -l . ? no unformatted files.) Tj
+0 -12 Td
+(- go test ./... ? all packages pass \(666+ files, whole repository\).) Tj
+0 -12 Td
+(- go test -race ./pkg/insurance/casestate/... ./pkg/insurance/auditlink/...) Tj
+0 -12 Td
+(./pkg/insurance/casepack/... ./pkg/insurance/recovery/... ./pkg/insurance/network/...) Tj
+0 -12 Td
+(./pkg/insurance/invariants/... ./pkg/insurance/ingestion/... ? race-clean, repeated \(up to) Tj
+0 -12 Td
+(-count=5 on the concurrent-actor tests specifically\).) Tj
+0 -12 Td
+(- go test ./pkg/insurance/guardrails/... ? the whole-tree structural guardrail scan \(no) Tj
+0 -12 Td
+(verdict/liability fields, no opaque confidence floats, no forbidden canonical duplicates, no) Tj
+0 -12 Td
+(hard-coded vendor names\) ? clean.) Tj
+0 -12 Td
+(- ./scripts/verify.sh ? the project's own CI gate script \(build, vet, gofmt, zero-external-) Tj
+0 -12 Td
+(dependency invariant, full race+cover test run, 5x race-repeat on consensus-critical) Tj
+0 -12 Td
+(packages\) ? see test-evidence/r11_verify_output.txt in this deliverable's zip for the full) Tj
+0 -12 Td
+(run log.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WHAT CHANGED IN THE DELIVERABLE'S OWN TRACKING ARTIFACTS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- FINAL_MASTER_GAP_MATRIX.json: eight new CLOSED rows \(FINAL-CHECK-A through) Tj
+0 -12 Td
+(FINAL-CHECK-G, HIDDEN-P0-EXTERNAL-EVENT-INGESTION-PIPELINE\), each with real evidence) Tj
+0 -12 Td
+(paths, test commands, and acceptance criteria. The 13 pre-existing OPEN/BLOCKED_EXTERNAL) Tj
+0 -12 Td
+(rows are unchanged ? they were never in scope for this docx.) Tj
+0 -12 Td
+(- READINESS_MANIFEST.json: regenerated for real via go run ./cmd/veriqo-readiness \(never) Tj
+0 -12 Td
+(hand-edited\) ? see the manifest itself for the current mandatory-gate pass count and level.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 869 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(HONESTY STATEMENT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(No fabricated external validation, no invented counterparties or experts, no simulated live) Tj
+0 -12 Td
+(network integration appears anywhere in this round's work. pkg/insurance/ingestion is) Tj
+0 -12 Td
+(explicit, in its own package doc comment, that the "external event" it ingests is a) Tj
+0 -12 Td
+(caller-constructed data shape standing in for what a real adapter would hand back ? matching) Tj
+0 -12 Td
+(the same interfaces-and-data-shapes discipline pkg/insurance/network has held since Round 8,) Tj
+0 -12 Td
+(and payment/settlement.go's own BankConfirmationAdapter \(also interface-only\) since Round) Tj
+0 -12 Td
+(10. Every claim of closure in this report is backed by a named test file and a runnable go) Tj
+0 -12 Td
+(test command, listed above and in FINAL_MASTER_GAP_MATRIX.json.) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000015 00000 n 
+0000000091 00000 n 
+0000000161 00000 n 
+0000004368 00000 n 
+0000004494 00000 n 
+0000009832 00000 n 
+0000009958 00000 n 
+0000014312 00000 n 
+0000014438 00000 n 
+0000015358 00000 n 
+0000015485 00000 n 
+trailer
+<< /Size 12 /Root 11 0 R >>
+startxref
+15535
+%%EOF
