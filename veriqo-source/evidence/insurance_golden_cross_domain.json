@@ -14,5 +14,7 @@
   "recovery_target_registered": true,
   "regulatory_finding_recorded": true,
   "evidence_sufficiency_assessed": true,
+  "payment_settled_and_reconciled": true,
+  "audit_unified": true,
   "cold_replay_matches": true
 }

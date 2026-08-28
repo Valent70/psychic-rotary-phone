@@ -30,7 +30,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -61,7 +61,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -92,7 +92,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -123,7 +123,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -154,7 +154,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -185,7 +185,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -216,7 +216,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   },
@@ -267,7 +267,7 @@ exit: 0
       {
         "name": "no_verdict_field",
         "pass": true,
-        "detail": "scanned 17 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
+        "detail": "scanned 20 fields on the compiled Dossier type, none is a coverage/liability/settlement verdict"
       }
     ]
   }

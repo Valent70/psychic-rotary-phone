@@ -3,6 +3,6 @@ command: internal:entityconsistency.ScanProductionAuthority
 exit: 0
 ---
 {
-  "scanned_files": 311,
+  "scanned_files": 317,
   "violations": null
 }

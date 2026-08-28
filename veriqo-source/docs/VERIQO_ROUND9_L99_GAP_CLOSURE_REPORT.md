@@ -79,7 +79,12 @@ this round's changes are additive and do not touch that code.
   when real, external, signed evidence closes it. Nothing in this round produces that
   evidence for any of the eight, so nothing in this register changes, honestly.
 - `READINESS_MANIFEST.json`: regenerated for real via `go run ./cmd/veriqo-readiness`
-  (not hand-edited) — see the manifest itself for this round's exact gate counts and verdict.
+  (not hand-edited, operator `veriqo-readiness-r9`). Unchanged in shape from Round 8, exactly
+  as expected — G1-G6 were never among this manifest's 62 mechanical gates, they were the
+  five hand-authored `GAP-*` findings layered on top in `FINAL_MASTER_GAP_MATRIX.json`: **62
+  gates — 54 VERIFIED_INTERNAL, 5 READY_FOR_EXTERNAL_QUALIFICATION, 0 EXTERNALLY_QUALIFIED, 3
+  BLOCKED_EXTERNAL, 0 NOT_READY — verdict TEMPORARY_PRODUCTION_READINESS_CANDIDATE (Level
+  2)**, never a fabricated PRODUCTION_QUALIFIED.
 
 ## Verification evidence
 

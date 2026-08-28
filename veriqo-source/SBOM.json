@@ -5,7 +5,7 @@
     "component": {
       "type": "application",
       "name": "veriqo",
-      "version": "dev"
+      "version": "v7.12.1"
     },
     "properties": [
       {
@@ -14,7 +14,7 @@
       },
       {
         "name": "vcs.commit",
-        "value": "bd52fb8add35ec2b6935da70c3354630dbb02a53"
+        "value": "unknown"
       },
       {
         "name": "build.os",
