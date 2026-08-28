@@ -184,11 +184,11 @@ func DriveGolden() (*GoldenResult, error) {
 	if err := gr.attachPayment(); err != nil {
 		return nil, fmt.Errorf("casepack: golden: payment: %w", err)
 	}
-	if err := gr.attachUnifiedAudit(); err != nil {
-		return nil, fmt.Errorf("casepack: golden: unified audit: %w", err)
-	}
 	if err := gr.attachLifecycle(); err != nil {
 		return nil, fmt.Errorf("casepack: golden: lifecycle: %w", err)
+	}
+	if err := gr.attachUnifiedAudit(); err != nil {
+		return nil, fmt.Errorf("casepack: golden: unified audit: %w", err)
 	}
 	return gr, nil
 }
@@ -613,8 +613,17 @@ func (gr *GoldenResult) attachUnifiedAudit() error {
 			return err
 		}
 	}
-	if err := auditlink.VerifyUnified(store); err != nil {
-		return fmt.Errorf("unified audit ledger failed its own verification: %w", err)
+	if gr.Lifecycle != nil {
+		if _, err := auditlink.MirrorLifecycleHistory(store, gr.Lifecycle); err != nil {
+			return err
+		}
+	}
+	events, err := auditlink.VerifyCanonicalAuthority(store)
+	if err != nil {
+		return fmt.Errorf("unified audit ledger failed its own canonical-authority verification: %w", err)
+	}
+	if len(events) != len(store.Snapshot()) {
+		return fmt.Errorf("reconstructed %d canonical events but the ledger holds %d records", len(events), len(store.Snapshot()))
 	}
 	gr.AuditStore = store
 	if gr.Dossier != nil {
@@ -762,10 +771,10 @@ func GoldenColdReplay() (live *GoldenResult, coldReport ColdReplayReport, err er
 	if err := live.attachPayment(); err != nil {
 		return nil, report, err
 	}
-	if err := live.attachUnifiedAudit(); err != nil {
+	if err := live.attachLifecycle(); err != nil {
 		return nil, report, err
 	}
-	if err := live.attachLifecycle(); err != nil {
+	if err := live.attachUnifiedAudit(); err != nil {
 		return nil, report, err
 	}
 	return live, report, nil

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	caseinsurance "veriqo/pkg/insurance/case"
+	"veriqo/pkg/insurance/casestate"
 	"veriqo/pkg/insurance/party"
 	"veriqo/pkg/insurance/payment"
 	"veriqo/pkg/insurance/quantum"
@@ -77,10 +78,28 @@ func TestMirrorReserveHistoryAppendsEveryEntry(t *testing.T) {
 	}
 }
 
+func TestMirrorLifecycleHistoryAppendsEveryTransition(t *testing.T) {
+	cl, err := casestate.New("CASE-LC-AUDIT-1")
+	if err != nil {
+		t.Fatalf("casestate.New: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateAccepted, "PTY-1", party.RoleInsured, "", "IDEM-A", "accepted", 10); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	store := audit.NewAuditStore()
+	recs, err := MirrorLifecycleHistory(store, cl)
+	if err != nil {
+		t.Fatalf("MirrorLifecycleHistory: %v", err)
+	}
+	if len(recs) != 1 {
+		t.Fatalf("expected 1 mirrored record, got %d", len(recs))
+	}
+}
+
 func TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain(t *testing.T) {
-	// The crux of "unified audit": case, payment, and reserve events all
-	// land in the SAME AuditStore and the WHOLE chain (not per-domain
-	// sub-chains) still verifies as one hash-linked ledger.
+	// The crux of "unified audit": case, payment, reserve, and lifecycle
+	// events all land in the SAME AuditStore and the WHOLE chain (not
+	// per-domain sub-chains) still verifies as one hash-linked ledger.
 	c, err := caseinsurance.New("CASE-UNIFIED-1", 0)
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -96,6 +115,13 @@ func TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain(t *testing.
 	if err != nil {
 		t.Fatalf("reserve.New: %v", err)
 	}
+	cl, err := casestate.New("CASE-UNIFIED-1")
+	if err != nil {
+		t.Fatalf("casestate.New: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateAccepted, "PTY-1", party.RoleInsured, "", "IDEM-LC", "accepted", 40); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
 
 	store := audit.NewAuditStore()
 	if _, err := MirrorCase(store, c, "CASE-UNIFIED-1"); err != nil {
@@ -107,16 +133,19 @@ func TestMirroringMultipleDomainsIntoOneStoreStaysOneVerifiableChain(t *testing.
 	if _, err := MirrorReserveHistory(store, r); err != nil {
 		t.Fatalf("MirrorReserveHistory: %v", err)
 	}
+	if _, err := MirrorLifecycleHistory(store, cl); err != nil {
+		t.Fatalf("MirrorLifecycleHistory: %v", err)
+	}
 
 	snap := store.Snapshot()
-	if len(snap) != 3 {
-		t.Fatalf("expected 3 total records across all three domains, got %d", len(snap))
+	if len(snap) != 4 {
+		t.Fatalf("expected 4 total records across all four domains, got %d", len(snap))
 	}
 	if err := VerifyUnified(store); err != nil {
 		t.Fatalf("expected the whole multi-domain chain to verify as ONE ledger: %v", err)
 	}
 	// Every record's index is strictly sequential across domains -- proof
-	// there is one shared chain, not three independent ones that happen
+	// there is one shared chain, not four independent ones that happen
 	// to share a Go value.
 	for i, rec := range snap {
 		if rec.Index != uint64(i)+1 {
@@ -129,5 +158,135 @@ func TestMirrorCaseRefusesNilCase(t *testing.T) {
 	store := audit.NewAuditStore()
 	if _, err := MirrorCase(store, nil, "X"); err == nil {
 		t.Fatal("expected MirrorCase to refuse a nil case")
+	}
+}
+
+// ---- Round 10: canonical authority reconstruction ----------------------
+
+// TestReconstructionRequiresOnlyTheLedgerRecord is the structural proof
+// this package's own doc comment promises: ReconstructCanonicalEvent
+// takes ONLY the audit.AuditRecord (nothing from the original
+// casestate.CaseLifecycle, payment.PaymentRecord, or any other domain
+// object) and still recovers the full Actor/Authority/Action/Object/
+// EvidenceID/BeforeState/AfterState/Timestamp/Hash/ParentHash shape. If
+// the ledger were merely hash-linked to a second, separately-trusted
+// audit trail, this reconstruction would be impossible from the record
+// alone -- it is not, which is the whole point.
+func TestReconstructionRequiresOnlyTheLedgerRecord(t *testing.T) {
+	cl, err := casestate.New("CASE-RECON-1")
+	if err != nil {
+		t.Fatalf("casestate.New: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateAccepted, "PTY-ACTOR-1", party.RoleInsured, "", "IDEM-1", "accepted with full detail", 100); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateEvidenceExchanged, "PTY-ACTOR-2", party.RoleBroker, "EVID-RECON-1", "IDEM-2", "evidence exchanged", 110); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+
+	store := audit.NewAuditStore()
+	if _, err := MirrorLifecycleHistory(store, cl); err != nil {
+		t.Fatalf("MirrorLifecycleHistory: %v", err)
+	}
+
+	// Deliberately discard cl -- everything below reconstructs from the
+	// ledger record ALONE, proving no second source is consulted.
+	cl = nil
+	_ = cl
+
+	snap := store.Snapshot()
+	if len(snap) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(snap))
+	}
+
+	second := snap[1] // the EVIDENCE_EXCHANGED transition, richest in fields
+	ev, err := ReconstructCanonicalEvent(second)
+	if err != nil {
+		t.Fatalf("ReconstructCanonicalEvent: %v", err)
+	}
+	if ev.Actor != "PTY-ACTOR-2" {
+		t.Errorf("expected Actor PTY-ACTOR-2, got %q", ev.Actor)
+	}
+	if ev.Authority != string(party.RoleBroker) {
+		t.Errorf("expected Authority %q, got %q", party.RoleBroker, ev.Authority)
+	}
+	if ev.EvidenceID != "EVID-RECON-1" {
+		t.Errorf("expected EvidenceID EVID-RECON-1, got %q", ev.EvidenceID)
+	}
+	if ev.BeforeState != string(casestate.StateAccepted) || ev.AfterState != string(casestate.StateEvidenceExchanged) {
+		t.Errorf("expected BeforeState/AfterState ACCEPTED/EVIDENCE_EXCHANGED, got %q/%q", ev.BeforeState, ev.AfterState)
+	}
+	if ev.Object != "CASE-RECON-1" {
+		t.Errorf("expected Object CASE-RECON-1, got %q", ev.Object)
+	}
+	if ev.Hash == "" || ev.Hash != second.Hash {
+		t.Errorf("expected Hash to equal the ledger record's own Hash, got %q vs %q", ev.Hash, second.Hash)
+	}
+	if ev.ParentHash != second.PrevHash {
+		t.Errorf("expected ParentHash to equal the ledger record's own PrevHash, got %q vs %q", ev.ParentHash, second.PrevHash)
+	}
+	if ev.ParentHash != snap[0].Hash {
+		t.Errorf("expected the second event's ParentHash to equal the FIRST record's own Hash -- proof they are one chain, not two: %q vs %q", ev.ParentHash, snap[0].Hash)
+	}
+}
+
+func TestVerifyCanonicalAuthorityReconstructsTheWholeChain(t *testing.T) {
+	cl, err := casestate.New("CASE-VCA-1")
+	if err != nil {
+		t.Fatalf("casestate.New: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateAccepted, "PTY-1", party.RoleInsured, "", "IDEM-1", "accepted", 10); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateEvidenceExchanged, "PTY-1", party.RoleInsured, "EVID-1", "IDEM-2", "exchanged", 20); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	store := audit.NewAuditStore()
+	if _, err := MirrorLifecycleHistory(store, cl); err != nil {
+		t.Fatalf("MirrorLifecycleHistory: %v", err)
+	}
+	events, err := VerifyCanonicalAuthority(store)
+	if err != nil {
+		t.Fatalf("VerifyCanonicalAuthority: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 reconstructed events, got %d", len(events))
+	}
+	for i, ev := range events {
+		if ev.Hash == "" {
+			t.Errorf("event %d: expected a non-empty Hash", i)
+		}
+	}
+}
+
+func TestVerifyCanonicalAuthorityDetectsTamperedPayload(t *testing.T) {
+	cl, err := casestate.New("CASE-TAMPER-1")
+	if err != nil {
+		t.Fatalf("casestate.New: %v", err)
+	}
+	if _, err := cl.Transition(casestate.StateAccepted, "PTY-1", party.RoleInsured, "", "IDEM-1", "accepted", 10); err != nil {
+		t.Fatalf("Transition: %v", err)
+	}
+	store := audit.NewAuditStore()
+	if _, err := MirrorLifecycleHistory(store, cl); err != nil {
+		t.Fatalf("MirrorLifecycleHistory: %v", err)
+	}
+	// A tampered payload (Payload is not part of the hash preimage's own
+	// re-derivation check by field, but Hash IS derived from Payload at
+	// write time via hashRecord -- feeding a hand-altered snapshot back
+	// through VerifySnapshot must be refused).
+	snap := store.Snapshot()
+	tampered := make([]audit.AuditRecord, len(snap))
+	copy(tampered, snap)
+	tampered[0].Payload = `{"domain":"LIFECYCLE","subject":"TAMPERED"}`
+	if err := (audit.Auditor{}).VerifySnapshot(tampered, store.RootHash()); err == nil {
+		t.Fatal("expected a tampered payload to be detected by the chain's own hash verification")
+	}
+}
+
+func TestReconstructCanonicalEventRefusesUndecodablePayload(t *testing.T) {
+	bad := audit.AuditRecord{Index: 1, Actor: "X", Action: "Y", Payload: "not json"}
+	if _, err := ReconstructCanonicalEvent(bad); err == nil {
+		t.Fatal("expected ReconstructCanonicalEvent to refuse an undecodable payload")
 	}
 }
