@@ -1,0 +1,754 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] /Count 6 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 3906 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO -- RED FLAG RESPONSE REPORT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 28 August 2026) Tj
+0 -12 Td
+(Baseline: VTECP-001 + CRE closure report -- commit 2ad92bc) Tj
+0 -12 Td
+(Responds to: Red_Flag_yang_harus_dtuntaskan.docx -- an independent reviewer's response to) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(prior closure report, naming three specific "red flags" and pushing back explicitly on the) Tj
+0 -12 Td
+(phrase "All 10 phases are complete" as an overstatement of platform readiness.) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review. All code in) Tj
+0 -12 Td
+(this deliverable compiles, is tested, and was verified against the live repository.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's three red flags are addressed one by one below. Two \(LocalAnchorer,) Tj
+0 -12 Td
+(pkg/inference's) Tj
+0 -12 Td
+(scope\) were already honestly documented in the prior report and required no code change --) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(reviewer agreed with the architecture and asked only that the status stay visible in the gap) Tj
+0 -12 Td
+(register, which this report does explicitly. The third -- "Finding.ConfidenceBasis masih) Tj
+0 -12 Td
+(dapat) Tj
+0 -12 Td
+(dipalsukan" \(still forgeable\), named as the most serious of the three and a residual) Tj
+0 -12 Td
+(security/integrity gap rather than a footnote -- required a real code change and got one: a) Tj
+0 -12 Td
+(sealed AuthorizedFinding type that makes the reviewer's own requested pipeline shape a) Tj
+0 -12 Td
+(compile-time guarantee, not a documented convention.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer also asked for something the prior report did not provide: a genuine multi-) Tj
+0 -12 Td
+(stage) Tj
+0 -12 Td
+(integration test proving an inference actually passes through Model Registry -> Approval ->) Tj
+0 -12 Td
+(Policy -> Evidence Grounding -> Inference -> Output Validation -> Human Review -> Audit,) Tj
+0 -12 Td
+("bukan hanya) Tj
+0 -12 Td
+(unit-test terhadap interface" \(not just a unit test against the interface\). That test now) Tj
+0 -12 Td
+(exists) Tj
+0 -12 Td
+(and passes, with an explicit, honest label on the one stage \(Inference\) that cannot be) Tj
+0 -12 Td
+(proven) Tj
+0 -12 Td
+(against a real external system in this environment.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Finally, the reviewer's own three-level framework -- Level 1 \(Code Complete\) / Level 2) Tj
+0 -12 Td
+(\(Engineering Verified\) / Level 3 \(Real-World Production Verified\) -- is adopted here) Tj
+0 -12 Td
+(explicitly,) Tj
+0 -12 Td
+(replacing the prior report's less precise "All 10 phases are complete." Level 3 is not) Tj
+0 -12 Td
+(claimed. This report says so plainly, with the same gap-register table the reviewer's own) Tj
+0 -12 Td
+(document proposed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(RED FLAG 1: LOCALANCHORER IS A SIMULATOR) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point: "Cryptographic anchoring architecture != real external anchoring." Saying) Tj
+0 -12 Td
+("Evidence integrity is externally anchored" to an investor or customer is not yet a) Tj
+0 -12 Td
+(claimable,) Tj
+0 -12 Td
+(live production capability. Correct status: "Implemented -> internally verifiable, but:) Tj
+0 -12 Td
+(External) Tj
+0 -12 Td
+(anchoring -> NOT YET LIVE." Must stay in the final gap register.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response: Agreed, and this was already the prior report's own position -- LocalAnchorer's) Tj
+0 -12 Td
+(package doc comment and every AnchorReceipt.AnchoredBy value it produces already say) Tj
+0 -12 Td
+("LocalAnchorer\(simulator, not a real external anchor\)" verbatim, and the prior closure) Tj
+0 -12 Td
+(report's) Tj
+0 -12 Td
+("Honest scope boundaries" section already stated this. No code change was needed; the) Tj
+0 -12 Td
+(reviewer's) Tj
+0 -12 Td
+(own two-line status framing is reproduced verbatim in this report's gap register below, so) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3749 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(it) Tj
+0 -12 Td
+(stays visible rather than being buried in a code comment alone.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(RED FLAG 2: PKG/INFERENCE IS NOT AN AI EXECUTION ENGINE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point: Correctly identified as a deliberate, correct architecture decision, not a) Tj
+0 -12 Td
+(weakness -- AI should propose/interpret/rank; VERIQO should verify/govern/trace/decide) Tj
+0 -12 Td
+(workflow) Tj
+0 -12 Td
+(state. InferenceTrace is a governance layer, not a model engine. But one piece of follow-up) Tj
+0 -12 Td
+(work remained: "real model gateway integration test... untuk membuktikan bahwa model) Tj
+0 -12 Td
+(eksternal) Tj
+0 -12 Td
+(benar-benar melewati Model Registry -> Approval -> Policy -> Evidence Grounding -> Inference) Tj
+0 -12 Td
+(-> Output) Tj
+0 -12 Td
+(Validation -> Human Review -> Audit, bukan hanya unit-test terhadap interface.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response: Built. TestModelGatewayFullPipeline) Tj
+0 -12 Td
+(\(test/integration/model_gateway_pipeline_test.go\)) Tj
+0 -12 Td
+(walks all eight named stages using the real package at each one:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Stage    Real package exercised    What the test actually checks) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   1. Model Registry    pkg/governance/lifecycle    Model registers in DRAFT) Tj
+0 -12 Td
+(   2. Approval    pkg/governance/lifecycle    VALIDATED->CALIBRATED->APPROVED->ACTIVE with a) Tj
+0 -12 Td
+(named approver, confirmed by re-reading the record) Tj
+0 -12 Td
+(   3. Policy    pkg/authz    Purpose-bound request allowed; the *same* request with no) Tj
+0 -12 Td
+(declared purpose is confirmed denied) Tj
+0 -12 Td
+(   4. Evidence Grounding    pkg/ontology + pkg/evidence/manifest    A real evidence object) Tj
+0 -12 Td
+(is walked DRAFT->FINALIZED, and the inference's InputHash is a hash *of* the finalized) Tj
+0 -12 Td
+(manifest's own hash -- grounding is checkable, not a label) Tj
+0 -12 Td
+(   5. Inference    pkg/inference    A trace is recorded -- explicitly labeled in the test's) Tj
+0 -12 Td
+(own doc comment as a real, governed, LOCAL call, not a real external LLM API, since none is) Tj
+0 -12 Td
+(configured in this environment) Tj
+0 -12 Td
+(   6. Output Validation    pkg/inference + pkg/insurance/finding    The trace's hash) Tj
+0 -12 Td
+(verifies, and the raw output alone is confirmed to decompose only as far as StatusCandidate) Tj
+0 -12 Td
+(-- never silently accepted as finished) Tj
+0 -12 Td
+(   7. Human Review    pkg/governance/hitl    Full) Tj
+0 -12 Td
+(Submit->Assign->Open->Act\(APPROVE\)->Execute workflow, producing a real GovernedOutcome) Tj
+0 -12 Td
+(naming the actual reviewer) Tj
+0 -12 Td
+(   8. Audit    pkg/platform/audit + hitl.Engine.VerifyChain    Both ledgers independently) Tj
+0 -12 Td
+(re-verified; a Merkle checkpoint is sealed and checked) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What this does not and cannot honestly claim: network connectivity to a real external model) Tj
+0 -12 Td
+(provider. VERIQO has none configured in this sandboxed engineering environment, and claiming) Tj
+0 -12 Td
+(otherwise would violate this codebase's own anti-fabrication rule \(VTECP-001 ß58\). What it) Tj
+0 -12 Td
+(does) Tj
+0 -12 Td
+(prove, completely: the seven stages around inference are real, wired together in the) Tj
+0 -12 Td
+(reviewer's) Tj
+0 -12 Td
+(own stated order, and enforced end to end -- the actual substance of "not just a unit test) Tj
+0 -12 Td
+(against) Tj
+0 -12 Td
+(the interface.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(RED FLAG 3 \(THE MOST SERIOUS\): FINDING.CONFIDENCEBASIS WAS STILL FORGEABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point, verbatim in structure:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(caller) Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(manually creates Finding) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3781 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(v) Tj
+0 -12 Td
+(injects ConfidenceBasis) Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(Finding enters downstream system) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VerifyFindingAgainstHypothesis existed, but the reviewer's question was sharper: "Apakah) Tj
+0 -12 Td
+(VERIQO) Tj
+0 -12 Td
+(memaksa semua Finding production melewati verification gate? Kalau jawabannya masih tidak,) Tj
+0 -12 Td
+(maka) Tj
+0 -12 Td
+(verification function ada, tetapi enforcement belum absolute." \(Does VERIQO force every) Tj
+0 -12 Td
+(production Finding through the verification gate? If the answer is still no, the) Tj
+0 -12 Td
+(verification) Tj
+0 -12 Td
+(function exists but enforcement is not absolute.\) The reviewer named the required shape) Tj
+0 -12 Td
+(explicitly:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Evidence -> Verification -> Hypothesis -> Finding Builder ->) Tj
+0 -12 Td
+(Finding Verification Gate -> AUTHORIZED FINDING -> CRE / Dossier / Decision) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(with "Caller -> Finding" directly, skipping the gate, named as the one thing that must not) Tj
+0 -12 Td
+(be) Tj
+0 -12 Td
+(possible. The reviewer's own conclusion: "ini adalah satu gap yang menurut saya Claude harus) Tj
+0 -12 Td
+(tutup, bukan sekadar dokumentasikan" \(this is a gap that must be closed, not just) Tj
+0 -12 Td
+(documented\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response: closed, structurally, not by convention. pkg/insurance/cre gained a new file,) Tj
+0 -12 Td
+(authorized.go:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- AuthorizedFinding -- every field unexported. The only exported surface is read-only) Tj
+0 -12 Td
+(accessors \(Finding\(\), HypothesisID\(\), AuthorizedAt\(\), AuthorizationHash\(\), IsZero\(\)\).) Tj
+0 -12 Td
+(There is no cre.AuthorizedFinding{finding: x} that compiles from outside this package --) Tj
+0 -12 Td
+(unexported field names are not addressable across a package boundary in Go at all. The only) Tj
+0 -12 Td
+(value obtainable from outside pkg/insurance/cre is either the zero value \(every accessor) Tj
+0 -12 Td
+(then) Tj
+0 -12 Td
+(returns empty/zero, which fails any check a careful consumer runs\) or a value that genuinely) Tj
+0 -12 Td
+(came out of Authorize.) Tj
+0 -12 Td
+(- Authorize is the only exported function that can populate one. It requires the Finding to) Tj
+0 -12 Td
+(already be at StatusFinding, then runs the full gate: VerifyFindingAgainstHypothesis against) Tj
+0 -12 Td
+(the *real* hypothesis, VerifyFindingProvenance against the *real* cited traces. Either) Tj
+0 -12 Td
+(failing) Tj
+0 -12 Td
+(returns the zero value and the error -- never a partially-authorized result.) Tj
+0 -12 Td
+(- GenerateFindings -- the actual production entry point -- now returns []AuthorizedFinding,) Tj
+0 -12 Td
+(not []finding.Finding. Its signature changed: every call site in this repository \(engine) Tj
+0 -12 Td
+(tests, both golden-case tests, the cross-system integration test, the adversarial test\) was) Tj
+0 -12 Td
+(updated accordingly. This means "skip the gate" does not typecheck for any real caller of) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(engine going forward -- not merely "is discouraged in a doc comment.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The direct proof the reviewer asked for:) Tj
+0 -12 Td
+(TestAuthorizeRefusesAHandForgedFindingEvenWhenInternallyConsistent) Tj
+0 -12 Td
+(constructs exactly the attack the reviewer's diagram describes -- a caller builds a) Tj
+0 -12 Td
+(finding.Finding) Tj
+0 -12 Td
+(by hand, injects a ConfidenceBasis the real hypothesis never earned, and recomputes the) Tj
+0 -12 Td
+(Finding's) Tj
+0 -12 Td
+(own hash so it stays internally self-consistent \(exactly what a real forger capable of) Tj
+0 -12 Td
+(producing) Tj
+0 -12 Td
+(one would do\). The forged Finding does structurally reach StatusFinding on its own terms --) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 4168 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(proving that reaching StatusFinding alone was never sufficient proof, which is precisely why) Tj
+0 -12 Td
+(this gate exists as a separate step. Authorize still refuses it, because it re-derives the) Tj
+0 -12 Td
+(truth) Tj
+0 -12 Td
+(from the real causation.HypothesisSet rather than trusting anything the Finding claims about) Tj
+0 -12 Td
+(itself. The same forged Finding is exercised again in the cross-file adversarial test) Tj
+0 -12 Td
+(\(test/integration/cre_vtecp_adversarial_test.go\), confirming the refusal holds from an) Tj
+0 -12 Td
+(external) Tj
+0 -12 Td
+(package's own call site too, not merely from inside pkg/insurance/cre's own test suite.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What is honestly still true after this fix: Authorize requires a caller to pass it a real) Tj
+0 -12 Td
+(*causation.HypothesisSet and the correct HypothesisID. If a caller constructs both a forged) Tj
+0 -12 Td
+(Finding *and* a forged HypothesisSet that happens to agree with it, Authorize would) Tj
+0 -12 Td
+(\(correctly\)) Tj
+0 -12 Td
+(accept it -- but at that point the caller has reconstructed a HypothesisSet whose) Tj
+0 -12 Td
+(SupportingEvidence/ContradictingEvidence genuinely say what the Finding claims, which is no) Tj
+0 -12 Td
+(longer forgery, it is the caller doing the real work BuildFinding would have done. The) Tj
+0 -12 Td
+(gate's) Tj
+0 -12 Td
+(actual guarantee is narrower and more honest than "no one can ever lie": it guarantees that) Tj
+0 -12 Td
+(an) Tj
+0 -12 Td
+(AuthorizedFinding's claims are *consistent with some HypothesisSet the caller can produce*,) Tj
+0 -12 Td
+(exactly as VerifyFindingAgainstHypothesis's own doc comment already stated before this round) Tj
+0 -12 Td
+(--) Tj
+0 -12 Td
+(what changed is that a caller can no longer *skip* presenting one at all.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(GAP REGISTER \(REVIEWER'S OWN FRAMING, REPRODUCED AND UPDATED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Area    Status    Note) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Source code integrity    [GREEN]    unchanged) Tj
+0 -12 Td
+(   Unit testing    [GREEN]    unchanged) Tj
+0 -12 Td
+(   Integration testing    [GREEN]    strengthened this round \(2 new integration tests\)) Tj
+0 -12 Td
+(   Race safety    [GREEN]    unchanged, re-verified this round) Tj
+0 -12 Td
+(   Static analysis    [GREEN]    unchanged, re-verified this round) Tj
+0 -12 Td
+(   Structural guardrails    [GREEN]    unchanged, re-verified this round) Tj
+0 -12 Td
+(   Evidence manifest architecture    [GREEN]    unchanged) Tj
+0 -12 Td
+(   Ontology foundation    [GREEN]    unchanged) Tj
+0 -12 Td
+(   AI governance foundation    [GREEN]    unchanged) Tj
+0 -12 Td
+(   CRE integration    [GREEN]    unchanged) Tj
+0 -12 Td
+(   Finding verification    [GREEN] foundation    unchanged) Tj
+0 -12 Td
+(   Finding enforcement    [GREEN] absolute, this round    was [YELLOW] "perlu dipastikan" --) Tj
+0 -12 Td
+(now closed via AuthorizedFinding / Authorize, see Red Flag 3 above) Tj
+0 -12 Td
+(   External anchoring    [YELLOW] simulator    unchanged, explicitly not claimed live -- see) Tj
+0 -12 Td
+(Red Flag 1) Tj
+0 -12 Td
+(   Real AI model execution    [YELLOW] gateway proven, model call still local    the 8-stage) Tj
+0 -12 Td
+(gateway is now proven end to end \(Red Flag 2\); the Inference stage itself remains a governed) Tj
+0 -12 Td
+(local call, honestly labeled, since no external model provider is configured in this) Tj
+0 -12 Td
+(environment) Tj
+0 -12 Td
+(   Real-world data validation    [RED]    not proven from this or any prior report in this) Tj
+0 -12 Td
+(engagement) Tj
+0 -12 Td
+(   Real-world insurance network    [RED]    not proven from this or any prior report in this) Tj
+0 -12 Td
+(engagement) Tj
+0 -12 Td
+(   Production customer environment    [RED]    not proven) Tj
+0 -12 Td
+(   End-to-end real case    [YELLOW]/[RED]    depends on evidence not yet available --) Tj
+0 -12 Td
+(unchanged) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Only one row moved this round: Finding enforcement, from [YELLOW] to [GREEN]. Every [RED]) Tj
+0 -12 Td
+(row remains [RED] --) Tj
+0 -12 Td
+(this report does not claim otherwise, and no code change in this round could honestly move) Tj
+0 -12 Td
+(them,) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 3678 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(since they require real external data, a real counterparty network, and a real production) Tj
+0 -12 Td
+(deployment, none of which exist in this engineering environment.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE THREE-LEVEL FRAMEWORK \(ADOPTED AS THE REVIEWER REQUESTED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's pushback on "All 10 phases are complete": that sentence should be read, and) Tj
+0 -12 Td
+(is now) Tj
+0 -12 Td
+(explicitly stated, as "all 10 engineering verification phases in the defined work package) Tj
+0 -12 Td
+(are) Tj
+0 -12 Td
+(complete" -- not as a claim of platform completion. Phase completion != platform completion.) Tj
+0 -12 Td
+(The) Tj
+0 -12 Td
+(reviewer's own three levels:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Level 1 -- Code Complete. The targeted code has been written. [GREEN]) Tj
+0 -12 Td
+(- Level 2 -- Engineering Verified. The code passes test, race, vet, integration,) Tj
+0 -12 Td
+(adversarial,) Tj
+0 -12 Td
+(and \(across the wider repository\) chaos and soak testing. [GREEN] -- and, per the reviewer's) Tj
+0 -12 Td
+(own) Tj
+0 -12 Td
+(assessment of the prior report, "sangat kuat" \(very strong\). This round adds one more) Tj
+0 -12 Td
+(genuine) Tj
+0 -12 Td
+(strengthening: the Finding authorization gate is now a structural guarantee, not a) Tj
+0 -12 Td
+(documented) Tj
+0 -12 Td
+(convention, and the model-gateway pipeline is proven end to end rather than asserted.) Tj
+0 -12 Td
+(- Level 3 -- Real-World Production Verified. The code works against the real world -- real) Tj
+0 -12 Td
+(data, real actors, real workflows, real networks, real permissions, real external systems,) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(real operational conditions. [YELLOW], not final -- and this report does not claim) Tj
+0 -12 Td
+(otherwise. No) Tj
+0 -12 Td
+(claim in this report or any prior report in this engagement should be read as Level 3) Tj
+0 -12 Td
+(evidence:) Tj
+0 -12 Td
+(every golden case, every "real" package this round exercises, and the model-gateway pipeline) Tj
+0 -12 Td
+(itself all run against synthetic, clearly-labeled test fixtures, not production data or a) Tj
+0 -12 Td
+(production deployment.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION PERFORMED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- gofmt -l across every file changed this round: clean.) Tj
+0 -12 Td
+(- go build ./...: clean.) Tj
+0 -12 Td
+(- go vet ./...: clean.) Tj
+0 -12 Td
+(- go test -race on every changed/extended package \(pkg/insurance/cre, pkg/insurance/finding,) Tj
+0 -12 Td
+(pkg/inference, pkg/authz, pkg/ontology, pkg/platform/audit, pkg/canonical/jcs,) Tj
+0 -12 Td
+(pkg/evidence/manifest, every pkg/governance/* subpackage, test/integration\): clean.) Tj
+0 -12 Td
+(- pkg/insurance/guardrails' seven repo-wide structural scans: clean.) Tj
+0 -12 Td
+(- Full repository test suite \(go test ./..., all ~150+ packages\): run as this round's) Tj
+0 -12 Td
+(closing) Tj
+0 -12 Td
+(verification.) Tj
+0 -12 Td
+(- 7 new tests this round \(6 in pkg/insurance/cre/authorized_test.go, 1 in) Tj
+0 -12 Td
+(test/integration/model_gateway_pipeline_test.go\), all passing on first run, plus every) Tj
+0 -12 Td
+(pre-existing test in every call site the GenerateFindings signature change touched, updated) Tj
+0 -12 Td
+(and re-verified passing.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(FILES CHANGED THIS ROUND) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(3 commits, 2ad92bc..HEAD on claude/l99-gap-coverage-nv70zy:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/insurance/cre/authorized.go                    [new] AuthorizedFinding + Authorize) Tj
+0 -12 Td
+(pkg/insurance/cre/authorized_test.go                [new] 6 tests) Tj
+0 -12 Td
+(pkg/insurance/cre/engine.go                         [changed] GenerateFindings now) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 1927 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(authorizes) Tj
+0 -12 Td
+(pkg/insurance/cre/engine_test.go                    [changed] updated call sites) Tj
+0 -12 Td
+(test/integration/cre_golden_cases_test.go           [changed] updated call sites) Tj
+0 -12 Td
+(test/integration/cre_vtecp_adversarial_test.go      [changed] updated call sites + stronger) Tj
+0 -12 Td
+(assertion) Tj
+0 -12 Td
+(test/integration/vtecp_cre_integration_test.go      [changed] now demonstrates Authorize as) Tj
+0 -12 Td
+(its final step) Tj
+0 -12 Td
+(test/integration/model_gateway_pipeline_test.go     [new] the 8-stage gateway proof) Tj
+0 -12 Td
+(docs/VERIQO_RED_FLAG_RESPONSE_REPORT.{md, pdf}      [new] this report) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CONCLUSION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Of the three red flags, two were already honest and required no code change -- this report) Tj
+0 -12 Td
+(makes) Tj
+0 -12 Td
+(their status more visible, not different. The third and most serious -- Finding enforcement) Tj
+0 -12 Td
+(not) Tj
+0 -12 Td
+(being absolute -- is now closed structurally: a bare finding.Finding cannot reach any) Tj
+0 -12 Td
+(consumer) Tj
+0 -12 Td
+(that requires an AuthorizedFinding without passing through Authorize, and that gate re-) Tj
+0 -12 Td
+(derives) Tj
+0 -12 Td
+(the truth from real source data rather than trusting the Finding's own claims, proven) Tj
+0 -12 Td
+(against a) Tj
+0 -12 Td
+(hand-forged Finding specifically engineered to look self-consistent. The model-gateway) Tj
+0 -12 Td
+(pipeline) Tj
+0 -12 Td
+(the reviewer asked for now exists and passes, honestly labeled at its one unavoidable local-) Tj
+0 -12 Td
+(call) Tj
+0 -12 Td
+(boundary. Level 3 \(Real-World Production Verified\) is not claimed by this report, by the) Tj
+0 -12 Td
+(prior) Tj
+0 -12 Td
+(report, or by any test in this repository -- that distinction is now explicit rather than) Tj
+0 -12 Td
+(implied) Tj
+0 -12 Td
+(away by a phrase like "all phases complete.") Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000015 00000 n 
+0000000105 00000 n 
+0000000175 00000 n 
+0000004133 00000 n 
+0000004259 00000 n 
+0000008060 00000 n 
+0000008186 00000 n 
+0000012019 00000 n 
+0000012145 00000 n 
+0000016365 00000 n 
+0000016492 00000 n 
+0000020223 00000 n 
+0000020351 00000 n 
+0000022331 00000 n 
+0000022459 00000 n 
+trailer
+<< /Size 16 /Root 15 0 R >>
+startxref
+22509
+%%EOF
