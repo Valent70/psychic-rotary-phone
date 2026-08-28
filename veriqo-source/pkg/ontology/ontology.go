@@ -30,6 +30,29 @@
 // (REUSE > EXTEND > REFACTOR > CREATE), and never imports those
 // packages itself (avoiding any import-cycle risk with callers that
 // may need to link back into the ontology graph).
+//
+// # Not a duplicate of pkg/kernel/ontology
+//
+// The repository already has a pkg/kernel/ontology, but it solves a
+// different problem: a generic meta-schema registry (EntityType,
+// RelationType, ActionType, PolicyType as versioned, content-addressed
+// TypeDefs, with structural field-kind validation of arbitrary
+// Instances against them). It has no fixed vocabulary and no concept
+// of case-domain object identity or a first-class Link model. This
+// package is the opposite direction: VTECP-001 section 11-13's OWN
+// concrete, named vocabulary (Case, Evidence, Fact, Contract, ...) and
+// the specific tenant-scoped identity + typed-link model those
+// sections mandate, wired through the section 14 action pipeline.
+// Building this vocabulary as instances of pkg/kernel/ontology's
+// TypeDef/Instance system was considered and rejected: that system's
+// Instance.Fields is map[string]string (structural validation only,
+// no typed Go structs, no first-class Link type distinct from a
+// generic relation instance, and no ExecuteAction-style mandatory
+// audit pipeline), so bending it to VTECP's requirements would mean
+// rebuilding most of this package as a thin, type-unsafe layer on top
+// of it — reuse in name only. The two packages may converge later if
+// a genuine shared abstraction emerges; today they serve distinct,
+// non-overlapping callers and neither imports the other.
 package ontology
 
 import (
