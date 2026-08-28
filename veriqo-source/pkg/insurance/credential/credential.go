@@ -179,6 +179,41 @@ func (c Credential) EffectiveAt(tick uint64) bool {
 // network.QualificationState alone is a bare enum with no record of
 // who attested it. Reuses network.QualificationState and
 // network.RegistrySource rather than declaring parallel vocabularies.
+//
+// Round 10 adds the fields the reviewer's own docx names as missing —
+// "QualificationRecord harus mampu menjawab: siapa yang qualify, untuk
+// apa, berdasarkan credential apa, jurisdiction mana, effective date,
+// expiry, issuer, verification source, revoked, delegated authority,
+// scope, evidence, requalification" (who qualifies, for what, on which
+// credential, which jurisdiction, effective date, expiry, issuer,
+// verification source, revoked, delegated authority, scope, evidence,
+// requalification). Each is answered as follows:
+//
+//   - siapa/untuk apa: PartyID/Role (already present).
+//   - berdasarkan credential apa: CredentialID (already present).
+//   - jurisdiction: Jurisdiction (new).
+//   - effective date/expiry: EffectiveAtTick/ExpiresAtTick (new).
+//   - issuer: Issuer (new) — distinct from Source: Source is WHICH
+//     REGISTRY attested it (network.RegistrySource); Issuer is the
+//     real-world body that issued the underlying credential (e.g. "The
+//     International Group of P&I Clubs"), matching
+//     credential.Credential.IssuingAuthority's own reasoning applied
+//     here for qualifications attested without a linked Credential.
+//   - verification source: Source (already present).
+//   - revoked: State == network.StateRevoked (already representable —
+//     see RevocationReason below for the required reason).
+//   - delegated authority: DelegatedAuthorityRelationshipID (new) —
+//     REUSES party.Relationship (by RelationshipID reference) rather
+//     than re-deriving a second delegation model, matching this
+//     domain's own REUSE discipline exactly as pkg/insurance/credential's
+//     own package doc comment already establishes for Organization/
+//     Jurisdiction/Authority.
+//   - scope: Scope (new).
+//   - evidence: EvidenceIDs (already present).
+//   - requalification: this Registry is append-only (RecordQualification
+//     never overwrites) — a later QualificationRecord for the same
+//     PartyID+Role IS a requalification by construction; see
+//     QualificationHistory/CurrentQualification/EffectiveQualificationAt.
 type QualificationRecord struct {
 	PartyID party.PartyID              `json:"party_id"`
 	Role    party.Role                 `json:"role"`
@@ -191,24 +226,56 @@ type QualificationRecord struct {
 	// CredentialID, if non-empty, names the Credential this
 	// qualification rests on (e.g. the P&I Club membership certificate
 	// backing a StateExternallyVerified attestation).
-	CredentialID   string        `json:"credential_id,omitempty"`
-	EvidenceIDs    []string      `json:"evidence_ids,omitempty"`
+	CredentialID string   `json:"credential_id,omitempty"`
+	EvidenceIDs  []string `json:"evidence_ids,omitempty"`
+
+	// Jurisdiction is where this qualification is recognised (e.g. "England
+	// and Wales") — free text, matching Credential.Jurisdiction's own
+	// reasoning.
+	Jurisdiction string `json:"jurisdiction,omitempty"`
+	// Issuer is the real-world body that issued the underlying
+	// qualification, distinct from Source (which registry ATTESTED it,
+	// not which body ISSUED it — a corporate registry can attest a
+	// qualification issued by a completely different body).
+	Issuer string `json:"issuer,omitempty"`
+	// EffectiveAtTick/ExpiresAtTick bound when this specific
+	// QualificationRecord is in force — ExpiresAtTick == 0 means
+	// open-ended, matching Credential.ExpiresAtTick's own convention.
+	EffectiveAtTick uint64 `json:"effective_at_tick"`
+	ExpiresAtTick   uint64 `json:"expires_at_tick,omitempty"`
+	// Scope bounds WHAT this qualification covers (e.g. "cargo damage
+	// surveys only; hull surveys out of scope") — free text, matching
+	// party.Relationship.Scope's own reasoning.
+	Scope string `json:"scope,omitempty"`
+	// DelegatedAuthorityRelationshipID, if non-empty, names the
+	// party.Relationship.RelationshipID this qualification's own
+	// authority is delegated FROM — reused by reference, never a second
+	// delegation chain (see this type's own doc comment).
+	DelegatedAuthorityRelationshipID string `json:"delegated_authority_relationship_id,omitempty"`
+	// RevocationReason is required non-empty when State ==
+	// network.StateRevoked, matching party.Relationship's own
+	// "REVOKED needs a stated reason" rule.
+	RevocationReason string `json:"revocation_reason,omitempty"`
+
 	RecordedBy     party.PartyID `json:"recorded_by"`
 	RecordedAtTick uint64        `json:"recorded_at_tick"`
 }
 
 var (
-	ErrEmptyQualificationParty       = errors.New("credential: QualificationRecord.PartyID must be non-empty")
-	ErrUnknownQualificationRole      = errors.New("credential: unknown QualificationRecord.Role")
-	ErrUnknownQualificationState     = errors.New("credential: unknown QualificationRecord.State")
-	ErrExternallyVerifiedNeedsSource = errors.New("credential: StateExternallyVerified requires a Source registry -- an external verification with no named external source did not happen")
-	ErrEmptyRecordedBy               = errors.New("credential: QualificationRecord.RecordedBy must be non-empty")
+	ErrEmptyQualificationParty             = errors.New("credential: QualificationRecord.PartyID must be non-empty")
+	ErrUnknownQualificationRole            = errors.New("credential: unknown QualificationRecord.Role")
+	ErrUnknownQualificationState           = errors.New("credential: unknown QualificationRecord.State")
+	ErrExternallyVerifiedNeedsSource       = errors.New("credential: StateExternallyVerified requires a Source registry -- an external verification with no named external source did not happen")
+	ErrEmptyRecordedBy                     = errors.New("credential: QualificationRecord.RecordedBy must be non-empty")
+	ErrRevokedNeedsReason                  = errors.New("credential: State is StateRevoked but RevocationReason is empty")
+	ErrQualificationExpiresBeforeEffective = errors.New("credential: ExpiresAtTick must be 0 (open) or >= EffectiveAtTick")
 )
 
 // Validate checks q's own internal consistency, including the same
 // "an externally verified state needs a named external source" rule
 // this domain applies everywhere else evidence-or-it-didn't-happen is
-// enforced.
+// enforced, and the same "revoked needs a reason" rule
+// party.Relationship already enforces for relationships.
 func (q QualificationRecord) Validate() error {
 	if q.PartyID == "" {
 		return ErrEmptyQualificationParty
@@ -227,10 +294,33 @@ func (q QualificationRecord) Validate() error {
 			return fmt.Errorf("credential: %w: %s is not a modelled qualification authority for role %s", network.ErrRegistryMisroute, q.Source, q.Role)
 		}
 	}
+	if q.State == network.StateRevoked && q.RevocationReason == "" {
+		return ErrRevokedNeedsReason
+	}
+	if q.ExpiresAtTick != 0 && q.ExpiresAtTick < q.EffectiveAtTick {
+		return ErrQualificationExpiresBeforeEffective
+	}
 	if q.RecordedBy == "" {
 		return ErrEmptyRecordedBy
 	}
 	return nil
+}
+
+// EffectiveAt reports whether q is genuinely in force at tick: not
+// StateRevoked, past its own EffectiveAtTick, and not yet past
+// ExpiresAtTick (0 == unbounded) — mirrors Credential.EffectiveAt
+// exactly.
+func (q QualificationRecord) EffectiveAt(tick uint64) bool {
+	if q.State == network.StateRevoked {
+		return false
+	}
+	if tick < q.EffectiveAtTick {
+		return false
+	}
+	if q.ExpiresAtTick != 0 && tick > q.ExpiresAtTick {
+		return false
+	}
+	return true
 }
 
 // ---- Registry --------------------------------------------------------
@@ -371,4 +461,33 @@ func (r *Registry) CurrentQualification(p party.PartyID, role party.Role) (Quali
 		return QualificationRecord{}, false
 	}
 	return hist[len(hist)-1], true
+}
+
+// EffectiveQualificationAt finds the record most recently in effect as
+// of tick — the LATEST QualificationRecord (by RecordedAtTick) that was
+// itself already recorded at or before tick — and reports it only if
+// THAT specific record is EffectiveAt(tick). This is the
+// requalification-aware, point-in-time answer: a later record for the
+// same PartyID+Role always supersedes an earlier one once its own
+// RecordedAtTick has passed, and a later REVOCATION is authoritative
+// going forward — it is never skipped in favour of falling back to an
+// earlier, still-nominally-active record, which is exactly the
+// property that makes this Registry's append-only history a real
+// requalification trail rather than a set of independently-checked
+// facts.
+func (r *Registry) EffectiveQualificationAt(p party.PartyID, role party.Role, tick uint64) (QualificationRecord, bool) {
+	hist := r.QualificationHistory(p, role)
+	var current QualificationRecord
+	found := false
+	for _, q := range hist {
+		if q.RecordedAtTick > tick {
+			break
+		}
+		current = q
+		found = true
+	}
+	if !found || !current.EffectiveAt(tick) {
+		return QualificationRecord{}, false
+	}
+	return current, true
 }

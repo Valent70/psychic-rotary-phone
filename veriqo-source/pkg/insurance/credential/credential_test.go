@@ -163,3 +163,100 @@ func TestKindAndStatusVocabulariesAreClosed(t *testing.T) {
 		}
 	}
 }
+
+// ---- Round 10: enriched QualificationRecord fields ----------------------
+
+func fullQualification() QualificationRecord {
+	return QualificationRecord{
+		PartyID: "PTY-SURVEYOR", Role: party.RoleSurveyor, State: network.StateExternallyVerified,
+		Source: network.RegistrySourceSurveyor, CredentialID: "CRED-1", EvidenceIDs: []string{"EVID-1"},
+		Jurisdiction: "England and Wales", Issuer: "Institute of Marine Engineering, Science and Technology",
+		EffectiveAtTick: 100, ExpiresAtTick: 500, Scope: "cargo damage surveys only",
+		DelegatedAuthorityRelationshipID: "REL-1", RecordedBy: "PTY-REVIEWER", RecordedAtTick: 100,
+	}
+}
+
+func TestQualificationRecordValidateRequiresRevocationReasonWhenRevoked(t *testing.T) {
+	q := fullQualification()
+	q.State = network.StateRevoked
+	if err := q.Validate(); err != ErrRevokedNeedsReason {
+		t.Fatalf("expected ErrRevokedNeedsReason, got %v", err)
+	}
+	q.RevocationReason = "licence lapsed"
+	if err := q.Validate(); err != nil {
+		t.Fatalf("expected revoked-with-reason to pass, got %v", err)
+	}
+}
+
+func TestQualificationRecordValidateRejectsExpiresBeforeEffective(t *testing.T) {
+	q := fullQualification()
+	q.ExpiresAtTick = 50 // before EffectiveAtTick of 100
+	if err := q.Validate(); err != ErrQualificationExpiresBeforeEffective {
+		t.Fatalf("expected ErrQualificationExpiresBeforeEffective, got %v", err)
+	}
+}
+
+func TestQualificationRecordEffectiveAtWindow(t *testing.T) {
+	q := fullQualification()
+	if q.EffectiveAt(50) {
+		t.Fatal("expected not yet effective before EffectiveAtTick")
+	}
+	if !q.EffectiveAt(200) {
+		t.Fatal("expected effective within window")
+	}
+	if q.EffectiveAt(600) {
+		t.Fatal("expected not effective after ExpiresAtTick")
+	}
+}
+
+func TestQualificationRecordRevokedIsNeverEffective(t *testing.T) {
+	q := fullQualification()
+	q.State = network.StateRevoked
+	q.RevocationReason = "withdrawn"
+	if q.EffectiveAt(200) {
+		t.Fatal("expected a revoked qualification to never report as effective, even within its own window")
+	}
+}
+
+func TestEffectiveQualificationAtIsRequalificationAware(t *testing.T) {
+	r := NewRegistry()
+	first := fullQualification()
+	first.State = network.StateSelfAttested
+	first.Source = ""
+	first.EffectiveAtTick, first.ExpiresAtTick, first.RecordedAtTick = 100, 300, 100
+	if err := r.RecordQualification(first); err != nil {
+		t.Fatalf("RecordQualification(first): %v", err)
+	}
+	second := fullQualification() // externally verified, requalifies the party
+	second.EffectiveAtTick, second.ExpiresAtTick, second.RecordedAtTick = 300, 0, 300
+	if err := r.RecordQualification(second); err != nil {
+		t.Fatalf("RecordQualification(second): %v", err)
+	}
+
+	atFirst, ok := r.EffectiveQualificationAt("PTY-SURVEYOR", party.RoleSurveyor, 150)
+	if !ok || atFirst.State != network.StateSelfAttested {
+		t.Fatalf("expected the FIRST record to be effective at tick 150, got %+v ok=%v", atFirst, ok)
+	}
+	atSecond, ok := r.EffectiveQualificationAt("PTY-SURVEYOR", party.RoleSurveyor, 350)
+	if !ok || atSecond.State != network.StateExternallyVerified {
+		t.Fatalf("expected the SECOND (requalified) record to be effective at tick 350, got %+v ok=%v", atSecond, ok)
+	}
+}
+
+func TestEffectiveQualificationAtHonorsRevocation(t *testing.T) {
+	r := NewRegistry()
+	q := fullQualification()
+	if err := r.RecordQualification(q); err != nil {
+		t.Fatalf("RecordQualification: %v", err)
+	}
+	revoked := q
+	revoked.State = network.StateRevoked
+	revoked.RevocationReason = "credential suspended"
+	revoked.RecordedAtTick = 250
+	if err := r.RecordQualification(revoked); err != nil {
+		t.Fatalf("RecordQualification(revoked): %v", err)
+	}
+	if _, ok := r.EffectiveQualificationAt("PTY-SURVEYOR", party.RoleSurveyor, 400); ok {
+		t.Fatal("expected no effective qualification after revocation")
+	}
+}
