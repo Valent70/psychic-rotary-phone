@@ -46,6 +46,8 @@ import (
 	"strings"
 	"sync"
 
+	"veriqo/pkg/canonical/jcs"
+	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/platform/telemetry"
 )
 
@@ -90,6 +92,15 @@ type Rule struct {
 	// Relation, when set, requires the actor to stand in this ReBAC
 	// relation to the resource (directly or transitively).
 	Relation string `json:"relation,omitempty"`
+	// Purposes, when set, requires the request to declare one of these
+	// purposes (VTECP-001 Capability 3: "Purpose Binding" -- data-use
+	// limitation, not just who/under-what-conditions/in-what-relation
+	// but for-what-declared-reason). Supports the same "*"/"prefix*"
+	// wildcards as Roles/Actions/Resources. An empty Purposes is
+	// purpose-agnostic and matches any request, including one with no
+	// declared purpose -- this is additive: a Document written before
+	// this field existed evaluates identically.
+	Purposes []string `json:"purposes,omitempty"`
 	// Obligations are side conditions the caller MUST honour when the
 	// rule allows (e.g. "redact_pii", "log_to_audit").
 	Obligations []string `json:"obligations,omitempty"`
@@ -139,8 +150,8 @@ func (d Document) canonicalBytes() []byte {
 	rules := append([]Rule(nil), d.Rules...)
 	sort.Slice(rules, func(i, j int) bool { return rules[i].ID < rules[j].ID })
 	for _, r := range rules {
-		fmt.Fprintf(&b, "rule=%s|effect=%s|priority=%d|roles=%s|actions=%s|resources=%s|relation=%s|obligations=%s",
-			r.ID, r.Effect, r.Priority, join(r.Roles), join(r.Actions), join(r.Resources), r.Relation, join(r.Obligations))
+		fmt.Fprintf(&b, "rule=%s|effect=%s|priority=%d|roles=%s|actions=%s|resources=%s|relation=%s|obligations=%s|purposes=%s",
+			r.ID, r.Effect, r.Priority, join(r.Roles), join(r.Actions), join(r.Resources), r.Relation, join(r.Obligations), join(r.Purposes))
 		conds := append([]Condition(nil), r.Conditions...)
 		sort.Slice(conds, func(i, j int) bool {
 			if conds[i].Attribute != conds[j].Attribute {
@@ -218,6 +229,21 @@ type Request struct {
 	Resource   string
 	Attributes map[string]string
 	Tick       uint64
+	// Tenant scopes this request for PolicyDecision recordkeeping (§ below).
+	// It is not itself evaluated by matches() -- a rule that needs to
+	// gate on tenant does so via an ABAC Condition on Attributes["tenant_id"]
+	// exactly as before this field existed; Tenant only travels through
+	// to the audit-facing PolicyDecision so a decision record is
+	// self-describing without the caller having to duplicate the value
+	// into Attributes.
+	Tenant string
+	// Purpose is the declared reason this request is being made (e.g.
+	// "claims_investigation", "regulatory_audit", "case_resolution") --
+	// matched against a rule's Purposes. Empty means no purpose was
+	// declared; a rule with a non-empty Purposes will then fail to
+	// match (see matches()), same as an empty Roles/Attributes would
+	// fail an RBAC/ABAC rule.
+	Purpose string
 }
 
 // Explanation is the auditable answer.
@@ -248,11 +274,23 @@ type Engine struct {
 	rels     map[string][]Relationship
 	// MaxRelationDepth bounds transitive relationship traversal.
 	MaxRelationDepth int
+	// AuditStore optionally mirrors every CanRecorded decision into a
+	// canonical, hash-chained audit ledger -- opt-in, exactly like
+	// ontology.Registry.AuditStore: nil performs no mirroring.
+	AuditStore *audit.AuditStore
 }
 
 // NewEngine constructs an empty authorization engine.
 func NewEngine() *Engine {
 	return &Engine{active: -1, rels: map[string][]Relationship{}, MaxRelationDepth: 8}
+}
+
+// AttachAuditStore opts this engine into audit mirroring for every
+// CanRecorded call made afterwards.
+func (e *Engine) AttachAuditStore(store *audit.AuditStore) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.AuditStore = store
 }
 
 // Publish appends a new policy version, chained to its predecessor.
@@ -490,6 +528,169 @@ func (e *Engine) Can(req Request) (Explanation, error) {
 	return ex, nil
 }
 
+// Reason codes for PolicyDecision.ReasonCodes -- a small, stable
+// vocabulary a downstream consumer can match on directly, never free
+// text (Explanation.Reason remains the human-readable prose).
+const (
+	ReasonNoActivePolicy     = "NO_ACTIVE_POLICY"
+	ReasonPolicyExpired      = "POLICY_EXPIRED"
+	ReasonPolicyNotYetActive = "POLICY_NOT_YET_ACTIVE"
+	ReasonRuleDeny           = "RULE_DENY"
+	ReasonRuleAllow          = "RULE_ALLOW"
+	ReasonDefaultDeny        = "DEFAULT_DENY"
+)
+
+// PolicyDecision is the canonical, hashable, auditable record of one
+// authorization evaluation (VTECP-001 Capability 3) -- distinct from
+// Explanation, which is the caller-facing return value. PolicyDecision
+// is what gets mirrored into the audit ledger and what the Unified
+// Decision Graph (Capability 3 + Capability 4's convergence point)
+// links a Case/Evidence/Fact object to.
+//
+// DecisionID and PolicyInputsHash are both derived deterministically
+// from the request + evaluation tick via jcs.Hash -- never a random
+// UUID (VTECP-001 LAW-03: determinism). The consequence is intentional
+// and matches this codebase's established idempotency discipline
+// (see pkg/insurance/casestate's idempotencyPrelude): evaluating the
+// identical request against the identical active policy version at
+// the identical tick produces the identical DecisionID, because it IS
+// the identical decision.
+type PolicyDecision struct {
+	DecisionID       string   `json:"decision_id"`
+	Tenant           string   `json:"tenant,omitempty"`
+	Actor            string   `json:"actor"`
+	Action           string   `json:"action"`
+	Resource         string   `json:"resource"`
+	Purpose          string   `json:"purpose,omitempty"`
+	PolicyID         string   `json:"policy_id,omitempty"`
+	PolicyVersion    int      `json:"policy_version,omitempty"`
+	PolicyHash       string   `json:"policy_hash,omitempty"`
+	PolicyInputsHash string   `json:"policy_inputs_hash"`
+	Allowed          bool     `json:"allowed"`
+	DecidingEffect   Effect   `json:"deciding_effect,omitempty"`
+	MatchedRule      string   `json:"matched_rule,omitempty"`
+	ReasonCodes      []string `json:"reason_codes"`
+	Obligations      []string `json:"obligations,omitempty"`
+	EvaluatedAtTick  uint64   `json:"evaluated_at_tick"`
+	DecisionHash     string   `json:"decision_hash"`
+}
+
+// policyInputs is the canonicalized subset of Request that identifies
+// "what was actually asked" -- deliberately excludes nothing from
+// Request except nothing (every field that can affect the decision is
+// here), so PolicyInputsHash is a genuine commitment to the inputs.
+type policyInputs struct {
+	Actor      string            `json:"actor"`
+	Roles      []string          `json:"roles,omitempty"`
+	Action     string            `json:"action"`
+	Resource   string            `json:"resource"`
+	Attributes map[string]string `json:"attributes,omitempty"`
+	Tick       uint64            `json:"tick"`
+	Tenant     string            `json:"tenant,omitempty"`
+	Purpose    string            `json:"purpose,omitempty"`
+	// ActivePolicyVersion disambiguates: the same request inputs
+	// evaluated against two different active policy versions (e.g.
+	// after a rollback) are different decisions and must hash
+	// differently even though the Request itself is byte-identical.
+	ActivePolicyVersion int `json:"active_policy_version"`
+}
+
+// reasonCodeFor classifies an Explanation into PolicyDecision's stable
+// vocabulary. Kept separate from Can() itself so Can()'s own control
+// flow is not complicated by a concern only CanRecorded needs.
+func reasonCodeFor(ex Explanation, err error) string {
+	switch {
+	case errors.Is(err, ErrNoPolicy):
+		return ReasonNoActivePolicy
+	case errors.Is(err, ErrPolicyExpired):
+		return ReasonPolicyExpired
+	case errors.Is(err, ErrPolicyNotYetActive):
+		return ReasonPolicyNotYetActive
+	case ex.Allowed:
+		return ReasonRuleAllow
+	case ex.MatchedRule != "" && ex.DecidingEffect == Deny:
+		return ReasonRuleDeny
+	default:
+		return ReasonDefaultDeny
+	}
+}
+
+// CanRecorded is Can(), plus the canonical PolicyDecision record VTECP-
+// 001 Capability 3 requires and (when AttachAuditStore was called)
+// mirroring that decision into the audit ledger -- including refused
+// evaluations (no active policy, expired, not yet active), because an
+// authorization audit trail that only records grants is not an audit
+// trail. Can() itself is untouched and remains the lighter-weight call
+// for sites that do not need a recorded decision.
+func (e *Engine) CanRecorded(req Request) (Explanation, PolicyDecision, error) {
+	ex, err := e.Can(req)
+
+	activeVersion := 0
+	if d, aerr := e.Active(); aerr == nil {
+		activeVersion = d.Version
+	}
+	inputsHash := jcs.MustHash(policyInputs{
+		Actor: req.Actor, Roles: req.Roles, Action: req.Action, Resource: req.Resource,
+		Attributes: req.Attributes, Tick: req.Tick, Tenant: req.Tenant, Purpose: req.Purpose,
+		ActivePolicyVersion: activeVersion,
+	})
+
+	dec := PolicyDecision{
+		DecisionID:       "decision:" + inputsHash,
+		Tenant:           req.Tenant,
+		Actor:            req.Actor,
+		Action:           req.Action,
+		Resource:         req.Resource,
+		Purpose:          req.Purpose,
+		PolicyID:         ex.PolicyID,
+		PolicyVersion:    ex.PolicyVersion,
+		PolicyHash:       ex.PolicyHash,
+		PolicyInputsHash: inputsHash,
+		Allowed:          ex.Allowed,
+		DecidingEffect:   ex.DecidingEffect,
+		MatchedRule:      ex.MatchedRule,
+		ReasonCodes:      []string{reasonCodeFor(ex, err)},
+		Obligations:      ex.Obligations,
+		EvaluatedAtTick:  req.Tick,
+	}
+	dec.DecisionHash = computePolicyDecisionHash(dec)
+
+	e.mu.RLock()
+	store := e.AuditStore
+	e.mu.RUnlock()
+	if store != nil {
+		payload, mErr := json.Marshal(dec)
+		if mErr != nil {
+			return ex, dec, fmt.Errorf("authz: encoding policy decision for audit: %w", mErr)
+		}
+		if _, aErr := store.Append("AUTHZ:"+req.Actor, "PolicyDecision", string(payload)); aErr != nil {
+			return ex, dec, fmt.Errorf("authz: audit ledger append failed: %w", aErr)
+		}
+	}
+	return ex, dec, err
+}
+
+// computePolicyDecisionHash hashes dec with its own DecisionHash field
+// cleared first, mirroring pkg/evidence/manifest's computeManifestHash
+// discipline for the same reason: a self-referential hash must be
+// computed over "everything except itself."
+func computePolicyDecisionHash(dec PolicyDecision) string {
+	dec.DecisionHash = ""
+	return jcs.MustHash(dec)
+}
+
+// VerifyPolicyDecisionHash re-derives dec's DecisionHash and reports
+// whether it matches the recorded value -- the third-party-verifiable
+// integrity check on a PolicyDecision pulled back out of the audit
+// ledger, mirroring VerifyManifestHash.
+func VerifyPolicyDecisionHash(dec PolicyDecision) error {
+	want := computePolicyDecisionHash(dec)
+	if want != dec.DecisionHash {
+		return fmt.Errorf("authz: policy decision hash mismatch: recorded=%s recomputed=%s", dec.DecisionHash, want)
+	}
+	return nil
+}
+
 // DryRun evaluates a request against a NON-active version — the audit's
 // "dry-run" requirement, so a policy change can be tested against real
 // traffic shapes before it goes live.
@@ -540,6 +741,11 @@ func (e *Engine) matches(r Rule, req Request) (string, bool) {
 	if r.Relation != "" {
 		if !e.hasRelation(req.Actor, r.Relation, req.Resource) {
 			return fmt.Sprintf("actor has no %q relationship to the resource (ReBAC)", r.Relation), false
+		}
+	}
+	if len(r.Purposes) > 0 {
+		if req.Purpose == "" || !matchAny(r.Purposes, req.Purpose) {
+			return fmt.Sprintf("request purpose %q is not bound to this rule's allowed purposes (Purpose Binding)", req.Purpose), false
 		}
 	}
 	return "all conditions satisfied", true
