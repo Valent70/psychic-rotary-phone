@@ -1,0 +1,865 @@
+%PDF-1.4
+%ту╧╙
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R] /Count 7 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 4341 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO CRE + VTECP-001 ? CLOSURE REPORT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 28 August 2026) Tj
+0 -12 Td
+(Baseline: R11 \(FINAL INTERNAL CHECK\) deliverable ? commit 0540117) Tj
+0 -12 Td
+(Responds to: three attached specification documents ? VERIQO_CASE_RESOLUTION_ENGINE.docx) Tj
+0 -12 Td
+(\(CRE\), VERIQO_TRUST_EVIDENCE_CONTROL_PLANE.docx \(VTECP-001\), and) Tj
+0 -12 Td
+(Bagian_dari_Case_Resolution_Engine.docx) Tj
+0 -12 Td
+(\(a framing memo extending both\) ? plus the explicit instruction to build the Case Resolution) Tj
+0 -12 Td
+(Engine "serta beberapa fondasi lainnya" \(plus some other foundations\), in as much detail as) Tj
+0 -12 Td
+(possible, with no remaining gap, efficiently, with thorough integration testing.) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review. All code in) Tj
+0 -12 Td
+(this deliverable compiles, is tested, and was verified against the live repository ? no) Tj
+0 -12 Td
+(external system, counterparty, or credential was contacted or fabricated.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Both specifications describe a broad, five-capability trust and evidence platform) Tj
+0 -12 Td
+(\(VTECP-001\)) Tj
+0 -12 Td
+(and an eleven-stage case resolution pipeline \(CRE\) sitting on top of it. A repository survey) Tj
+0 -12 Td
+(early in this round found something the specifications themselves did not anticipate: almost) Tj
+0 -12 Td
+(every CRE pipeline stage, and three of VTECP-001's five capabilities, already existed in) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(~700-file repository, built and tested across ten prior rounds of work on the insurance) Tj
+0 -12 Td
+(domain.) Tj
+0 -12 Td
+(Building a second, parallel implementation of any of it would have been pure duplication ?) Tj
+0 -12 Td
+(exactly what both specs' own instructions forbid \("Claude should first inspect the existing) Tj
+0 -12 Td
+(repository and reuse existing packages wherever possible... If equivalent packages already) Tj
+0 -12 Td
+(exist, Claude MUST extend them rather than duplicate functionality"\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(So this round's real work was threefold:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. Build the two capabilities that had no existing equivalent at all ? RFC 8785 JSON) Tj
+0 -12 Td
+(canonicalization \(a stated prerequisite for everything else\), the Immutable Evidence) Tj
+0 -12 Td
+(Manifest, the generic Ontology object/link/action registry, and a Merkle inclusion-proof +) Tj
+0 -12 Td
+(anchoring layer over the audit ledger.) Tj
+0 -12 Td
+(2. Extend, not duplicate, the capabilities that were 80% there ? pkg/authz already had) Tj
+0 -12 Td
+(real RBAC+ABAC+ReBAC; it gained Purpose Binding and a canonical PolicyDecision record.) Tj
+0 -12 Td
+(pkg/governance/lifecycle already gated a model through DRAFT?...?ACTIVE; a new) Tj
+0 -12 Td
+(pkg/inference package uses it as the enforcement point for a generic InferenceTrace.) Tj
+0 -12 Td
+(3. Build the one genuinely missing CRE artifact ? the Finding object \(SUPPORTED BY /) Tj
+0 -12 Td
+(CONTRADICTED BY / CONTRACT BASIS / OBLIGATION / EVENT / CAUSATION / QUANTUM / CONFIDENCE /) Tj
+0 -12 Td
+(HUMAN REVIEW / STATUS\) and the mechanical engine that assembles one from the causation,) Tj
+0 -12 Td
+(obligation, timeline, and quantum packages that already existed ? plus two verification) Tj
+0 -12 Td
+(functions that re-derive a Finding's claims from source rather than trusting them.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(13 commits, 21 new/changed files, ~5,300 lines, 131 new tests, all passing on first or) Tj
+0 -12 Td
+(second) Tj
+0 -12 Td
+(run \(three real bugs were caught by the tests themselves and fixed before commit ? see) Tj
+0 -12 Td
+(below\).) Tj
+0 -12 Td
+(Race detector, go vet, gofmt, the full repository test suite, and pkg/insurance/guardrails') Tj
+0 -12 Td
+(repo-wide structural scans \(no opaque confidence score, no verdict/determination field,) Tj
+0 -12 Td
+(anywhere) Tj
+0 -12 Td
+(in the insurance domain\) all pass clean as of this report.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WHAT WAS REUSED, NOT REBUILT \(THE SURVEY'S OWN FINDINGS\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A dedicated research pass read the actual source ? not just type signatures ? of) Tj
+0 -12 Td
+(pkg/insurance/{policy,claim,case,evidence,verification,timeline,obligation,coverage,causatio) Tj
+0 -12 Td
+(n,) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 4020 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(quantum,dossier,dossierverify,casestate}, pkg/governance/{lifecycle,hitl,calibration,) Tj
+0 -12 Td
+(qualification,envelope}, pkg/moat/{causal,contradiction,decision,calibration,reliability,) Tj
+0 -12 Td
+(evidencegraph,provenance,entity}, and pkg/explanation. The result, in CRE's own pipeline) Tj
+0 -12 Td
+(order:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   CRE stage    Reused as-is    Verdict) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Contract    pkg/insurance/policy \(Version, Clause, History.EffectiveAt\)    Pure reuse) Tj
+0 -12 Td
+(   Claim    pkg/insurance/claim \(Type registry, Status, never APPROVED/DENIED\)    Pure reuse) Tj
+0 -12 Td
+(   Case aggregate    pkg/insurance/case \(15-state pipeline already close to CRE's own stage) Tj
+0 -12 Td
+(order\)    Pure reuse) Tj
+0 -12 Td
+(   Evidence    pkg/insurance/evidence, pkg/evidence/*    Pure reuse) Tj
+0 -12 Td
+(   Provenance    pkg/moat/provenance, pkg/evidence/provenance    Pure reuse) Tj
+0 -12 Td
+(   Verification    pkg/insurance/verification's four gates) Tj
+0 -12 Td
+(\(coverage/quantum/preservation/human-review\)    Pure reuse) Tj
+0 -12 Td
+(   Fact reconstruction    pkg/insurance/timeline \(Event, Detector, Condition/Compare\)) Tj
+0 -12 Td
+(Pure reuse) Tj
+0 -12 Td
+(   Contract-to-fact mapping    pkg/insurance/obligation, pkg/insurance/coverage    Pure) Tj
+0 -12 Td
+(reuse) Tj
+0 -12 Td
+(   Causation    pkg/insurance/causation \(HypothesisSet, Explain, mechanically-derived) Tj
+0 -12 Td
+(Status\)    Pure reuse) Tj
+0 -12 Td
+(   Quantum    pkg/insurance/quantum \(Compute, DetectDiscrepancy, Amount as int64 minor) Tj
+0 -12 Td
+(units\)    Pure reuse) Tj
+0 -12 Td
+(   Human review    pkg/governance/hitl \(MachineDecision + GovernedOutcome\)    Pure reuse) Tj
+0 -12 Td
+(   Evidence dossier    pkg/insurance/dossier, pkg/insurance/dossierverify    Pure reuse) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(For VTECP-001's five capabilities:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Capability    Status before this round    This round) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   1. Immutable Evidence Manifest    Did not exist    Built ? pkg/evidence/manifest) Tj
+0 -12 Td
+(   2. Ontology Layer    A *different*, narrower pkg/kernel/ontology existed \(generic meta-) Tj
+0 -12 Td
+(schema registry, no fixed vocabulary, no ExecuteAction pipeline\)    Built ? pkg/ontology,) Tj
+0 -12 Td
+(documented why it is not a duplicate) Tj
+0 -12 Td
+(   3. RBAC+ABAC+Purpose Binding Authorization    RBAC+ABAC+ReBAC existed in pkg/authz;) Tj
+0 -12 Td
+(Purpose Binding did not    Extended pkg/authz) Tj
+0 -12 Td
+(   4. Cryptographically Verifiable Audit Ledger    A hash-chained linear ledger existed) Tj
+0 -12 Td
+(\(pkg/platform/audit\); Merkle inclusion proofs and anchoring did not    Extended) Tj
+0 -12 Td
+(pkg/platform/audit) Tj
+0 -12 Td
+(   5. AI/Model Lifecycle Governance    Model lifecycle gating existed) Tj
+0 -12 Td
+(\(pkg/governance/lifecycle\); a generic, cross-domain inference audit record did not    Built) Tj
+0 -12 Td
+(pkg/inference on top of the existing registry) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(NEW AND EXTENDED CODE, BY PHASE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 1?2 ? PKG/CANONICAL/JCS AND PKG/EVIDENCE/MANIFEST) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/canonical/jcs implements RFC 8785 \(the canonicalization VTECP-001 з7 names explicitly as) Tj
+0 -12 Td
+(the correction to a hand-rolled JSON-sorting proposal\): UTF-16 code-unit key ordering,) Tj
+0 -12 Td
+(correct) Tj
+0 -12 Td
+(string escaping, and ECMAScript Number::toString-compatible number formatting for every) Tj
+0 -12 Td
+(number) Tj
+0 -12 Td
+(shape this codebase actually produces \(64-bit integers and floats in [-1e15, 1e15]\) ? with) Tj
+0 -12 Td
+(an) Tj
+0 -12 Td
+(honest, documented refusal \(ErrUnsupportedNumber\) for magnitudes outside that verified) Tj
+0 -12 Td
+(range,) Tj
+0 -12 Td
+(rather than a silent, possibly non-interoperable guess. A real bug was caught by its own) Tj
+0 -12 Td
+(test) Tj
+0 -12 Td
+(suite before commit: encodeNumber initially fell straight from int64 to float64, so a) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 4281 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(legitimate uint64 tick above math.MaxInt64 was wrongly refused; fixed by trying an exact) Tj
+0 -12 Td
+(uint64 parse first.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/evidence/manifest is the Immutable Evidence Manifest: a seven-state lifecycle) Tj
+0 -12 Td
+(\(DRAFT?INGESTED?INTEGRITY_ASSESSED?PROVENANCE_COMPLETE?READY_FOR_FINALIZATION?FINALIZED,) Tj
+0 -12 Td
+(plus) Tj
+0 -12 Td
+(SUPERSEDED\), a hash-linked custody-event chain, and version history that is never edited in) Tj
+0 -12 Td
+(place ? Supersede always creates version N+1, leaving version N provably untouched. A real) Tj
+0 -12 Td
+(bug) Tj
+0 -12 Td
+(was caught by its own tests: Advance originally computed the manifest's self-referential) Tj
+0 -12 Td
+(hash) Tj
+0 -12 Td
+(*before* setting FinalizedAt, so every finalized manifest's hash verification failed,) Tj
+0 -12 Td
+(including) Tj
+0 -12 Td
+(genuinely untampered ones; fixed by reordering the two operations.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(35 tests \(17 + 18 across the two packages' own test files, verified by direct count\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 3 ? PKG/ONTOLOGY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The generic object/link/action registry: VTECP-001 з11's 19 core object types plus the) Tj
+0 -12 Td
+(framing) Tj
+0 -12 Td
+(memo's 14 additional entity types, з13's 9 core link types plus 10 more, tenant-scoped) Tj
+0 -12 Td
+(identity) Tj
+0 -12 Td
+(distinct from database row identity, and the mandated 5-stage ExecuteAction pipeline) Tj
+0 -12 Td
+(\(Policy?Validation?Execution?StateTransition?Audit\) every ontology mutation runs through. A) Tj
+0 -12 Td
+(pre-existing pkg/kernel/ontology \(a generic meta-schema/instance validator with no fixed) Tj
+0 -12 Td
+(vocabulary\) was found during implementation; the two are not duplicates, and the package doc) Tj
+0 -12 Td
+(comment records why extending the older package was considered and rejected rather than) Tj
+0 -12 Td
+(silently) Tj
+0 -12 Td
+(building a second one. 22 tests, all passing on first run ? no bugs surfaced this time.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 4 ? PKG/AUTHZ EXTENDED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Rule gained Purposes \(wildcard-matched, same semantics as Roles/Actions/Resources\);) Tj
+0 -12 Td
+(Request gained Purpose and Tenant. A rule with no Purposes is purpose-agnostic and) Tj
+0 -12 Td
+(evaluates identically to every Document written before the field existed ? additive, not) Tj
+0 -12 Td
+(breaking. A new PolicyDecision type is the canonical, hashable, auditable record of one) Tj
+0 -12 Td
+(Can\(\) evaluation, with a deterministic DecisionID/PolicyInputsHash derived via jcs.Hash) Tj
+0 -12 Td
+(\(never a random UUID\) so identical inputs against the identical active policy version) Tj
+0 -12 Td
+(produce) Tj
+0 -12 Td
+(the identical decision ID. Engine.CanRecorded wraps Can\(\) and, when an AuditStore is) Tj
+0 -12 Td
+(attached, mirrors the decision into the shared ledger ? including *refused* evaluations, so) Tj
+0 -12 Td
+(denials are part of the audit trail, not just grants. 10 new tests, all passing on first) Tj
+0 -12 Td
+(run.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 5 ? PKG/PLATFORM/AUDIT EXTENDED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(MerkleRoot/GenerateInclusionProof/VerifyInclusionProof/VerifyRecordInclusion implement) Tj
+0 -12 Td
+(RFC 6962 \(Certificate Transparency\)'s Merkle Tree Hash construction over AuditRecord.Hash) Tj
+0 -12 Td
+(values ? domain-separated leaf/node hashing chosen specifically to defeat the standard) Tj
+0 -12 Td
+(second-preimage attack a naive pairwise tree is vulnerable to. Anchorer is an interface for) Tj
+0 -12 Td
+(committing a root to an external reference; LocalAnchorer is the only implementation) Tj
+0 -12 Td
+(shipped,) Tj
+0 -12 Td
+(an explicit in-memory simulator whose every receipt self-identifies as such) Tj
+0 -12 Td
+(\(AnchoredBy: "LocalAnchorer\(simulator, not a real external anchor\)"\) ? VERIQO has no real) Tj
+0 -12 Td
+(external anchoring integration today, and this says so rather than implying one.) Tj
+0 -12 Td
+(AuditStore.Checkpoint/VerifyCheckpoint seal and independently re-verify a Merkle root over a) Tj
+0 -12 Td
+(claimed record range. 16 new tests \(verified by direct count ? an earlier commit message in) Tj
+0 -12 Td
+(this round's own history overstated this as 24; the number here is a fresh grep -c count,) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 4246 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(not) Tj
+0 -12 Td
+(a repeated claim\), across leaf counts 1 through 33 \(both exact-power-of-two and uneven-split) Tj
+0 -12 Td
+(recursion branches\), tamper detection at every layer, and an explicit test proving) Tj
+0 -12 Td
+(VerifyCheckpoint \(range/root integrity\) and the pre-existing Auditor.VerifyChain) Tj
+0 -12 Td
+(\(payload-to-hash integrity\) are deliberately complementary, not redundant.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 6 ? PKG/INFERENCE AND PKG/INSURANCE/FINDING) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/inference.Recorder is the only writer of InferenceTrace records, and it refuses to) Tj
+0 -12 Td
+(accept one for a model that is not the ACTIVE version of its model ID at the claimed tick,) Tj
+0 -12 Td
+(per a) Tj
+0 -12 Td
+(bound lifecycle.Registry's own Binding resolution ? this is VTECP-001's core Capability 5) Tj
+0 -12 Td
+(rule \("AI output never becomes evidence authority directly"\) enforced structurally: an) Tj
+0 -12 Td
+(inference) Tj
+0 -12 Td
+(from a DRAFT, unapproved, deprecated, or unknown model is rejected outright, not) Tj
+0 -12 Td
+(recorded-with-a-flag. 12 tests.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/insurance/finding.Finding implements CRE's own schema exactly. It is deliberately a) Tj
+0 -12 Td
+(citation layer, not a new analysis engine ? every field cites a value some other package) Tj
+0 -12 Td
+(already) Tj
+0 -12 Td
+(computed. Status is derived-only \(Evaluate always overwrites whatever a caller supplied\): a) Tj
+0 -12 Td
+(Finding missing even one required field is CANDIDATE, never FINDING. The first draft used an) Tj
+0 -12 Td
+(opaque Confidence float64; the repository's own pkg/insurance/guardrails scan) Tj
+0 -12 Td
+(\(TestNoOpaqueConfidenceScoreAnywhereInTheInsuranceDomain\) correctly caught this as a real) Tj
+0 -12 Td
+(violation of the domain's established discipline and it was replaced with ConfidenceBasis) Tj
+0 -12 Td
+(causation.Status ? the same mechanically-derived classification causation.Hypothesis.Status) Tj
+0 -12 Td
+(already computes, reused rather than reinvented. A reflection-based test) Tj
+0 -12 Td
+(\(TestFindingHasNoVerdictField\) enforces that Finding never grows a) Tj
+0 -12 Td
+(Verdict/Liable/Guilty/Winner/ApprovedAmount field. 11 tests.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 7 ? CROSS-SYSTEM INTEGRATION PROOF) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(One test, TestVTECPCapabilitiesIntegrateAsOneSystem, threads a small real maritime) Tj
+0 -12 Td
+(cargo-damage scenario through all five capabilities plus the Finding gate in a single shared) Tj
+0 -12 Td
+(*audit.AuditStore, confirming ? by scanning the resulting ledger, not by assertion ? that) Tj
+0 -12 Td
+(ontology, authz, and inference all mirror into the same ledger; that a purpose-bound rule) Tj
+0 -12 Td
+(denies) Tj
+0 -12 Td
+(the identical request when no purpose is declared; that a model must be walked through its) Tj
+0 -12 Td
+(full) Tj
+0 -12 Td
+(DRAFT?ACTIVE lifecycle before an inference trace is accepted; that a real) Tj
+0 -12 Td
+(causation.HypothesisSet) Tj
+0 -12 Td
+(\(two competing hypotheses, real evidence\) drives a Finding that only reaches StatusFinding) Tj
+0 -12 Td
+(once) Tj
+0 -12 Td
+(every field is present; and that the InferenceTrace's own audit record's inclusion is proven) Tj
+0 -12 Td
+(via) Tj
+0 -12 Td
+(GenerateInclusionProof/VerifyRecordInclusion *without* needing the rest of the ledger, with) Tj
+0 -12 Td
+(the proof's root checked against a sealed Merkle checkpoint. Two real fixture bugs \(missing) Tj
+0 -12 Td
+(ResponsibleParty/Status on a test Obligation\) were caught and fixed while writing it. 1) Tj
+0 -12 Td
+(test.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 8 ? PKG/INSURANCE/CRE: THE CASE RESOLUTION ENGINE CORE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The one genuinely missing mechanical step: turning a completed causation.HypothesisSet into) Tj
+0 -12 Td
+(Finding candidates. CandidateHypotheses filters to only SUPPORTED/PARTIALLY_SUPPORTED) Tj
+0 -12 Td
+(hypotheses \(an empty result ? nothing supported ? is a legitimate, honestly-reported) Tj
+0 -12 Td
+(outcome,) Tj
+0 -12 Td
+(never an error\). BuildFinding copies SupportedBy/ContradictedBy/ConfidenceBasis verbatim) Tj
+0 -12 Td
+(from the real hypothesis, derives Alternatives mechanically as every *other* hypothesis in) Tj
+0 -12 Td
+(the) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 3916 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(set \(never hand-picked\), and uses causation.Explain's own hedged narrative ? inventing none) Tj
+0 -12 Td
+(of) Tj
+0 -12 Td
+(it. 7 tests.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Two verification functions close the gap BuildFinding's own mechanical path doesn't) Tj
+0 -12 Td
+(structurally) Tj
+0 -12 Td
+(prevent ? a caller hand-constructing a Finding directly, bypassing BuildFinding entirely:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- VerifyFindingProvenance confirms a Finding's cited SourceInferenceTraceID, if any, names a) Tj
+0 -12 Td
+(real, hash-verified trace ? not just a string that happens to be present. 5 tests.) Tj
+0 -12 Td
+(- VerifyFindingAgainstHypothesis re-derives SupportedBy/ContradictedBy/ConfidenceBasis) Tj
+0 -12 Td
+(from the *real* hypothesis in a HypothesisSet \(never trusting the Finding's own claim\) and) Tj
+0 -12 Td
+(confirms they match ? the CRE-level equivalent of pkg/insurance/verification's) Tj
+0 -12 Td
+(re-verify-by-recomputing gates, applied to the causation citation. 5 tests, including one) Tj
+0 -12 Td
+(that hand-forges a Finding, recomputes its own hash to stay internally consistent \(exactly) Tj
+0 -12 Td
+(what) Tj
+0 -12 Td
+(a real attacker capable of forging one would do\), and confirms it still reaches) Tj
+0 -12 Td
+(StatusFinding) Tj
+0 -12 Td
+(on its own terms ? proving that internal hash consistency alone is *not* sufficient proof,) Tj
+0 -12 Td
+(which is the entire reason this function exists.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PHASE 9 ? GOLDEN CASES AND ADVERSARIAL TESTS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Two further golden-case scenarios \(a crude-oil cargo contamination dispute; a warehouse-fire) Tj
+0 -12 Td
+(electrical-fault-vs-arson claim\) exercise GenerateFindings ? the engine-level entry point,) Tj
+0 -12 Td
+(not) Tj
+0 -12 Td
+(the lower-level BuildFinding the unit tests use ? in domains distinct from Phase 7's) Tj
+0 -12 Td
+(maritime) Tj
+0 -12 Td
+(example, confirming the engine generalizes rather than being tuned to one worked case. 2) Tj
+0 -12 Td
+(tests.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Six adversarial tests target the CRE spec's own "6 MUST NOT" list and VTECP-001's AI-) Tj
+0 -12 Td
+(governance) Tj
+0 -12 Td
+(rule under actual pressure: a zero-evidence hypothesis cannot be forced into a Finding; a) Tj
+0 -12 Td
+(hand-forged Finding is caught by re-derivation against real data even after being made) Tj
+0 -12 Td
+(internally) Tj
+0 -12 Td
+(self-consistent; an inference from a never-approved model is refused *and never touches the) Tj
+0 -12 Td
+(audit) Tj
+0 -12 Td
+(ledger at all*; Purpose Binding cannot be bypassed by holding the correct role alone; policy) Tj
+0 -12 Td
+(denial in the ontology's 5-stage pipeline halts both the mutation and the audit entry; and) Tj
+0 -12 Td
+(tampering a single record contributed by one subsystem breaks chain verification for a) Tj
+0 -12 Td
+(ledger) Tj
+0 -12 Td
+(shared across subsystems. 6 tests.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Golden-case domain data \(case/evidence IDs, amounts, narratives\) is clearly synthetic test) Tj
+0 -12 Td
+(fixture data, not a claim about any real case ? consistent with this repository's discipline) Tj
+0 -12 Td
+(throughout every prior round.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARIES) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Consistent with VTECP-001 з58's explicit anti-fabrication rule, the following are stated) Tj
+0 -12 Td
+(plainly) Tj
+0 -12 Td
+(rather than glossed over:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- LocalAnchorer is a simulator. VERIQO has no real external anchoring integration \(no) Tj
+0 -12 Td
+(blockchain, no third-party notarization service, no regulator timestamping authority\) today.) Tj
+0 -12 Td
+(Every receipt it issues says so in its own AnchoredBy field. A real Anchorer plugs into) Tj
+0 -12 Td
+(AuditStore.Checkpoint without any caller-visible change when one exists.) Tj
+0 -12 Td
+(- pkg/inference does not run any AI model. It is a governed audit-trail primitive: it) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 4455 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(records that a call happened, to a specific governed model version, with a specific input) Tj
+0 -12 Td
+(commitment and output, gated on that model being ACTIVE. It has no opinion on how the output) Tj
+0 -12 Td
+(was produced, and makes no claim of running or hosting inference itself.) Tj
+0 -12 Td
+(- jcs.Canonicalize has a bounded, documented number range. Magnitudes outside) Tj
+0 -12 Td
+([-1e15, 1e15] or requiring exponential notation are refused \(ErrUnsupportedNumber\), not) Tj
+0 -12 Td
+(silently mis-encoded, because this implementation has not been verified against the) Tj
+0 -12 Td
+(ECMAScript spec's exact behavior at the extreme ends of the IEEE-754 range.) Tj
+0 -12 Td
+(- A ConfidenceBasis can still be hand-fabricated by a caller who bypasses BuildFinding) Tj
+0 -12 Td
+(entirely ? this is exactly why VerifyFindingAgainstHypothesis exists as a *separate*,) Tj
+0 -12 Td
+(mandatory-to-call re-verification step, not folded silently into Finding.Evaluate itself) Tj
+0 -12 Td
+(\(which has no access to the real HypothesisSet to check against\). A Finding's own) Tj
+0 -12 Td
+(StatusFinding alone is not proof of anything; VerifyFindingAgainstHypothesis and) Tj
+0 -12 Td
+(VerifyFindingProvenance are.) Tj
+0 -12 Td
+(- The two additional golden cases \(crude-oil contamination, warehouse fire\) are illustrative) Tj
+0 -12 Td
+(scenarios built to exercise the engine across domains, not literal transcriptions of) Tj
+0 -12 Td
+(specific) Tj
+0 -12 Td
+(worked examples from the source specification documents ? this round did not have the) Tj
+0 -12 Td
+(original CRE docx's own named worked examples \(з24/з26/з27, referenced in earlier planning\)) Tj
+0 -12 Td
+(in) Tj
+0 -12 Td
+(working context by the time golden-case tests were written, and this report says so rather) Tj
+0 -12 Td
+(than) Tj
+0 -12 Td
+(presenting reconstructed guesses as verbatim spec content.) Tj
+0 -12 Td
+(- No real counterparty, expert, or regulator was contacted. Every actor name) Tj
+0 -12 Td
+(\(analyst-1, surveyor-lead-1, ml-engineer-1\) in every test is a synthetic fixture label.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION PERFORMED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- gofmt -l across every file changed or added this round: clean.) Tj
+0 -12 Td
+(- go build ./...: clean, at every phase and at the end.) Tj
+0 -12 Td
+(- go vet ./...: clean, at every phase and at the end.) Tj
+0 -12 Td
+(- go test -race on every new/extended package: clean.) Tj
+0 -12 Td
+(- Full repository test suite \(go test ./..., all ~150+ packages including test/e2e,) Tj
+0 -12 Td
+(test/integration, test/soak, test/stress, test/chaos, test/acceptance\): clean, run) Tj
+0 -12 Td
+(twice during this round \(after Phase 5 and after Phase 6\) with no regressions, and once more) Tj
+0 -12 Td
+(as) Tj
+0 -12 Td
+(this report's own closing verification.) Tj
+0 -12 Td
+(- pkg/insurance/guardrails' seven repo-wide structural scans \(no determination/verdict) Tj
+0 -12 Td
+(field,) Tj
+0 -12 Td
+(no opaque confidence score, no forbidden canonical duplicate, no hard-coded vendor judgment,) Tj
+0 -12 Td
+(full package coverage\): clean.) Tj
+0 -12 Td
+(- 131 new tests this round \(verified by direct grep -c '^func Test' count per file, not) Tj
+0 -12 Td
+(carried forward from earlier, less-precisely-counted commit messages\), all passing.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(FILES CHANGED THIS ROUND) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(13 commits, 0540117..HEAD on claude/l99-gap-coverage-nv70zy:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/canonical/jcs/{jcs.go, jcs_test.go}                              [new package]) Tj
+0 -12 Td
+(pkg/evidence/manifest/{manifest.go, manifest_test.go}                [new package]) Tj
+0 -12 Td
+(pkg/ontology/{ontology.go, ontology_test.go}                         [new package]) Tj
+0 -12 Td
+(pkg/authz/{authz.go [extended], purpose_decision_test.go}            [extended]) Tj
+0 -12 Td
+(pkg/platform/audit/{merkle.go, merkle_test.go}                       [extended]) Tj
+0 -12 Td
+(pkg/inference/{inference.go, inference_test.go}                      [new package]) Tj
+0 -12 Td
+(pkg/insurance/finding/{finding.go, finding_test.go}                  [new package]) Tj
+0 -12 Td
+(pkg/insurance/cre/{engine.go, engine_test.go,) Tj
+0 -12 Td
+(provenance.go, provenance_test.go}                [new package]) Tj
+0 -12 Td
+(test/integration/vtecp_cre_integration_test.go                       [new]) Tj
+0 -12 Td
+(test/integration/cre_golden_cases_test.go                            [new]) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 1297 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(test/integration/cre_vtecp_adversarial_test.go                       [new]) Tj
+0 -12 Td
+(docs/VERIQO_VTECP_CRE_CLOSURE_REPORT.{md, pdf}                       [this report]) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CONCLUSION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VTECP-001's five capabilities and CRE's eleven-stage pipeline are now fully wired, tested,) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(integration-proven ? five capabilities either newly built or genuinely extended, eleven) Tj
+0 -12 Td
+(pipeline) Tj
+0 -12 Td
+(stages reused without duplication, one net-new mechanical engine connecting causation output) Tj
+0 -12 Td
+(to) Tj
+0 -12 Td
+(the Finding gate, and two re-verification functions ensuring a Finding's claims can be) Tj
+0 -12 Td
+(checked) Tj
+0 -12 Td
+(against real source data rather than trusted at face value. Nothing in this deliverable) Tj
+0 -12 Td
+(asserts a) Tj
+0 -12 Td
+(verdict, a liability determination, or automatic court-admissibility; every gate that exists) Tj
+0 -12 Td
+(\(Finding's field-completeness check, the model-ACTIVE requirement, Purpose Binding, the) Tj
+0 -12 Td
+(audit) Tj
+0 -12 Td
+(ledger's hash chain and Merkle proofs\) fails closed, and every honest limitation is stated) Tj
+0 -12 Td
+(in this) Tj
+0 -12 Td
+(report rather than implied away.) Tj
+ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 15 0 R >>
+endobj
+17 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 18
+0000000000 65535 f 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000182 00000 n 
+0000004575 00000 n 
+0000004701 00000 n 
+0000008773 00000 n 
+0000008899 00000 n 
+0000013232 00000 n 
+0000013358 00000 n 
+0000017656 00000 n 
+0000017783 00000 n 
+0000021752 00000 n 
+0000021880 00000 n 
+0000026388 00000 n 
+0000026516 00000 n 
+0000027866 00000 n 
+0000027994 00000 n 
+trailer
+<< /Size 18 /Root 17 0 R >>
+startxref
+28044
+%%EOF
