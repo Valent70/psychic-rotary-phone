@@ -92,6 +92,12 @@ const (
 	ActionReverse        Action = "REVERSE"
 	ActionDispute        Action = "DISPUTE"
 	ActionResolveDispute Action = "RESOLVE_DISPUTE"
+	// ActionRecordSettlement is recorded when external
+	// SettlementEvidence is attached — see settlement.go. Distinct from
+	// ActionSettle: ActionSettle is this program's own internal
+	// terminal state (PAID); ActionRecordSettlement is the EXTERNAL
+	// confirmation of it, which may arrive later, or never.
+	ActionRecordSettlement Action = "RECORD_SETTLEMENT"
 )
 
 // PaymentEvent is one immutable, append-only history record — a
@@ -244,8 +250,9 @@ type PaymentRecord struct {
 	proposedBy   party.PartyID
 	authorizedBy party.PartyID
 
-	dispute *PaymentDispute
-	history []PaymentEvent
+	dispute    *PaymentDispute
+	settlement *SettlementEvidence
+	history    []PaymentEvent
 }
 
 // New creates a payment in StatusPending. amount must be positive — a

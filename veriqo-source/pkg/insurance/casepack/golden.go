@@ -584,6 +584,30 @@ func (gr *GoldenResult) attachPayment() error {
 	if rec.Adequacy != payment.AdequacyExact {
 		return fmt.Errorf("golden case payment did not reconcile exactly against its own allocation: %s", rec.Adequacy)
 	}
+
+	// Round 10: settlement evidence. This is a SYNTHETIC bank
+	// confirmation, honestly labelled as such by SourceDescription --
+	// no BankConfirmationAdapter implementation exists anywhere in this
+	// repository (payment/settlement.go's own doc comment), so the
+	// golden case cannot honestly claim a REAL external confirmation.
+	// What this DOES prove for real: the internal SettlementEvidence
+	// data contract and ReconcileSettlement math work correctly end to
+	// end on a real payment, ready for a real adapter to populate.
+	if err := p.RecordSettlementEvidence(payment.SettlementEvidence{
+		PaymentID: p.PaymentID, Reference: "REF-GOLDEN-1",
+		SourceDescription: "golden-case synthetic settlement confirmation (no real bank adapter exists)",
+		SettledAmount:     insurerPrimary.Amount, ConfirmedAtTick: 1040,
+	}); err != nil {
+		return err
+	}
+	settlementRec, err := p.ReconcileSettlement()
+	if err != nil {
+		return err
+	}
+	if settlementRec.Adequacy != payment.AdequacyExact {
+		return fmt.Errorf("golden case settlement did not reconcile exactly: %s", settlementRec.Adequacy)
+	}
+
 	gr.Payment = p
 	return nil
 }
@@ -814,7 +838,8 @@ type GoldenAssuranceSummary struct {
 	AuditUnified                bool `json:"audit_unified"`
 
 	// ---- Round 10 additions ----
-	CaseLifecycleGoverned bool `json:"case_lifecycle_governed"`
+	CaseLifecycleGoverned       bool `json:"case_lifecycle_governed"`
+	PaymentSettlementReconciled bool `json:"payment_settlement_reconciled"`
 
 	ColdReplayMatches bool `json:"cold_replay_matches"`
 }
@@ -947,6 +972,15 @@ func RunGoldenAssurance() GoldenAssuranceSummary {
 		live.Lifecycle.Payment != nil && live.Lifecycle.Payment.Status() == payment.StatusPaid
 	if !s.CaseLifecycleGoverned {
 		s.Failures = append(s.Failures, "case lifecycle state machine did not reach CLOSED with a genuinely approved reserve and paid payment")
+	}
+
+	if live.Payment != nil {
+		if settlementRec, err := live.Payment.ReconcileSettlement(); err == nil {
+			s.PaymentSettlementReconciled = settlementRec.Adequacy == payment.AdequacyExact && settlementRec.ExternallyEvidenced
+		}
+	}
+	if !s.PaymentSettlementReconciled {
+		s.Failures = append(s.Failures, "golden payment settlement evidence was not recorded and exactly reconciled")
 	}
 
 	replayed, coldReport, err := GoldenColdReplay()
