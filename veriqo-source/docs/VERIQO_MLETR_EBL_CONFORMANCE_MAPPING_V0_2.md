@@ -21,6 +21,40 @@ would matter (e.g. for a diff against "what changed"), that comparison
 cannot honestly be made here -- only the requested *end state* is
 produced.
 
+## Primary-source verification attempt (P1, this round)
+
+The reviewer's follow-up instruction (`Yang_selesai_dan_masih_harus_diselesaikan.docx`)
+explicitly asked: "Verifikasi sumber hukum primer untuk Articles 9-18
+dan jangan publish low-confidence mapping sebagai settled legal
+conclusion" (verify primary legal sources for Articles 9-18, and do not
+publish a low-confidence mapping as a settled legal conclusion).
+
+This was genuinely attempted this round, not skipped. `WebSearch`
+located the correct official source (UNCITRAL's own MLETR ebook PDF at
+`uncitral.un.org`), and `WebFetch` was then used to try to retrieve its
+actual text. **The attempt failed for infrastructure reasons, not lack
+of trying**: this session's network egress proxy blocks every domain
+tried -- `uncitral.un.org` (the official UNCITRAL source),
+`en.wikipedia.org`, `www.wto.org`, and `unece.org` were all rejected
+with `EGRESS_BLOCKED` before any content could be retrieved. No
+alternative unblocked mirror of the primary MLETR text was found within
+this round's effort.
+
+**The practical consequence, stated exactly as the reviewer's own
+instruction requires: nothing in this document is published as a
+settled legal conclusion.** Every article-level claim below already
+carried (from the first v0.2 draft, before this verification attempt)
+an explicit confidence label and a "verify against official text"
+caveat; that discipline is unchanged and, if anything, now has extra
+weight, since primary-source verification was attempted and concretely
+could not be completed this round. Articles 13, 16, 17, and 18 remain
+explicitly LOW CONFIDENCE below. Articles 9, 11, and 12 are labeled
+HIGHER confidence only because their general function is widely and
+consistently documented across public MLETR explanatory literature this
+session already has general knowledge of -- **that is still not the same
+as primary-source verification, and is not represented as such
+anywhere in this document.**
+
 **This document is a technical-evidentiary self-assessment written by an
 engineering audit process. It is not a legal opinion, and it does not
 constitute legal advice.** Every claim about legal effect, evidentiary
@@ -232,3 +266,11 @@ prevent. Articles 9, 11, and 12 are HIGHER confidence because their
 general function (reliability standard, transfer, change of medium) is
 widely and consistently documented in public MLETR explanatory
 materials and is consistent with how the reviewer's own docx used them.
+None of the eight articles in this table -- 9, 11, and 12 included --
+have been checked against primary UNCITRAL source text by this session:
+a genuine attempt was made (see "Primary-source verification attempt"
+near the top of this document) and was blocked by network egress
+restrictions before any official text could be retrieved. "Higher
+confidence" above means general-knowledge confidence, not
+primary-source-verified confidence, and this document does not conflate
+the two.

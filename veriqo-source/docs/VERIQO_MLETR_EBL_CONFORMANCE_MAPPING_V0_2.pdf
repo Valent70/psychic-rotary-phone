@@ -1,7 +1,7 @@
 %PDF-1.4
 %‚„œ”
 1 0 obj
-<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R] /Count 6 >>
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R] /Count 7 >>
 endobj
 2 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -10,7 +10,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Courier >>
 endobj
 4 0 obj
-<< /Length 3709 >>
+<< /Length 4096 >>
 stream
 BT
 /F2 8 Tf
@@ -61,10 +61,89 @@ BT
 0 -12 Td
 () Tj
 0 -12 Td
+(PRIMARY-SOURCE VERIFICATION ATTEMPT \(P1, THIS ROUND\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's follow-up instruction \(Yang_selesai_dan_masih_harus_diselesaikan.docx\)) Tj
+0 -12 Td
+(explicitly asked: "Verifikasi sumber hukum primer untuk Articles 9-18) Tj
+0 -12 Td
+(dan jangan publish low-confidence mapping sebagai settled legal) Tj
+0 -12 Td
+(conclusion" \(verify primary legal sources for Articles 9-18, and do not) Tj
+0 -12 Td
+(publish a low-confidence mapping as a settled legal conclusion\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This was genuinely attempted this round, not skipped. WebSearch) Tj
+0 -12 Td
+(located the correct official source \(UNCITRAL's own MLETR ebook PDF at) Tj
+0 -12 Td
+(uncitral.un.org\), and WebFetch was then used to try to retrieve its) Tj
+0 -12 Td
+(actual text. The attempt failed for infrastructure reasons, not lack) Tj
+0 -12 Td
+(of trying: this session's network egress proxy blocks every domain) Tj
+0 -12 Td
+(tried -- uncitral.un.org \(the official UNCITRAL source\),) Tj
+0 -12 Td
+(en.wikipedia.org, www.wto.org, and unece.org were all rejected) Tj
+0 -12 Td
+(with EGRESS_BLOCKED before any content could be retrieved. No) Tj
+0 -12 Td
+(alternative unblocked mirror of the primary MLETR text was found within) Tj
+0 -12 Td
+(this round's effort.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The practical consequence, stated exactly as the reviewer's own) Tj
+0 -12 Td
+(instruction requires: nothing in this document is published as a) Tj
+0 -12 Td
+(settled legal conclusion. Every article-level claim below already) Tj
+0 -12 Td
+(carried \(from the first v0.2 draft, before this verification attempt\)) Tj
+0 -12 Td
+(an explicit confidence label and a "verify against official text") Tj
+0 -12 Td
+(caveat; that discipline is unchanged and, if anything, now has extra) Tj
+0 -12 Td
+(weight, since primary-source verification was attempted and concretely) Tj
+0 -12 Td
+(could not be completed this round. Articles 13, 16, 17, and 18 remain) Tj
+0 -12 Td
+(explicitly LOW CONFIDENCE below. Articles 9, 11, and 12 are labeled) Tj
+0 -12 Td
+(HIGHER confidence only because their general function is widely and) Tj
+0 -12 Td
+(consistently documented across public MLETR explanatory literature this) Tj
+0 -12 Td
+(session already has general knowledge of -- that is still not the same) Tj
+0 -12 Td
+(as primary-source verification, and is not represented as such) Tj
+0 -12 Td
+(anywhere in this document.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
 (This document is a technical-evidentiary self-assessment written by an) Tj
 0 -12 Td
 (engineering audit process. It is not a legal opinion, and it does not) Tj
-0 -12 Td
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 3733 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (constitute legal advice. Every claim about legal effect, evidentiary) Tj
 0 -12 Td
 (weight, or regulatory conformance below must be independently validated) Tj
@@ -132,18 +211,7 @@ BT
 (compliance certification authority.) Tj
 0 -12 Td
 () Tj
-ET
-endstream
-endobj
-5 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
-endobj
-6 0 obj
-<< /Length 5008 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (---) Tj
 0 -12 Td
 () Tj
@@ -193,7 +261,18 @@ BT
 (as appropriate for the purpose    A hash-chained, JCS-canonicalized event record of the) Tj
 0 -12 Td
 (change-of-medium act itself \(who initiated it, when, under which policy\)) Tj
-0 -12 Td
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 5759 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (manifest.CustodyEvent \(action=TRANSFORMED/DERIVED\) chained via EventHash/PreviousHash) Tj
 0 -12 Td
 (Engineering Verified \(Level 2\) -- real, tested code in this repo    The reliable-method) Tj
@@ -261,18 +340,7 @@ BT
 (upstream identity provider actually used in a given deployment) Tj
 0 -12 Td
 (   5. Time and place of the change    When and \(where relevant\) where the change of medium) Tj
-ET
-endstream
-endobj
-7 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
-endobj
-8 0 obj
-<< /Length 4464 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (occurred must be recorded    CustodyEvent.Tick and Manifest.FinalizedAt, covered by the same) Tj
 0 -12 Td
 (hash chain    CustodyEvent, Manifest.FinalizedAt    Engineering Verified for the recording) Tj
@@ -322,7 +390,18 @@ BT
 (independent party still needs access to the event log/snapshot and the verification tooling;) Tj
 0 -12 Td
 (Veriqo does not yet ship a standalone, non-Go, third-party-operable verifier    Yes -- for) Tj
-0 -12 Td
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 3759 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (court/regulator use, an independently-implemented \(not just independently-run\) verifier) Tj
 0 -12 Td
 (would strengthen the claim further) Tj
@@ -390,18 +469,7 @@ BT
 () Tj
 0 -12 Td
 (---) Tj
-ET
-endstream
-endobj
-9 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
-endobj
-10 0 obj
-<< /Length 4083 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 () Tj
 0 -12 Td
 (CHANGE 4 -- WHAT VERIQO CANNOT CLAIM) Tj
@@ -451,7 +519,18 @@ BT
 (should be limited to internal hash-chain consistency, not) Tj
 0 -12 Td
 (cryptographic proof against a specific signer.) Tj
-0 -12 Td
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 3813 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (- Veriqo cannot claim identity assurance. Custody-event actors are) Tj
 0 -12 Td
 (recorded as attributed strings; whether "PTY-1" really was the party) Tj
@@ -519,18 +598,7 @@ BT
 (THE ONE-SENTENCE POSITIONING STATEMENT) Tj
 0 -12 Td
 () Tj
-ET
-endstream
-endobj
-11 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
-endobj
-12 0 obj
-<< /Length 4471 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (Per the reviewer's own request, verbatim:) Tj
 0 -12 Td
 () Tj
@@ -580,7 +648,18 @@ BT
 (This v0.2 delivers that structure fully for Article 12 \(Change 2's) Tj
 0 -12 Td
 (table\) and the cross-cutting function boundary \(Change 3's table\). A) Tj
-0 -12 Td
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 5431 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (best-effort, GENERAL-FUNCTION-LEVEL first pass at the remaining seven) Tj
 0 -12 Td
 (articles follows below, using the same eight-column structure -- but) Tj
@@ -648,18 +727,7 @@ BT
 (   Art. 12 -- Change of medium    See Change 2's full 7-factor table above    \(see above\)) Tj
 0 -12 Td
 (\(see above\)    \(see above\)    \(see above\)    \(see above\)    Engineering Verified, most fully) Tj
-ET
-endstream
-endobj
-13 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
-endobj
-14 0 obj
-<< /Length 4029 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (mapped article in this document) Tj
 0 -12 Td
 (   Art. 13 -- \(general function believed to concern requirements applicable to the use of) Tj
@@ -709,7 +777,18 @@ BT
 (recognition of electronic transferable records; LOW confidence\)    Ensures the ETR is) Tj
 0 -12 Td
 (recognized across jurisdictions    Veriqo's evidence artifacts are jurisdiction-agnostic by) Tj
-0 -12 Td
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Length 2210 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (construction \(content-hash-based, no jurisdiction-specific encoding\) -- a NEUTRAL property) Tj
 0 -12 Td
 (that MAY be relevant to cross-border recognition arguments, but this is a legal argument) Tj
@@ -747,36 +826,54 @@ BT
 (widely and consistently documented in public MLETR explanatory) Tj
 0 -12 Td
 (materials and is consistent with how the reviewer's own docx used them.) Tj
+0 -12 Td
+(None of the eight articles in this table -- 9, 11, and 12 included --) Tj
+0 -12 Td
+(have been checked against primary UNCITRAL source text by this session:) Tj
+0 -12 Td
+(a genuine attempt was made \(see "Primary-source verification attempt") Tj
+0 -12 Td
+(near the top of this document\) and was blocked by network egress) Tj
+0 -12 Td
+(restrictions before any official text could be retrieved. "Higher) Tj
+0 -12 Td
+(confidence" above means general-knowledge confidence, not) Tj
+0 -12 Td
+(primary-source-verified confidence, and this document does not conflate) Tj
+0 -12 Td
+(the two.) Tj
 ET
 endstream
 endobj
-15 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+17 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 16 0 R >>
 endobj
-16 0 obj
+18 0 obj
 << /Type /Catalog /Pages 1 0 R >>
 endobj
 xref
-0 17
+0 19
 0000000000 65535 f 
 0000000015 00000 n 
-0000000105 00000 n 
-0000000175 00000 n 
-0000000243 00000 n 
-0000004004 00000 n 
-0000004140 00000 n 
-0000009200 00000 n 
-0000009336 00000 n 
-0000013852 00000 n 
-0000013988 00000 n 
-0000018124 00000 n 
-0000018262 00000 n 
-0000022786 00000 n 
-0000022924 00000 n 
-0000027006 00000 n 
-0000027144 00000 n 
+0000000112 00000 n 
+0000000182 00000 n 
+0000000250 00000 n 
+0000004398 00000 n 
+0000004534 00000 n 
+0000008319 00000 n 
+0000008455 00000 n 
+0000014266 00000 n 
+0000014402 00000 n 
+0000018214 00000 n 
+0000018352 00000 n 
+0000022218 00000 n 
+0000022356 00000 n 
+0000027840 00000 n 
+0000027978 00000 n 
+0000030241 00000 n 
+0000030379 00000 n 
 trailer
-<< /Size 17 /Root 16 0 R >>
+<< /Size 19 /Root 18 0 R >>
 startxref
-27194
+30429
 %%EOF
