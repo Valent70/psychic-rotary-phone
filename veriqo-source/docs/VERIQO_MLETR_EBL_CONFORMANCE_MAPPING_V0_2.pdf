@@ -1,0 +1,782 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R] /Count 6 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3709 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO -- MLETR / EBL RELIABILITY CONFORMANCE MAPPING V0.2) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A NOTE ON PROVENANCE BEFORE ANYTHING ELSE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's instruction \(Mengubah_fokus_VERIQO_sekarang.docx\) asks for) Tj
+0 -12 Td
+("Revision 0.2" of a prior positioning document -- referred to in that) Tj
+0 -12 Td
+(docx as "dokumen Claude" -- with four named changes. That prior document) Tj
+0 -12 Td
+(is not present anywhere in this repository or in this session's own) Tj
+0 -12 Td
+(history \(a repo-wide search of docs/*.md and every PDF filename) Tj
+0 -12 Td
+(under docs/ for "MLETR", "eBL", and "Article 12\(b\)" found nothing\). It) Tj
+0 -12 Td
+(was evidently produced in a different conversation this session has no) Tj
+0 -12 Td
+(access to.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Rather than guess at text this session has never seen, this is a) Tj
+0 -12 Td
+(freshly constructed v0.2 that applies all four requested changes and) Tj
+0 -12 Td
+(the new positioning sentence directly, grounded in VERIQO's real,) Tj
+0 -12 Td
+(already-built, already-tested technical capabilities \(drawn from six) Tj
+0 -12 Td
+(rounds of audited work in this repository\) rather than in an) Tj
+0 -12 Td
+(unverifiable prior draft. Where the original document's exact wording) Tj
+0 -12 Td
+(would matter \(e.g. for a diff against "what changed"\), that comparison) Tj
+0 -12 Td
+(cannot honestly be made here -- only the requested *end state* is) Tj
+0 -12 Td
+(produced.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This document is a technical-evidentiary self-assessment written by an) Tj
+0 -12 Td
+(engineering audit process. It is not a legal opinion, and it does not) Tj
+0 -12 Td
+(constitute legal advice. Every claim about legal effect, evidentiary) Tj
+0 -12 Td
+(weight, or regulatory conformance below must be independently validated) Tj
+0 -12 Td
+(against \(a\) the authoritative UNCITRAL MLETR 2017 text and any) Tj
+0 -12 Td
+(explanatory notes, \(b\) the specific enacting legislation of whichever) Tj
+0 -12 Td
+(jurisdiction\(s\) a transaction is governed by \(MLETR is a *model* law --) Tj
+0 -12 Td
+(enacting states adapt it\), and \(c\) qualified legal counsel, before this) Tj
+0 -12 Td
+(document is relied upon externally with any party named in it \(an eBL) Tj
+0 -12 Td
+(platform, a marine surveyor, a P&I club, a trade-finance bank, an) Tj
+0 -12 Td
+(insurer, or a court\). This caveat is not boilerplate -- it is the) Tj
+0 -12 Td
+(literal content of CHANGE 4 below, restated up front so it cannot be) Tj
+0 -12 Td
+(skimmed past.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CHANGE 1 -- THE CORE CLAIM, REWORDED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Was: "Veriqo is built for Article 12\(b\).") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Now:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(> "Veriqo is architected to provide transaction-specific evidence that) Tj
+0 -12 Td
+(> may support Article 12\(b\) where the relevant MLETR function has in) Tj
+0 -12 Td
+(> fact been fulfilled.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The difference is not stylistic. The original phrasing implies Veriqo) Tj
+0 -12 Td
+(itself *satisfies* a statutory requirement. The revised phrasing states) Tj
+0 -12 Td
+(what Veriqo actually does: it produces evidence *about* whether a) Tj
+0 -12 Td
+(transaction's electronic transferable record \(ETR\) practice satisfied a) Tj
+0 -12 Td
+(reliable-method standard -- the legal conclusion of whether that) Tj
+0 -12 Td
+(standard was actually met is for the enacting jurisdiction's law, the) Tj
+0 -12 Td
+(parties' chosen platform and process, and ultimately a court or) Tj
+0 -12 Td
+(regulator to determine. Veriqo is evidentiary infrastructure, not a) Tj
+0 -12 Td
+(compliance certification authority.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 5008 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CHANGE 2 -- ARTICLE 12 \(CHANGE OF MEDIUM\): A 7-FACTOR TECHNICAL MAPPING) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Article 12 of MLETR addresses change of medium -- the functional-) Tj
+0 -12 Td
+(equivalence requirements that must hold when a transferable document or) Tj
+0 -12 Td
+(instrument moves between paper and electronic form \(or back\), so that) Tj
+0 -12 Td
+(the change does not break the continuity of the "reliable method") Tj
+0 -12 Td
+(standard the record depends on, and does not create two simultaneously) Tj
+0 -12 Td
+(valid originals.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The seven factors below are this engineering assessment's own working) Tj
+0 -12 Td
+(decomposition of what a change-of-medium event must be able to) Tj
+0 -12 Td
+(demonstrate to a third party -- they are not a verbatim reproduction) Tj
+0 -12 Td
+(of Article 12's sub-paragraph numbering \(which requires the official) Tj
+0 -12 Td
+(UNCITRAL text and counsel to map precisely; see the provenance note) Tj
+0 -12 Td
+(above\). They are organized to match what a technical evidence system) Tj
+0 -12 Td
+(can actually attest to.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Article 12 factor    What MLETR asks    What Veriqo provides    Evidence artifact) Tj
+0 -12 Td
+(Current status    External dependency    Independent validation required) Tj
+0 -12 Td
+(  ---  ---  ---  ---  ---  ---  ---) Tj
+0 -12 Td
+(   1. Reliability of method    The method used for the change of medium must be as reliable) Tj
+0 -12 Td
+(as appropriate for the purpose    A hash-chained, JCS-canonicalized event record of the) Tj
+0 -12 Td
+(change-of-medium act itself \(who initiated it, when, under which policy\)) Tj
+0 -12 Td
+(manifest.CustodyEvent \(action=TRANSFORMED/DERIVED\) chained via EventHash/PreviousHash) Tj
+0 -12 Td
+(Engineering Verified \(Level 2\) -- real, tested code in this repo    The reliable-method) Tj
+0 -12 Td
+(*standard itself* \(what counts as "appropriate"\) is set by the enacting legislation and/or) Tj
+0 -12 Td
+(the eBL platform's own rules, not by Veriqo    Yes -- a qualified assessor must confirm the) Tj
+0 -12 Td
+(specific hash-chain/canonicalization scheme meets the applicable reliability threshold in) Tj
+0 -12 Td
+(the relevant jurisdiction) Tj
+0 -12 Td
+(   2. Integrity through the change    The record's content must be demonstrably unchanged in) Tj
+0 -12 Td
+(substance across the medium change    ManifestHash/computeManifestHash -- a deterministic,) Tj
+0 -12 Td
+(content-only hash independently re-verifiable via VerifyManifestHash) Tj
+0 -12 Td
+(Manifest.ManifestHash + VerifyManifestHash    Engineering Verified -- proven by adversarial) Tj
+0 -12 Td
+(tampering tests \(TestVerifyManifestHashDetectsTampering\)    None for the hash mechanism) Tj
+0 -12 Td
+(itself; the *upstream* content capture \(was the paper document faithfully digitized?\) is) Tj
+0 -12 Td
+(outside Veriqo's control    Yes -- the digitization/capture step upstream of Veriqo needs) Tj
+0 -12 Td
+(its own independent attestation) Tj
+0 -12 Td
+(   3. Singularity \(no duplicate originals\)    Only one version of the record may be capable) Tj
+0 -12 Td
+(of exercising the underlying rights at any time    StateFinalized immutability + Supersede's) Tj
+0 -12 Td
+(single-successor lineage \(a FINALIZED version can only be superseded once, never edited\)) Tj
+0 -12 Td
+(manifest.Registry.Advance/Supersede, ErrFinalizedIsImmutable, ErrAlreadySuperseded) Tj
+0 -12 Td
+(Engineering Verified -- proven by TestFinalizedManifestIsImmutable,) Tj
+0 -12 Td
+(TestSupersedeRefusesAnUnfinalizedParent    Whether the PAPER original was actually deprived) Tj
+0 -12 Td
+(of legal effect at the moment of change is an act outside Veriqo \(a) Tj
+0 -12 Td
+(platform/registry/carrier action\), not something Veriqo's own hash chain can observe or) Tj
+0 -12 Td
+(enforce    Yes -- singularity of the *legal* instrument requires the eBL platform's own) Tj
+0 -12 Td
+(exclusivity mechanism; Veriqo can only attest to singularity within its own evidence record) Tj
+0 -12 Td
+(   4. Identification of the controller at the moment of change    The person entitled to) Tj
+0 -12 Td
+(control the record at the time of the medium change must be identifiable    Custody-event) Tj
+0 -12 Td
+(Actor field, attributed and hash-chain-covered    CustodyEvent.Actor,) Tj
+0 -12 Td
+(hasCustodyActionBoundToContent    Engineering Verified for the custody-event mechanism) Tj
+0 -12 Td
+(itself    Actor identity assurance \(was "PTY-1" really that party?\) depends on an external) Tj
+0 -12 Td
+(identity/authentication system feeding Veriqo, e.g. pkg/security/identity's SPIFFE-based) Tj
+0 -12 Td
+(provider, which is not yet wired into this custody-event path \(see the companion OS) Tj
+0 -12 Td
+(Integration Audit gap document\)    Yes -- identity binding strength depends entirely on the) Tj
+0 -12 Td
+(upstream identity provider actually used in a given deployment) Tj
+0 -12 Td
+(   5. Time and place of the change    When and \(where relevant\) where the change of medium) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 4464 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(occurred must be recorded    CustodyEvent.Tick and Manifest.FinalizedAt, covered by the same) Tj
+0 -12 Td
+(hash chain    CustodyEvent, Manifest.FinalizedAt    Engineering Verified for the recording) Tj
+0 -12 Td
+(mechanism    Veriqo's tick is an application-defined monotonic counter, not a) Tj
+0 -12 Td
+(certified/synchronized wall-clock timestamp or trusted timestamping authority \(RFC 3161 or) Tj
+0 -12 Td
+(equivalent\) unless the deployment wires one in    Yes -- if legal "time" precision is) Tj
+0 -12 Td
+(required, a trusted timestamping authority should sit upstream of or alongside the tick) Tj
+0 -12 Td
+(value) Tj
+0 -12 Td
+(   6. Non-repudiation / attributability    The party responsible for the change of medium) Tj
+0 -12 Td
+(action must not be able to credibly deny it    Hash-chain covering Actor + ContentHash +) Tj
+0 -12 Td
+(PreviousHash, refusing any reordering or substitution) Tj
+0 -12 Td
+(\(TestReorderedCustodyChainFailsVerification\)    Custody hash chain    Engineering Verified) Tj
+0 -12 Td
+(for internal consistency    Cryptographic non-repudiation in the strict sense \(a signature) Tj
+0 -12 Td
+(the actor cannot deny producing\) requires the signing infrastructure in) Tj
+0 -12 Td
+(pkg/platform/security/keys to actually be wired to custody-event submission, which is not) Tj
+0 -12 Td
+(yet the case in this repository today    Yes -- true non-repudiation requires per-actor) Tj
+0 -12 Td
+(signing keys bound to custody events, a real but currently unbuilt integration) Tj
+0 -12 Td
+(   7. Independent verifiability / replay    An independent party must be able to confirm,) Tj
+0 -12 Td
+(after the fact, that the change of medium happened as claimed    Deterministic replay: an) Tj
+0 -12 Td
+(independent party can reconstruct the same ManifestHash/CustodyChainHead from the same event) Tj
+0 -12 Td
+(sequence on a fresh registry    TestReplayReproducesIdenticalFinalizedState, and \(as of the) Tj
+0 -12 Td
+(most recent round\) a real multi-node raft consensus proof) Tj
+0 -12 Td
+(\(TestManifestCluster_FinalizedEvidenceConvergesAcrossRealConsensus\)    Engineering Verified,) Tj
+0 -12 Td
+(and the strongest-evidenced row in this table -- this is VERIQO's core differentiator    The) Tj
+0 -12 Td
+(independent party still needs access to the event log/snapshot and the verification tooling;) Tj
+0 -12 Td
+(Veriqo does not yet ship a standalone, non-Go, third-party-operable verifier    Yes -- for) Tj
+0 -12 Td
+(court/regulator use, an independently-implemented \(not just independently-run\) verifier) Tj
+0 -12 Td
+(would strengthen the claim further) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CHANGE 3 -- MLETR FUNCTION BOUNDARY TABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This table is reproduced exactly as specified by the reviewer, since it) Tj
+0 -12 Td
+(was handed over as ready content rather than column headers to fill in:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   MLETR function    eBL platform    VERIQO) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Identify ETR    PRIMARY    Evidence support) Tj
+0 -12 Td
+(   Integrity    PRIMARY    STRONG) Tj
+0 -12 Td
+(   Exclusive control    PRIMARY    OUT OF SCOPE) Tj
+0 -12 Td
+(   Identify controller    PRIMARY    Evidence support) Tj
+0 -12 Td
+(   Transfer control    PRIMARY    Evidence capture/verification) Tj
+0 -12 Td
+(   Singularity    PRIMARY    Evidence support) Tj
+0 -12 Td
+(   Time/place    PRIMARY    Strong evidence support) Tj
+0 -12 Td
+(   Transaction auditability    Shared    VERY STRONG) Tj
+0 -12 Td
+(   Independent replay    Usually external capability    VERIQO CORE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Read plainly: for every function that actually CONSTITUTES the legal) Tj
+0 -12 Td
+(instrument \(identifying the ETR, holding exclusive control, transferring) Tj
+0 -12 Td
+(control\), the eBL platform is PRIMARY and Veriqo is, at most, an) Tj
+0 -12 Td
+(evidence-support layer sitting alongside it -- and for "Exclusive) Tj
+0 -12 Td
+(control" specifically, Veriqo is explicitly OUT OF SCOPE: Veriqo does) Tj
+0 -12 Td
+(not hold, assert, or adjudicate who currently controls an ETR. Where) Tj
+0 -12 Td
+(Veriqo is strong-to-core is in the two functions a platform typically) Tj
+0 -12 Td
+(does NOT specialize in: transaction auditability and independent) Tj
+0 -12 Td
+(replay -- i.e., proving after the fact what happened and letting someone) Tj
+0 -12 Td
+(who was not part of the original transaction verify it independently.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4083 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(CHANGE 4 -- WHAT VERIQO CANNOT CLAIM) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Stated explicitly, because the reviewer is right that this increases) Tj
+0 -12 Td
+(credibility rather than undermining it:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Veriqo cannot claim to make an ETR "reliable." Reliability under) Tj
+0 -12 Td
+(MLETR is a property of the *method* used by the platform/process that) Tj
+0 -12 Td
+(issues, controls, and transfers the record. Veriqo can produce) Tj
+0 -12 Td
+(evidence about how that method performed in a specific transaction; it) Tj
+0 -12 Td
+(cannot retroactively make an unreliable method reliable, and it does) Tj
+0 -12 Td
+(not certify a method as reliable in the abstract.) Tj
+0 -12 Td
+(- Veriqo cannot claim exclusive control. "Exclusive control" is a) Tj
+0 -12 Td
+(legal/technical property the eBL platform itself must establish and) Tj
+0 -12 Td
+(maintain \(see the boundary table above\). Veriqo has no mechanism that) Tj
+0 -12 Td
+(asserts, grants, or arbitrates who currently controls an ETR.) Tj
+0 -12 Td
+(- Veriqo cannot claim to be a system of record for the ETR itself.) Tj
+0 -12 Td
+(The eBL platform is the system of record for the transferable) Tj
+0 -12 Td
+(instrument. Veriqo is a system of record for *evidence about* events) Tj
+0 -12 Td
+(concerning that instrument -- a distinct, narrower claim.) Tj
+0 -12 Td
+(- Veriqo cannot claim cryptographic non-repudiation today. As Change) Tj
+0 -12 Td
+(2's table notes, per-actor signing is not yet wired to custody-event) Tj
+0 -12 Td
+(submission in this repository. Until it is, "non-repudiation" claims) Tj
+0 -12 Td
+(should be limited to internal hash-chain consistency, not) Tj
+0 -12 Td
+(cryptographic proof against a specific signer.) Tj
+0 -12 Td
+(- Veriqo cannot claim identity assurance. Custody-event actors are) Tj
+0 -12 Td
+(recorded as attributed strings; whether "PTY-1" really was the party) Tj
+0 -12 Td
+(claimed depends on the identity system feeding Veriqo in a given) Tj
+0 -12 Td
+(deployment, which is not yet integrated \(see the companion OS) Tj
+0 -12 Td
+(Integration Audit document\).) Tj
+0 -12 Td
+(- Veriqo cannot claim trusted timestamping. Tick values are) Tj
+0 -12 Td
+(application-defined, not RFC 3161 \(or equivalent\) certified) Tj
+0 -12 Td
+(timestamps, unless a deployment separately wires one in.) Tj
+0 -12 Td
+(- Veriqo cannot claim legal conformance with MLETR or any enacting) Tj
+0 -12 Td
+(jurisdiction's legislation. Every mapping in this document is a) Tj
+0 -12 Td
+(technical-evidentiary self-assessment, not a legal determination. Only) Tj
+0 -12 Td
+(qualified counsel, applied to a specific transaction and a specific) Tj
+0 -12 Td
+(jurisdiction's enacted law, can make that determination.) Tj
+0 -12 Td
+(- Veriqo cannot claim its distributed-replication and snapshot-) Tj
+0 -12 Td
+(restoration proofs were run over a real network. The most recent) Tj
+0 -12 Td
+(engineering round proved real multi-node raft consensus using this) Tj
+0 -12 Td
+(repository's own in-process transport \(raftlite.MemTransport\), not) Tj
+0 -12 Td
+(the full mTLS pkg/transport/rafttcp + multi-process/Docker harness.) Tj
+0 -12 Td
+(This is a genuine, real consensus proof -- but it is not yet a) Tj
+0 -12 Td
+(real-socket, real-process, real-network-partition proof for the) Tj
+0 -12 Td
+(Evidence/Manifest authority layer specifically. Stated honestly rather) Tj
+0 -12 Td
+(than implied as complete.) Tj
+0 -12 Td
+(- Veriqo cannot claim system-level authority assurance yet. Every) Tj
+0 -12 Td
+(hardening round to date has proven the Evidence/Manifest/Hypothesis/) Tj
+0 -12 Td
+(Finding authority packages safe *in isolation*. Whether that safety) Tj
+0 -12 Td
+(survives integration with VERIQO's own API, Workflow, Knowledge,) Tj
+0 -12 Td
+(Intelligence, Decision, Ledger, and Cluster layers is the subject of) Tj
+0 -12 Td
+(the separate, not-yet-executed "OS Integration Audit" -- see the) Tj
+0 -12 Td
+(companion gap-analysis document delivered alongside this one.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE ONE-SENTENCE POSITIONING STATEMENT) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 4471 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(Per the reviewer's own request, verbatim:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(> "Veriqo does not make an electronic transferable record legally) Tj
+0 -12 Td
+(> reliable; it makes the evidence of how a reliable method performed in) Tj
+0 -12 Td
+(> a specific transaction independently verifiable.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is the load-bearing sentence for the whole document: it separates) Tj
+0 -12 Td
+(Veriqo's actual, provable claim \(evidentiary verifiability\) from the) Tj
+0 -12 Td
+(claim it must never make \(legal reliability\), in one line simple enough) Tj
+0 -12 Td
+(to survive being quoted out of context by a lawyer, regulator, or) Tj
+0 -12 Td
+(investor.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(TOWARD THE FULLER MAPPING \(ARTICLE 9/10/11/12/13/16/17/18\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's final verdict names the next high-value deliverable as a) Tj
+0 -12 Td
+(full, line-by-line "MLETR/eBL Reliability Conformance Mapping v0.2" \(now) Tj
+0 -12 Td
+(this document\) extending across Articles 9, 10, 11, 12, 13, 16, 17, and) Tj
+0 -12 Td
+(18: Article -> eBL function -> Veriqo capability -> evidence artifact ->) Tj
+0 -12 Td
+(technical proof -> external dependency -> legal boundary -> readiness) Tj
+0 -12 Td
+(status.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This v0.2 delivers that structure fully for Article 12 \(Change 2's) Tj
+0 -12 Td
+(table\) and the cross-cutting function boundary \(Change 3's table\). A) Tj
+0 -12 Td
+(best-effort, GENERAL-FUNCTION-LEVEL first pass at the remaining seven) Tj
+0 -12 Td
+(articles follows below, using the same eight-column structure -- but) Tj
+0 -12 Td
+(each article's *general function* \(not its verbatim statutory text,) Tj
+0 -12 Td
+(which this session cannot independently confirm without the official) Tj
+0 -12 Td
+(UNCITRAL text\) is described in normal legal-technology terms, flagged) Tj
+0 -12 Td
+(individually as low-confidence where this session's knowledge is) Tj
+0 -12 Td
+(general rather than clause-verified, and every row repeats the same) Tj
+0 -12 Td
+(external-dependency and validation-required discipline as Change 2.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Article \(general function, not verbatim text -- verify against official MLETR text\)) Tj
+0 -12 Td
+(eBL function    Veriqo capability    Evidence artifact    Technical proof    External) Tj
+0 -12 Td
+(dependency    Legal boundary    Readiness status) Tj
+0 -12 Td
+(  ---  ---  ---  ---  ---  ---  ---  ---) Tj
+0 -12 Td
+(   Art. 9 -- General reliability standard for the method used to identify a person and) Tj
+0 -12 Td
+(indicate that person's intention \(the umbrella functional-equivalence test\)    Establishes) Tj
+0 -12 Td
+(and operates the reliable method itself    Evidence that a specific instance of the method) Tj
+0 -12 Td
+(executed as designed \(inputs, outputs, actor, time\)    CustodyEvent chain, ManifestHash) Tj
+0 -12 Td
+(TestReplayReproducesIdenticalFinalizedState, hash-chain adversarial tests    The reliability) Tj
+0 -12 Td
+(*standard* \(what threshold counts as reliable\) is set by the platform + enacting law, not) Tj
+0 -12 Td
+(Veriqo    Veriqo does not set or certify the reliability threshold    Engineering Verified) Tj
+0 -12 Td
+(\(evidence layer only\)) Tj
+0 -12 Td
+(   Art. 10 -- Control \(functional equivalent of possession\)    Establishes and enforces) Tj
+0 -12 Td
+(exclusive control    NONE -- explicitly out of scope \(Change 3\)    n/a    n/a    Entirely) Tj
+0 -12 Td
+(the eBL platform's responsibility    Veriqo makes no control-related claim    Out of scope) Tj
+0 -12 Td
+(by design) Tj
+0 -12 Td
+(   Art. 11 -- Transfer of control \(functional equivalent of endorsement/delivery\)) Tj
+0 -12 Td
+(Executes and records the transfer act    Evidence capture of the transfer event as reported) Tj
+0 -12 Td
+(to Veriqo \(custody event\)    CustodyEvent \(action reflecting transfer\), hash chain    Same) Tj
+0 -12 Td
+(custody-chain tamper-detection tests as Change 2 row 6    Veriqo does not itself effect or) Tj
+0 -12 Td
+(validate the transfer -- it records what the platform reports    Veriqo's record is evidence) Tj
+0 -12 Td
+(OF a claimed transfer, not proof the transfer was legally effective    Engineering Verified) Tj
+0 -12 Td
+(\(evidence capture only\)) Tj
+0 -12 Td
+(   Art. 12 -- Change of medium    See Change 2's full 7-factor table above    \(see above\)) Tj
+0 -12 Td
+(\(see above\)    \(see above\)    \(see above\)    \(see above\)    Engineering Verified, most fully) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 4029 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(mapped article in this document) Tj
+0 -12 Td
+(   Art. 13 -- \(general function believed to concern requirements applicable to the use of) Tj
+0 -12 Td
+(ETRs / party autonomy considerations; this session's confidence on the precise scope of this) Tj
+0 -12 Td
+(specific article number is LOW without the official text\)    Varies by the specific) Tj
+0 -12 Td
+(requirement    Evidence-layer support only where the requirement concerns) Tj
+0 -12 Td
+(integrity/attribution/timing, which Veriqo already provides generically    Same mechanisms) Tj
+0 -12 Td
+(as above, applied generically    Same test suite    Depends on the specific requirement) Tj
+0 -12 Td
+(Flagged for review: this row should not be relied on until the specific article text is) Tj
+0 -12 Td
+(confirmed    Low confidence -- requires official text before further mapping) Tj
+0 -12 Td
+(   Art. 16 -- \(general function believed to concern amendment of an electronic transferable) Tj
+0 -12 Td
+(record; LOW confidence on precise scope\)    Executes and records amendments    Evidence) Tj
+0 -12 Td
+(capture of an amendment event, superseded-version lineage    manifest.Registry.Supersede,) Tj
+0 -12 Td
+(MarkSuperseded    TestSupersedeCreatesNewVersionWithoutRewritingHistory    Whether an) Tj
+0 -12 Td
+("amendment" under this article maps cleanly onto Veriqo's "Supersede" concept needs legal) Tj
+0 -12 Td
+(confirmation    Flagged for review    Low confidence -- plausible technical mapping,) Tj
+0 -12 Td
+(unconfirmed legal mapping) Tj
+0 -12 Td
+(   Art. 17 -- \(general function believed to concern replacement of an electronic) Tj
+0 -12 Td
+(transferable record with a paper-based transferable document or instrument, or the reverse;) Tj
+0 -12 Td
+(LOW confidence\)    Executes the replacement/reconversion    Same change-of-medium evidence) Tj
+0 -12 Td
+(mechanisms as Article 12, applied in reverse    Same as Change 2's table    Same as Change) Tj
+0 -12 Td
+(2's table    Same dependencies as Article 12    Flagged for review -- may substantially) Tj
+0 -12 Td
+(overlap Article 12's own scope; needs counsel to disambiguate    Low confidence) Tj
+0 -12 Td
+(   Art. 18 -- \(general function believed to concern requirements for cross-border) Tj
+0 -12 Td
+(recognition of electronic transferable records; LOW confidence\)    Ensures the ETR is) Tj
+0 -12 Td
+(recognized across jurisdictions    Veriqo's evidence artifacts are jurisdiction-agnostic by) Tj
+0 -12 Td
+(construction \(content-hash-based, no jurisdiction-specific encoding\) -- a NEUTRAL property) Tj
+0 -12 Td
+(that MAY be relevant to cross-border recognition arguments, but this is a legal argument) Tj
+0 -12 Td
+(this session cannot make    n/a    n/a    Cross-border legal recognition is entirely a) Tj
+0 -12 Td
+(matter of the enacting jurisdictions' own law and any applicable treaty/reciprocity) Tj
+0 -12 Td
+(arrangement    Flagged for review -- do not present Veriqo's jurisdiction-agnostic evidence) Tj
+0 -12 Td
+(format as itself satisfying any cross-border recognition requirement without counsel) Tj
+0 -12 Td
+(confirming the argument    Low confidence) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Explicit flag: the rows for Articles 13, 16, 17, and 18 are marked) Tj
+0 -12 Td
+(LOW CONFIDENCE because this session does not have verified access to the) Tj
+0 -12 Td
+(precise UNCITRAL MLETR article text for those specific numbers and is) Tj
+0 -12 Td
+(describing plausible, generally-understood functions rather than) Tj
+0 -12 Td
+(clause-verified ones. Publishing this table externally without first) Tj
+0 -12 Td
+(replacing those four rows' descriptions with counsel-verified text would) Tj
+0 -12 Td
+(be exactly the overclaiming this whole revision exercise exists to) Tj
+0 -12 Td
+(prevent. Articles 9, 11, and 12 are HIGHER confidence because their) Tj
+0 -12 Td
+(general function \(reliability standard, transfer, change of medium\) is) Tj
+0 -12 Td
+(widely and consistently documented in public MLETR explanatory) Tj
+0 -12 Td
+(materials and is consistent with how the reviewer's own docx used them.) Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000015 00000 n 
+0000000105 00000 n 
+0000000175 00000 n 
+0000000243 00000 n 
+0000004004 00000 n 
+0000004140 00000 n 
+0000009200 00000 n 
+0000009336 00000 n 
+0000013852 00000 n 
+0000013988 00000 n 
+0000018124 00000 n 
+0000018262 00000 n 
+0000022786 00000 n 
+0000022924 00000 n 
+0000027006 00000 n 
+0000027144 00000 n 
+trailer
+<< /Size 17 /Root 16 0 R >>
+startxref
+27194
+%%EOF

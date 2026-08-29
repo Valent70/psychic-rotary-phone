@@ -1,0 +1,673 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R] /Count 5 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3853 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO -- AUTHORITY TO OS INTEGRATION AUDIT: GAP ANALYSIS & ROADMAP) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response to Mengubah_fokus_VERIQO_sekarang.docx's reframing: not "is) Tj
+0 -12 Td
+(there one more setter that can be bypassed" but "can the hardened) Tj
+0 -12 Td
+(authority model survive integration with the real VERIQO operating) Tj
+0 -12 Td
+(system." The reviewer proposed the next major audit as VERIQO) Tj
+0 -12 Td
+(AUTHORITY -> OS INTEGRATION AUDIT, across ten boundaries \(A-J\) and one) Tj
+0 -12 Td
+(end-to-end adversarial pipeline scenario.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This document is that audit's gap analysis and roadmap, not its) Tj
+0 -12 Td
+(execution. Executing ten boundary audits plus a full end-to-end) Tj
+0 -12 Td
+(adversarial pipeline test is realistically several more engineering) Tj
+0 -12 Td
+(rounds of work -- the reviewer's own docx frames it as "the next major) Tj
+0 -12 Td
+(audit," future tense, not something to complete in one pass. What this) Tj
+0 -12 Td
+(round delivers instead, honestly and completely: a real, grep-and-read) Tj
+0 -12 Td
+(inventory of what currently exists for each boundary, whether it is) Tj
+0 -12 Td
+(wired to the hardened authority core at all, and a concrete, prioritized) Tj
+0 -12 Td
+(list of what remains to be built before each boundary can actually be) Tj
+0 -12 Td
+(audited \(because for most of them, the integration doesn't exist yet to) Tj
+0 -12 Td
+(audit\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every claim below is grounded in a real grep/file read against this) Tj
+0 -12 Td
+(repository as of this round; nothing here is inferred from the package) Tj
+0 -12 Td
+(name alone.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 1 -- THE HEADLINE FINDING) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Six-plus rounds of hardening work proved the Evidence/Manifest/) Tj
+0 -12 Td
+(Hypothesis/Finding authority packages safe in isolation. Almost none of) Tj
+0 -12 Td
+(VERIQO's surrounding OS-layer packages import those hardened packages at) Tj
+0 -12 Td
+(all today. A repository-wide search for every OS-layer package) Tj
+0 -12 Td
+(importing any of pkg/evidence/manifest, pkg/insurance/evidence,) Tj
+0 -12 Td
+(pkg/insurance/causation, pkg/insurance/finding, pkg/insurance/cre,) Tj
+0 -12 Td
+(or pkg/evidence/provenance found exactly two real hits outside the) Tj
+0 -12 Td
+(authority packages' own internal cross-references:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. pkg/insurance/dossier/dossier.go:15 imports pkg/insurance/) Tj
+0 -12 Td
+(causation -- and only to embed an already-computed) Tj
+0 -12 Td
+(*causation.Explanation into a report struct \(dossier.go:37,78\).) Tj
+0 -12 Td
+(Read-only consumption of a derived value; no construction, no) Tj
+0 -12 Td
+(authority risk.) Tj
+0 -12 Td
+(2. pkg/consensus/raftlite/fsm_manifest_adapter.go and) Tj
+0 -12 Td
+(fsm_evidence_adapter.go -- the FSM adapters this round's earlier) Tj
+0 -12 Td
+(work \(L99 Gap Coverage Response\) just built, wiring real raft) Tj
+0 -12 Td
+(consensus to manifest.Registry/evidence.Registry through their) Tj
+0 -12 Td
+(own gated methods.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every other conceptual layer the reviewer named -- API, Workflow,) Tj
+0 -12 Td
+(Knowledge, Intelligence, Decision, Ledger, Storage \(beyond raftlite's) Tj
+0 -12 Td
+(own in-process snapshot mechanism\), Replay, and whatever "UCR"/"UER" map) Tj
+0 -12 Td
+(onto in this codebase -- has zero import-level connection to the) Tj
+0 -12 Td
+(authority core today. This is not a subtle finding requiring careful) Tj
+0 -12 Td
+(interpretation: it is a grep returning nothing, repeated ten times.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is, in one sense, good news: none of these layers can currently) Tj
+0 -12 Td
+(bypass the hardened authority packages, because none of them touch the) Tj
+0 -12 Td
+(authority packages at all. It is also the reviewer's exact point: there) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 5348 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(is no "system-level authority assurance" to claim yet, because there is) Tj
+0 -12 Td
+(close to no system-level integration to audit. The boundaries A-J are) Tj
+0 -12 Td
+(not yet safe OR unsafe -- they are not yet built, for the most part.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 2 -- BOUNDARY-BY-BOUNDARY INVENTORY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Boundary    Real package\(s\) found    Wired to hardened core?    Honest assessment) Tj
+0 -12 Td
+(  ---  ---  ---  ---) Tj
+0 -12 Td
+(   A. API boundary    veriqo/gateway/rest \(server.go, lifecycle_route.go,) Tj
+0 -12 Td
+(generated_routes.go\)    NOT WIRED -- imports pkg/lifecycle, pkg/platform/audit,) Tj
+0 -12 Td
+(pkg/platform/security, veriqo/registry; zero import of) Tj
+0 -12 Td
+(manifest/evidence/causation/finding/cre/provenance anywhere in the package    Cannot bypass) Tj
+0 -12 Td
+(authority it never touches. Also cannot be said to ENFORCE authority yet -- there is no HTTP) Tj
+0 -12 Td
+(route in this repo today that reaches a manifest.Manifest or insevidence.Record at all.) Tj
+0 -12 Td
+(   B. Workflow boundary    pkg/workflow/workflow.go    NOT WIRED -- zero import of any) Tj
+0 -12 Td
+(hardened package    Same as A: no live bypass risk, no live enforcement either.) Tj
+0 -12 Td
+(   C. UCR/UER boundary    pkg/ucr exists and is real -- but it is the Unified Cognitive) Tj
+0 -12 Td
+(Reasoning engine \(working memory, reasoning graph, causal planner; see pkg/ucr/ucr.go's own) Tj
+0 -12 Td
+(package doc comment\), not a "Unified Case/Evidence Registry." No package named or clearly) Tj
+0 -12 Td
+(serving a "UER" \(Unified Evidence Registry\) role was found anywhere in this repository \(a) Tj
+0 -12 Td
+(whole-word search for "UER" across all .go files returned zero hits\). The closest real) Tj
+0 -12 Td
+(candidates for whatever "UER" is meant to name are pkg/insurance/evidence \(Evidence Record,) Tj
+0 -12 Td
+(already hardened\) and pkg/evidence/api \(see below\).    pkg/ucr itself: NOT WIRED.) Tj
+0 -12 Td
+(pkg/evidence/api/api.go:60 and contract.go:44 DO import pkg/evidence/provenance -- but only) Tj
+0 -12 Td
+(to reference two constants \(provenance.OriginSynthetic, provenance.SchemaVersionV1\); no call) Tj
+0 -12 Td
+(to GrantTrust, Register, or construction of a provenance.Entry anywhere in that package.) Tj
+0 -12 Td
+(This is the boundary the reviewer's own naming is honestly ambiguous about, given this) Tj
+0 -12 Td
+(codebase's actual package names. Recommend clarifying with the reviewer whether "UER" refers) Tj
+0 -12 Td
+(to a package that needs to be BUILT, or to pkg/insurance/evidence/pkg/evidence/api under a) Tj
+0 -12 Td
+(different name. Either way: no live authority-bypass risk exists today because the) Tj
+0 -12 Td
+(connection is, at most, a shared constant reference.) Tj
+0 -12 Td
+(   D. Knowledge boundary    veriqo/core/knowledge/knowledge.go, pkg/moat/kg/kg.go \(Knowledge) Tj
+0 -12 Td
+(Graph, the same package KGAdapter wires to real raft consensus\)    NOT WIRED to the) Tj
+0 -12 Td
+(authority core -- zero import of manifest/evidence/causation/finding/cre/provenance in) Tj
+0 -12 Td
+(either package    The specific risk named \("Knowledge layer turns derived authority into) Tj
+0 -12 Td
+(asserted truth"\) cannot manifest today because Knowledge has no path to READ authority state) Tj
+0 -12 Td
+(in the first place, let alone re-assert it. This boundary is closed by absence, not by a) Tj
+0 -12 Td
+(checked gate -- worth building the gate deliberately once the pipe is built, rather than) Tj
+0 -12 Td
+(relying on the pipe's current non-existence.) Tj
+0 -12 Td
+(   E. Intelligence boundary    veriqo/core/intelligence/intelligence.go,) Tj
+0 -12 Td
+(pkg/moat/decision/intelligence.go    NOT WIRED -- zero import of the authority core    Same) Tj
+0 -12 Td
+(as D: the specific risk \("model output automatically becomes a trusted finding"\) cannot) Tj
+0 -12 Td
+(manifest because Intelligence has no path to finding.Finding/cre.AuthorizedFinding at all) Tj
+0 -12 Td
+(today. cre.Authorize/AuthorizeGrounded remain the only real gate, and nothing calls them) Tj
+0 -12 Td
+(from this layer.) Tj
+0 -12 Td
+(   F. Decision boundary    pkg/moat/decision/decision.go -- a real, standalone weighted-) Tj
+0 -12 Td
+(factor Engine with its own Policy/Decision/DecisionRecord types \(decision.go:48-140\)    NOT) Tj
+0 -12 Td
+(WIRED -- does not take a cre.AuthorizedFinding \(or anything from the Finding authority) Tj
+0 -12 Td
+(chain\) as input anywhere; it is a parallel, independent decision-scoring mechanism    This) Tj
+0 -12 Td
+(is the most consequential gap in the whole audit. The reviewer's own pipeline diagram puts) Tj
+0 -12 Td
+(Decision directly downstream of Finding/CRE; the real code shows two unrelated systems.) Tj
+0 -12 Td
+(Until pkg/moat/decision.Engine \(or whatever becomes the real Decision layer\) is wired to) Tj
+0 -12 Td
+(consume an AuthorizedFinding specifically -- not a raw finding.Finding, not a hand-built) Tj
+0 -12 Td
+(score -- "Decision only accepts authorized inputs" cannot be tested, because Decision does) Tj
+0 -12 Td
+(not accept Finding-shaped inputs of any kind today.) Tj
+0 -12 Td
+(   G. Ledger boundary    pkg/platform/audit/merkle.go + audit.go \(the Merkle-anchored audit) Tj
+0 -12 Td
+(ledger; matches this engagement's own earlier VTECP Phase 5 "Ledger Merkle + Anchor + Verify) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 4873 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(API" work\)    NOT WIRED -- zero import of the authority core    Same absence-based closure) Tj
+0 -12 Td
+(as D/E. A ledger record today cannot cite a manifest.Manifest's ManifestHash or an) Tj
+0 -12 Td
+(AuthorizedFinding's AuthorizationHash as its provenance, because nothing connects them.) Tj
+0 -12 Td
+(Building that connection, with the SAME "derive, never assert" discipline the authority) Tj
+0 -12 Td
+(packages already use, is real future work.) Tj
+0 -12 Td
+(   H. Storage boundary    pkg/storage/store.go, pkg/storage/snapshot \(a generic, content-) Tj
+0 -12 Td
+(agnostic Raft snapshot mechanism -- Snapshot{Meta, Data []byte}, checksum-verified only, no) Tj
+0 -12 Td
+(domain semantics\), pkg/storage/wal, pkg/storage/evidence    PARTIALLY WIRED, and this needs) Tj
+0 -12 Td
+(a precise distinction: pkg/storage/snapshot.Store itself is STILL not wired to) Tj
+0 -12 Td
+(manifest.Registry/evidence.Registry -- it remains a generic byte-blob store. What IS now) Tj
+0 -12 Td
+(wired \(this round's own earlier work\) is a DIFFERENT snapshot mechanism:) Tj
+0 -12 Td
+(raftlite.Snapshotter, an interface internal to pkg/consensus/raftlite, which) Tj
+0 -12 Td
+(ManifestAdapter/EvidenceAdapter implement directly, bypassing pkg/storage/snapshot entirely.) Tj
+0 -12 Td
+(Do not conflate the two. "Snapshot restoration" was closed for the raftlite-internal) Tj
+0 -12 Td
+(mechanism \(real, tested, fail-closed against forgery\). pkg/storage/snapshot.Store's OWN) Tj
+0 -12 Td
+(persisted-object restore path -- the literal "Storage boundary" the reviewer named) Tj
+0 -12 Td
+(\("persisted objects... restore authority"\) -- has not been touched and has no wiring to the) Tj
+0 -12 Td
+(authority packages at all. This is real, unclosed, unclaimed work.) Tj
+0 -12 Td
+(   I. Replay boundary    pkg/replay/replay.go \(a tamper-evident record/replay/verify) Tj
+0 -12 Td
+(certificate system\)    NOT WIRED to manifest.Registry/evidence.Registry -- pkg/evidence/api) Tj
+0 -12 Td
+(imports pkg/replay, but pkg/evidence/api is itself a separate evidence layer from) Tj
+0 -12 Td
+(pkg/evidence/manifest, with no import path connecting the two    "Deterministic replay) Tj
+0 -12 Td
+(becoming an alternate authority path" cannot manifest via pkg/replay today because) Tj
+0 -12 Td
+(pkg/replay has no way to write into manifest.Registry/evidence.Registry at all. The manifest) Tj
+0 -12 Td
+(package's OWN internal replay-determinism guarantee) Tj
+0 -12 Td
+(\(TestReplayReproducesIdenticalFinalizedState\) is a different, already-closed concern --) Tj
+0 -12 Td
+(proving replaying real gated calls converges safely, not proving pkg/replay's own) Tj
+0 -12 Td
+(certificate mechanism can't inject authority, because it never touches the authority) Tj
+0 -12 Td
+(packages to test that against.) Tj
+0 -12 Td
+(   J. Cluster boundary    pkg/transport/rafttcp \(real mTLS TCP transport\),) Tj
+0 -12 Td
+(pkg/consensus/raftlite    WIRED, and this is the one boundary with real, tested integration) Tj
+0 -12 Td
+(ManifestAdapter/EvidenceAdapter \(this round's own earlier work\) proved real multi-node raft) Tj
+0 -12 Td
+(consensus converges safely and rejects forged snapshots -- but ONLY using) Tj
+0 -12 Td
+(raftlite.MemTransport \(in-process\), not the real rafttcp mTLS transport. The specific risk) Tj
+0 -12 Td
+(named \("node-to-node transport becomes an authority injection path"\) has not been tested) Tj
+0 -12 Td
+(against a REAL network transport for these two adapters -- pkg/kernel/distributed's own) Tj
+0 -12 Td
+(adapters have been, per test/integration/live_cluster_test.go, but) Tj
+0 -12 Td
+(ManifestAdapter/EvidenceAdapter have not yet been run through that same real-transport) Tj
+0 -12 Td
+(harness.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 3 -- THE END-TO-END ADVERSARIAL PIPELINE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's proposed pipeline:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(External Input -> API -> UCR -> UER -> Evidence -> Manifest ->) Tj
+0 -12 Td
+(Hypothesis -> Finding -> CRE -> Decision -> Ledger -> Reporting) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(No test anywhere in this repository exercises this pipeline, or any) Tj
+0 -12 Td
+(meaningful fragment of it, end to end. Confirmed by: no file in test/) Tj
+0 -12 Td
+(\(test/soak, test/chaos, test/integration, test/stress,) Tj
+0 -12 Td
+(test/e2e, test/evidence, test/acceptance\) imports both) Tj
+0 -12 Td
+(veriqo/gateway/rest and any hardened authority package. test/e2e/) Tj
+0 -12 Td
+(eight_blockers -- the closest-sounding candidate by directory name --) Tj
+0 -12 Td
+(tests eight qualification blockers \(per TestAllEightBlockersQualifyTogether\),) Tj
+0 -12 Td
+(not this pipeline. This is expected, not a surprise: Part 2 already) Tj
+0 -12 Td
+(showed API/Workflow/Knowledge/Intelligence/Decision/Ledger have no wiring) Tj
+0 -12 Td
+(to the authority core for such a test to exercise in the first place.) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4504 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(THE 12 NAMED ATTACKS, HONESTLY SCORED AGAINST WHAT ACTUALLY EXISTS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Attack    Coverage today) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   1. Forged evidence status    Package-level: closed \(evidence.Registry.Submit resets) Tj
+0 -12 Td
+(Status; TestSubmitResetsAuthorityBearingFields\). End-to-end: no test, no pipe to attack.) Tj
+0 -12 Td
+(   2. Forged manifest state    Package-level: closed \(RegisterDraft forces State=DRAFT;) Tj
+0 -12 Td
+(TestJSONDeserializedManifestCannotManufactureAuthority,) Tj
+0 -12 Td
+(TestForgedSnapshotStateFieldCannotBeRestored\). End-to-end: no test, no pipe.) Tj
+0 -12 Td
+(   3. Forged hash    Package-level: closed \(VerifyManifestHash,) Tj
+0 -12 Td
+(TestVerifyManifestHashDetectsTampering\). End-to-end: no test, no pipe.) Tj
+0 -12 Td
+(   4. Forged hypothesis status    Package-level: closed this engagement's most recent-but-) Tj
+0 -12 Td
+(one round \(HypothesisSet.Add forces StatusUnproven;) Tj
+0 -12 Td
+(TestHypothesisSetAddNeverTrustsACallerAssertedSupportedStatus\). End-to-end: no test, no) Tj
+0 -12 Td
+(pipe.) Tj
+0 -12 Td
+(   5. Forged finding    Package-level: closed \(AuthorizedFinding's unexported, accessor-) Tj
+0 -12 Td
+(sealed fields; Authorize/AuthorizeGrounded gates\). End-to-end: no test, no pipe -- and Part) Tj
+0 -12 Td
+(2's Decision-boundary finding means there is nowhere downstream for a forged Finding to even) Tj
+0 -12 Td
+(be tested against yet.) Tj
+0 -12 Td
+(   6. Forged authority \(trust grant\)    Package-level: closed \(provenance.Registry.Register) Tj
+0 -12 Td
+(forces TrustGranted=false; only GrantTrust can set it\). End-to-end: no test, no pipe.) Tj
+0 -12 Td
+(   7. Forged serialized state    Package-level: closed for both Manifest and Evidence Record) Tj
+0 -12 Td
+(\(TestJSONDeserializedRecordCannotManufactureAuthority,) Tj
+0 -12 Td
+(TestJSONDeserializedManifestCannotManufactureAuthority, and this round's raftlite Restore) Tj
+0 -12 Td
+(forgery tests\). End-to-end: no test, no pipe.) Tj
+0 -12 Td
+(   8. Replay omission    Package-level: closed) Tj
+0 -12 Td
+(\(TestReplayOmittingReviewedEventCannotReachFinalized, and the raftlite Restore equivalent\).) Tj
+0 -12 Td
+(End-to-end: no test, no pipe.) Tj
+0 -12 Td
+(   9. Duplicate event    Package-level: closed for concurrent double-finalize/duplicate-) Tj
+0 -12 Td
+(transition \(TestConcurrentDoubleFinalizeHasExactlyOneWinner,) Tj
+0 -12 Td
+(TestConcurrentDuplicateAdvanceTransitionHasExactlyOneWinner\). Not separately tested as a) Tj
+0 -12 Td
+(REPLAY-time duplicate \(the same command applied twice via Apply\) for the raftlite adapters) Tj
+0 -12 Td
+(specifically -- a real, small, addressable gap.) Tj
+0 -12 Td
+(   10. Stale state    Partially covered:) Tj
+0 -12 Td
+(RecordCustodyEventDoesNotStaleTheFinalizedManifestHash covers one specific staleness shape.) Tj
+0 -12 Td
+(A general "an old cached read is acted on after the authoritative state has moved on") Tj
+0 -12 Td
+(scenario has no dedicated test anywhere in the repo.) Tj
+0 -12 Td
+(   11. Concurrent transition    Package-level: closed, seven scenarios) Tj
+0 -12 Td
+(\(TestConcurrentFinalizeAndCustodyMutateNeverStalesTheHash,) Tj
+0 -12 Td
+(TestConcurrentFinalizeAndSupersedeNeverSupersedesAnUnfinalizedParent,) Tj
+0 -12 Td
+(TestConcurrentMarkSupersededAndDuplicateSubmitNeverResurrectsEvidence,) Tj
+0 -12 Td
+(TestConcurrentSetRightsChangesConvergeToASingleAuthorizedValue, and others from the Trust) Tj
+0 -12 Td
+(Authority Model round\). End-to-end: no test, no pipe.) Tj
+0 -12 Td
+(   12. API injection    No coverage anywhere. veriqo/gateway/rest has no route touching the) Tj
+0 -12 Td
+(authority core \(Part 2, boundary A\), so there is nothing for an "API injection" attack to) Tj
+0 -12 Td
+(inject INTO yet. This is the single attack type with zero existing coverage even at the) Tj
+0 -12 Td
+(package level, because the API layer itself doesn't reach the packages that would need) Tj
+0 -12 Td
+(defending.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 4 -- PRIORITIZED ROADMAP: WHAT STILL NEEDS TO BE BUILT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(In the order that unblocks the most subsequent work:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. Decide what "Decision" means for real, then wire pkg/moat/decision.Engine \(or a new type\)) Tj
+0 -12 Td
+(to consume cre.AuthorizedFinding specifically. This is the single highest-leverage gap:) Tj
+0 -12 Td
+(without it, boundary F cannot be audited, attack 5 \(forged finding\) has no downstream target) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 4125 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(to defend, and the reviewer's own pipeline diagram has a literal hole at its center.) Tj
+0 -12 Td
+(2. Build one real HTTP route in veriqo/gateway/rest that reaches the authority core \(e.g. a) Tj
+0 -12 Td
+(route that submits evidence via insevidence.Registry.Submit, or queries a) Tj
+0 -12 Td
+(manifest.Manifest's State\). Only once this exists can boundary A be audited for real, and) Tj
+0 -12 Td
+(attack 12 \(API injection\) has a target.) Tj
+0 -12 Td
+(3. Wire pkg/platform/audit \(Ledger\) to cite real authority-artifact hashes \(ManifestHash,) Tj
+0 -12 Td
+(AuthorizationHash\) as ledger-entry provenance, with the same "derive, never accept a caller-) Tj
+0 -12 Td
+(asserted hash" discipline the rest of this engagement has used everywhere else.) Tj
+0 -12 Td
+(4. Extend ManifestAdapter/EvidenceAdapter onto the real pkg/transport/rafttcp harness) Tj
+0 -12 Td
+(\(test/integration/live_cluster_test.go's own pattern\), closing boundary J's remaining honest) Tj
+0 -12 Td
+(gap \(real network, not MemTransport\).) Tj
+0 -12 Td
+(5. Decide and clarify "UCR"/"UER" against this repository's actual package names \(pkg/ucr is) Tj
+0 -12 Td
+(Unified Cognitive Reasoning, not a registry; no "UER" package exists\) before auditing) Tj
+0 -12 Td
+(boundary C -- auditing an undefined boundary produces a false sense of coverage.) Tj
+0 -12 Td
+(6. Wire pkg/storage/snapshot.Store \(the generic, content-agnostic persisted-object store\) to) Tj
+0 -12 Td
+(the authority core with the same replay-through-real-gates discipline raftlite.Snapshotter) Tj
+0 -12 Td
+(now uses, closing boundary H's remaining gap -- these are two different mechanisms and only) Tj
+0 -12 Td
+(one is closed.) Tj
+0 -12 Td
+(7. Once 1-2 above exist, build the actual end-to-end pipeline test \(External Input -> API ->) Tj
+0 -12 Td
+(... -> Reporting\) and run the 12 named attacks against it for real -- this is the reviewer's) Tj
+0 -12 Td
+(stated "most important test," and it is only meaningful once there is a real pipeline to) Tj
+0 -12 Td
+(attack.) Tj
+0 -12 Td
+(8. Add the two small, currently-uncovered attack shapes \(9: duplicate event specifically at) Tj
+0 -12 Td
+(the raftlite Apply-replay layer; 10: a general stale-read-then-act scenario\) as targeted) Tj
+0 -12 Td
+(unit tests, independent of the larger roadmap items -- these are cheap and can be done any) Tj
+0 -12 Td
+(time.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(No source code was changed for this document \(this round's other) Tj
+0 -12 Td
+(deliverable, the MLETR/eBL Conformance Mapping, is likewise a document,) Tj
+0 -12 Td
+(per the reviewer's own "yang harus kita lakukan sekarang bukan coding) Tj
+0 -12 Td
+(lagi" -- what we need to do now is not coding anymore\). The full) Tj
+0 -12 Td
+(repository test suite was re-run to confirm the codebase remains exactly) Tj
+0 -12 Td
+(as green as the prior round left it:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(gofmt -l .                                    clean) Tj
+0 -12 Td
+(go build ./...                                clean) Tj
+0 -12 Td
+(go vet ./...                                  clean) Tj
+0 -12 Td
+(go test ./...                                 full repository suite: 189 packages, 0 FAIL) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- This document is a gap analysis and roadmap, not the executed OS) Tj
+0 -12 Td
+(Integration Audit itself. Executing it -- building the missing wiring) Tj
+0 -12 Td
+(in items 1-6 above, then running the real end-to-end adversarial) Tj
+0 -12 Td
+(pipeline -- is genuinely several more engineering rounds of work, not) Tj
+0 -12 Td
+(something this round overclaims to have finished.) Tj
+0 -12 Td
+(- Every "not wired" finding above is a real, repository-wide grep result) Tj
+0 -12 Td
+(as of this round's commit, not an assumption from a package's name.) Tj
+0 -12 Td
+(- Where this repository's own package names did not cleanly match the) Tj
+0 -12 Td
+(reviewer's terminology \(specifically "UCR"/"UER"\), that mismatch is) Tj
+0 -12 Td
+(reported plainly rather than papered over with a best-guess mapping.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000015 00000 n 
+0000000098 00000 n 
+0000000168 00000 n 
+0000000236 00000 n 
+0000004141 00000 n 
+0000004277 00000 n 
+0000009677 00000 n 
+0000009813 00000 n 
+0000014738 00000 n 
+0000014874 00000 n 
+0000019431 00000 n 
+0000019569 00000 n 
+0000023747 00000 n 
+0000023885 00000 n 
+trailer
+<< /Size 15 /Root 14 0 R >>
+startxref
+23935
+%%EOF
