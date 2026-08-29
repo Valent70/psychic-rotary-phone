@@ -4,10 +4,40 @@ import (
 	"errors"
 	"testing"
 
+	"veriqo/pkg/evidence/manifest"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/evidence"
 	"veriqo/pkg/insurance/finding"
 )
+
+// groundedManifestRegistry builds a manifest.Registry with a single
+// evidence ID finalized (and hash-verified), simulating real grounded
+// evidence.
+func groundedManifestRegistry(t *testing.T, evidenceID string) *manifest.Registry {
+	t.Helper()
+	reg := manifest.NewRegistry()
+	draft, err := reg.RegisterDraft(manifest.Manifest{
+		TenantID: "t1", CaseID: "case-1", EvidenceID: evidenceID, Version: 1,
+		URI: "evidence://survey-1.pdf", Filename: "survey-1.pdf", MediaType: "application/pdf",
+		ByteSize: 1024, SHA256: "aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd4",
+		Method: "UPLOAD", Collector: "surveyor-1", Source: "independent-surveyor", AcquiredAt: 1, ReceivedAt: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur := draft
+	for _, s := range []manifest.State{manifest.StateIngested, manifest.StateIntegrityAssessed,
+		manifest.StateProvenanceComplete, manifest.StateReadyForFinalization, manifest.StateFinalized} {
+		cur, err = reg.Advance(evidenceID, s, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := manifest.VerifyManifestHash(cur); err != nil {
+		t.Fatal(err)
+	}
+	return reg
+}
 
 func TestZeroValueAuthorizedFindingIsZero(t *testing.T) {
 	var a AuthorizedFinding
@@ -143,5 +173,211 @@ func TestAuthorizationHashChangesWithTickOrHypothesis(t *testing.T) {
 	}
 	if a1.AuthorizationHash() == a2.AuthorizationHash() {
 		t.Fatal("expected authorizing at a different tick to change the AuthorizationHash")
+	}
+}
+
+// TestFindingAccessorReturnsAnIndependentCopy is the direct proof for
+// the immutability review item: mutating the slice a caller gets back
+// from Finding() must never be observable through a's own sealed
+// state, nor through any other call to Finding().
+func TestFindingAccessorReturnsAnIndependentCopy(t *testing.T) {
+	hs := buildHypothesisSet(t)
+	candidates := CandidateHypotheses(hs)
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, candidates[0], dg, FindingInput{
+		CaseID: "case-1", ContractBasis: "clause-9.3", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f1", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := Authorize(f, hs, candidates[0].ID, nil, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(a.Finding().SupportedBy) == 0 {
+		t.Fatal("fixture must have at least one SupportedBy entry for this test to be meaningful")
+	}
+	original := append([]string(nil), a.Finding().SupportedBy...)
+
+	got := a.Finding()
+	got.SupportedBy[0] = "TAMPERED"
+
+	again := a.Finding()
+	for i := range original {
+		if again.SupportedBy[i] != original[i] {
+			t.Fatalf("mutating a value returned by Finding() corrupted a's own sealed state: got %v, want %v", again.SupportedBy, original)
+		}
+	}
+	if err := VerifyFindingProvenance(again, nil); err != nil {
+		t.Fatalf("expected a's own state to still verify after an external mutation attempt: %v", err)
+	}
+}
+
+// TestAuthorizeClonesInputSoCallerCannotMutateAfterTheFact proves the
+// immutability boundary holds at CONSTRUCTION time too: a caller who
+// keeps their own reference to the slice they used to build the
+// pre-authorization Finding cannot reach into the sealed
+// AuthorizedFinding by mutating that reference after Authorize returns.
+func TestAuthorizeClonesInputSoCallerCannotMutateAfterTheFact(t *testing.T) {
+	hs := buildHypothesisSet(t)
+	candidates := CandidateHypotheses(hs)
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, candidates[0], dg, FindingInput{
+		CaseID: "case-1", ContractBasis: "clause-9.3", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f1", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.SupportedBy) == 0 {
+		t.Fatal("fixture must have at least one SupportedBy entry for this test to be meaningful")
+	}
+	original := append([]string(nil), f.SupportedBy...)
+
+	a, err := Authorize(f, hs, candidates[0].ID, nil, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The caller still holds f, built with its own SupportedBy slice --
+	// mutate it after the fact, exactly as a caller who reused a buffer
+	// or a shared slice might do.
+	f.SupportedBy[0] = "TAMPERED-AFTER-AUTHORIZE"
+
+	got := a.Finding()
+	for i := range original {
+		if got.SupportedBy[i] != original[i] {
+			t.Fatalf("mutating the caller's own pre-authorization Finding after Authorize returned corrupted the sealed AuthorizedFinding: got %v, want %v", got.SupportedBy, original)
+		}
+	}
+}
+
+// singleEvidenceHypothesisSet builds a minimal HypothesisSet with one
+// hypothesis citing exactly one evidence ID, so AuthorizeGrounded tests
+// only need to ground a single manifest.
+func singleEvidenceHypothesisSet(t *testing.T, evidenceID string) (*causation.HypothesisSet, causation.Hypothesis) {
+	t.Helper()
+	hs, err := causation.NewHypothesisSet("case-grounded", "claim-grounded", "question")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := hs.Add(causation.Hypothesis{ID: "H1", Description: "grounded hypothesis"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := hs.AddSupportingEvidence("H1", evidenceID); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := hs.Get("H1")
+	return hs, h
+}
+
+func TestAuthorizeGroundedAcceptsRealFinalizedEvidence(t *testing.T) {
+	const evidenceID = "ev-grounded-1"
+	hs, h := singleEvidenceHypothesisSet(t, evidenceID)
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, h, dg, FindingInput{
+		CaseID: "case-grounded", ContractBasis: "clause-1", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f-grounded", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifests := groundedManifestRegistry(t, evidenceID)
+	a, err := AuthorizeGrounded(f, hs, h.ID, nil, manifests, 1)
+	if err != nil {
+		t.Fatalf("AuthorizeGrounded: %v", err)
+	}
+	if a.IsZero() {
+		t.Fatal("expected a populated AuthorizedFinding")
+	}
+}
+
+func TestAuthorizeGroundedRefusesNilRegistry(t *testing.T) {
+	const evidenceID = "ev-grounded-2"
+	hs, h := singleEvidenceHypothesisSet(t, evidenceID)
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, h, dg, FindingInput{
+		CaseID: "case-grounded", ContractBasis: "clause-1", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f-grounded", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AuthorizeGrounded(f, hs, h.ID, nil, nil, 1); !errors.Is(err, ErrEvidenceNotGrounded) {
+		t.Fatalf("expected ErrEvidenceNotGrounded for a nil registry, got %v", err)
+	}
+}
+
+func TestAuthorizeGroundedRefusesUnknownEvidence(t *testing.T) {
+	const evidenceID = "ev-grounded-3"
+	hs, h := singleEvidenceHypothesisSet(t, evidenceID)
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, h, dg, FindingInput{
+		CaseID: "case-grounded", ContractBasis: "clause-1", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f-grounded", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyRegistry := manifest.NewRegistry() // no manifest registered for evidenceID at all
+	if _, err := AuthorizeGrounded(f, hs, h.ID, nil, emptyRegistry, 1); !errors.Is(err, ErrEvidenceNotGrounded) {
+		t.Fatalf("expected ErrEvidenceNotGrounded for unknown evidence, got %v", err)
+	}
+}
+
+func TestAuthorizeGroundedRefusesNonFinalizedEvidence(t *testing.T) {
+	const evidenceID = "ev-grounded-4"
+	hs, h := singleEvidenceHypothesisSet(t, evidenceID)
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, h, dg, FindingInput{
+		CaseID: "case-grounded", ContractBasis: "clause-1", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f-grounded", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := manifest.NewRegistry()
+	if _, err := reg.RegisterDraft(manifest.Manifest{
+		TenantID: "t1", CaseID: "case-1", EvidenceID: evidenceID, Version: 1,
+		URI: "evidence://x.pdf", Filename: "x.pdf", MediaType: "application/pdf",
+		ByteSize: 1, SHA256: "aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd4",
+		Method: "UPLOAD", Collector: "s", Source: "s", AcquiredAt: 1, ReceivedAt: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Left in DRAFT -- never advanced to FINALIZED.
+	if _, err := AuthorizeGrounded(f, hs, h.ID, nil, reg, 1); !errors.Is(err, ErrEvidenceNotGrounded) {
+		t.Fatalf("expected ErrEvidenceNotGrounded for a non-finalized manifest, got %v", err)
+	}
+}
+
+func TestAuthorizeGroundedRefusesPartiallyGroundedEvidence(t *testing.T) {
+	hs, err := causation.NewHypothesisSet("case-partial", "claim-partial", "question")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := hs.Add(causation.Hypothesis{ID: "H1", Description: "partially grounded"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := hs.AddSupportingEvidence("H1", "ev-real"); err != nil {
+		t.Fatal(err)
+	}
+	if err := hs.AddSupportingEvidence("H1", "ev-fake"); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := hs.Get("H1")
+	dg := evidence.NewDependencyGraph()
+	f, err := BuildFinding(hs, h, dg, FindingInput{
+		CaseID: "case-partial", ContractBasis: "clause-1", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+	}, "f-partial", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Only "ev-real" is grounded; "ev-fake" has no manifest at all.
+	manifests := groundedManifestRegistry(t, "ev-real")
+	if _, err := AuthorizeGrounded(f, hs, h.ID, nil, manifests, 1); !errors.Is(err, ErrEvidenceNotGrounded) {
+		t.Fatalf("expected ErrEvidenceNotGrounded when even one cited evidence ID is ungrounded, got %v", err)
 	}
 }

@@ -31,6 +31,7 @@ import (
 	"fmt"
 
 	"veriqo/pkg/canonical/jcs"
+	"veriqo/pkg/evidence/manifest"
 	"veriqo/pkg/inference"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/finding"
@@ -39,6 +40,22 @@ import (
 // AuthorizedFinding is a finding.Finding that has passed the Finding
 // Verification Gate. See this file's package-level doc comment for why
 // it cannot be forged from outside this package.
+//
+// Unexported fields alone stop cross-package CONSTRUCTION, but not
+// cross-package MUTATION of what is already sealed inside one: Go
+// copies a struct's slice fields by header (pointer, length, capacity),
+// not by cloning the backing array, so returning finding.Finding by
+// value from an accessor would still hand out a reference to the same
+// backing arrays this type's own hash was computed over. A caller
+// holding that reference could mutate SupportedBy/ContradictedBy/
+// Alternatives in place, silently corrupting a.finding out from under
+// its own already-computed AuthorizationHash with no error raised
+// anywhere. cloneFinding closes this at BOTH ends: Authorize clones f
+// before sealing it in (so a caller who keeps their own reference to
+// the Finding they built cannot reach back in after the fact), and
+// Finding() clones again before returning (so a caller mutating what
+// they got back cannot reach in either). Every call to Finding()
+// therefore returns a fully independent copy.
 type AuthorizedFinding struct {
 	finding      finding.Finding
 	hypothesisID causation.HypothesisID
@@ -46,8 +63,21 @@ type AuthorizedFinding struct {
 	hash         string
 }
 
-// Finding returns the underlying, now-authorized Finding.
-func (a AuthorizedFinding) Finding() finding.Finding { return a.finding }
+// cloneFinding returns f with SupportedBy/ContradictedBy/Alternatives
+// deep-copied -- the only reference-type fields finding.Finding has
+// (see finding.Finding's own definition: everything else is a scalar).
+func cloneFinding(f finding.Finding) finding.Finding {
+	f.SupportedBy = append([]string(nil), f.SupportedBy...)
+	f.ContradictedBy = append([]string(nil), f.ContradictedBy...)
+	f.Alternatives = append([]string(nil), f.Alternatives...)
+	return f
+}
+
+// Finding returns the underlying, now-authorized Finding as an
+// independent copy -- mutating the result can never affect a's own
+// sealed state, and never affects any other copy a previous or future
+// call to Finding() returned either.
+func (a AuthorizedFinding) Finding() finding.Finding { return cloneFinding(a.finding) }
 
 // HypothesisID names which hypothesis this Finding was authorized
 // against.
@@ -92,11 +122,57 @@ func Authorize(f finding.Finding, hs *causation.HypothesisSet, hypothesisID caus
 	if err := VerifyFindingProvenance(f, traces); err != nil {
 		return AuthorizedFinding{}, err
 	}
-	a := AuthorizedFinding{finding: f, hypothesisID: hypothesisID, authorizedAt: tick}
+	// Clone before sealing: f's slice fields may still be referenced by
+	// whatever code the caller used to build it (see cloneFinding's own
+	// doc comment). Everything from here on reads/hashes the clone, not
+	// the caller-supplied f, so nothing the caller still holds a
+	// reference to can reach into a's internal state after this point.
+	a := AuthorizedFinding{finding: cloneFinding(f), hypothesisID: hypothesisID, authorizedAt: tick}
 	a.hash = jcs.MustHash(struct {
 		FindingHash  string                 `json:"finding_hash"`
 		HypothesisID causation.HypothesisID `json:"hypothesis_id"`
 		AuthorizedAt uint64                 `json:"authorized_at"`
 	}{f.Hash, hypothesisID, tick})
 	return a, nil
+}
+
+// ErrEvidenceNotGrounded is AuthorizeGrounded's refusal when a cited
+// evidence ID does not resolve to a real, FINALIZED, hash-verified
+// manifest.Manifest.
+var ErrEvidenceNotGrounded = errors.New("cre: Finding cites evidence that is not grounded in a real, finalized, hash-verified manifest")
+
+// AuthorizeGrounded is Authorize, strengthened with evidence-hash-level
+// lineage verification: "Finding.Hash == recomputedHash" proves f is
+// internally consistent; it does not prove the evidence f cites is
+// real. Authorize (via VerifyFindingAgainstHypothesis) already confirms
+// SupportedBy/ContradictedBy match the real hypothesis's own evidence
+// REFERENCES -- but a reference is just a string ID, and nothing in
+// Authorize alone confirms that ID names evidence that actually exists,
+// let alone evidence whose own integrity independently verifies.
+// AuthorizeGrounded closes that: every evidence ID f cites in
+// SupportedBy or ContradictedBy must resolve, in manifests, to a
+// manifest.Manifest whose latest version is FINALIZED and whose own
+// hash independently verifies via manifest.VerifyManifestHash. manifests
+// must not be nil -- a caller with no real evidence-manifest registry
+// to check against should call Authorize directly rather than pass an
+// empty one and have every citation trivially fail.
+func AuthorizeGrounded(f finding.Finding, hs *causation.HypothesisSet, hypothesisID causation.HypothesisID,
+	traces []inference.InferenceTrace, manifests *manifest.Registry, tick uint64) (AuthorizedFinding, error) {
+	if manifests == nil {
+		return AuthorizedFinding{}, fmt.Errorf("%w: no manifest registry was supplied to ground evidence against", ErrEvidenceNotGrounded)
+	}
+	cited := append(append([]string(nil), f.SupportedBy...), f.ContradictedBy...)
+	for _, evidenceID := range cited {
+		m, err := manifests.Latest(evidenceID)
+		if err != nil {
+			return AuthorizedFinding{}, fmt.Errorf("%w: %s: %v", ErrEvidenceNotGrounded, evidenceID, err)
+		}
+		if m.State != manifest.StateFinalized {
+			return AuthorizedFinding{}, fmt.Errorf("%w: %s is not FINALIZED (state=%s)", ErrEvidenceNotGrounded, evidenceID, m.State)
+		}
+		if err := manifest.VerifyManifestHash(m); err != nil {
+			return AuthorizedFinding{}, fmt.Errorf("%w: %s: %v", ErrEvidenceNotGrounded, evidenceID, err)
+		}
+	}
+	return Authorize(f, hs, hypothesisID, traces, tick)
 }
