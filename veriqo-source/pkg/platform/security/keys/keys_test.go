@@ -77,6 +77,33 @@ func TestPendingKeyCannotSign(t *testing.T) {
 	}
 }
 
+// TestRegisterForcesPendingRegardlessOfCallerSuppliedState is the direct
+// adversarial proof for Register's own defensive reset: a caller who
+// hand-builds KeyMetadata{State: StateActive} (or StateRevoked) and
+// Registers it directly must NOT thereby skip Activate() -- the key
+// must land at StatePending like any other freshly registered key, and
+// must refuse to sign until a real Activate() call.
+func TestRegisterForcesPendingRegardlessOfCallerSuppliedState(t *testing.T) {
+	for _, forged := range []State{StateActive, StateRevoked, StateRetired} {
+		p := NewMemoryKeyProvider()
+		m := NewManager(p)
+		forgedMD := KeyMetadata{KeyID: "forged-key", Purpose: PurposeEvidence, State: forged, PublicKey: "00"}
+		if err := m.Register(forgedMD); err != nil {
+			t.Fatalf("Register(%s): %v", forged, err)
+		}
+		got, err := m.Metadata("forged-key")
+		if err != nil {
+			t.Fatalf("Metadata: %v", err)
+		}
+		if got.State != StatePending {
+			t.Fatalf("caller claimed State=%s: expected Register to force StatePending, got %s", forged, got.State)
+		}
+		if _, err := m.Sign(context.Background(), "forged-key", digest("x"), 1); !errors.Is(err, ErrKeyNotActive) {
+			t.Fatalf("caller claimed State=%s: expected a forged key to still refuse to sign before a real Activate(), got %v", forged, err)
+		}
+	}
+}
+
 func TestExpiredKeyCannotSign(t *testing.T) {
 	m, _ := setup(t)
 	if _, err := m.Sign(context.Background(), "evidence-1", digest("x"), 5000); !errors.Is(err, ErrKeyExpired) {

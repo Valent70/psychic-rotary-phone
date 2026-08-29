@@ -195,15 +195,35 @@ func NewManager(p KeyProvider) *Manager {
 	return &Manager{provider: p, meta: map[string]*KeyMetadata{}}
 }
 
-// Register records a key's metadata under management.
+// Register records a key's metadata under management. State is always
+// forced to StatePending regardless of what the caller supplied --
+// exactly like manifest.Registry.RegisterDraft forcing State=DRAFT and
+// evidence.Registry.Submit resetting Status -- because State gates real
+// authority here (ActiveKeyFor and Sign both branch directly on
+// State==StateActive, with no separate derivation step). Without this,
+// a caller could hand-build KeyMetadata{State: StateActive} and Register
+// it directly, skipping the Activate() step this package's own lifecycle
+// (PENDING -> ACTIVE -> RETIRED -> REVOKED) treats as the gate. The only
+// legitimate way a key becomes ACTIVE is a real Activate() call.
 func (m *Manager) Register(md KeyMetadata) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	md.State = StatePending
+	return m.registerLocked(md)
+}
+
+// registerLocked is Register's core logic, assuming m.mu is already
+// held. Unlike the public Register, it does NOT force State -- it
+// trusts its caller completely, which is safe only because every
+// internal caller is itself an already-gated, privileged code path that
+// independently decided what State the new entry should carry (Register
+// always passes StatePending; Rotate passes StateActive only after
+// independently verifying the predecessor's own real state under the
+// SAME lock). No external caller can reach registerLocked directly --
+// it is unexported.
+func (m *Manager) registerLocked(md KeyMetadata) error {
 	if _, dup := m.meta[md.KeyID]; dup {
 		return fmt.Errorf("%w: %s", ErrKeyExists, md.KeyID)
-	}
-	if md.State == "" {
-		md.State = StatePending
 	}
 	if md.Version == 0 {
 		md.Version = 1
@@ -233,13 +253,12 @@ func (m *Manager) Activate(keyID string) error {
 // them. Signatures made by the retired key REMAIN valid.
 func (m *Manager) Rotate(oldKeyID string, successor KeyMetadata) error {
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	old, ok := m.meta[oldKeyID]
 	if !ok {
-		m.mu.Unlock()
 		return fmt.Errorf("%w: %s", ErrUnknownKey, oldKeyID)
 	}
 	if old.State == StateRevoked {
-		m.mu.Unlock()
 		return ErrKeyRevoked
 	}
 	old.State = StateRetired
@@ -247,8 +266,7 @@ func (m *Manager) Rotate(oldKeyID string, successor KeyMetadata) error {
 	successor.Version = old.Version + 1
 	successor.Purpose = old.Purpose
 	successor.State = StateActive
-	m.mu.Unlock()
-	return m.Register(successor)
+	return m.registerLocked(successor)
 }
 
 // Revoke invalidates a key and everything it signed, retroactively.
