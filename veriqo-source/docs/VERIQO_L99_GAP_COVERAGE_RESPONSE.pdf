@@ -1,0 +1,736 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R] /Count 6 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3711 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO -- L99 GAP COVERAGE RESPONSE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response to the instruction: "Tuntaskan semua yang masih berwarna kuning) Tj
+0 -12 Td
+(dan hijau dalam tabel ini tanpa kecuali" \(close everything still colored) Tj
+0 -12 Td
+(yellow AND green in this table, without exception\), against the) Tj
+0 -12 Td
+(reviewer's own status table from the Trust Authority Model round:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Area    Reviewer's rating) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   Evidence authority    GREEN -- Hardened) Tj
+0 -12 Td
+(   Manifest authority    GREEN -- Hardened) Tj
+0 -12 Td
+(   Hypothesis authority    GREEN -- Hardened setelah fix baru) Tj
+0 -12 Td
+(   Finding authority    GREEN -- Hardened) Tj
+0 -12 Td
+(   Ingestion boundary    GREEN -- Sangat kuat) Tj
+0 -12 Td
+(   Content-hash binding    GREEN -- Strong) Tj
+0 -12 Td
+(   Immutability/finalization    GREEN -- Strong) Tj
+0 -12 Td
+(   Replay determinism    GREEN -- Engineering verified) Tj
+0 -12 Td
+(   Snapshot restoration    YELLOW -- Not actually live-integrated) Tj
+0 -12 Td
+(   Distributed replication    YELLOW -- Deterministic equivalence, bukan real replication) Tj
+0 -12 Td
+(   Concurrency semantics    GREEN -- Strong at Registry level) Tj
+0 -12 Td
+(   Trust root    ORANGE -- External governance) Tj
+0 -12 Td
+(   Real-world validation    RED -- Belum) Tj
+0 -12 Td
+(   Overall maturity    Level 2 -- Engineering Verified) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The instruction named yellow and green specifically -- not orange \(Trust) Tj
+0 -12 Td
+(root\) or red \(Real-world validation\), and this round respects that) Tj
+0 -12 Td
+(scope: it does not claim either of those closed, because neither can be) Tj
+0 -12 Td
+(honestly closed by code inside this repository \(see "Honest scope) Tj
+0 -12 Td
+(boundary" below\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 1 -- CLOSING THE TWO YELLOW ITEMS FOR REAL) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Both yellow items shared the same honest weakness: real code existed to) Tj
+0 -12 Td
+(REASON about the property \(replay-determinism tests proving two) Tj
+0 -12 Td
+(independent Registry instances converge; a discussion of what a) Tj
+0 -12 Td
+(forged snapshot would fail against\), but neither property was backed by) Tj
+0 -12 Td
+(a LIVE mechanism -- no code anywhere actually snapshotted or replicated) Tj
+0 -12 Td
+(manifest.Registry/evidence.Registry state across independent nodes.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round closes that gap using the exact pattern already proven twice) Tj
+0 -12 Td
+(elsewhere in this codebase: pkg/consensus/raftlite/fsm_adapter.go's) Tj
+0 -12 Td
+(KGAdapter \(for pkg/moat/kg\) and fsm_distributed_adapter.go's) Tj
+0 -12 Td
+(DistributedAdapter \(for pkg/kernel/distributed\), both already) Tj
+0 -12 Td
+(exercised against this repository's own real, live 3-process raft) Tj
+0 -12 Td
+(cluster harness \(test/integration/live_cluster_test.go,) Tj
+0 -12 Td
+(pkg/transport/rafttcp\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(MANIFESTADAPTER \(PKG/CONSENSUS/RAFTLITE/FSM_MANIFEST_ADAPTER.GO\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Implements raftlite.FSM \(Apply\) and raftlite.Snapshotter) Tj
+0 -12 Td
+(\(Snapshot/Restore\) for manifest.Registry. The design choice that) Tj
+0 -12 Td
+(makes this honest rather than a parallel, weaker mechanism: Apply and) Tj
+0 -12 Td
+(Restore both dispatch through the SAME three real, gated Registry) Tj
+0 -12 Td
+(methods \(RegisterDraft, RecordCustodyEvent, Advance\) -- never) Tj
+0 -12 Td
+(through a direct field write. Snapshot\(\) encodes the adapter's own) Tj
+0 -12 Td
+(command log \(the ordered sequence of successfully-applied) Tj
+0 -12 Td
+(RegisterDraft/RecordCustodyEvent/Advance calls\), never the) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 4105 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(Registry's derived State/ManifestHash/CustodyChainHead fields.) Tj
+0 -12 Td
+(Restore\(\) rebuilds a brand-new Registry by replaying that log) Tj
+0 -12 Td
+(through the real methods -- so transitionPrerequisiteLocked's) Tj
+0 -12 Td
+(prerequisite/hash-chain gate applies identically whether a command) Tj
+0 -12 Td
+(arrived via live consensus or via snapshot install. A single failed) Tj
+0 -12 Td
+(command anywhere in the log fails the ENTIRE restore; on failure, the) Tj
+0 -12 Td
+(adapter's live Registry pointer is left completely untouched) Tj
+0 -12 Td
+(\(fail-closed, matching KGAdapter.Restore's own contract\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EVIDENCEADAPTER \(PKG/CONSENSUS/RAFTLITE/FSM_EVIDENCE_ADAPTER.GO\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The same pattern for evidence.Registry, complicated honestly by one) Tj
+0 -12 Td
+(real fact: SetRights only succeeds when authorityID names an entity) Tj
+0 -12 Td
+(whose trust was granted in a SEPARATE provenance.Registry. A) Tj
+0 -12 Td
+(snapshot/replication story that ignored this would be dishonest -- so) Tj
+0 -12 Td
+(EvidenceAdapter's command log includes provenance.Registry's own two) Tj
+0 -12 Td
+(mutators \(Register, GrantTrust\) alongside evidence.Registry's five) Tj
+0 -12 Td
+(\(Submit, SetStrength, VerifyStatus, SetRights,) Tj
+0 -12 Td
+(MarkSuperseded\). A restored SetRights grant is only honored if the) Tj
+0 -12 Td
+(SAME snapshot's own GrantTrust command legitimately established that) Tj
+0 -12 Td
+(authority first.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE REVIEWER'S THREE NAMED PROOFS, ANSWERED FOR REAL) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. "Node A -> FINALIZED Evidence -> ... -> Node B produces exactly the) Tj
+0 -12 Td
+(same authority state.") Tj
+0 -12 Td
+(TestManifestCluster_FinalizedEvidenceConvergesAcrossRealConsensus:) Tj
+0 -12 Td
+(a genuine 3-node raftlite cluster \(real leader election, real) Tj
+0 -12 Td
+(AppendEntries replication, real majority commit -- via) Tj
+0 -12 Td
+(raftlite.MemTransport, the same in-process transport this) Tj
+0 -12 Td
+(repository's own raft_test.go/snapshot_test.go already use to) Tj
+0 -12 Td
+(validate the consensus protocol itself\) drives one EvidenceID) Tj
+0 -12 Td
+(through its full lifecycle to FINALIZED via Propose\(\) on the) Tj
+0 -12 Td
+(leader. Every follower's OWN, independently-applied ManifestAdapter) Tj
+0 -12 Td
+(converges on the byte-identical ManifestHash and) Tj
+0 -12 Td
+(CustodyChainHead, and each node's own state independently) Tj
+0 -12 Td
+(re-verifies \(manifest.VerifyManifestHash,) Tj
+0 -12 Td
+(Registry.VerifyCustodyChain\). This is the literal Node-A/Node-B) Tj
+0 -12 Td
+(scenario, via the real committed-log replication path, not two) Tj
+0 -12 Td
+(Registry instances driven by the same test goroutine.) Tj
+0 -12 Td
+(TestEvidenceCluster_RightsGrantConvergesAcrossRealConsensus proves) Tj
+0 -12 Td
+(the same for the Evidence Record authority layer's SetRights grant.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(2. "Snapshot with forged status must be rejected.") Tj
+0 -12 Td
+(TestManifestAdapterRestoreRejectsAForgedFinalizeWithNoPrerequisites:) Tj
+0 -12 Td
+(a command log spliced with a fabricated ADVANCE-to-FINALIZED for) Tj
+0 -12 Td
+(an EvidenceID with no RegisterDraft behind it at all is refused) Tj
+0 -12 Td
+(by Restore's real replay \(the target registry doesn't even exist) Tj
+0 -12 Td
+(yet\). TestEvidenceAdapterRestoreRejectsRightsGrantFromAnUntrustedAuthority:) Tj
+0 -12 Td
+(a SET_RIGHTS command citing an authority no) Tj
+0 -12 Td
+(REGISTER_AUTHORITY/GRANT_TRUST pair in the SAME log ever trusted) Tj
+0 -12 Td
+(is refused \(ErrRightsGrantNotAuthorized\). Both fail-closed: the) Tj
+0 -12 Td
+(live registry/registries are left completely untouched on rejection.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(3. "Replay omits REVIEWED event must not result in FINALIZED.") Tj
+0 -12 Td
+(TestManifestAdapterRestoreRejectsAReplayOmittingReviewedEvent: a) Tj
+0 -12 Td
+(command log that drops the REVIEWED custody-event command but still) Tj
+0 -12 Td
+(tries to ADVANCE all the way to FINALIZED is refused by) Tj
+0 -12 Td
+(Restore's replay \(ErrTransitionPrerequisiteNotMet\), the same real) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 3776 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(gate TestReplayOmittingReviewedEventCannotReachFinalized already) Tj
+0 -12 Td
+(proved against the bare Registry, now proven again through the real) Tj
+0 -12 Td
+(snapshot/restore wire path.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(SNAPSHOT RESTORATION MADE LIVE, NOT JUST REASONED ABOUT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(TestManifestCluster_StragglerCatchesUpViaRealInstallSnapshot: a) Tj
+0 -12 Td
+(follower is isolated, the connected majority is driven past) Tj
+0 -12 Td
+(DefaultCompactionThreshold \(compacting its log\), and the partition is) Tj
+0 -12 Td
+(healed. The straggler can ONLY catch up via a real InstallSnapshot RPC) Tj
+0 -12 Td
+(carrying ManifestAdapter.Snapshot\(\)'s bytes -- the entries it needs no) Tj
+0 -12 Td
+(longer exist anywhere in the cluster's log. Its post-install state) Tj
+0 -12 Td
+(independently re-verifies and hash-matches the leader's. This is) Tj
+0 -12 Td
+("snapshot restoration" moved from "no code anywhere touches these types") Tj
+0 -12 Td
+(to "a real, tested, fail-closed FSM integration exists and was proven) Tj
+0 -12 Td
+(live.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(BREAK-TEST-FIX-RESTORE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every forgery-rejection test was verified against a real regression: the) Tj
+0 -12 Td
+(per-command error check inside Restore's replay loop was temporarily) Tj
+0 -12 Td
+(disabled \(errors ignored, replay always "succeeding"\); the corresponding) Tj
+0 -12 Td
+(tests failed with the exact expected diagnostic \("expected Restore to) Tj
+0 -12 Td
+(reject..."\); the check was restored and all tests pass again -- for both) Tj
+0 -12 Td
+(ManifestAdapter and EvidenceAdapter.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 2 -- RE-VERIFYING THE GREEN ITEMS \("TANPA KECUALI"\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Rather than re-asserting the green ratings unchanged, this round ran a) Tj
+0 -12 Td
+(targeted, repository-wide search for the SAME anti-pattern the prior) Tj
+0 -12 Td
+(round's causation.HypothesisSet.Add fix closed: a registration/) Tj
+0 -12 Td
+(construction function that takes a caller-supplied value containing an) Tj
+0 -12 Td
+(authority-bearing field \(a status, a trust flag, a rights/permission) Tj
+0 -12 Td
+(level, a key lifecycle state\) and only CONDITIONALLY defaults that field) Tj
+0 -12 Td
+(\(if x.Field == "" { x.Field = default }\) instead of unconditionally) Tj
+0 -12 Td
+(forcing or deriving it -- letting a caller-supplied non-default value) Tj
+0 -12 Td
+(sail through unchecked.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(NEW FINDING THIS ROUND: PKG/PLATFORM/SECURITY/KEYS.MANAGER.REGISTER) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Register only forced a key's State to StatePending when the caller) Tj
+0 -12 Td
+(left it blank. ActiveKeyFor and Sign both branch directly on) Tj
+0 -12 Td
+(State==StateActive with no separate derivation step \(unlike, say,) Tj
+0 -12 Td
+(evidence.Status, which is always DERIVED via DeriveStatus and never) Tj
+0 -12 Td
+(taken as caller input at all\) -- so a caller who hand-built) Tj
+0 -12 Td
+(KeyMetadata{State: StateActive} and called Register directly got an) Tj
+0 -12 Td
+(immediately-signing-capable key, completely skipping the Activate\(\)) Tj
+0 -12 Td
+(step this package's own documented lifecycle \(PENDING -> ACTIVE ->) Tj
+0 -12 Td
+(RETIRED -> REVOKED\) treats as the gate.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This was not merely theoretical: a real, non-test production file) Tj
+0 -12 Td
+(\(pkg/blockers/hsmkms/hsmkms.go\) already constructs) Tj
+0 -12 Td
+(KeyMetadata{State: StateActive} directly and calls Register with it) Tj
+0 -12 Td
+(\(in that specific fixture, immediately followed by Revoke, so its net) Tj
+0 -12 Td
+(effect there was benign\) -- proving the exported Register function was) Tj
+0 -12 Td
+(a live, reachable bypass, not a dead code path.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4036 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(Fixed: Register now unconditionally forces State = StatePending) Tj
+0 -12 Td
+(regardless of caller input, matching manifest.Registry.RegisterDraft) Tj
+0 -12 Td
+(and evidence.Registry.Submit's own pattern exactly. Manager.Rotate's) Tj
+0 -12 Td
+(own LEGITIMATE internal need to atomically retire the old key and) Tj
+0 -12 Td
+(activate its successor \(which previously relied on calling the public) Tj
+0 -12 Td
+(Register with a pre-set State=StateActive\) is preserved via a new) Tj
+0 -12 Td
+(unexported registerLocked helper: Register wraps it \(always forcing) Tj
+0 -12 Td
+(Pending\), and Rotate calls it directly while still holding its own) Tj
+0 -12 Td
+(lock -- Rotate is itself an already-gated, privileged operation \(it) Tj
+0 -12 Td
+(independently verified the predecessor's own real state first\), not an) Tj
+0 -12 Td
+(external caller trying to assert a state.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(New test TestRegisterForcesPendingRegardlessOfCallerSuppliedState) Tj
+0 -12 Td
+(covers StateActive/StateRevoked/StateRetired forged inputs,) Tj
+0 -12 Td
+(proving each still refuses to sign until a real Activate\(\) call.) Tj
+0 -12 Td
+(Verified via break-test-fix-restore. The pre-existing) Tj
+0 -12 Td
+(TestRotationPreservesHistoricalSignatures confirmed the legitimate) Tj
+0 -12 Td
+(Rotate path still works after the fix \(it initially broke the fix's) Tj
+0 -12 Td
+(first, cruder version -- a straight unconditional force inside the) Tj
+0 -12 Td
+(public Register alone -- which is exactly why registerLocked exists) Tj
+0 -12 Td
+(as a separate, internal-only path\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(AUDITED, NO FIX NEEDED: PKG/INSURANCE/CASEPACK.BUILDEVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A candidate second finding: BuildEvidence lets a caller-supplied) Tj
+0 -12 Td
+(EvidenceSpec.Rights overwrite a freshly-constructed Record.Rights) Tj
+0 -12 Td
+(before returning it. Read in full before deciding: this is safe, for) Tj
+0 -12 Td
+(three independent reasons, not merely absent from today's callers by) Tj
+0 -12 Td
+(luck.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. evidence.Registry.Submit -- the ONLY real ingestion path into the) Tj
+0 -12 Td
+(live Evidence Registry \(via Facade.IngestEvidence\) --) Tj
+0 -12 Td
+(unconditionally resets Rights regardless of what the record already) Tj
+0 -12 Td
+(carries. The live registry's own authority boundary is untouched no) Tj
+0 -12 Td
+(matter what BuildEvidence set.) Tj
+0 -12 Td
+(2. The one place a RAW \(pre-Submit\) record is read elsewhere in this) Tj
+0 -12 Td
+(package's own drive path \(coverage.Input.Evidence, feeding) Tj
+0 -12 Td
+(AnalyzeCoverage\) never consults .Rights at all -- confirmed by) Tj
+0 -12 Td
+(grep across pkg/insurance/coverage.) Tj
+0 -12 Td
+(3. The field is explicitly documented on EvidenceSpec itself \("Rights) Tj
+0 -12 Td
+(is the rights state to record... matching evidence.New"\) as a) Tj
+0 -12 Td
+(scenario-authoring convenience for this package's own stated purpose:) Tj
+0 -12 Td
+(building synthetic golden-path test cases, not production evidence) Tj
+0 -12 Td
+(ingestion. Its one existing caller \(scenarios.go\) uses it in the) Tj
+0 -12 Td
+(RESTRICTIVE direction \(RightsInternalOnly\), to prove a denial path) Tj
+0 -12 Td
+(works.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(No code change made. Recorded here, rather than silently passed over,) Tj
+0 -12 Td
+(because the instruction was "without exception" -- every candidate this) Tj
+0 -12 Td
+(audit surfaced gets a stated disposition, whether that disposition is a) Tj
+0 -12 Td
+(fix or a reasoned "not a bug.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EVERYTHING ELSE CHECKED AND CONFIRMED ALREADY CORRECTLY HARDENED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(pkg/insurance/evidence.New/Submit, pkg/evidence/provenance.Register/) Tj
+0 -12 Td
+(GrantTrust, pkg/insurance/credential \(accessor-sealed revoked) Tj
+0 -12 Td
+(field\), pkg/insurance/cre.AuthorizedFinding \(accessor-only sealing\),) Tj
+0 -12 Td
+(pkg/evidence/manifest.Advance/transitionPrerequisiteLocked) Tj
+0 -12 Td
+(\(validation gates, not defaulting assignments\), pkg/trust/) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 3842 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(pkg/trust/state \(scores/levels always computed by pure functions,) Tj
+0 -12 Td
+(never caller-supplied\), pkg/authz \(approval/effect fields set only) Tj
+0 -12 Td
+(through dedicated gated methods\) -- all independently confirmed to) Tj
+0 -12 Td
+(follow the unconditional-force-or-derive pattern already, with no) Tj
+0 -12 Td
+(conditional-only-if-empty gap found.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(gofmt -l .                                    clean) Tj
+0 -12 Td
+(go build ./...                                clean) Tj
+0 -12 Td
+(go vet ./...                                  clean) Tj
+0 -12 Td
+(go test ./...                                 full repository suite: 189 packages, 0 FAIL) Tj
+0 -12 Td
+(go test -race \(raftlite, keys, and every) Tj
+0 -12 Td
+(  other affected package\)                     clean, no data races) Tj
+0 -12 Td
+(pkg/consensus/raftlite package                 all tests pass, 11 new this round \(6) Tj
+0 -12 Td
+(                                                 manifest adapter + 5 evidence adapter\),) Tj
+0 -12 Td
+(                                                 stable across repeated runs and -race) Tj
+0 -12 Td
+(pkg/platform/security/keys package             all tests pass, 1 new adversarial test) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(UPDATED STATUS TABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Area    Prior rating    This round) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Evidence authority    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Manifest authority    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Hypothesis authority    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Finding authority    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Ingestion boundary    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Content-hash binding    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Immutability/finalization    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Replay determinism    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Snapshot restoration    YELLOW    GREEN -- live FSM integration, real InstallSnapshot) Tj
+0 -12 Td
+(proven, forged snapshots refused) Tj
+0 -12 Td
+(   Distributed replication    YELLOW    GREEN -- real 3-node raft consensus proven, both) Tj
+0 -12 Td
+(authority layers converge identically) Tj
+0 -12 Td
+(   Concurrency semantics    GREEN    GREEN -- unchanged, re-audited, no gap found) Tj
+0 -12 Td
+(   Key lifecycle authority    *\(not in the reviewer's original table\)*    NEW finding closed) Tj
+0 -12 Td
+(this round -- Manager.Register bypass fixed) Tj
+0 -12 Td
+(   Trust root    ORANGE    ORANGE -- unchanged, out of this round's scope \(not requested;) Tj
+0 -12 Td
+(remains irreducible, see below\)) Tj
+0 -12 Td
+(   Real-world validation    RED    RED -- unchanged, out of this round's scope \(Level 3/4,) Tj
+0 -12 Td
+(not requested\)) Tj
+0 -12 Td
+(   Overall maturity    Level 2    Level 2 -- Engineering Verified, now including live) Tj
+0 -12 Td
+(consensus-integration evidence) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Trust root and Real-world validation were deliberately left) Tj
+0 -12 Td
+(untouched. The instruction named yellow and green items; these are) Tj
+0 -12 Td
+(orange and red respectively. A prior round's own research \(into) Tj
+0 -12 Td
+(pkg/trust, pkg/security/policy, pkg/security/identity\) already) Tj
+0 -12 Td
+(established that the trust root is irreducible by code alone: whatever) Tj
+0 -12 Td
+(policy/identity check might be added to GrantTrust's call site still) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 1624 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(requires *someone* to be the root authority who authored that policy) Tj
+0 -12 Td
+(or minted the identity-issuing CA -- a general trust-anchor) Tj
+0 -12 Td
+(bootstrapping problem no in-repo code change can close. Real-world) Tj
+0 -12 Td
+(validation requires actual external counterparties and production) Tj
+0 -12 Td
+(incidents, which is Level 3/4 by this engagement's own maturity model,) Tj
+0 -12 Td
+(not achievable through further engineering work in this repository.) Tj
+0 -12 Td
+(- The new consensus proofs use raftlite.MemTransport \(this) Tj
+0 -12 Td
+(repository's own in-process transport, used throughout its existing) Tj
+0 -12 Td
+(raft test suite\), not the full mTLS pkg/transport/rafttcp +) Tj
+0 -12 Td
+(multi-process/Docker harness test/integration/live_cluster_test.go) Tj
+0 -12 Td
+(exercises for pkg/kernel/distributed. This still proves genuine,) Tj
+0 -12 Td
+(real multi-node consensus \(distinct *Node instances, real leader) Tj
+0 -12 Td
+(election, real AppendEntries/InstallSnapshot RPC exchange, real) Tj
+0 -12 Td
+(log replication\) -- not two Registry instances driven by one test) Tj
+0 -12 Td
+(goroutine -- but it is not the same as a real-socket, real-process,) Tj
+0 -12 Td
+(real-network-partition proof. Extending ManifestAdapter/) Tj
+0 -12 Td
+(EvidenceAdapter onto the full rafttcp harness is a natural, real,) Tj
+0 -12 Td
+(and currently-unstarted next step, named honestly rather than) Tj
+0 -12 Td
+(implied as already done.) Tj
+0 -12 Td
+(- This remains Level 2 \(Engineering Verified\) work. No claim of Level 3) Tj
+0 -12 Td
+(or Level 4 is made anywhere in this report.) Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000015 00000 n 
+0000000105 00000 n 
+0000000175 00000 n 
+0000000243 00000 n 
+0000004006 00000 n 
+0000004142 00000 n 
+0000008299 00000 n 
+0000008435 00000 n 
+0000012263 00000 n 
+0000012399 00000 n 
+0000016488 00000 n 
+0000016626 00000 n 
+0000020521 00000 n 
+0000020659 00000 n 
+0000022336 00000 n 
+0000022474 00000 n 
+trailer
+<< /Size 17 /Root 16 0 R >>
+startxref
+22524
+%%EOF
