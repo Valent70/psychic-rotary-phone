@@ -50,6 +50,15 @@ type ServerOptions struct {
 	JWTSecret []byte             // non-empty enables JWT auth (Bearer token)
 	RBAC      security.RoleTable // non-empty enables RBAC (requires JWTSecret to be set too)
 	Audit     *audit.AuditStore  // non-nil enables hash-chained request auditing
+
+	// InsuranceLedger, when non-nil, additionally serves POST
+	// /insurance/decide over the real pkg/insurance/claimworkflow
+	// Decision Trust Boundary (see insurance_decide_route.go) -- every
+	// Decision it produces is appended to this exact store, so a caller
+	// holding InsuranceLedger can independently audit every decision
+	// this route has ever reached. A nil value (every caller of this
+	// function before this route existed) simply omits the route.
+	InsuranceLedger *audit.AuditStore
 }
 
 // NewServer builds an *http.Server exposing every generated route
@@ -68,6 +77,9 @@ func NewServer(addr string, reg *registry.Registry, orch *lifecycle.Orchestrator
 		mux.HandleFunc(path, handler)
 	}
 	for path, handler := range lifecycleRoutes(orch) {
+		mux.HandleFunc(path, handler)
+	}
+	for path, handler := range insuranceRoutes(opts.InsuranceLedger) {
 		mux.HandleFunc(path, handler)
 	}
 	mux.HandleFunc("/healthz", healthHandler(reg))

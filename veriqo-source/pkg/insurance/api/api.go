@@ -17,13 +17,17 @@ import (
 	"errors"
 	"fmt"
 
+	"veriqo/pkg/evidence/manifest"
+	"veriqo/pkg/inference"
 	"veriqo/pkg/insurance/canonical"
 	insurancecase "veriqo/pkg/insurance/case"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/claim"
 	"veriqo/pkg/insurance/contradiction"
 	"veriqo/pkg/insurance/coverage"
+	"veriqo/pkg/insurance/cre"
 	"veriqo/pkg/insurance/deadline"
+	"veriqo/pkg/insurance/decision"
 	"veriqo/pkg/insurance/dossier"
 	"veriqo/pkg/insurance/evidence"
 	"veriqo/pkg/insurance/gap"
@@ -34,6 +38,7 @@ import (
 	"veriqo/pkg/insurance/recovery"
 	"veriqo/pkg/insurance/timeline"
 	"veriqo/pkg/insurance/verification"
+	"veriqo/pkg/platform/audit"
 )
 
 var (
@@ -41,6 +46,13 @@ var (
 	ErrNoParties       = errors.New("api: at least one party is required")
 	ErrClaimNotYetSet  = errors.New("api: no claim has been registered on this case yet")
 	ErrPolicyNotYetSet = errors.New("api: no policy has been registered on this case yet")
+
+	// ErrNotReadyForDecision, ErrNoCausationAnalyzed, ErrHypothesisNotFound
+	// and ErrNilAuditStore gate DecideClaim -- see its own doc comment.
+	ErrNotReadyForDecision = errors.New("api: DecideClaim requires the case to be at DOSSIER_GENERATED")
+	ErrNoCausationAnalyzed = errors.New("api: DecideClaim requires AnalyzeCausation to have run first, on this same facade")
+	ErrHypothesisNotFound  = errors.New("api: hypothesisID was not found in the HypothesisSet this facade's own AnalyzeCausation analyzed")
+	ErrNilAuditStore       = errors.New("api: ledger AuditStore must not be nil")
 )
 
 // PartySpec is one party to register during IdentifyParties.
@@ -99,6 +111,23 @@ type Facade struct {
 	// is returned to the caller rather than swallowed: a case whose
 	// lineage cannot be recorded is not a case that quietly proceeds.
 	binding *canonical.Binding
+
+	// hs is the HypothesisSet this facade's own AnalyzeCausation step
+	// last analyzed — retained (never re-accepted as a fresh parameter)
+	// so DecideClaim can only ever build a Finding against a hypothesis
+	// THIS case's own causation analysis actually derived a status for,
+	// never one a caller hands in unreviewed at decision time.
+	hs *causation.HypothesisSet
+
+	// ledger is the OPTIONAL audit ledger DecideClaim appends its
+	// Decision to (nil means "decide but do not anchor" — e.g. in a
+	// focused unit test, mirroring binding's own optionality above).
+	ledger *audit.AuditStore
+
+	// decision and decisionRecord hold the outcome of the most recent
+	// DecideClaim call, exposed read-only via Decision().
+	decision       *decision.Decision
+	decisionRecord *audit.AuditRecord
 }
 
 // BindCanonical attaches this facade to the canonical case-lineage
@@ -123,6 +152,27 @@ func (f *Facade) BindCanonical(b *canonical.Binding) error {
 // Canonical returns this facade's canonical binding, or nil when the
 // case is being driven without one.
 func (f *Facade) Canonical() *canonical.Binding { return f.binding }
+
+// BindLedger attaches the audit ledger DecideClaim anchors its Decision
+// to. Optional, mirroring BindCanonical's own optionality: a facade
+// driven without a ledger can still call DecideClaim, it simply
+// produces an un-anchored Decision (Decision() still returns it).
+func (f *Facade) BindLedger(store *audit.AuditStore) error {
+	if store == nil {
+		return ErrNilAuditStore
+	}
+	f.ledger = store
+	return nil
+}
+
+// Decision returns the Decision this facade's most recent DecideClaim
+// call produced, and whether one has been made yet.
+func (f *Facade) Decision() (decision.Decision, bool) {
+	if f.decision == nil {
+		return decision.Decision{}, false
+	}
+	return *f.decision, true
+}
 
 // Status returns the case's externally-reported position: the derived
 // nine-value Stage from the Final Design's frozen vocabulary plus any
@@ -388,6 +438,7 @@ func (f *Facade) AnalyzeCausation(tick uint64, hs *causation.HypothesisSet) (cau
 		return causation.Explanation{}, err
 	}
 	f.causationExplanation = &explanation
+	f.hs = hs
 	if f.binding != nil {
 		for _, h := range hs.All() {
 			upstream := f.binding.ResolvedUpstream(h.SupportingEvidence...)
@@ -565,6 +616,85 @@ func (f *Facade) GenerateDossier(tick uint64) (*dossier.Dossier, verification.Ma
 		return nil, verification.Manifest{}, err
 	}
 	return d, manifest, nil
+}
+
+// DecideClaim closes the gap the "Masih_terlalu_banyak_gap" review
+// named explicitly: pkg/insurance/decision was only the Decision Trust
+// Boundary's kernel, with nothing in this Facade's own real,
+// pre-existing claim orchestration wired to it. This method is that
+// wiring — never a re-implementation. It drives the case's own
+// evidence and causation state (already produced by IngestEvidence,
+// VerifyEvidence, and AnalyzeCausation earlier in this same Facade's
+// lifecycle) through the identical sealed authority chain the core
+// trust pipeline uses:
+//
+//	cre.BuildFinding -> cre.AuthorizeGrounded -> decision.MakeDecision -> decision.AppendToLedger
+//
+// There is no path from this Facade straight to a Decision: DecideClaim
+// itself never constructs a finding.Finding, cre.AuthorizedFinding, or
+// decision.Decision by hand, it only calls the same gated constructors
+// the core pipeline calls, so every invariant those packages enforce
+// (evidence must be FINALIZED and hash-verified, the Finding's
+// ConfidenceBasis must equal the hypothesis's real, evidence-derived
+// Status, the cited inference trace must actually exist, rationale
+// must be non-empty, ...) applies here identically.
+//
+// Only callable once this case has reached DOSSIER_GENERATED — every
+// analysis step this Facade drives has already run — and only for a
+// hypothesisID present in the HypothesisSet THIS Facade's own
+// AnalyzeCausation call last analyzed, never one supplied fresh at
+// decision time: a caller cannot decide a claim against a hypothesis
+// this case's own causation analysis never evaluated.
+//
+// manifests grounds every evidence ID the resulting Finding cites
+// against real, FINALIZED, hash-verified manifests (AuthorizeGrounded);
+// traces is the set of real inference.InferenceTrace records available
+// for provenance citation, mirroring the core pipeline's own Intelligence
+// -> Hypothesis (never -> Finding directly) discipline. DecideClaim does
+// not itself advance the case's lifecycle state — like RaiseException
+// and ComputeGapAssessment, it is a same-state operation the caller may
+// invoke once the dossier is ready, before deciding what state Close
+// should move to.
+func (f *Facade) DecideClaim(tick uint64, hypothesisID causation.HypothesisID,
+	manifests *manifest.Registry, traces []inference.InferenceTrace,
+	in cre.FindingInput, findingID string,
+	outcome decision.Outcome, rationale string) (decision.Decision, error) {
+	if f.c.State() != insurancecase.StateDossierGenerated {
+		return decision.Decision{}, fmt.Errorf("%w: case is at %s", ErrNotReadyForDecision, f.c.State())
+	}
+	if f.hs == nil {
+		return decision.Decision{}, ErrNoCausationAnalyzed
+	}
+	h, ok := f.hs.Get(hypothesisID)
+	if !ok {
+		return decision.Decision{}, fmt.Errorf("%w: %s", ErrHypothesisNotFound, hypothesisID)
+	}
+
+	builtFinding, err := cre.BuildFinding(f.hs, h, f.evDeps, in, findingID, tick)
+	if err != nil {
+		return decision.Decision{}, fmt.Errorf("api: building finding: %w", err)
+	}
+
+	af, err := cre.AuthorizeGrounded(builtFinding, f.hs, hypothesisID, traces, manifests, tick)
+	if err != nil {
+		return decision.Decision{}, fmt.Errorf("api: authorizing finding: %w", err)
+	}
+
+	d, err := decision.MakeDecision(af, outcome, rationale, tick)
+	if err != nil {
+		return decision.Decision{}, fmt.Errorf("api: making decision: %w", err)
+	}
+
+	if f.ledger != nil {
+		rec, err := decision.AppendToLedger(f.ledger, "api.Facade.DecideClaim", d)
+		if err != nil {
+			return decision.Decision{}, fmt.Errorf("api: appending decision to ledger: %w", err)
+		}
+		f.decisionRecord = &rec
+	}
+
+	f.decision = &d
+	return d, nil
 }
 
 // Close moves a case out of DOSSIER_GENERATED into a terminal state —
