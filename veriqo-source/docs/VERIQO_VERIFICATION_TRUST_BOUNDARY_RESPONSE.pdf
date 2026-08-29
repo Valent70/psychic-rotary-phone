@@ -1,0 +1,1006 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R] /Count 8 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 3938 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO -- VERIFICATION & TRUST BOUNDARY RESPONSE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 29 August 2026) Tj
+0 -12 Td
+(Baseline: Red Flag Response Report -- commit e0dcdbb) Tj
+0 -12 Td
+(Responds to: Verification.docx -- an independent reviewer's follow-up review of the Red Flag) Tj
+0 -12 Td
+(Response, agreeing with the direction taken but identifying that "unexported fields" alone) Tj
+0 -12 Td
+(does) Tj
+0 -12 Td
+(not prove perfect immutability, that hash-consistency alone does not prove authoritative) Tj
+0 -12 Td
+(lineage,) Tj
+0 -12 Td
+(and proposing two structural changes: a 4-level maturity model \(replacing the prior 3-level) Tj
+0 -12 Td
+(one\)) Tj
+0 -12 Td
+(and a repository-wide Authority Boundary Audit as the next phase, explicitly not "adding) Tj
+0 -12 Td
+(features.") Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review. All code in) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(deliverable compiles, is tested, and was verified against the live repository. Every claim) Tj
+0 -12 Td
+(below) Tj
+0 -12 Td
+(that names a test, a file, or a line of code was checked against that exact source before) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(report was written.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every item the reviewer raised is addressed below, in the reviewer's own order. Three are) Tj
+0 -12 Td
+(real code) Tj
+0 -12 Td
+(gaps that got real fixes, each verified with the same "revert the fix, prove the test fails,) Tj
+0 -12 Td
+(restore the fix, prove the test passes" discipline used throughout this engagement:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. AuthorizedFinding was not actually immutable -- unexported fields stop cross-package) Tj
+0 -12 Td
+(*construction*, not cross-package *mutation* of what is already sealed, because Go copies a) Tj
+0 -12 Td
+(struct's slice fields by header, not by cloning the backing array. Fixed with defensive) Tj
+0 -12 Td
+(deep-copying at both the write boundary \(Authorize\) and the read boundary \(Finding\(\)\).) Tj
+0 -12 Td
+(2. Authorize\(\) verified hash-consistency, not full lineage -- a Finding whose hash verified) Tj
+0 -12 Td
+(could still cite evidence that was never real, and could cite a hypothesis whose own Status) Tj
+0 -12 Td
+(was never actually evidence-derived. Both gaps are closed: AuthorizeGrounded verifies every) Tj
+0 -12 Td
+(cited evidence ID resolves to a real, FINALIZED, hash-verified manifest.Manifest; a new) Tj
+0 -12 Td
+(check in VerifyFindingAgainstHypothesis refuses any hypothesis whose stored Status exceeds) Tj
+0 -12 Td
+(what its own evidence lists could legitimately derive.) Tj
+0 -12 Td
+(3. No test proved authority survives the whole pipeline --) Tj
+0 -12 Td
+(TestAuthorityCannotBeLostAcrossThePipeline) Tj
+0 -12 Td
+(now runs Detection -> Inference -> Finding -> Authorization -> AuthorizedFinding -> Decision) Tj
+0 -12 Td
+(->) Tj
+0 -12 Td
+(Reporting end to end with real packages at every stage, and proves the forbidden shape) Tj
+0 -12 Td
+(\(AuthorizedFinding -> cast/rebuild -> Raw Finding -> Decision\) is refused at the) Tj
+0 -12 Td
+(authorization) Tj
+0 -12 Td
+(boundary, not merely absent from the code someone happened to write.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's exact required language for the inference engine and for LocalAnchorer is) Tj
+0 -12 Td
+(adopted) Tj
+0 -12 Td
+(verbatim below \(see "Calibrated status language"\), the 4-level maturity model replaces the) Tj
+0 -12 Td
+(prior) Tj
+0 -12 Td
+(3-level one, and the Authority Boundary Audit -- explicitly framed by the reviewer as) Tj
+0 -12 Td
+(classification, not a feature-development mandate -- is completed for every named object,) Tj
+0 -12 Td
+(with one) Tj
+0 -12 Td
+(additional real fix \(the hypothesis-status gap above\) where the audit surfaced a genuine,) Tj
+0 -12 Td
+(narrowly) Tj
+0 -12 Td
+(scoped bypass.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 1 -- DEEP IMMUTABILITY OF AUTHORIZEDFINDING) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3990 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(Reviewer's point: "Kalimat Claude: 'semua field unexported, tidak bisa dibuat dari package) Tj
+0 -12 Td
+(lain' belum otomatis berarti sistemnya immutable secara sempurna" -- unexported fields) Tj
+0 -12 Td
+(prevent) Tj
+0 -12 Td
+(construction, not necessarily mutation, if an accessor returns a slice/map/pointer directly.) Tj
+0 -12 Td
+(Nested) Tj
+0 -12 Td
+(objects \(slices, maps, pointers, nested structs, interfaces, returned references\) all need) Tj
+0 -12 Td
+(auditing, not just the top-level struct.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response: The reviewer's critique was correct and identified a real, exploitable bug, not a) Tj
+0 -12 Td
+(theoretical one. finding.Finding has three []string fields -- SupportedBy, ContradictedBy,) Tj
+0 -12 Td
+(Alternatives -- and Go copies a struct's slice field by header \(pointer, length, capacity\),) Tj
+0 -12 Td
+(never) Tj
+0 -12 Td
+(by cloning the backing array. AuthorizedFinding.Finding\(\) returned a.finding by value, which) Tj
+0 -12 Td
+(looks like a safe copy but still shared the same three backing arrays with a's own sealed) Tj
+0 -12 Td
+(state.) Tj
+0 -12 Td
+(A caller mutating an element of the returned Finding's SupportedBy slice was mutating) Tj
+0 -12 Td
+(AuthorizedFinding's own internal data out from under its already-computed AuthorizationHash,) Tj
+0 -12 Td
+(silently, with no error anywhere. The same hole existed in the other direction: a caller) Tj
+0 -12 Td
+(could) Tj
+0 -12 Td
+(mutate the Finding they built *after* calling Authorize, corrupting the sealed value) Tj
+0 -12 Td
+(retroactively.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Fix \(pkg/insurance/cre/authorized.go\): a cloneFinding helper deep-copies all three slice) Tj
+0 -12 Td
+(fields -- the only reference-type fields finding.Finding has; every other field is a scalar,) Tj
+0 -12 Td
+(so a) Tj
+0 -12 Td
+(full audit of nested slices/maps/pointers/interfaces reduces to exactly these three. It is) Tj
+0 -12 Td
+(applied) Tj
+0 -12 Td
+(at both boundaries: Authorize clones before sealing f into the new AuthorizedFinding, and) Tj
+0 -12 Td
+(Finding\(\) clones again before returning. Every call to Finding\(\) now returns a fully) Tj
+0 -12 Td
+(independent copy in both directions.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Verified as exploitable, then verified as fixed. Two new tests --) Tj
+0 -12 Td
+(TestFindingAccessorReturnsAnIndependentCopy and) Tj
+0 -12 Td
+(TestAuthorizeClonesInputSoCallerCannotMutateAfterTheFact) Tj
+0 -12 Td
+(-- were first run against the pre-fix code \(the clone calls temporarily reverted\) and both) Tj
+0 -12 Td
+(failed) Tj
+0 -12 Td
+(with exact corruption evidence \(got [TAMPERED ev-weather-log-1], want [ev-survey-1 ev-) Tj
+0 -12 Td
+(weather-log-1]\).) Tj
+0 -12 Td
+(Restoring the fix, both tests pass, and the full pkg/insurance/cre suite \(31 tests\) remains) Tj
+0 -12 Td
+(green.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 2 -- AUTHORIZE\(\) MUST VERIFY FULL LINEAGE, NOT JUST HASH CONSISTENCY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point: "Hash membuktikan: 'data ini konsisten dengan hash.' Hash tidak) Tj
+0 -12 Td
+(membuktikan:) Tj
+0 -12 Td
+('data ini berasal dari authoritative source.'" A Finding's lineage -- hypothesis ID,) Tj
+0 -12 Td
+(hypothesis) Tj
+0 -12 Td
+(content, evidence references, evidence hashes, confidence basis, generation context, policy) Tj
+0 -12 Td
+(context -- must be traceable, not just internally self-consistent.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response: Two independent gaps existed under this one heading, and both are now closed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Gap 2a -- evidence references were never checked against real evidence. Authorize already) Tj
+0 -12 Td
+(confirmed \(via VerifyFindingAgainstHypothesis\) that a Finding's SupportedBy/ContradictedBy) Tj
+0 -12 Td
+(match the real hypothesis's own evidence *references* -- but a reference is just a string) Tj
+0 -12 Td
+(ID.) Tj
+0 -12 Td
+(Nothing previously confirmed that ID names evidence that actually exists, let alone evidence) Tj
+0 -12 Td
+(whose) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 4292 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(own integrity independently verifies. AuthorizeGrounded \(pkg/insurance/cre/authorized.go\)) Tj
+0 -12 Td
+(closes this by reusing the already-existing pkg/evidence/manifest package \(no new evidence-) Tj
+0 -12 Td
+(authenticity system invented\): every evidence ID a Finding cites in SupportedBy or) Tj
+0 -12 Td
+(ContradictedBy must resolve, in a supplied manifest.Registry, to a manifest.Manifest whose) Tj
+0 -12 Td
+(latest version is FINALIZED and whose own hash independently verifies via) Tj
+0 -12 Td
+(manifest.VerifyManifestHash. Five new tests cover acceptance of real finalized evidence and) Tj
+0 -12 Td
+(refusal of a nil registry, unknown evidence, non-finalized evidence, and partially grounded) Tj
+0 -12 Td
+(evidence \(one real citation, one fabricated\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Gap 2b -- a hypothesis's own Status was never confirmed to be evidence-derived.) Tj
+0 -12 Td
+(causation.HypothesisSet.Add does not force Status to be computed from real evidence -- a) Tj
+0 -12 Td
+(caller) Tj
+0 -12 Td
+(can Add a Hypothesis whose Status already claims StatusSupported while its own) Tj
+0 -12 Td
+(SupportingEvidence/ContradictingEvidence lists would legitimately derive something weaker) Tj
+0 -12 Td
+(\(or) Tj
+0 -12 Td
+(nothing at all\), and Add accepts it as long as the value is a known causation.Status. Since) Tj
+0 -12 Td
+(VerifyFindingAgainstHypothesis only compared f.ConfidenceBasis against h.Status, a Finding) Tj
+0 -12 Td
+(citing such a hypothesis passed even though h.Status was never actually earned -- exactly) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+("Hash proves consistency, not authoritative origin" distinction the reviewer named. Fixed in) Tj
+0 -12 Td
+(pkg/insurance/cre/provenance.go: VerifyFindingAgainstHypothesis now also recomputes the) Tj
+0 -12 Td
+(status) Tj
+0 -12 Td
+(h's own evidence lists would produce via causation.DeriveStatus\(h, nil\) -- already exported) Tj
+0 -12 Td
+(by) Tj
+0 -12 Td
+(the mature causation package for exactly this purpose, so that package needed no changes --) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(refuses whenever h.Status is strictly stronger than that recomputation. The comparison is) Tj
+0 -12 Td
+(deliberately one-directional: DeriveStatus\(h, nil\) counts evidence with no independence) Tj
+0 -12 Td
+(discounting, the most generous status any legitimate computation could produce, so a real) Tj
+0 -12 Td
+(dependency-graph-discounted status can only be weaker or equal, never stronger -- this check) Tj
+0 -12 Td
+(cannot) Tj
+0 -12 Td
+(false-positive against any legitimate computation anywhere in the codebase. New test) Tj
+0 -12 Td
+(TestVerifyFindingAgainstHypothesisRejectsHypothesisWithFabricatedStatus proves the exact) Tj
+0 -12 Td
+(attack) Tj
+0 -12 Td
+(is caught, through both the standalone check and the full Authorize gate, verified failing) Tj
+0 -12 Td
+(against the pre-fix code before confirming it passes with the fix.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every other lineage element the reviewer listed was already covered before this round and) Tj
+0 -12 Td
+(remains) Tj
+0 -12 Td
+(covered: hypothesis ID and content \(VerifyFindingAgainstHypothesis re-derives from the real) Tj
+0 -12 Td
+(HypothesisSet, never trusts the Finding's own claim\), confidence basis \(same\), generation) Tj
+0 -12 Td
+(context) Tj
+0 -12 Td
+(\(VerifyFindingProvenance confirms a cited SourceInferenceTraceID names a real, hash-verified) Tj
+0 -12 Td
+(InferenceTrace\), and policy/model context \(the trace's own model lineage runs through) Tj
+0 -12 Td
+(pkg/governance/lifecycle's Registered -> Validated -> Calibrated -> Approved -> Active gate,) Tj
+0 -12 Td
+(exercised) Tj
+0 -12 Td
+(end to end in Part 3's pipeline test\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 3 -- REDFLAG-2 PIPELINE SECURITY TEST, STRENGTHENED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point: prove not just GenerateFindings\(\) -> authorized, but the full chain) Tj
+0 -12 Td
+(-> downstream processing -> cannot downgrade -> cannot reconstruct raw Finding -> cannot) Tj
+0 -12 Td
+(bypass) Tj
+0 -12 Td
+(authorization, across Detection -> Inference -> Finding -> Authorization ->) Tj
+0 -12 Td
+(AuthorizedFinding ->) Tj
+0 -12 Td
+(Decision -> Reporting, explicitly forbidding AuthorizedFinding -> cast/rebuild -> Raw) Tj
+0 -12 Td
+(Finding ->) Tj
+0 -12 Td
+(Decision.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 4037 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(Response: TestAuthorityCannotBeLostAcrossThePipeline) Tj
+0 -12 Td
+(\(test/integration/authority_pipeline_test.go\) is new. It builds a real pipeline end to end:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Detection -- a real ontology.Registry object, two real manifest.Manifest records \(one) Tj
+0 -12 Td
+(supporting, one contradicting\) taken all the way to FINALIZED with an independently) Tj
+0 -12 Td
+(verifying) Tj
+0 -12 Td
+(hash.) Tj
+0 -12 Td
+(- Inference -- a real lifecycle.Registry model taken to ModelActive through its full) Tj
+0 -12 Td
+(governance gate, then a real inference.Recorder.Record call producing a hash-verified trace.) Tj
+0 -12 Td
+(- Finding -- a real causation.HypothesisSet, with both supporting and contradicting evidence) Tj
+0 -12 Td
+(attached so the hypothesis's real status is PARTIALLY_SUPPORTED, not trivially SUPPORTED.) Tj
+0 -12 Td
+(- Authorization -- both cre.GenerateFindings \(the production path\) and the stricter) Tj
+0 -12 Td
+(cre.AuthorizeGrounded succeed against this real data.) Tj
+0 -12 Td
+(- Decision & Reporting -- two stand-in functions, decide and report, typed to accept only) Tj
+0 -12 Td
+(cre.AuthorizedFinding, never finding.Finding. This typing *is* the proof for the forbidden) Tj
+0 -12 Td
+(diagram: raw := authorized.Finding\(\); decide\(raw\) does not compile, because finding.Finding) Tj
+0 -12 Td
+(is not cre.AuthorizedFinding -- Go has no runtime "must not compile" primitive, so the test) Tj
+0 -12 Td
+(file) Tj
+0 -12 Td
+(records this as a documented, verified fact in its own comment rather than asserting it at) Tj
+0 -12 Td
+(runtime.) Tj
+0 -12 Td
+(- Adversarial re-entry attempt -- the test extracts af.Finding\(\) \(an independent copy, per) Tj
+0 -12 Td
+(Part 1's fix\), escalates its ConfidenceBasis to a status the real hypothesis did not earn,) Tj
+0 -12 Td
+(recomputes the Finding's own hash to stay internally self-consistent \(exactly what an) Tj
+0 -12 Td
+(attacker) Tj
+0 -12 Td
+(capable of forging a Finding would also do\), and confirms both cre.Authorize and) Tj
+0 -12 Td
+(cre.AuthorizeGrounded refuse to re-authorize it. The original AuthorizedFinding's own state) Tj
+0 -12 Td
+(--) Tj
+0 -12 Td
+(and decide\(af\)'s output -- is confirmed unaffected by any of this.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is the strongest form of the requirement available without a language-level "must not) Tj
+0 -12 Td
+(compile" test primitive: a real, running, end-to-end positive path, plus a compile-time-) Tj
+0 -12 Td
+(enforced) Tj
+0 -12 Td
+(negative path recorded and verified as a fact about the type system, plus a runtime proof) Tj
+0 -12 Td
+(that) Tj
+0 -12 Td
+(re-injection is refused by the same gate a first-time forgery would hit.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 4 -- CALIBRATED STATUS LANGUAGE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer asked that two specific claims never be overstated, and supplied the exact) Tj
+0 -12 Td
+(replacement) Tj
+0 -12 Td
+(language. Both are adopted verbatim, here and in every future report from this engagement.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Inference engine. Never: *"VERIQO AI inference engine production-ready."* Always:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(> VERIQO has a governed inference architecture and executable integration path, but external) Tj
+0 -12 Td
+(model) Tj
+0 -12 Td
+(> execution remains environment/provider dependent and has not yet been production-) Tj
+0 -12 Td
+(validated.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Model Registry -> Approval -> Policy -> Evidence Grounding -> Inference Governance -> Output) Tj
+0 -12 Td
+(Validation) Tj
+0 -12 Td
+(-> Human Review -> Audit is tested as an integration architecture \(Part 3 above, and the) Tj
+0 -12 Td
+(prior) Tj
+0 -12 Td
+(Red Flag Response's TestModelGatewayFullPipeline\). Actual external model execution against a) Tj
+0 -12 Td
+(real) Tj
+0 -12 Td
+(provider is not, and this report makes no claim that it is.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(LocalAnchorer. The reviewer's own four-row framing, kept explicitly separated rather than) Tj
+0 -12 Td
+(collapsed into a single "done" label:) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 3527 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(   Layer    Status) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   Engineering    [GREEN] Implemented) Tj
+0 -12 Td
+(   Internal verification    [GREEN] Tested) Tj
+0 -12 Td
+(   External anchoring    [RED] Not live) Tj
+0 -12 Td
+(   Independent third-party verification    [RED] Not proven) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(LocalAnchorer's own package doc comment and every AnchorReceipt.AnchoredBy value it produces) Tj
+0 -12 Td
+(already say "LocalAnchorer\(simulator, not a real external anchor\)" verbatim -- no code) Tj
+0 -12 Td
+(changed) Tj
+0 -12 Td
+(here, only this report's framing, so the distinction stays visible rather than living only) Tj
+0 -12 Td
+(in a) Tj
+0 -12 Td
+(code comment.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 5 -- "57 TESTS PASSING" IS NOT 57 PROOF POINTS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's principle is adopted explicitly, and is restated here so it travels with) Tj
+0 -12 Td
+(every) Tj
+0 -12 Td
+(future status claim this engagement makes:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(> Software correctness != Domain truth != Real-world truth.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A test suite proves the code behaves as the test cases we wrote say it should. It does not) Tj
+0 -12 Td
+(prove:) Tj
+0 -12 Td
+(real maritime data correctness, real AIS anomaly correctness, real cargo identity, real) Tj
+0 -12 Td
+(owner) Tj
+0 -12 Td
+(identity, real insurance coverage, real P&I response, real trade finance workflow, real) Tj
+0 -12 Td
+(claims,) Tj
+0 -12 Td
+(real counterparties, real sanctions environment, real-world legal enforceability, or real) Tj
+0 -12 Td
+(external) Tj
+0 -12 Td
+(anchoring. Every "tests passing" claim in this and prior reports should be read against this) Tj
+0 -12 Td
+(principle, not in place of it.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 6 -- FOUR-LEVEL MATURITY MODEL \(REPLACES THE PRIOR THREE-LEVEL MODEL\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The prior Red Flag Response adopted a 3-level framework \(Code Complete / Engineering) Tj
+0 -12 Td
+(Verified /) Tj
+0 -12 Td
+(Real-World Production Verified\). The reviewer's critique is accepted: VERIQO's trust) Tj
+0 -12 Td
+(architecture) Tj
+0 -12 Td
+(is more complex than that framework distinguishes, specifically between a *controlled* pilot) Tj
+0 -12 Td
+(with) Tj
+0 -12 Td
+(real external parties and *unsupervised production* exposure. The reviewer's 4-level model) Tj
+0 -12 Td
+(replaces) Tj
+0 -12 Td
+(it, effective immediately, in this and all future reports:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- LEVEL 1 -- Implemented. Code exists: code, build, basic tests.) Tj
+0 -12 Td
+(- LEVEL 2 -- Engineering Verified. Unit, integration, race, vet, guardrails, determinism,) Tj
+0 -12 Td
+(replay, fault tests.) Tj
+0 -12 Td
+(- LEVEL 3 -- Controlled External Validation. Real data, real documents, real counterparties,) Tj
+0 -12 Td
+(real workflows, real domain experts -- but still a controlled pilot.) Tj
+0 -12 Td
+(- LEVEL 4 -- Production Proven. Real customers, real decisions, real incidents, real claims,) Tj
+0 -12 Td
+(real financial impact, real SLA, real security, real external integrations.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIQO's honest position on this axis, as of this report: Level 2. Everything in this) Tj
+0 -12 Td
+(deliverable -- the immutability fix, the lineage-grounding gate, the hypothesis-status) Tj
+0 -12 Td
+(check, the) Tj
+0 -12 Td
+(pipeline test, the full repository test suite \(go build, go vet, gofmt, the full go test) Tj
+0 -12 Td
+(./..., -race on the affected packages, and pkg/insurance/guardrails\) -- is Level 2 evidence.) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 4364 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(None of it is Level 3 or Level 4 evidence, and this report makes no claim that it is.) Tj
+0 -12 Td
+("Production) Tj
+0 -12 Td
+(proven" is reserved for Level 4, exactly as the reviewer specified, and is not used anywhere) Tj
+0 -12 Td
+(in) Tj
+0 -12 Td
+(this report.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 7 -- AUTHORITY BOUNDARY AUDIT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's framing, quoted directly: *"Bukan langsung menambah fitur. Tetapi lakukan) Tj
+0 -12 Td
+(Authority) Tj
+0 -12 Td
+(Boundary Audit."* \(Not adding features directly. Instead perform an Authority Boundary) Tj
+0 -12 Td
+(Audit.\) The) Tj
+0 -12 Td
+(task: search the codebase for every object carrying a settable boolean verified / trusted /) Tj
+0 -12 Td
+(approved / authorized / reconciled / settled / insured / compliant pattern \(or an equivalent) Tj
+0 -12 Td
+(enum) Tj
+0 -12 Td
+(field\) that can be set directly by a caller -- the Thing{Verified: true} trust-bypass shape) Tj
+0 -12 Td
+(-- and) Tj
+0 -12 Td
+(classify each: Object / Forgeable? / Gate / Authority Source / Status.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Method. Two passes: \(1\) a repository-wide search for exported struct fields of type bool,) Tj
+0 -12 Td
+(Status, or State whose name matches Verified|Trusted|Approved|Authorized|Reconciled|Settled|) Tj
+0 -12 Td
+(Insured|Compliant|Validated|Confirmed|Final|Immutable|Canonical; \(2\) for every hit, tracing) Tj
+0 -12 Td
+(whether the field is a derived, computed report/output value \(safe -- nothing downstream) Tj
+0 -12 Td
+(trusts) Tj
+0 -12 Td
+(it as an input\) or a directly caller-settable authority value with no gating computation) Tj
+0 -12 Td
+(behind) Tj
+0 -12 Td
+(it \(the actual bypass pattern\). The reviewer's own named object list is covered below; two) Tj
+0 -12 Td
+(names on) Tj
+0 -12 Td
+(that list -- InsuranceAssessment and RiskAssessment -- do not exist as named types anywhere) Tj
+0 -12 Td
+(in) Tj
+0 -12 Td
+(this repository, and are reported as such rather than invented for the sake of a complete-) Tj
+0 -12 Td
+(looking) Tj
+0 -12 Td
+(table.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Object    Forgeable?    Gate    Authority Source    Status) Tj
+0 -12 Td
+(  ---  ---  ---  ---  ---) Tj
+0 -12 Td
+(   Finding    No    Authorize\(\) / AuthorizeGrounded\(\), both requiring a real) Tj
+0 -12 Td
+(causation.HypothesisSet and \(for the grounded gate\) a real manifest.Registry) Tj
+0 -12 Td
+(cre.AuthorizedFinding -- unexported fields, sealed by Authorize, deep-cloned at both) Tj
+0 -12 Td
+(boundaries \(Part 1\)    [GREEN] Closed) Tj
+0 -12 Td
+(   Hypothesis    No \(as of this round\)    VerifyFindingAgainstHypothesis's new) Tj
+0 -12 Td
+(statusStrength / causation.DeriveStatus\(h, nil\) check    causation.HypothesisSet, evidence-) Tj
+0 -12 Td
+(derivation now enforced one-directionally    [GREEN] Closed this round \(Part 2b\)) Tj
+0 -12 Td
+(   Evidence    Yes    evidence.Registry.SetStatus\(evidenceID, status\) accepts any known) Tj
+0 -12 Td
+(Status value from any caller, with no verification-computation gate behind it    none -- the) Tj
+0 -12 Td
+(caller's own claim    [RED] Open, documented, not fixed this round -- see below) Tj
+0 -12 Td
+(   Decision \(pkg/moat/decision\)    Constructible, but not currently exploitable) Tj
+0 -12 Td
+(decision.Decision and DecisionRecord are plain exported structs; only Engine.Decide is) Tj
+0 -12 Td
+(exercised anywhere in this codebase as a real decision path, and DecisionRecord's audit log) Tj
+0 -12 Td
+(is hash-chained and append-only, produced only internally    Engine.Decide, when used) Tj
+0 -12 Td
+([YELLOW] Narrow -- see below) Tj
+0 -12 Td
+(   Claim \(pkg/insurance/claim\)    Constructible, but narrow blast radius    claim.New only) Tj
+0 -12 Td
+(sets the initial StatusRegistered value; nothing in the claim package gates later) Tj
+0 -12 Td
+(transitions of Claim.Status    case.Case.RegisterClaim checks Status == StatusRegistered) Tj
+0 -12 Td
+(once, at registration only; no other code in the repository reads Claim.Status to gate a) Tj
+0 -12 Td
+(money-movement or settlement decision    [YELLOW] Narrow -- see below) Tj
+0 -12 Td
+(   Settlement \(pkg/insurance/payment SettlementEvidence / SettlementReconciliation\)    No) Tj
+0 -12 Td
+(PaymentRecord.RecordSettlementEvidence -- unexported p.settlement field, requires) Tj
+0 -12 Td
+(StatusPaid, validates the evidence, refuses to overwrite an existing record) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 3864 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(PaymentRecord, itself state-machine gated    [GREEN] Already sealed) Tj
+0 -12 Td
+(   Counterparty \(closest existing analog: pkg/insurance/party.Party\)    No trust-bypass) Tj
+0 -12 Td
+(field found    n/a -- Party carries no Verified/Trusted/Approved boolean at all    n/a) Tj
+0 -12 Td
+([GREEN] Nothing to close) Tj
+0 -12 Td
+(   EntityResolution \(closest existing analog: pkg/moat/entity.Registry\)    No    CanonicalID) Tj
+0 -12 Td
+(is content-addressed \(SHA-256 over the sorted alias set\), never caller-settable; every) Tj
+0 -12 Td
+(MergeRecord is hash-chained, append-only, and produced only by Registry.Merge) Tj
+0 -12 Td
+(entity.Registry's own hash chain    [GREEN] Already sealed) Tj
+0 -12 Td
+(   InsuranceAssessment    --    --    --    Not found -- no type of this name exists in this) Tj
+0 -12 Td
+(repository; not invented for this table) Tj
+0 -12 Td
+(   RiskAssessment    --    --    --    Not found -- no type of this name exists in this) Tj
+0 -12 Td
+(repository; not invented for this table) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Notes on the three non-[GREEN] rows.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(*Evidence -- genuinely open.* evidence.Registry.SetStatus is a real, exploitable trust-) Tj
+0 -12 Td
+(bypass) Tj
+0 -12 Td
+(pattern: any caller can set an evidence record's Status to any known value, including) Tj
+0 -12 Td
+(StatusVerified, with no computation behind it. This is the same category of gap Part 2b) Tj
+0 -12 Td
+(closed) Tj
+0 -12 Td
+(for Hypothesis, but in a larger, more mature subsystem \(pkg/insurance/evidence, unchanged) Tj
+0 -12 Td
+(since) Tj
+0 -12 Td
+(early in this engagement\) with a wider blast radius, so closing it correctly needs its own) Tj
+0 -12 Td
+(scoped) Tj
+0 -12 Td
+(round rather than a rushed fix inside this one -- matching the reviewer's own framing that) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(phase is audit-and-classify, not "fix everything found." It is recorded here honestly as the) Tj
+0 -12 Td
+(one) Tj
+0 -12 Td
+([RED] finding, not silently left off the table.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(*Decision -- constructible but not currently a live bypass.* A caller can write) Tj
+0 -12 Td
+(decision.Decision{Action: decision.ActionEscalate} directly; nothing stops it. But no code) Tj
+0 -12 Td
+(anywhere in this repository currently *consumes* a bare, caller-constructed Decision as an) Tj
+0 -12 Td
+(input) Tj
+0 -12 Td
+(to a further gated action -- the only place Decision values are produced is Engine.Decide's) Tj
+0 -12 Td
+(own) Tj
+0 -12 Td
+(internal computation, and the audit log \(DecisionRecord\) is hash-chained and only appended) Tj
+0 -12 Td
+(to) Tj
+0 -12 Td
+(internally. This is a latent risk \(a future caller *could* build a fake Decision and hand it) Tj
+0 -12 Td
+(somewhere that trusts it\) rather than a live one today, and is recorded as such rather than) Tj
+0 -12 Td
+(either) Tj
+0 -12 Td
+(ignored or overstated as an active exploit.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(*Claim -- same shape as Decision, verified by tracing every reader of Claim.Status.* Only) Tj
+0 -12 Td
+(one place) Tj
+0 -12 Td
+(in the repository reads it: case.Case.RegisterClaim's one-time entry guard. No coverage,) Tj
+0 -12 Td
+(quantum, recovery, or payment code path keys a decision off Claim.Status. The real) Tj
+0 -12 Td
+(settlement) Tj
+0 -12 Td
+(authority gate is pkg/insurance/payment's state-machine-backed PaymentRecord, already sealed) Tj
+0 -12 Td
+(\(see the Settlement row above\), so Claim.Status being directly settable does not currently) Tj
+0 -12 Td
+(open a) Tj
+0 -12 Td
+(path to an unauthorized payment. Recorded as [YELLOW] rather than [GREEN] because the field) Tj
+0 -12 Td
+(itself remains) Tj
+0 -12 Td
+(unsealed, even though nothing today exploits that.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION EVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- gofmt -l . -- clean, no output.) Tj
+0 -12 Td
+(- go build ./... -- clean.) Tj
+ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 15 0 R >>
+endobj
+17 0 obj
+<< /Length 1908 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(- go vet ./... -- clean.) Tj
+0 -12 Td
+(- go test ./... -- full repository suite, all packages pass \(including test/integration,) Tj
+0 -12 Td
+(test/e2e/eight_blockers, test/soak, test/stress, test/acceptance\).) Tj
+0 -12 Td
+(- go test -race ./pkg/insurance/cre/... ./test/integration/... ./pkg/insurance/causation/...) Tj
+0 -12 Td
+(./pkg/insurance/evidence/... -- clean, no data races.) Tj
+0 -12 Td
+(- go test ./pkg/insurance/guardrails/... -- all 7 repository-wide guardrail scans pass \(no) Tj
+0 -12 Td
+(Determination field, no opaque confidence score, no forbidden canonical duplicate, no hard-) Tj
+0 -12 Td
+(coded) Tj
+0 -12 Td
+(vendor judgment, anywhere in the insurance domain\).) Tj
+0 -12 Td
+(- pkg/insurance/cre test count: 31, all passing \(up from 23 before this round: 2 new) Tj
+0 -12 Td
+(immutability) Tj
+0 -12 Td
+(tests, 5 new grounding tests, and 1 new hypothesis-status-fabrication test\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY FOR THIS ROUND) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Per the reviewer's own instruction that this phase is an audit, not a feature mandate: the) Tj
+0 -12 Td
+(Authority Boundary Audit above classifies every named object and fixes the one gap) Tj
+0 -12 Td
+(\(Hypothesis.Status\) that was both \(a\) directly reachable from the Finding/Authorize chain) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(engagement has been hardening and \(b\) closeable with a small, reuse-only change to already-) Tj
+0 -12 Td
+(exported) Tj
+0 -12 Td
+(API, exactly like Part 2b. The Evidence.SetStatus gap is real, is not fixed here, and is not) Tj
+0 -12 Td
+(described as fixed anywhere in this report. Closing it -- along with re-auditing Decision) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(Claim once \(or if\) real callers start consuming their currently-unconsumed authority fields) Tj
+0 -12 Td
+(-- is) Tj
+0 -12 Td
+(the next scoped round's work, not claimed as done in this one.) Tj
+ET
+endstream
+endobj
+18 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 17 0 R >>
+endobj
+19 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 20
+0000000000 65535 f 
+0000000015 00000 n 
+0000000119 00000 n 
+0000000189 00000 n 
+0000004179 00000 n 
+0000004305 00000 n 
+0000008347 00000 n 
+0000008473 00000 n 
+0000012817 00000 n 
+0000012943 00000 n 
+0000017032 00000 n 
+0000017159 00000 n 
+0000020739 00000 n 
+0000020867 00000 n 
+0000025284 00000 n 
+0000025412 00000 n 
+0000029329 00000 n 
+0000029457 00000 n 
+0000031418 00000 n 
+0000031546 00000 n 
+trailer
+<< /Size 20 /Root 19 0 R >>
+startxref
+31596
+%%EOF
