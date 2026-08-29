@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"veriqo/pkg/evidence/ontology"
+	"veriqo/pkg/evidence/provenance"
 	"veriqo/pkg/insurance/party"
 )
 
@@ -426,5 +427,97 @@ func TestKnownStatusesCoversTheBlueprintList(t *testing.T) {
 	// blueprint §8 enumerates exactly 7 statuses.
 	if len(knownStatuses) != 7 {
 		t.Fatalf("expected 7 known statuses per VICE blueprint §8, got %d", len(knownStatuses))
+	}
+}
+
+// ---- Final Authority Hardening Round: Submit's own authority-bypass ----
+//
+// This is a NEW finding surfaced by this round's own audit, not one
+// named in any prior review: Submit previously stored whatever Record
+// value a caller handed it verbatim, with zero reset of any
+// authority-bearing field. Since Record has no unexported fields and
+// no accessor-only sealing (unlike cre.AuthorizedFinding), any caller
+// -- or a deserializer reconstructing a Record from JSON, which is
+// exactly the class of attack Final_Hardening_Round.docx's item 15
+// warned about -- could hand-build Record{Status: StatusCorroborated,
+// Rights: provenance.RightsCustomerFacingAllowed} directly and Submit
+// it, bypassing New()'s honest defaults AND every downstream authority
+// gate (VerifyStatus's derivation, SetRights's authority check)
+// entirely. TestSubmitResetsAuthorityBearingFields is the direct
+// adversarial proof this is now closed.
+
+func TestSubmitResetsAuthorityBearingFields(t *testing.T) {
+	reg := NewRegistry()
+	forged := Record{
+		CaseID: "CASE-1", Underlying: mustEvidence(t, "S1", "src", 100),
+		SourcePartyID: "PTY-1", Origin: OriginClaimant,
+		// Every one of these is a forged authority claim: a caller
+		// constructing a Record by hand (or via json.Unmarshal, which
+		// exercises exactly the same code path since Go's decoder sets
+		// exported fields directly) never went through New(), VerifyStatus,
+		// or a genuinely authorized SetRights call for any of them.
+		Status:               StatusCorroborated,
+		Strength:             Strength{Authenticity: AuthenticitySupported, Integrity: IntegrityVerified, Completeness: CompletenessComplete, ContradictionLevel: ContradictionLevelNone},
+		Rights:               "CUSTOMER_FACING_ALLOWED",
+		CorrectionSuperseded: true,
+		SupersededBy:         "EV-SOMETHING-ELSE",
+	}
+	if err := reg.Submit(forged); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	got, ok := reg.Get(forged.EvidenceID())
+	if !ok {
+		t.Fatal("expected the record to be present after Submit")
+	}
+	if got.Status != StatusUnverified {
+		t.Fatalf("forged Status survived Submit: got %v, want %v (New()'s own honest default)", got.Status, StatusUnverified)
+	}
+	if got.Strength != (Strength{}) {
+		t.Fatalf("forged Strength survived Submit: got %+v, want the zero value", got.Strength)
+	}
+	if got.Rights != provenance.RightsUnknownPendingContract {
+		t.Fatalf("forged Rights survived Submit: got %v, want %v", got.Rights, provenance.RightsUnknownPendingContract)
+	}
+	if got.CorrectionSuperseded {
+		t.Fatal("forged CorrectionSuperseded=true survived Submit")
+	}
+	if got.SupersededBy != "" {
+		t.Fatalf("forged SupersededBy survived Submit: got %q", got.SupersededBy)
+	}
+	// And the record lands on exactly New()'s own honest baseline:
+	// UNKNOWN_PENDING_CONTRACT permits internal use only, nothing more.
+	if !got.Permits(provenance.UseInternalOnly) {
+		t.Fatal("expected the reset UNKNOWN_PENDING_CONTRACT rights state to still permit internal-only use")
+	}
+	if got.Permits(provenance.UseCustomerFacing) {
+		t.Fatal("expected the reset rights state to NOT permit customer-facing use -- the forged CUSTOMER_FACING_ALLOWED must not survive")
+	}
+}
+
+// TestSubmitDoesNotResetCallerOwnedDescriptiveFields confirms the fix
+// is scoped correctly: only authority-bearing fields are reset. A
+// caller's legitimate descriptive data -- including ChainOfCustody,
+// which may honestly describe hand-offs that happened BEFORE the
+// evidence ever reached VERIQO -- survives Submit unchanged.
+func TestSubmitDoesNotResetCallerOwnedDescriptiveFields(t *testing.T) {
+	reg := NewRegistry()
+	rec := Record{
+		CaseID: "CASE-1", Underlying: mustEvidence(t, "S1", "src", 100),
+		SourcePartyID: "PTY-1", Origin: OriginSurveyor, DocumentType: "survey_report",
+		ChainOfCustody: []CustodyEntry{{Holder: "field surveyor", Action: "collected", Tick: 50}},
+		Metadata:       map[string]string{"note": "genuine descriptive data"},
+	}
+	if err := reg.Submit(rec); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	got, _ := reg.Get(rec.EvidenceID())
+	if got.DocumentType != "survey_report" {
+		t.Fatalf("DocumentType was incorrectly reset: got %q", got.DocumentType)
+	}
+	if len(got.ChainOfCustody) != 1 || got.ChainOfCustody[0].Holder != "field surveyor" {
+		t.Fatalf("pre-VERIQO ChainOfCustody was incorrectly reset: got %+v", got.ChainOfCustody)
+	}
+	if got.Metadata["note"] != "genuine descriptive data" {
+		t.Fatal("Metadata was incorrectly reset")
 	}
 }

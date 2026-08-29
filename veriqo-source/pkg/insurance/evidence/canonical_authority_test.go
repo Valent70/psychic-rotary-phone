@@ -1,9 +1,12 @@
 package evidence
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
 
 	"veriqo/pkg/evidence/manifest"
+	"veriqo/pkg/evidence/provenance"
 )
 
 // This file is the "split-registry contradiction" adversarial test
@@ -93,13 +96,13 @@ func TestAdvancingOneRegistryNeverChangesTheOther(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	if _, err := manifestReg.RecordCustodyEvent(rec.EvidenceID(), "evt-1", "actor", manifest.CustodyReceived, 1, "x"); err != nil {
+	if _, err := manifestReg.RecordCustodyEvent(rec.EvidenceID(), "evt-1", "actor", manifest.CustodyReceived, 1, "x", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := manifestReg.Advance(rec.EvidenceID(), manifest.StateIngested, 1); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := manifestReg.RecordCustodyEvent(rec.EvidenceID(), "evt-2", "actor", manifest.CustodyHashed, 1, "x"); err != nil {
+	if _, err := manifestReg.RecordCustodyEvent(rec.EvidenceID(), "evt-2", "actor", manifest.CustodyHashed, 1, "x", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := manifestReg.Advance(rec.EvidenceID(), manifest.StateIntegrityAssessed, 1); err != nil {
@@ -108,7 +111,7 @@ func TestAdvancingOneRegistryNeverChangesTheOther(t *testing.T) {
 	if _, err := manifestReg.Advance(rec.EvidenceID(), manifest.StateProvenanceComplete, 1); err != nil {
 		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
 	}
-	if _, err := manifestReg.RecordCustodyEvent(rec.EvidenceID(), "evt-3", "actor", manifest.CustodyReviewed, 1, "x"); err != nil {
+	if _, err := manifestReg.RecordCustodyEvent(rec.EvidenceID(), "evt-3", "actor", manifest.CustodyReviewed, 1, "x", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := manifestReg.Advance(rec.EvidenceID(), manifest.StateReadyForFinalization, 1); err != nil {
@@ -147,5 +150,107 @@ func TestAdvancingOneRegistryNeverChangesTheOther(t *testing.T) {
 	}
 	if stillFinalized.State != manifest.StateFinalized || stillFinalized.ManifestHash != finalized.ManifestHash {
 		t.Fatal("manifest.Registry's own FINALIZED manifest changed after evidence.Registry.VerifyStatus was called -- split-registry contradiction")
+	}
+}
+
+// ---- Final Authority Hardening Round: serialization cannot manufacture
+// authoritative state ----
+//
+// "No serialized representation may be sufficient to manufacture an
+// authoritative state." A repository-wide grep confirms no file that
+// imports both pkg/evidence/manifest (or pkg/insurance/evidence) and
+// json.Unmarshal/Decode exists anywhere in this codebase today -- there
+// is no LIVE deserialization path to exploit. But the reviewer's
+// requirement is a standing invariant, not a statement about today's
+// callers, so this proves it directly: json.Unmarshal sets exported
+// struct fields exactly the same way a hand-built composite literal
+// does (Go's encoding/json has no notion of "this field is special"),
+// so a forged JSON payload is functionally identical to the
+// hand-constructed Record this file's TestSubmitResetsAuthorityBearingFields
+// already covers -- proven here via an actual round-trip through
+// encoding/json rather than only a struct literal, to close the gap
+// completely.
+
+func TestJSONDeserializedRecordCannotManufactureAuthority(t *testing.T) {
+	forgedJSON := []byte(`{
+		"case_id": "CASE-1",
+		"underlying": ` + mustEvidenceJSON(t, "S1", "src", 100) + `,
+		"source_party_id": "PTY-1",
+		"origin": "CLAIMANT_EVIDENCE",
+		"status": "CORROBORATED",
+		"rights": "CUSTOMER_FACING_ALLOWED"
+	}`)
+	var forged Record
+	if err := json.Unmarshal(forgedJSON, &forged); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if forged.Status != StatusCorroborated {
+		t.Fatalf("test setup: expected the unmarshaled value itself to carry the forged Status, got %v", forged.Status)
+	}
+
+	reg := NewRegistry()
+	if err := reg.Submit(forged); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	got, ok := reg.Get(forged.EvidenceID())
+	if !ok {
+		t.Fatal("expected the record to be present")
+	}
+	if got.Status != StatusUnverified {
+		t.Fatalf("a JSON-deserialized forged Status survived Submit: got %v, want %v", got.Status, StatusUnverified)
+	}
+	if got.Rights != provenance.RightsUnknownPendingContract {
+		t.Fatalf("a JSON-deserialized forged Rights survived Submit: got %v", got.Rights)
+	}
+}
+
+func mustEvidenceJSON(t *testing.T, subject, source string, observedAt uint64) string {
+	t.Helper()
+	ev := mustEvidence(t, subject, source, observedAt)
+	b, err := json.Marshal(ev)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	return string(b)
+}
+
+// TestJSONDeserializedManifestCannotManufactureAuthority is the
+// manifest.Registry side of the same proof: a forged Manifest value
+// claiming FINALIZED with a made-up ManifestHash -- constructed via
+// json.Unmarshal, functionally identical to a hand-built composite
+// literal -- is structurally INERT. It never enters
+// manifestReg.versions (an unexported map with no method that accepts
+// an arbitrary Manifest as "the new latest version" -- only
+// RegisterDraft, which forces State=DRAFT/Version=1/clears hash
+// fields, and Advance/Supersede, both gated), and VerifyManifestHash
+// independently refuses it since its ManifestHash was never really
+// computed by computeManifestHash.
+func TestJSONDeserializedManifestCannotManufactureAuthority(t *testing.T) {
+	forgedJSON := []byte(`{
+		"tenant_id": "t1", "case_id": "CASE-1", "evidence_id": "EV-FORGED",
+		"version": 1, "sha256": "sha256:whatever-the-attacker-wants",
+		"state": "FINALIZED", "manifest_hash": "sha256:fabricated-not-really-computed"
+	}`)
+	var forged manifest.Manifest
+	if err := json.Unmarshal(forgedJSON, &forged); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if forged.State != manifest.StateFinalized {
+		t.Fatalf("test setup: expected the unmarshaled value to claim FINALIZED, got %s", forged.State)
+	}
+
+	// The forged value independently fails hash verification --
+	// ManifestHash was never actually computed by computeManifestHash
+	// over these fields.
+	if err := manifest.VerifyManifestHash(forged); err == nil {
+		t.Fatal("expected VerifyManifestHash to refuse a forged, never-really-computed ManifestHash")
+	}
+
+	// And it is simply inert against a real registry: nothing about
+	// unmarshaling it registers it anywhere. A real registry for the
+	// SAME EvidenceID has no record of it at all.
+	reg := manifest.NewRegistry()
+	if _, err := reg.Latest(forged.EvidenceID); !errors.Is(err, manifest.ErrManifestNotFound) {
+		t.Fatalf("expected ErrManifestNotFound -- the forged value was never registered anywhere, got %v", err)
 	}
 }

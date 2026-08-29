@@ -31,13 +31,14 @@ func groundedManifestRegistry(t *testing.T, evidenceID string) *manifest.Registr
 	// real custody events Authority Round 2's transitionPrerequisiteLocked
 	// now requires at each step (RECEIVED, HASHED, REVIEWED) -- the
 	// honest way to reach FINALIZED.
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "cre-system", manifest.CustodyReceived, 1, "received into custody"); err != nil {
+	const contentHash = "aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd4"
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "cre-system", manifest.CustodyReceived, 1, "received into custody", ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := reg.Advance(evidenceID, manifest.StateIngested, 1); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "cre-system", manifest.CustodyHashed, 1, "hash computed"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "cre-system", manifest.CustodyHashed, 1, "hash computed", contentHash); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := reg.Advance(evidenceID, manifest.StateIntegrityAssessed, 1); err != nil {
@@ -46,7 +47,7 @@ func groundedManifestRegistry(t *testing.T, evidenceID string) *manifest.Registr
 	if _, err := reg.Advance(evidenceID, manifest.StateProvenanceComplete, 1); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "cre-system", manifest.CustodyReviewed, 1, "independent review complete"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "cre-system", manifest.CustodyReviewed, 1, "independent review complete", contentHash); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := reg.Advance(evidenceID, manifest.StateReadyForFinalization, 1); err != nil {

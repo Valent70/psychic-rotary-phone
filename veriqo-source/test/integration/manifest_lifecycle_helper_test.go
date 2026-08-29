@@ -17,13 +17,23 @@ import (
 // this package.
 func advanceManifestToFinalized(t *testing.T, reg *manifest.Registry, evidenceID string, tick uint64) manifest.Manifest {
 	t.Helper()
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "cre-system", manifest.CustodyReceived, tick, "received into custody"); err != nil {
+	// The manifest's own recorded SHA256 is what the HASHED/REVIEWED
+	// custody events must bind their ContentHash to (Final Authority
+	// Hardening Round: prerequisite existence is not enough, prerequisite
+	// identity binding must also be proven) -- looked up here rather
+	// than asked of the caller, since every fixture already set it at
+	// RegisterDraft time.
+	draft, err := reg.Latest(evidenceID)
+	if err != nil {
+		t.Fatalf("Latest(%s): %v", evidenceID, err)
+	}
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "cre-system", manifest.CustodyReceived, tick, "received into custody", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent(RECEIVED) for %s: %v", evidenceID, err)
 	}
 	if _, err := reg.Advance(evidenceID, manifest.StateIngested, tick); err != nil {
 		t.Fatalf("Advance(%s) to INGESTED: %v", evidenceID, err)
 	}
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "cre-system", manifest.CustodyHashed, tick, "hash computed"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "cre-system", manifest.CustodyHashed, tick, "hash computed", draft.SHA256); err != nil {
 		t.Fatalf("RecordCustodyEvent(HASHED) for %s: %v", evidenceID, err)
 	}
 	if _, err := reg.Advance(evidenceID, manifest.StateIntegrityAssessed, tick); err != nil {
@@ -32,7 +42,7 @@ func advanceManifestToFinalized(t *testing.T, reg *manifest.Registry, evidenceID
 	if _, err := reg.Advance(evidenceID, manifest.StateProvenanceComplete, tick); err != nil {
 		t.Fatalf("Advance(%s) to PROVENANCE_COMPLETE: %v", evidenceID, err)
 	}
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "cre-system", manifest.CustodyReviewed, tick, "independent review complete"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "cre-system", manifest.CustodyReviewed, tick, "independent review complete", draft.SHA256); err != nil {
 		t.Fatalf("RecordCustodyEvent(REVIEWED) for %s: %v", evidenceID, err)
 	}
 	if _, err := reg.Advance(evidenceID, manifest.StateReadyForFinalization, tick); err != nil {

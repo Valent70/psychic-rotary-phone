@@ -108,7 +108,11 @@ const GenesisHash = "GENESIS-" + "0000000000000000000000000000000000000000000000
 
 // CustodyEvent is one immutable, hash-chained custody record
 // (VTECP-001 §9). EventHash is computed, never caller-supplied — see
-// Registry.RecordCustodyEvent.
+// Registry.RecordCustodyEvent. ContentHash, when non-empty, is this
+// event's own claim about WHICH content it concerns -- see
+// RecordCustodyEvent's own doc comment for why this exists (a Final
+// Authority Hardening Round finding: "prerequisite existence is not
+// enough; prerequisite identity binding must also be proven").
 type CustodyEvent struct {
 	EventID      string        `json:"event_id"`
 	EvidenceID   string        `json:"evidence_id"`
@@ -118,11 +122,17 @@ type CustodyEvent struct {
 	PreviousHash string        `json:"previous_hash"`
 	EventHash    string        `json:"event_hash"`
 	Reason       string        `json:"reason"`
+	ContentHash  string        `json:"content_hash,omitempty"`
 }
 
 // hashInput is exactly the fields VTECP-001 §9's formula folds into
 // Hn = SHA256(Hn-1 || JCS(EventN)) — separated from CustodyEvent
 // itself so EventHash is never accidentally included in its own input.
+// ContentHash is included: a caller (or an attacker with write access
+// to the in-memory chain, the same threat TestCustodyChainDetectsTampering
+// already exercises) rewriting which content an event attests to after
+// the fact is exactly as much tampering as rewriting the Reason, and
+// must be caught by the same chain-verification mechanism.
 type custodyHashInput struct {
 	EvidenceID   string        `json:"evidence_id"`
 	Actor        string        `json:"actor"`
@@ -130,12 +140,14 @@ type custodyHashInput struct {
 	Action       CustodyAction `json:"action"`
 	PreviousHash string        `json:"previous_hash"`
 	Reason       string        `json:"reason"`
+	ContentHash  string        `json:"content_hash"`
 }
 
 func computeCustodyHash(e CustodyEvent) (string, error) {
 	return jcs.Hash(custodyHashInput{
 		EvidenceID: e.EvidenceID, Actor: e.Actor, Tick: e.Tick,
 		Action: e.Action, PreviousHash: e.PreviousHash, Reason: e.Reason,
+		ContentHash: e.ContentHash,
 	})
 }
 
@@ -329,6 +341,25 @@ func hasCustodyAction(chain []CustodyEvent, action CustodyAction) bool {
 	return false
 }
 
+// hasCustodyActionBoundToContent reports whether chain contains an
+// event of the given action whose OWN ContentHash equals wantHash --
+// the identity-binding check a Final Authority Hardening Round finding
+// asked for explicitly: "A has a HASHED event" is not enough; the
+// HASHED event must itself say it hashed the SAME content the manifest
+// currently claims (cur.SHA256), not merely exist somewhere in this
+// EvidenceID's chain.
+func hasCustodyActionBoundToContent(chain []CustodyEvent, action CustodyAction, wantHash string) bool {
+	if wantHash == "" {
+		return false
+	}
+	for _, e := range chain {
+		if e.Action == action && e.ContentHash == wantHash {
+			return true
+		}
+	}
+	return false
+}
+
 // transitionPrerequisiteLocked checks, for the SPECIFIC evidenceID and
 // candidate transition, that real work backing it is actually on file
 // -- never trusting that calling Advance in the right order is itself
@@ -355,16 +386,16 @@ func (r *Registry) transitionPrerequisiteLocked(evidenceID string, cur Manifest,
 		if cur.HashStatus == "" {
 			return fmt.Errorf("%w: %s -> %s requires HashStatus to be recorded", ErrTransitionPrerequisiteNotMet, cur.State, to)
 		}
-		if !hasCustodyAction(chain, CustodyHashed) {
-			return fmt.Errorf("%w: %s -> %s requires a recorded HASHED custody event", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		if !hasCustodyActionBoundToContent(chain, CustodyHashed, cur.SHA256) {
+			return fmt.Errorf("%w: %s -> %s requires a recorded HASHED custody event whose ContentHash matches this manifest's own SHA256 (%s) -- existence of a HASHED event for this EvidenceID is not enough, it must attest to THIS content", ErrTransitionPrerequisiteNotMet, cur.State, to, cur.SHA256)
 		}
 	case StateProvenanceComplete:
 		if cur.AcquisitionRecord == "" {
 			return fmt.Errorf("%w: %s -> %s requires AcquisitionRecord to be recorded", ErrTransitionPrerequisiteNotMet, cur.State, to)
 		}
 	case StateReadyForFinalization:
-		if !hasCustodyAction(chain, CustodyReviewed) {
-			return fmt.Errorf("%w: %s -> %s requires a recorded REVIEWED custody event", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		if !hasCustodyActionBoundToContent(chain, CustodyReviewed, cur.SHA256) {
+			return fmt.Errorf("%w: %s -> %s requires a recorded REVIEWED custody event whose ContentHash matches this manifest's own SHA256 (%s) -- a review of some OTHER content does not qualify", ErrTransitionPrerequisiteNotMet, cur.State, to, cur.SHA256)
 		}
 	case StateFinalized:
 		if cur.Classification == "" {
@@ -471,8 +502,18 @@ func (r *Registry) Supersede(next Manifest, tick uint64) (Manifest, error) {
 // RecordCustodyEvent appends the next custody event for evidenceID,
 // computing EventHash from the chain's own current head — the ONLY way
 // a CustodyEvent enters the chain (a caller never supplies EventHash
-// directly).
-func (r *Registry) RecordCustodyEvent(evidenceID, eventID, actor string, action CustodyAction, tick uint64, reason string) (CustodyEvent, error) {
+// directly). contentHash is the event's own claim about WHICH content
+// it concerns -- for actions where that matters (HASHED, REVIEWED; see
+// transitionPrerequisiteLocked, which requires it to equal the
+// manifest's own current SHA256), and may be left empty for actions
+// where it does not (RECEIVED, STORED, ACCESSED, ...). This closes a
+// Final Authority Hardening Round finding: "A has a RECEIVED event, A
+// has a HASHED event, A has a REVIEWED event" previously proved only
+// that events EXISTED for this EvidenceID string, never that each one
+// actually attested to the SAME content the manifest's own SHA256
+// records -- prerequisite existence is not the same as prerequisite
+// identity binding.
+func (r *Registry) RecordCustodyEvent(evidenceID, eventID, actor string, action CustodyAction, tick uint64, reason, contentHash string) (CustodyEvent, error) {
 	if !IsKnownCustodyAction(action) {
 		return CustodyEvent{}, fmt.Errorf("%w: %q", ErrUnknownCustodyAction, action)
 	}
@@ -485,7 +526,7 @@ func (r *Registry) RecordCustodyEvent(evidenceID, eventID, actor string, action 
 	}
 	e := CustodyEvent{
 		EventID: eventID, EvidenceID: evidenceID, Actor: actor, Tick: tick,
-		Action: action, PreviousHash: prev, Reason: reason,
+		Action: action, PreviousHash: prev, Reason: reason, ContentHash: contentHash,
 	}
 	h, err := computeCustodyHash(e)
 	if err != nil {
@@ -494,10 +535,26 @@ func (r *Registry) RecordCustodyEvent(evidenceID, eventID, actor string, action 
 	e.EventHash = h
 	r.custody[evidenceID] = append(chain, e)
 
+	// The custody LOG itself stays append-only regardless of state --
+	// a FINALIZED evidence item can still be legitimately ACCESSED or
+	// EXPORTED later, and that should be recorded. But the MANIFEST's
+	// own CustodyChainHead field must freeze once the manifest reaches
+	// FINALIZED or SUPERSEDED: ManifestHash was computed over the
+	// CustodyChainHead value AS OF finalization, so continuing to sync
+	// this field afterward would silently stale that already-recorded
+	// hash out from under it -- a Final Authority Hardening Round
+	// finding (FINALIZED must imply immutability of every field the
+	// hash covers, not just a documented convention that nothing
+	// SHOULD touch it after). VerifyManifestHash would eventually
+	// detect the resulting mismatch if anyone checked, but nothing
+	// previously stopped the mutation from happening in the first
+	// place.
 	if vs := r.versions[evidenceID]; len(vs) > 0 {
 		cur := vs[len(vs)-1]
-		cur.CustodyChainHead = h
-		vs[len(vs)-1] = cur
+		if cur.State != StateFinalized && cur.State != StateSuperseded {
+			cur.CustodyChainHead = h
+			vs[len(vs)-1] = cur
+		}
 	}
 	return e, nil
 }

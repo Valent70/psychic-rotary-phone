@@ -441,6 +441,29 @@ func (reg *Registry) Submit(rec Record) error {
 	if id == "" {
 		return ErrUnderlyingInvalid
 	}
+	// Every authority-bearing field is reset to its honest starting
+	// value here, exactly like New() -- never trusted from rec as
+	// given. This closes a Final Authority Hardening Round finding: a
+	// caller (or a deserializer, since Record has no unexported fields
+	// and no accessor-only sealing the way cre.AuthorizedFinding does)
+	// could otherwise hand-build a Record{Status: StatusCorroborated,
+	// Rights: provenance.RightsCustomerFacingAllowed, ...} directly and
+	// Submit it, bypassing New()'s defaults and every downstream
+	// authority gate (VerifyStatus's derivation, SetRights's authority
+	// check) entirely -- "serialized/hand-constructed objects must not
+	// be sufficient to manufacture an authoritative state" applies to
+	// this entry point exactly as much as to New() itself. Descriptive
+	// fields the caller legitimately controls (CaseID, Origin,
+	// SourcePartyID, DocumentType, ChainOfCustody -- which may
+	// genuinely describe hand-offs BEFORE evidence reached VERIQO, and
+	// so is not reset here -- RelatedEntities/Contracts/Events, the
+	// five qualification fields, Metadata) are left exactly as
+	// submitted.
+	rec.Status = StatusUnverified
+	rec.Strength = Strength{}
+	rec.Rights = provenance.RightsUnknownPendingContract
+	rec.CorrectionSuperseded = false
+	rec.SupersededBy = ""
 	reg.mu.Lock()
 	defer reg.mu.Unlock()
 	if _, exists := reg.records[id]; exists {

@@ -28,13 +28,13 @@ func validDraft(evidenceID string) Manifest {
 // file's own adversarial tests below.
 func advanceThroughFullLifecycle(t *testing.T, reg *Registry, evidenceID string, tick uint64) Manifest {
 	t.Helper()
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "PTY-1", CustodyReceived, tick, "received"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "PTY-1", CustodyReceived, tick, "received", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent(RECEIVED): %v", err)
 	}
 	if _, err := reg.Advance(evidenceID, StateIngested, tick); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "PTY-1", CustodyHashed, tick, "hashed"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "PTY-1", CustodyHashed, tick, "hashed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent(HASHED): %v", err)
 	}
 	if _, err := reg.Advance(evidenceID, StateIntegrityAssessed, tick); err != nil {
@@ -43,7 +43,7 @@ func advanceThroughFullLifecycle(t *testing.T, reg *Registry, evidenceID string,
 	if _, err := reg.Advance(evidenceID, StateProvenanceComplete, tick); err != nil {
 		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "PTY-1", CustodyReviewed, tick, "reviewed"); err != nil {
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "PTY-1", CustodyReviewed, tick, "reviewed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent(REVIEWED): %v", err)
 	}
 	if _, err := reg.Advance(evidenceID, StateReadyForFinalization, tick); err != nil {
@@ -218,7 +218,7 @@ func TestCustodyChainIsHashLinked(t *testing.T) {
 	events := []CustodyAction{CustodyReceived, CustodyRegistered, CustodyHashed, CustodyStored}
 	var lastHash string
 	for i, action := range events {
-		e, err := reg.RecordCustodyEvent("EV-1", "EVT-"+string(action), "PTY-1", action, uint64(i*10), "routine")
+		e, err := reg.RecordCustodyEvent("EV-1", "EVT-"+string(action), "PTY-1", action, uint64(i*10), "routine", "")
 		if err != nil {
 			t.Fatalf("RecordCustodyEvent(%s): %v", action, err)
 		}
@@ -242,10 +242,10 @@ func TestCustodyChainIsHashLinked(t *testing.T) {
 
 func TestCustodyChainDetectsTampering(t *testing.T) {
 	reg := NewRegistry()
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyReceived, 10, "routine"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyReceived, 10, "routine", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-2", "PTY-1", CustodyRegistered, 20, "routine"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-2", "PTY-1", CustodyRegistered, 20, "routine", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	// Tamper with the in-memory chain directly to simulate a corrupted
@@ -263,7 +263,7 @@ func TestCustodyChainDetectsTampering(t *testing.T) {
 
 func TestRecordCustodyEventRefusesUnknownAction(t *testing.T) {
 	reg := NewRegistry()
-	_, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyAction("BOGUS"), 10, "x")
+	_, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyAction("BOGUS"), 10, "x", "")
 	if !errors.Is(err, ErrUnknownCustodyAction) {
 		t.Fatalf("expected ErrUnknownCustodyAction, got %v", err)
 	}
@@ -274,7 +274,7 @@ func TestRecordCustodyEventUpdatesManifestChainHead(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	e, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyReceived, 10, "routine")
+	e, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyReceived, 10, "routine", "")
 	if err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
@@ -376,7 +376,7 @@ func TestAdvanceRefusesIntegrityAssessedWithoutHashedCustodyEvent(t *testing.T) 
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
@@ -398,13 +398,13 @@ func TestAdvanceRefusesIntegrityAssessedWithoutHashStatus(t *testing.T) {
 	if _, err := reg.RegisterDraft(d); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	_, err := reg.Advance("EV-1", StateIntegrityAssessed, 10)
@@ -420,13 +420,13 @@ func TestAdvanceRefusesProvenanceCompleteWithoutAcquisitionRecord(t *testing.T) 
 	if _, err := reg.RegisterDraft(d); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
@@ -443,13 +443,13 @@ func TestAdvanceRefusesReadyForFinalizationWithoutReviewedCustodyEvent(t *testin
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
@@ -474,14 +474,14 @@ func TestAdvanceRefusesFinalizationWithoutClassification(t *testing.T) {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
 	for _, action := range []CustodyAction{CustodyReceived} {
-		if _, err := reg.RecordCustodyEvent("EV-1", "EVT-"+string(action), "PTY-1", action, 10, "x"); err != nil {
+		if _, err := reg.RecordCustodyEvent("EV-1", "EVT-"+string(action), "PTY-1", action, 10, "x", ""); err != nil {
 			t.Fatalf("RecordCustodyEvent(%s): %v", action, err)
 		}
 	}
 	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
@@ -490,7 +490,7 @@ func TestAdvanceRefusesFinalizationWithoutClassification(t *testing.T) {
 	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
 		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateReadyForFinalization, 10); err != nil {
@@ -514,13 +514,13 @@ func TestAdvanceRefusesFinalizationWithATamperedCustodyChain(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
 		t.Fatalf("Advance to INGESTED: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
@@ -529,7 +529,7 @@ func TestAdvanceRefusesFinalizationWithATamperedCustodyChain(t *testing.T) {
 	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
 		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
 	}
-	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed"); err != nil {
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed", "sha256:deadbeef"); err != nil {
 		t.Fatalf("RecordCustodyEvent: %v", err)
 	}
 	if _, err := reg.Advance("EV-1", StateReadyForFinalization, 10); err != nil {
@@ -547,5 +547,194 @@ func TestAdvanceRefusesFinalizationWithATamperedCustodyChain(t *testing.T) {
 	_, err := reg.Advance("EV-1", StateFinalized, 10)
 	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
 		t.Fatalf("expected ErrTransitionPrerequisiteNotMet for a tampered custody chain, got %v", err)
+	}
+}
+
+// ---- Final Authority Hardening Round: FINALIZED must imply immutability
+// of every hash-covered field, not just a documented convention ----
+
+// TestRecordCustodyEventDoesNotStaleTheFinalizedManifestHash is the
+// direct adversarial proof: RecordCustodyEvent previously kept syncing
+// CustodyChainHead onto the latest Manifest version even after that
+// version reached FINALIZED, silently staling ManifestHash (computed
+// over the OLD CustodyChainHead value) out from under it. A later
+// custody event -- EXPORTED, ACCESSED, entirely legitimate actions
+// against evidence that is already finalized -- must still be
+// recordable in the custody LOG, but must never mutate the finalized
+// manifest's own already-hashed state.
+func TestRecordCustodyEventDoesNotStaleTheFinalizedManifestHash(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	finalized := advanceThroughFullLifecycle(t, reg, "EV-1", 10)
+	if finalized.ManifestHash == "" {
+		t.Fatal("expected a ManifestHash on the finalized manifest")
+	}
+	if err := VerifyManifestHash(finalized); err != nil {
+		t.Fatalf("expected the freshly finalized manifest to verify, got %v", err)
+	}
+
+	// A legitimate, later custody event against already-finalized
+	// evidence -- e.g. it was exported for a dispute.
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-exported", "dispute-team", CustodyExported, 20, "exported for arbitration", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent(EXPORTED) after finalization: %v", err)
+	}
+	// The custody LOG grew...
+	chain := reg.CustodyChain("EV-1")
+	if len(chain) == 0 || chain[len(chain)-1].Action != CustodyExported {
+		t.Fatalf("expected the EXPORTED event to be recorded in the custody log, got %+v", chain)
+	}
+	// ...but the FINALIZED manifest's own state is byte-for-byte
+	// unchanged, and its hash still verifies.
+	stillLatest, err := reg.Latest("EV-1")
+	if err != nil {
+		t.Fatalf("Latest: %v", err)
+	}
+	if stillLatest.CustodyChainHead != finalized.CustodyChainHead {
+		t.Fatalf("CustodyChainHead changed after finalization: got %s, want %s (frozen at finalization)", stillLatest.CustodyChainHead, finalized.CustodyChainHead)
+	}
+	if stillLatest.ManifestHash != finalized.ManifestHash {
+		t.Fatal("ManifestHash changed after finalization -- a supposedly immutable field was mutated")
+	}
+	if err := VerifyManifestHash(stillLatest); err != nil {
+		t.Fatalf("expected the finalized manifest to still independently verify after a later custody event, got %v", err)
+	}
+}
+
+// ---- Final Authority Hardening Round: prerequisite identity binding ----
+//
+// "Prerequisite existence is not enough; prerequisite identity binding
+// must also be proven." A HASHED custody event existing somewhere in
+// EV-1's chain used to be enough to reach INTEGRITY_ASSESSED, even if
+// that event's own content had nothing to do with the manifest's
+// actual SHA256. The tests below prove that gap is closed: an event of
+// the right ACTION but the WRONG (or missing) ContentHash does not
+// satisfy the prerequisite.
+
+func TestAdvanceRefusesHashedEventBoundToDifferentContent(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent(RECEIVED): %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	// A HASHED event is recorded, but it attests to SOME OTHER
+	// document's content -- e.g. copy-pasted from a different case, or
+	// a genuine mistake -- not the manifest's own "sha256:deadbeef".
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:wrong-document-entirely"); err != nil {
+		t.Fatalf("RecordCustodyEvent(HASHED): %v", err)
+	}
+	_, err := reg.Advance("EV-1", StateIntegrityAssessed, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet for a HASHED event bound to the wrong content, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesHashedEventWithNoContentHashAtAll(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent(RECEIVED): %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	// The pre-Hardening-Round shape: an event of the right ACTION,
+	// existence-only, no content claim at all.
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-hashed", "PTY-1", CustodyHashed, 10, "hashed", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent(HASHED): %v", err)
+	}
+	_, err := reg.Advance("EV-1", StateIntegrityAssessed, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet for a HASHED event with no ContentHash, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesReviewedEventBoundToDifferentContent(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent(RECEIVED): %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
+		t.Fatalf("RecordCustodyEvent(HASHED): %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
+		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
+	}
+	// The review was genuinely performed, but on the WRONG document.
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed", "sha256:a-different-document"); err != nil {
+		t.Fatalf("RecordCustodyEvent(REVIEWED): %v", err)
+	}
+	_, err := reg.Advance("EV-1", StateReadyForFinalization, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet for a REVIEWED event bound to the wrong content, got %v", err)
+	}
+}
+
+// TestCustodyEventContentHashIsHashChainCovered proves ContentHash is
+// itself part of what VerifyCustodyChain protects: an attacker with
+// write access to the in-memory chain (the same threat
+// TestCustodyChainDetectsTampering already exercises for Reason)
+// rewriting an event's ContentHash after the fact must be just as
+// detectable.
+func TestCustodyEventContentHashIsHashChainCovered(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-1", "PTY-1", CustodyHashed, 10, "hashed", "sha256:original"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	reg.mu.Lock()
+	chain := reg.custody["EV-1"]
+	chain[0].ContentHash = "sha256:swapped-in-after-the-fact"
+	reg.mu.Unlock()
+
+	if err := reg.VerifyCustodyChain("EV-1"); !errors.Is(err, ErrCustodyChainBroken) {
+		t.Fatalf("expected ErrCustodyChainBroken for a tampered ContentHash, got %v", err)
+	}
+}
+
+// TestReorderedCustodyChainFailsVerification proves the custody chain's
+// hash-linking (Hn = SHA256(Hn-1 || JCS(EventN))) itself detects a
+// replayed-out-of-order or spliced chain, not just a single tampered
+// field -- one of the Final Authority Hardening Round's own named
+// adversarial scenarios ("reordered events"). This package's own
+// exported surface has no way to reorder a chain (RecordCustodyEvent
+// only ever appends), so this reaches into the same unexported field
+// TestCustodyChainDetectsTampering already does, to simulate what a
+// corrupted persistence/replay layer replaying events out of order
+// would produce.
+func TestReorderedCustodyChainFailsVerification(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-1", "actor", CustodyReceived, 10, "first", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-2", "actor", CustodyHashed, 20, "second", "sha256:x"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if err := reg.VerifyCustodyChain("EV-1"); err != nil {
+		t.Fatalf("expected the genuine, in-order chain to verify, got %v", err)
+	}
+	reg.mu.Lock()
+	chain := reg.custody["EV-1"]
+	chain[0], chain[1] = chain[1], chain[0]
+	reg.mu.Unlock()
+
+	if err := reg.VerifyCustodyChain("EV-1"); !errors.Is(err, ErrCustodyChainBroken) {
+		t.Fatalf("expected ErrCustodyChainBroken for a reordered custody chain, got %v", err)
 	}
 }
