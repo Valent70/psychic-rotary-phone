@@ -242,3 +242,79 @@ func TestVerifyFindingAgainstHypothesisRejectsUnknownHypothesisID(t *testing.T) 
 		t.Fatalf("expected ErrFindingDoesNotMatchHypothesis for an unknown hypothesis ID, got %v", err)
 	}
 }
+
+// TestVerifyFindingAgainstHypothesisRejectsHypothesisWithFabricatedStatus
+// responds to Verification.docx's item 6: a Finding.Hash that verifies,
+// and a ConfidenceBasis that matches the cited hypothesis's own Status
+// field exactly, is still not proof the Finding is authoritative if that
+// Status was never actually earned from real evidence in the first
+// place. causation.HypothesisSet.Add does not force Status to be
+// evidence-derived -- a caller can Add a Hypothesis whose Status already
+// claims StatusSupported with zero SupportingEvidence attached, and Add
+// accepts it as long as it names a known status value. This proves that
+// exact attack -- a hand-fabricated Status with no real evidence behind
+// it at all -- is caught by VerifyFindingAgainstHypothesis's second,
+// evidence-derivation check, not just its first, matches-the-hypothesis
+// check (which this fabricated data would trivially pass, since f cites
+// the same, real, hypothesis-holding HypothesisSet).
+func TestVerifyFindingAgainstHypothesisRejectsHypothesisWithFabricatedStatus(t *testing.T) {
+	hs, err := causation.NewHypothesisSet("case-fab", "claim-fab", "What caused the loss?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Fabricated: Status claims StatusSupported directly, but the
+	// hypothesis's own evidence lists -- one supporting item against TWO
+	// contradicting items -- would legitimately derive, at most,
+	// StatusContradicted (cc > sc). causation.HypothesisSet.Add does not
+	// force Status to be evidence-derived, so this Add succeeds even
+	// though the Status field openly contradicts the evidence sitting
+	// right next to it.
+	const hFab causation.HypothesisID = "H-fabricated"
+	if err := hs.Add(causation.Hypothesis{
+		ID:                    hFab,
+		Description:           "fabricated: claims full support despite net contradicting evidence",
+		Status:                causation.StatusSupported,
+		SupportingEvidence:    []string{"ev-1"},
+		ContradictingEvidence: []string{"ev-2", "ev-3"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	hFabValue, ok := hs.Get(hFab)
+	if !ok {
+		t.Fatal("just-added hypothesis not found")
+	}
+	if got := causation.DeriveStatus(hFabValue, nil); got != causation.StatusContradicted {
+		t.Fatalf("fixture's evidence lists must derive StatusContradicted for this test to be meaningful, got %s", got)
+	}
+	f := finding.Finding{
+		FindingID: "f-fab", CaseID: "case-fab", ContractBasis: "clause-1", ObligationRef: "obl-1",
+		EventRef: "event-1", QuantumRef: "calc-1", ConfidenceBasis: causation.StatusSupported,
+		Causation:                "hedged narrative for the fabricated hypothesis",
+		SupportedBy:              []string{"ev-1"},
+		ContradictedBy:           []string{"ev-2", "ev-3"},
+		ContradictionsConsidered: true,
+		AlternativesConsidered:   true,
+		HumanReviewDecided:       true,
+	}
+	f = finding.Evaluate(f)
+	if len(finding.MissingFields(f)) != 0 {
+		t.Fatalf("fixture must reach StatusFinding for this test to be meaningful, missing=%v", finding.MissingFields(f))
+	}
+	// f's own Hash verifies, and its SupportedBy/ContradictedBy/
+	// ConfidenceBasis all match hFab's own stored fields exactly -- yet
+	// this must still be refused, because hFab's Status itself was never
+	// evidence-derived; it directly contradicts what its own evidence
+	// lists support.
+	err = VerifyFindingAgainstHypothesis(f, hs, hFab)
+	if err == nil {
+		t.Fatal("expected a hypothesis with a fabricated Status to be refused")
+	}
+	if !errors.Is(err, ErrHypothesisStatusNotEvidenceDerived) {
+		t.Fatalf("expected ErrHypothesisStatusNotEvidenceDerived, got %v", err)
+	}
+	// Also confirm the full authorization gate refuses it, not just the
+	// lower-level provenance check in isolation.
+	if _, err := Authorize(f, hs, hFab, nil, 1); !errors.Is(err, ErrHypothesisStatusNotEvidenceDerived) {
+		t.Fatalf("expected Authorize to also refuse via ErrHypothesisStatusNotEvidenceDerived, got %v", err)
+	}
+}
