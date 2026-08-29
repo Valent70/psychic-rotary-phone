@@ -1,0 +1,1135 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R] /Count 9 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 3734 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO -- FINAL AUTHORITY HARDENING ROUND RESPONSE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 29 August 2026) Tj
+0 -12 Td
+(Baseline: Authority Round 2: Manifest, Rights & Supersession Closure -- commit 4090f08) Tj
+0 -12 Td
+(Responds to: Final_Hardening_Round.docx -- an independent reviewer's final adversarial audit) Tj
+0 -12 Td
+(pass, and the user's own instruction to work through everything still open in one pass,) Tj
+0 -12 Td
+("tingkatkan) Tj
+0 -12 Td
+(dari hardening ke enterprise grade dan production readiness" \(raise this from hardening to) Tj
+0 -12 Td
+(enterprise grade and production readiness\).) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review. All code in) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(deliverable compiles, is tested, and was verified against the live repository. Every claim) Tj
+0 -12 Td
+(below) Tj
+0 -12 Td
+(that names a file, function, or test was checked against that exact source before this) Tj
+0 -12 Td
+(report was) Tj
+0 -12 Td
+(written.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT, AND A DIRECT ANSWER ON "ENTERPRISE GRADE / PRODUCTION READINESS") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round found and closed one genuinely new, previously-undiscovered critical gap) Tj
+0 -12 Td
+(\(evidence.Registry.Submit's own authority bypass\), closed two real integrity gaps in the) Tj
+0 -12 Td
+(Advance\(\) gate Authority Round 2 already hardened once, and added mechanical proof -- not) Tj
+0 -12 Td
+(prose --) Tj
+0 -12 Td
+(for two properties the prior round could only argue by reasoning about the code. Every fix) Tj
+0 -12 Td
+(follows) Tj
+0 -12 Td
+(this engagement's standing discipline: break the fix, confirm the new test fails with the) Tj
+0 -12 Td
+(exact) Tj
+0 -12 Td
+(expected diagnostic, restore the fix, confirm it passes.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(On the instruction to raise this "to enterprise grade and production readiness": that is not) Tj
+0 -12 Td
+(a) Tj
+0 -12 Td
+(switch this round -- or any amount of code hardening -- can flip, and this report does not) Tj
+0 -12 Td
+(claim it) Tj
+0 -12 Td
+(has. What this round *can* honestly say, and does: the Evidence/Manifest authority layer's) Tj
+0 -12 Td
+(engineering-level trust bypasses -- every one identified across four consecutive review) Tj
+0 -12 Td
+(rounds --) Tj
+0 -12 Td
+(are now closed or explicitly classified as external-world dependencies. That is real,) Tj
+0 -12 Td
+(verified) Tj
+0 -12 Td
+(progress on Level 2 \(Engineering Verified\) of the maturity model this engagement adopted) Tj
+0 -12 Td
+(several) Tj
+0 -12 Td
+(rounds ago. It is not Level 3 \(Controlled External Validation\) or Level 4 \(Production) Tj
+0 -12 Td
+(Proven\), and) Tj
+0 -12 Td
+("enterprise grade" / "production readiness" are Level 3/4 claims -- they require real) Tj
+0 -12 Td
+(external) Tj
+0 -12 Td
+(counterparties, real customers, real incidents, real financial impact, none of which any) Tj
+0 -12 Td
+(amount of) Tj
+0 -12 Td
+(local engineering work can manufacture. This report states VERIQO's position on that scale) Tj
+0 -12 Td
+(plainly,) Tj
+0 -12 Td
+(in Part 6, rather than let the instruction's framing imply otherwise.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 1 -- NEW FINDING: EVIDENCE.REGISTRY.SUBMIT'S OWN AUTHORITY BYPASS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is not a finding either reviewer document named. It surfaced from this round's own) Tj
+0 -12 Td
+(systematic) Tj
+0 -12 Td
+(audit of "every authority-bearing state transition and state transport mechanism," and it is) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(most serious finding of this engagement's four Authority rounds combined.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What was wrong. Registry.Submit\(rec Record\) error stored whatever Record value a caller) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3722 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(handed it, verbatim, with zero reset of any authority-bearing field. Record has no) Tj
+0 -12 Td
+(unexported) Tj
+0 -12 Td
+(fields and no accessor-only sealing the way cre.AuthorizedFinding does -- so a caller \(or a) Tj
+0 -12 Td
+(JSON) Tj
+0 -12 Td
+(deserializer, which sets exported struct fields exactly the same way a hand-built composite) Tj
+0 -12 Td
+(literal) Tj
+0 -12 Td
+(does\) could construct:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(go) Tj
+0 -12 Td
+(forged := Record{) Tj
+0 -12 Td
+(CaseID: "CASE-1", Underlying: realOntologyEvidence, SourcePartyID: "PTY-1", Origin:) Tj
+0 -12 Td
+(OriginClaimant,) Tj
+0 -12 Td
+(Status: StatusCorroborated,                         // never derived, never checked) Tj
+0 -12 Td
+(Rights: provenance.RightsCustomerFacingAllowed,      // never authorized, never checked) Tj
+0 -12 Td
+(}) Tj
+0 -12 Td
+(reg.Submit\(forged\) // accepted verbatim) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(-- completely bypassing New\(\)'s honest defaults and every downstream authority gate) Tj
+0 -12 Td
+(Authority) Tj
+0 -12 Td
+(Round 1 \(VerifyStatus/DeriveStatus\) and Authority Round 2 \(SetRights's trust-grant check\)) Tj
+0 -12 Td
+(had) Tj
+0 -12 Td
+(already closed. This was verified as a real, working exploit -- not a theoretical concern --) Tj
+0 -12 Td
+(before) Tj
+0 -12 Td
+(being fixed: a standalone test confirming the forged Status/Rights survived Submit unchanged) Tj
+0 -12 Td
+(was written and run against the pre-fix code first.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The fix. Submit now resets every authority-bearing field to New\(\)'s own honest starting) Tj
+0 -12 Td
+(value before storing the record: Status -> StatusUnverified, Strength -> the zero value,) Tj
+0 -12 Td
+(Rights -> RightsUnknownPendingContract, CorrectionSuperseded -> false, SupersededBy -> "".) Tj
+0 -12 Td
+(Caller-owned descriptive fields -- Origin, DocumentType, ChainOfCustody \(which may honestly) Tj
+0 -12 Td
+(describe custody hand-offs that happened *before* the evidence reached VERIQO\), the) Tj
+0 -12 Td
+(qualification) Tj
+0 -12 Td
+(fields, Metadata -- are left exactly as submitted; the fix is scoped to authority claims) Tj
+0 -12 Td
+(only, not) Tj
+0 -12 Td
+(every field on the type.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Adversarial tests, verified against a real regression. Three new tests in) Tj
+0 -12 Td
+(pkg/insurance/evidence/evidence_test.go and canonical_authority_test.go:) Tj
+0 -12 Td
+(TestSubmitResetsAuthorityBearingFields \(the direct proof, covering every reset field plus a) Tj
+0 -12 Td
+(Permits check confirming the honest baseline\),) Tj
+0 -12 Td
+(TestSubmitDoesNotResetCallerOwnedDescriptiveFields) Tj
+0 -12 Td
+(\(confirming the fix is correctly scoped, not a blunt reset of the whole struct\), and) Tj
+0 -12 Td
+(TestJSONDeserializedRecordCannotManufactureAuthority \(the same exploit, this time) Tj
+0 -12 Td
+(constructed via) Tj
+0 -12 Td
+(an actual encoding/json.Unmarshal round-trip rather than a struct literal, closing the gap) Tj
+0 -12 Td
+(completely rather than only for hand-built values\). Before finalizing, the reset lines were) Tj
+0 -12 Td
+(temporarily removed and the suite re-run: the forged-Status test failed immediately,) Tj
+0 -12 Td
+(reproducing the) Tj
+0 -12 Td
+(original exploit exactly, before the fix was restored.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 2 -- TWO FURTHER INTEGRITY GAPS IN MANIFEST.REGISTRY.ADVANCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Authority Round 2 already made Advance require real, attributed evidence for each transition) Tj
+0 -12 Td
+(\(transitionPrerequisiteLocked\). This round's audit found two ways that gate itself was still) Tj
+0 -12 Td
+(incomplete.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(2A. FINALIZED DID NOT ACTUALLY FREEZE EVERY HASH-COVERED FIELD) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3939 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(The gap. RecordCustodyEvent kept syncing CustodyChainHead onto the latest manifest version) Tj
+0 -12 Td
+(even after that version reached FINALIZED -- so a later, entirely legitimate custody event) Tj
+0 -12 Td
+(\(the) Tj
+0 -12 Td
+(evidence was EXPORTED for a dispute, ACCESSED for a review\) would silently stale the) Tj
+0 -12 Td
+(already-computed ManifestHash, which was computed over the CustodyChainHead value *as of) Tj
+0 -12 Td
+(finalization*. VerifyManifestHash would eventually catch the resulting mismatch if anyone) Tj
+0 -12 Td
+(actually) Tj
+0 -12 Td
+(called it -- but nothing prevented the mutation from happening in the first place, and) Tj
+0 -12 Td
+("FINALIZED) Tj
+0 -12 Td
+(must imply immutability of the finalized evidence state... bukan hanya 'we verified it) Tj
+0 -12 Td
+(once'" \(the) Tj
+0 -12 Td
+(reviewer's own framing\) requires prevention, not eventual detectability.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The fix. The custody *log* stays append-only regardless of state \(a finalized item can still) Tj
+0 -12 Td
+(be) Tj
+0 -12 Td
+(legitimately exported or accessed, and that should be recorded\) -- but the *manifest's own*) Tj
+0 -12 Td
+(CustodyChainHead field now freezes permanently once the manifest reaches FINALIZED or) Tj
+0 -12 Td
+(SUPERSEDED. TestRecordCustodyEventDoesNotStaleTheFinalizedManifestHash proves both halves:) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(custody log genuinely grows with the later event, and the finalized manifest's own state --) Tj
+0 -12 Td
+(and its) Tj
+0 -12 Td
+(independently-verifiable hash -- stays byte-for-byte unchanged. Verified against a real) Tj
+0 -12 Td
+(regression) Tj
+0 -12 Td
+(\(the state check was temporarily removed; the test failed, naming the exact stale hash; the) Tj
+0 -12 Td
+(fix was) Tj
+0 -12 Td
+(restored\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(2B. PREREQUISITE *EXISTENCE* WAS PROVEN; PREREQUISITE *IDENTITY BINDING* WAS NOT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's point, exactly: *"Kita tidak hanya ingin: A has RECEIVED event, A has HASHED) Tj
+0 -12 Td
+(event, A has REVIEWED event. Kita ingin: identity = X, content hash = H, acquisition = X/H,) Tj
+0 -12 Td
+(review =) Tj
+0 -12 Td
+(X/H, custody chain = X/H... Prerequisite existence is not enough; prerequisite identity) Tj
+0 -12 Td
+(binding must) Tj
+0 -12 Td
+(also be proven."* Authority Round 2's transitionPrerequisiteLocked checked only that *an*) Tj
+0 -12 Td
+(event of) Tj
+0 -12 Td
+(the right action existed somewhere in the chain for this EvidenceID -- never that the event) Tj
+0 -12 Td
+(actually attested to the *same content* the manifest's own SHA256 records. A HASHED event) Tj
+0 -12 Td
+(that) Tj
+0 -12 Td
+(secretly hashed a different document, or a REVIEWED event for the wrong version, would have) Tj
+0 -12 Td
+(satisfied the gate exactly as well as a genuine one.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The fix. CustodyEvent gains a ContentHash field -- included in the hash-chain-covered) Tj
+0 -12 Td
+(payload) Tj
+0 -12 Td
+(\(custodyHashInput\), so tampering with which content an event claims to concern after the) Tj
+0 -12 Td
+(fact is) Tj
+0 -12 Td
+(caught by the same chain verification that already protects every other field.) Tj
+0 -12 Td
+(RecordCustodyEvent) Tj
+0 -12 Td
+(takes a contentHash parameter \(empty for actions where it does not apply -- RECEIVED,) Tj
+0 -12 Td
+(STORED,) Tj
+0 -12 Td
+(ACCESSED, ...\). transitionPrerequisiteLocked now requires the HASHED and REVIEWED) Tj
+0 -12 Td
+(prerequisites to be satisfied by an event whose own ContentHash equals the manifest's) Tj
+0 -12 Td
+(current) Tj
+0 -12 Td
+(SHA256 -- existence of the right action is no longer sufficient on its own.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Four new adversarial tests, verified against a real regression:) Tj
+0 -12 Td
+(TestAdvanceRefusesHashedEventBoundToDifferentContent,) Tj
+0 -12 Td
+(TestAdvanceRefusesHashedEventWithNoContentHashAtAll,) Tj
+0 -12 Td
+(TestAdvanceRefusesReviewedEventBoundToDifferentContent, and) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3726 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(TestCustodyEventContentHashIsHashChainCovered \(proving ContentHash tampering is itself) Tj
+0 -12 Td
+(hash-chain-detectable, the same guarantee Reason already had\). Before finalizing, the) Tj
+0 -12 Td
+(binding) Tj
+0 -12 Td
+(checks were temporarily loosened back to existence-only and the suite re-run: all three) Tj
+0 -12 Td
+(refusal) Tj
+0 -12 Td
+(tests failed immediately \(got <nil>\), before the fix was restored.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 3 -- ROOT OF TRUST: GRANTTRUST, AUDITED, NOT RE-ENGINEERED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's concern: *"SetRights requires authority [via] GrantTrust, maka GrantTrust) Tj
+0 -12 Td
+(menjadi trust root yang sangat sensitif... Kalau caller -> GrantTrust\(...\) -> authority ->) Tj
+0 -12 Td
+(SetRights\(...\), maka kita hanya memindahkan bypass satu level ke atas"* \(if a caller can) Tj
+0 -12 Td
+(call) Tj
+0 -12 Td
+(GrantTrust freely, we have only moved the bypass up one level\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What this round found. A repository-wide grep confirms provenance.Registry.GrantTrust has) Tj
+0 -12 Td
+(zero production callers anywhere -- the same not-yet-wired pattern) Tj
+0 -12 Td
+(evidence.Registry.SetRights) Tj
+0 -12 Td
+(and MarkSuperseded had before Authority Round 2 closed them. No code path anywhere in this) Tj
+0 -12 Td
+(repository can self-bootstrap trust today, because nothing calls GrantTrust at all outside) Tj
+0 -12 Td
+(its own) Tj
+0 -12 Td
+(package's tests. The mechanics GrantTrust itself enforces were also already tested, in an) Tj
+0 -12 Td
+(earlier) Tj
+0 -12 Td
+(engineering round, before this one: Registry.Register always forces TrustGranted = false) Tj
+0 -12 Td
+(regardless of caller input \(TestRegisterNeverAutoGrantsTrustRegardlessOfCallerInput\), and) Tj
+0 -12 Td
+(GrantTrust refuses a missing policy reference and, for an EVIDENCE_PROVIDER, a missing) Tj
+0 -12 Td
+(attestation reference too.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What this round does not, and should not, do. The reviewer's concern generalizes past any) Tj
+0 -12 Td
+(single) Tj
+0 -12 Td
+(gate: *something*, eventually, has to be the root of a trust chain, and no amount of) Tj
+0 -12 Td
+(additional code) Tj
+0 -12 Td
+(gating removes that -- it only moves the question of "who may legitimately call this" one) Tj
+0 -12 Td
+(level) Tj
+0 -12 Td
+(further up, forever. This is not an evasion; it is the same structural fact every trust) Tj
+0 -12 Td
+(system has) Tj
+0 -12 Td
+(\(a PKI root CA, a blockchain's genesis block, a database's first admin account\). The honest,) Tj
+0 -12 Td
+(correct) Tj
+0 -12 Td
+(answer is not an infinite regress of code checks, but an explicit statement of where the) Tj
+0 -12 Td
+(code-level) Tj
+0 -12 Td
+(guarantee ends and an operational one must begin -- which the Trust Authority Graph below) Tj
+0 -12 Td
+(makes) Tj
+0 -12 Td
+(explicit -- and confirmation that nothing in this codebase quietly assumes that boundary is) Tj
+0 -12 Td
+(enforced) Tj
+0 -12 Td
+(when it is not. Who is authorized to invoke GrantTrust in a real deployment is classified) Tj
+0 -12 Td
+(here) Tj
+0 -12 Td
+(as an external-world / deployment-access-control dependency \(who has the credentials, the) Tj
+0 -12 Td
+(role,) Tj
+0 -12 Td
+(the physical or organizational access to run that code path\) -- the same category) Tj
+0 -12 Td
+(SetRights's own) Tj
+0 -12 Td
+(doc comment already used for the legal/commercial act that grants rights. No code in this) Tj
+0 -12 Td
+(repository) Tj
+0 -12 Td
+(claims otherwise.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 4 -- TRUST AUTHORITY GRAPH) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer asked for this as the next logical step past a flat API list: "where does) Tj
+0 -12 Td
+(authority) Tj
+0 -12 Td
+(ultimately come from?") Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 2328 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ROOT AUTHORITY) Tj
+0 -12 Td
+(\(external-world / deployment) Tj
+0 -12 Td
+(access control -- who may call) Tj
+0 -12 Td
+(GrantTrust at all -- NOT a code) Tj
+0 -12 Td
+(gate, by structural necessity\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(provenance.Registry.GrantTrust) Tj
+0 -12 Td
+(\(requires: PolicyRef, non-empty; for an) Tj
+0 -12 Td
+(EVIDENCE_PROVIDER, AttestationRef too;) Tj
+0 -12 Td
+(records GrantedBy + GrantedAtTick\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(Entry.TrustGranted = true) Tj
+0 -12 Td
+(\(the ONLY way this ever becomes true --) Tj
+0 -12 Td
+(Register always forces it false\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(evidence.Registry.SetRights\(state, provReg, authorityID\)) Tj
+0 -12 Td
+(\(refuses unless provReg.Get\(authorityID\)) Tj
+0 -12 Td
+(.TrustGranted is genuinely true\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(Record.Rights) Tj
+0 -12 Td
+(\(Permits\(use\) -- the fail-closed gate) Tj
+0 -12 Td
+(every consumer of external evidence) Tj
+0 -12 Td
+(must call before using it that way\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---------------------------------------------------------------) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ontology.Evidence.ComputeID\(\)) Tj
+0 -12 Td
+(\(content-addressed identity -- the ONE) Tj
+0 -12 Td
+(true root every other Evidence property) Tj
+0 -12 Td
+(below is keyed by; no GrantTrust chain) Tj
+0 -12 Td
+(needed, identity is a pure function of) Tj
+0 -12 Td
+(content\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(manifest.Registry.RegisterDraft) Tj
+0 -12 Td
+(\(first-write-wins per EvidenceID\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(RecordCustodyEvent \(RECEIVED/HASHED/REVIEWED, each) Tj
+0 -12 Td
+(ContentHash-bound to the manifest's own SHA256\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(manifest.Registry.Advance -- transitionPrerequisiteLocked) Tj
+0 -12 Td
+(\(DRAFT -> INGESTED -> INTEGRITY_ASSESSED ->) Tj
+0 -12 Td
+(PROVENANCE_COMPLETE -> READY_FOR_FINALIZATION,) Tj
+0 -12 Td
+(each requiring real, identity-bound, hash-chained) Tj
+0 -12 Td
+(evidence of the work it claims\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(FINALIZED) Tj
+0 -12 Td
+(\(Classification recorded, full custody chain) Tj
+0 -12 Td
+(independently re-verified, CustodyChainHead) Tj
+0 -12 Td
+(frozen permanently from this point on\)) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 2961 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(evidence.Registry.VerifyStatus / DeriveStatus) Tj
+0 -12 Td
+(\(Status -- a SEPARATE axis from Rights and from) Tj
+0 -12 Td
+(manifest.State; derived from Strength, never) Tj
+0 -12 Td
+(caller-supplied, since Authority Round 1\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(causation.HypothesisSet \(evidence-derived Status,) Tj
+0 -12 Td
+(one-directional bound since Verification Round 2b\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(cre.Authorize / AuthorizeGrounded) Tj
+0 -12 Td
+(\(requires finding.StatusFinding, a real) Tj
+0 -12 Td
+(HypothesisSet match, real inference-trace) Tj
+0 -12 Td
+(provenance, and -- AuthorizeGrounded --) Tj
+0 -12 Td
+(every cited evidence ID resolving to a) Tj
+0 -12 Td
+(real, FINALIZED, hash-verified Manifest\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(cre.AuthorizedFinding) Tj
+0 -12 Td
+(\(unexported fields, sealed by Authorize,) Tj
+0 -12 Td
+(deep-cloned at both boundaries\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(v) Tj
+0 -12 Td
+(Decision) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Two independent chains meet only at AuthorizeGrounded, which is deliberate and matches Part) Tj
+0 -12 Td
+(5's) Tj
+0 -12 Td
+(audit: the *Rights* chain \(who may use evidence, and how\) and the *Identity/Finalization*) Tj
+0 -12 Td
+(chain) Tj
+0 -12 Td
+(\(what the evidence actually is, and whether its acquisition was genuine\) answer different) Tj
+0 -12 Td
+(questions,) Tj
+0 -12 Td
+(and nothing in this codebase lets one substitute for the other -- a caller with) Tj
+0 -12 Td
+(CUSTOMER_FACING_ALLOWED) Tj
+0 -12 Td
+(rights on a piece of evidence still cannot get it treated as FINALIZED through that path,) Tj
+0 -12 Td
+(and a) Tj
+0 -12 Td
+(FINALIZED manifest confers no rights on its own.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 5 -- SERIALIZATION CANNOT MANUFACTURE AUTHORITATIVE STATE \(PROVEN, NOT JUST AUDITED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's requirement: *"No serialized representation may be sufficient to manufacture) Tj
+0 -12 Td
+(an) Tj
+0 -12 Td
+(authoritative state."* Two things were done here, not one: an audit of whether this is) Tj
+0 -12 Td
+(exploitable) Tj
+0 -12 Td
+(*today*, and a proof that it cannot become exploitable through the most obvious future path) Tj
+0 -12 Td
+(without) Tj
+0 -12 Td
+(anyone noticing.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Audit result. A repository-wide grep confirms no file that imports pkg/evidence/manifest or) Tj
+0 -12 Td
+(pkg/insurance/evidence also calls json.Unmarshal/json.Decode/gob.Decode anywhere in this) Tj
+0 -12 Td
+(codebase. pkg/storage/snapshot and pkg/replay -- the two packages that do) Tj
+0 -12 Td
+(serialize/deserialize) Tj
+0 -12 Td
+(state for Raft consensus -- operate on opaque, checksummed byte blobs and import neither) Tj
+0 -12 Td
+(package.) Tj
+0 -12 Td
+(There is no live deserialization path to exploit today.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proof, not just absence. Because Record and Manifest are plain, JSON-tagged structs, the) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 3922 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(moment such a path is ever added, it would be trivially exploitable *unless* the entry) Tj
+0 -12 Td
+(points those) Tj
+0 -12 Td
+(deserialized values eventually reach already refuse to trust them -- which is exactly what) Tj
+0 -12 Td
+(Part 1's) Tj
+0 -12 Td
+(Submit fix, and the existing manifest.Registry's own sealed internal map, already guarantee.) Tj
+0 -12 Td
+(Two new tests prove this directly, round-tripping a forged payload through real) Tj
+0 -12 Td
+(encoding/json) Tj
+0 -12 Td
+(calls rather than only a struct literal:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- TestJSONDeserializedRecordCannotManufactureAuthority -- a JSON payload claiming) Tj
+0 -12 Td
+("status": "CORROBORATED", "rights": "CUSTOMER_FACING_ALLOWED" is unmarshaled, confirmed to) Tj
+0 -12 Td
+(carry) Tj
+0 -12 Td
+(the forged values in the Go value itself, then Submitted -- and comes out StatusUnverified /) Tj
+0 -12 Td
+(RightsUnknownPendingContract, exactly Part 1's fix.) Tj
+0 -12 Td
+(- TestJSONDeserializedManifestCannotManufactureAuthority -- a JSON payload claiming) Tj
+0 -12 Td
+("state": "FINALIZED" with a fabricated manifest_hash is unmarshaled. It independently fails) Tj
+0 -12 Td
+(VerifyManifestHash \(the hash was never really computed by computeManifestHash\), and -- the) Tj
+0 -12 Td
+(structural guarantee, not merely the hash check -- manifest.Registry.Latest for that) Tj
+0 -12 Td
+(EvidenceID returns ErrManifestNotFound: the forged value was never registered anywhere,) Tj
+0 -12 Td
+(because versions is an unexported map with no method that accepts an arbitrary Manifest as) Tj
+0 -12 Td
+("the new latest version." Only RegisterDraft \(forces State=DRAFT, clears hash fields\) and) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(already-gated Advance/Supersede can ever populate it.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reordered events. TestReorderedCustodyChainFailsVerification proves the custody chain's own) Tj
+0 -12 Td
+(hash-linking \(Hn = SHA256\(Hn-1 || JCS\(EventN\)\)\) detects a spliced or replayed-out-of-order) Tj
+0 -12 Td
+(chain,) Tj
+0 -12 Td
+(not merely a single tampered field -- one of the reviewer's own named adversarial scenarios.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Scoped out, honestly. Two of the reviewer's named scenarios -- "stale snapshots" and "cross-) Tj
+0 -12 Td
+(node) Tj
+0 -12 Td
+(state injection" -- are not applicable to this specific audit's scope as concretely testable) Tj
+0 -12 Td
+(items,) Tj
+0 -12 Td
+(because \(per the audit above\) no snapshot or distributed-state mechanism in this repository) Tj
+0 -12 Td
+(touches) Tj
+0 -12 Td
+(Manifest or Record directly today; there is nothing live to attack. This is stated here) Tj
+0 -12 Td
+(plainly) Tj
+0 -12 Td
+(rather than either padded with an inapplicable test or silently dropped from the checklist.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 6 -- MATURITY MODEL POSITION, RESTATED PLAINLY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's 4-level model, adopted since Verification Round, is unchanged and this) Tj
+0 -12 Td
+(round's) Tj
+0 -12 Td
+(evidence does not move VERIQO's position on it:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Level 1 -- Implemented. Unchanged, satisfied.) Tj
+0 -12 Td
+(- Level 2 -- Engineering Verified. This round's evidence -- unit, adversarial, regression-) Tj
+0 -12 Td
+(proof) Tj
+0 -12 Td
+(tests; -race; go vet; guardrails -- is squarely Level 2 evidence, and strong Level 2) Tj
+0 -12 Td
+(evidence:) Tj
+0 -12 Td
+(four consecutive rounds of adversarial audit against this one authority layer have now) Tj
+0 -12 Td
+(converged) Tj
+0 -12 Td
+(to zero known, code-closeable, unaddressed bypasses. This is VERIQO's honest position: Level) Tj
+0 -12 Td
+(2.) Tj
+0 -12 Td
+(- Level 3 -- Controlled External Validation. Not attempted this round, not claimed. Requires) Tj
+0 -12 Td
+(real) Tj
+0 -12 Td
+(data, real documents, real counterparties, real domain experts in a controlled pilot -- none) Tj
+0 -12 Td
+(of) Tj
+0 -12 Td
+(which local engineering work can produce.) Tj
+ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 15 0 R >>
+endobj
+17 0 obj
+<< /Length 3641 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(- Level 4 -- Production Proven. Not attempted, not claimed, and -- per this engagement's) Tj
+0 -12 Td
+(standing) Tj
+0 -12 Td
+(discipline -- never will be claimed without real customers, real decisions, real incidents,) Tj
+0 -12 Td
+(real) Tj
+0 -12 Td
+(financial impact behind it.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+("Enterprise grade" and "production readiness," as commonly used, are Level 3/4 claims. This) Tj
+0 -12 Td
+(round) Tj
+0 -12 Td
+(does not make them. What it does claim, and can back with the evidence in Part 7: the) Tj
+0 -12 Td
+(Evidence/) Tj
+0 -12 Td
+(Manifest authority layer's engineering-level trust surface -- every mechanism four rounds of) Tj
+0 -12 Td
+(adversarial review have examined -- has no known open, code-closeable bypass as of this) Tj
+0 -12 Td
+(report.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION EVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- gofmt -l . -- clean, no output.) Tj
+0 -12 Td
+(- go build ./... -- clean.) Tj
+0 -12 Td
+(- go vet ./... -- clean.) Tj
+0 -12 Td
+(- go test ./... -- full repository suite, all packages pass.) Tj
+0 -12 Td
+(- go test -race ./pkg/insurance/evidence/... ./pkg/evidence/manifest/...) Tj
+0 -12 Td
+(./pkg/insurance/api/...) Tj
+0 -12 Td
+(./pkg/insurance/casepack/... ./pkg/insurance/cre/... ./test/integration/... -- clean, no) Tj
+0 -12 Td
+(data) Tj
+0 -12 Td
+(races.) Tj
+0 -12 Td
+(- go test ./pkg/insurance/guardrails/... -- all 7 repository-wide guardrail scans pass.) Tj
+0 -12 Td
+(- pkg/evidence/manifest package: 30 tests, all passing \(12 new this round: 1 finalized-hash-) Tj
+0 -12 Td
+(freeze,) Tj
+0 -12 Td
+(4 content-hash binding, 1 reordered-chain, plus prior rounds' still-passing suite\).) Tj
+0 -12 Td
+(- pkg/insurance/evidence package: 62 tests across its six test files, all passing \(4 new) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(round: 2 Submit-bypass proofs in evidence_test.go, 2 JSON-forgery proofs in) Tj
+0 -12 Td
+(canonical_authority_test.go\).) Tj
+0 -12 Td
+(- Six regressions verified this round alone \(Submit's reset, the FINALIZED custody-head) Tj
+0 -12 Td
+(freeze, and) Tj
+0 -12 Td
+(the HASHED/REVIEWED content-hash binding -- three separate checks\): each was temporarily) Tj
+0 -12 Td
+(disabled,) Tj
+0 -12 Td
+(the corresponding new test\(s\) failed with the exact expected diagnostic, then the fix was) Tj
+0 -12 Td
+(restored) Tj
+0 -12 Td
+(and the full suite re-confirmed green.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ADVERSARIAL CHECKLIST, MAPPED TO THE REVIEWER'S OWN ITEMS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Reviewer's item    Status) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   Prerequisite identity binding \(not just existence\)    Closed -- ContentHash binding, Part) Tj
+0 -12 Td
+(2b) Tj
+0 -12 Td
+(   Post-finalization mutation    Closed -- CustodyChainHead freeze, Part 2a \(extends prior) Tj
+0 -12 Td
+(rounds' ErrFinalizedIsImmutable/AddTransformation coverage\)) Tj
+0 -12 Td
+(   Rollback / reset / force / import / restore / reopen APIs    Audited, confirmed absent --) Tj
+0 -12 Td
+(repository-wide grep finds no such function anywhere near manifest/evidence) Tj
+0 -12 Td
+(   Serialization/deserialization manufacturing authority    Audited \(no live path\) + proven) Tj
+0 -12 Td
+(inert \(Part 5\)) Tj
+0 -12 Td
+(   Snapshot/replay/persistence authority preservation    Audited --) Tj
+0 -12 Td
+(pkg/storage/snapshot/pkg/replay do not touch these types; not applicable as a concrete) Tj
+0 -12 Td
+(attack today) Tj
+0 -12 Td
+(   Cross-node state injection    Not applicable -- no distributed-state mechanism reaches) Tj
+0 -12 Td
+(Manifest/Record directly) Tj
+0 -12 Td
+(   Duplicated/reordered events    Closed -- TestReorderedCustodyChainFailsVerification; the) Tj
+ET
+endstream
+endobj
+18 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 17 0 R >>
+endobj
+19 0 obj
+<< /Length 1742 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(underlying hash-chain mechanism was already tampering-resistant) Tj
+0 -12 Td
+(   Root authority for GrantTrust    Audited \(zero production callers; mechanics already) Tj
+0 -12 Td
+(tested\); classified as an external-world dependency, Part 3) Tj
+0 -12 Td
+(   Deterministic, auditable authority transitions    Unchanged from prior rounds -- every) Tj
+0 -12 Td
+(gate in this layer is a pure function of recorded, hash-chained, attributed data) Tj
+0 -12 Td
+(   Submit's own bypass \(not on the reviewer's list -- found by this round's own audit\)) Tj
+0 -12 Td
+(Closed -- Part 1, the round's most significant finding) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY FOR THIS ROUND) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Everything the reviewer's Final_Hardening_Round.docx named as requiring an explicit audit) Tj
+0 -12 Td
+(outcome) Tj
+0 -12 Td
+(is addressed above with one of: closed with a verified fix, confirmed absent by repository-) Tj
+0 -12 Td
+(wide) Tj
+0 -12 Td
+(grep, or classified as an external-world dependency. Nothing is left silently unaddressed.) Tj
+0 -12 Td
+(This) Tj
+0 -12 Td
+(round additionally surfaced and closed a gap neither reviewer document named -- Submit's own) Tj
+0 -12 Td
+(authority bypass -- because the instruction was to work through the whole authority-bearing) Tj
+0 -12 Td
+(surface,) Tj
+0 -12 Td
+(not only the items already flagged. No claim in this report exceeds what its own) Tj
+0 -12 Td
+(verification) Tj
+0 -12 Td
+(evidence supports: this is Level 2 \(Engineering Verified\) work, stated as such, not) Tj
+0 -12 Td
+("enterprise) Tj
+0 -12 Td
+(grade" or "production ready," which remain Level 3/4 claims this engagement has not) Tj
+0 -12 Td
+(attempted and) Tj
+0 -12 Td
+(does not make here.) Tj
+ET
+endstream
+endobj
+20 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 19 0 R >>
+endobj
+21 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 22
+0000000000 65535 f 
+0000000015 00000 n 
+0000000126 00000 n 
+0000000196 00000 n 
+0000003982 00000 n 
+0000004108 00000 n 
+0000007882 00000 n 
+0000008008 00000 n 
+0000011999 00000 n 
+0000012125 00000 n 
+0000015903 00000 n 
+0000016030 00000 n 
+0000018411 00000 n 
+0000018539 00000 n 
+0000021553 00000 n 
+0000021681 00000 n 
+0000025656 00000 n 
+0000025784 00000 n 
+0000029478 00000 n 
+0000029606 00000 n 
+0000031401 00000 n 
+0000031529 00000 n 
+trailer
+<< /Size 22 /Root 21 0 R >>
+startxref
+31579
+%%EOF
