@@ -286,8 +286,47 @@ func TestHypothesisSetAddRejectsDuplicateAndInvalid(t *testing.T) {
 	if err := hs.Add(Hypothesis{ID: "H2", Description: ""}); err != ErrEmptyDescription {
 		t.Fatalf("expected ErrEmptyDescription, got %v", err)
 	}
-	if err := hs.Add(Hypothesis{ID: "H3", Description: "x", Status: "BOGUS"}); err == nil {
-		t.Fatal("expected unknown Status to be rejected")
+	// A caller-supplied Status -- valid-looking (StatusSupported) or
+	// outright bogus -- is never trusted: Add always forces
+	// StatusUnproven, exactly like manifest.RegisterDraft forcing
+	// State=DRAFT and evidence.Submit resetting Status to
+	// StatusUnverified. This is INV-001 ("no caller may directly
+	// construct an authoritative state") applied to HypothesisSet.
+	if err := hs.Add(Hypothesis{ID: "H3", Description: "x", Status: "BOGUS"}); err != nil {
+		t.Fatalf("Add with a bogus caller-supplied Status must still succeed (the value is discarded, not validated): %v", err)
+	}
+	got, _ := hs.Get("H3")
+	if got.Status != StatusUnproven {
+		t.Fatalf("expected Add to force Status=StatusUnproven regardless of the caller-supplied value, got %q", got.Status)
+	}
+}
+
+// TestHypothesisSetAddNeverTrustsACallerAssertedSupportedStatus is the
+// direct adversarial version of the above: a caller hands Add a
+// Hypothesis that already claims StatusSupported, with SupportingEvidence
+// pre-populated to make the claim look plausible -- exactly the shape of
+// exploit the Final Authority Hardening Round proved against
+// evidence.Registry.Submit (a hand-built Record{Status:
+// StatusCorroborated} bypassing every downstream authority gate). Add
+// must refuse to trust it: the stored Hypothesis reads StatusUnproven
+// until AddSupportingEvidence/AddContradictingEvidence/RecomputeStatuses
+// actually derives a status from real, recorded evidence.
+func TestHypothesisSetAddNeverTrustsACallerAssertedSupportedStatus(t *testing.T) {
+	hs, _ := NewHypothesisSet("CASE-1", "CLM-1", "why?")
+	forged := Hypothesis{
+		ID: "H1", Description: "pre-existing damage",
+		Status:             StatusSupported,
+		SupportingEvidence: []string{"EV-forged-1", "EV-forged-2"},
+	}
+	if err := hs.Add(forged); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	got, ok := hs.Get("H1")
+	if !ok {
+		t.Fatal("expected H1 to be present")
+	}
+	if got.Status != StatusUnproven {
+		t.Fatalf("expected a caller-asserted StatusSupported to be discarded on Add (got %q) -- Status must only ever be reached via computeStatus", got.Status)
 	}
 }
 

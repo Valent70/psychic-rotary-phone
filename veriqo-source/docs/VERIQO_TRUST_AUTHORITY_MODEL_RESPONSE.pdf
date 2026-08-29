@@ -1,0 +1,1584 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R 25 0 R 27 0 R] /Count 12 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3370 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO -- TRUST AUTHORITY MODEL & FORMAL INVARIANT CONTRACT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response to Pekerjaan_Besar_yang_harus_ditutup_sampai_selesai.docx -- the) Tj
+0 -12 Td
+(reviewer's instruction to stop auditing function-by-function and instead) Tj
+0 -12 Td
+(raise five audit rounds' worth of findings into \(1\) a formal VERIQO) Tj
+0 -12 Td
+(Trust Authority Model, \(2\) a formal invariant list as a security) Tj
+0 -12 Td
+(contract, \(3\) a distributed replay / snapshot-forgery adversarial) Tj
+0 -12 Td
+(pass, and \(4\) a concurrency semantic-correctness audit \("race-free !=) Tj
+0 -12 Td
+(state-machine-safe under concurrent transitions"\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Everything below is grounded in this repository's real, compiling,) Tj
+0 -12 Td
+(tested code as it stands today -- every type, function, and error) Tj
+0 -12 Td
+(sentinel named is a real identifier you can grep for; every invariant) Tj
+0 -12 Td
+(cites the actual test function\(s\) that prove it; every gap this round) Tj
+0 -12 Td
+(found was fixed, with a regression test proven via break-test-fix-restore) Tj
+0 -12 Td
+(\(temporarily disable the fix, confirm the new test fails with the exact) Tj
+0 -12 Td
+(expected diagnostic, restore the fix, confirm it passes again\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART A -- THE VERIQO TRUST AUTHORITY MODEL) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A.1 WHY A UNIFYING MODEL, NOT A SINGLE GENERIC TYPE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIQO has no one AuthorityObject type that every kind of fact passes) Tj
+0 -12 Td
+(through. Five years of incremental hardening \(five audit rounds, in this) Tj
+0 -12 Td
+(engagement alone\) produced four independently-evolved subsystems,) Tj
+0 -12 Td
+(each with its own concrete vocabulary:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Subsystem    Package    What it governs) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Evidence Manifest    pkg/evidence/manifest    Chain-of-custody and finalization of one) Tj
+0 -12 Td
+(physical/digital evidence artifact) Tj
+0 -12 Td
+(   Evidence Record    pkg/insurance/evidence    Verification status and usage rights of one) Tj
+0 -12 Td
+(evidence item within a case) Tj
+0 -12 Td
+(   Hypothesis    pkg/insurance/causation    Causal-claim status derived from) Tj
+0 -12 Td
+(supporting/contradicting evidence references) Tj
+0 -12 Td
+(   Finding    pkg/insurance/finding + pkg/insurance/cre    A well-evidenced candidate) Tj
+0 -12 Td
+(conclusion, gated into an AuthorizedFinding) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Inventing a fifth, generic type that all four funnel through would be) Tj
+0 -12 Td
+(architecture theater -- it would not run, and it would not be what the) Tj
+0 -12 Td
+(real code enforces. Instead, this section defines the ladder as an) Tj
+0 -12 Td
+(abstraction: seven rungs that describe the *shape* every one of these) Tj
+0 -12 Td
+(subsystems' own lifecycle takes, in its own vocabulary, and a mapping) Tj
+0 -12 Td
+(table showing exactly where each subsystem's real states land on it --) Tj
+0 -12 Td
+(including being honest about which rungs a given subsystem does not) Tj
+0 -12 Td
+(implement, and why.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A.2 THE CANONICAL LADDER) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(UNTRUSTED) Tj
+0 -12 Td
+(   |) Tj
+0 -12 Td
+(REGISTERED) Tj
+0 -12 Td
+(   |) Tj
+0 -12 Td
+(VERIFIED) Tj
+0 -12 Td
+(   |) Tj
+0 -12 Td
+(DERIVED) Tj
+0 -12 Td
+(   |) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 3749 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(AUTHORIZED) Tj
+0 -12 Td
+(   |) Tj
+0 -12 Td
+(FINALIZED) Tj
+0 -12 Td
+(   |) Tj
+0 -12 Td
+(IMMUTABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(UNTRUSTED -- Data has crossed the system boundary \(a caller's struct) Tj
+0 -12 Td
+(literal, an HTTP body, a JSON blob about to be unmarshaled\) but has not) Tj
+0 -12 Td
+(yet been handed to any constructor this repository controls. Nothing) Tj
+0 -12 Td
+(about it is trusted; it is not even a value type the rest of the system) Tj
+0 -12 Td
+(recognizes as "in the system" yet.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(REGISTERED -- The item has been given a real, addressable identity by) Tj
+0 -12 Td
+(a real constructor \(manifest.RegisterDraft, evidence.New +) Tj
+0 -12 Td
+(Registry.Submit, provenance.Registry.Register,) Tj
+0 -12 Td
+(causation.HypothesisSet.Add\), but nothing about its *content* has been) Tj
+0 -12 Td
+(independently checked yet. Every authority-bearing field is reset to its) Tj
+0 -12 Td
+(honest, fail-closed starting value at this rung, regardless of what the) Tj
+0 -12 Td
+(caller supplied -- this is precisely INV-001 \(Part B\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFIED -- An independent check has been run against the item's own) Tj
+0 -12 Td
+(claims: a custody event's ContentHash matches the manifest's own) Tj
+0 -12 Td
+(SHA256 \(hasCustodyActionBoundToContent\); a provenance.Entry's trust) Tj
+0 -12 Td
+(was granted via a real GrantTrust call carrying a policy \(and, for an) Tj
+0 -12 Td
+(evidence provider, an attestation\) reference; a Finding passed) Tj
+0 -12 Td
+(VerifyFindingAgainstHypothesis and VerifyFindingProvenance.) Tj
+0 -12 Td
+(Verification answers "is this claim internally consistent and) Tj
+0 -12 Td
+(attributable", not yet "what do we conclude from it".) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(DERIVED -- A value is *computed* from already-verified inputs, never) Tj
+0 -12 Td
+(asserted by a caller. evidence.DeriveStatus\(Strength\),) Tj
+0 -12 Td
+(causation.computeStatus\(Hypothesis, *DependencyGraph\), and) Tj
+0 -12 Td
+(finding.Evaluate are the three real derivation functions in this) Tj
+0 -12 Td
+(repository; each is the *only* place its own output field is ever) Tj
+0 -12 Td
+(written.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(AUTHORIZED -- A governed act has explicitly sanctioned use of the) Tj
+0 -12 Td
+(now-verified-and-derived item: evidence.Registry.SetRights \(only when) Tj
+0 -12 Td
+(authorityID names an entity whose trust was really granted\) and) Tj
+0 -12 Td
+(cre.Authorize / cre.AuthorizeGrounded \(sealing an AuthorizedFinding) Tj
+0 -12 Td
+(whose fields are unexported and unconstructable from outside the cre) Tj
+0 -12 Td
+(package\) are the two real authorization gates.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(FINALIZED -- The item's state is locked and a cryptographic) Tj
+0 -12 Td
+(commitment is computed over its final, frozen content:) Tj
+0 -12 Td
+(manifest.Registry.Advance\(..., StateFinalized, ...\) computes) Tj
+0 -12 Td
+(ManifestHash over the manifest as of that instant and refuses every) Tj
+0 -12 Td
+(further direct mutation \(ErrFinalizedIsImmutable\). AuthorizedFinding) Tj
+0 -12 Td
+(is finalized *at construction* -- AuthorizationHash is computed once,) Tj
+0 -12 Td
+(inside Authorize, and the type has no mutator at all.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(IMMUTABLE -- The finalized record survives forever, exactly as) Tj
+0 -12 Td
+(recorded, queryable and independently re-verifiable, and can only be) Tj
+0 -12 Td
+(superseded \(a new version created alongside it\) or revoked) Tj
+0 -12 Td
+(\(marked no-longer-authoritative\) -- never edited in place.) Tj
+0 -12 Td
+(manifest.Registry.Supersede and evidence.Registry.MarkSuperseded are) Tj
+0 -12 Td
+(the two real supersession mechanisms; both append a new fact rather than) Tj
+0 -12 Td
+(rewriting an old one.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 5057 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(A.3 PER-RUNG CONTRACT \(GENERIC\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Rung    Who can create it    Evidence required    Cryptographic proof    Permitted) Tj
+0 -12 Td
+(transition    Forbidden transition    Derived or asserted    Survives serialization) Tj
+0 -12 Td
+(Survives replay    Survives replication    Revocable    Supersedable) Tj
+0 -12 Td
+(  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---) Tj
+0 -12 Td
+(   UNTRUSTED    anyone / anything    none    none    -> REGISTERED, via a real constructor) Tj
+0 -12 Td
+(direct promotion to any later rung    asserted \(unchecked\)    n/a -- not yet in the system) Tj
+0 -12 Td
+(n/a    n/a    n/a    n/a) Tj
+0 -12 Td
+(   REGISTERED    the item's own constructor only, with authority fields forced to fail-) Tj
+0 -12 Td
+(closed defaults    a real identity \(non-empty ID, known enum values\)    none yet    ->) Tj
+0 -12 Td
+(VERIFIED    skipping straight to AUTHORIZED/FINALIZED    asserted, but only the fail-closed) Tj
+0 -12 Td
+(default    yes \(INV-006\)    yes \(INV-007\)    yes \(INV-009\)    n/a \(nothing to revoke\)    n/a) Tj
+0 -12 Td
+(   VERIFIED    the specific verification function for that item \(never the caller\)) Tj
+0 -12 Td
+(content-hash-bound attestation, or a real trust grant    a check that independently) Tj
+0 -12 Td
+(recomputes/re-derives and compares    -> DERIVED    asserting VERIFIED with no matching) Tj
+0 -12 Td
+(evidence \(INV-004/005\)    asserted that verification ran; the *result* is a fact, not a) Tj
+0 -12 Td
+(guess    yes    yes    yes    yes \(trust can be revoked -- RevokeTrust\)    n/a) Tj
+0 -12 Td
+(   DERIVED    the one authoritative derivation function for that field    the verified) Tj
+0 -12 Td
+(inputs the derivation reads    the derivation function itself is the "proof" --) Tj
+0 -12 Td
+(deterministic and pure    -> AUTHORIZED    any direct write to the derived field from) Tj
+0 -12 Td
+(outside the derivation function \(INV-002\)    derived    yes    yes    yes    yes -- re-) Tj
+0 -12 Td
+(running derivation on new inputs supersedes the old value    implicit \(re-derivation\)) Tj
+0 -12 Td
+(   AUTHORIZED    a named authority whose trust was independently granted    a real,) Tj
+0 -12 Td
+(attributed grant recorded elsewhere \(GrantTrust\) or a passed verification gate \(Authorize\)) Tj
+0 -12 Td
+(the grant's own policy/attestation refs, or AuthorizationHash    -> FINALIZED    authorizing) Tj
+0 -12 Td
+(without a real, attributed grant \(INV-010\)    asserted, but only by a checked authority) Tj
+0 -12 Td
+(yes    yes    yes    yes    n/a \(a later authorization supersedes\)) Tj
+0 -12 Td
+(   FINALIZED    the sole state-transition function for that type, and only when every) Tj
+0 -12 Td
+(prerequisite holds    every prerequisite for every prior rung, chained    a hash computed) Tj
+0 -12 Td
+(over the frozen content at this instant    -> IMMUTABLE \(via Supersede, never via in-place) Tj
+0 -12 Td
+(edit\)    any direct field mutation after this point \(INV-003\)    derived \(the hash\) over) Tj
+0 -12 Td
+(asserted-but-verified content    yes -- and the hash must independently re-verify) Tj
+0 -12 Td
+(\(INV-006/008\)    yes -- replay must reach byte-identical hash \(INV-007\)    yes --) Tj
+0 -12 Td
+(independent nodes computing over identical input converge \(INV-009\)    no \(a FINALIZED item) Tj
+0 -12 Td
+(is never itself "revoked" -- see Supersede\)    yes, via Supersede/MarkSuperseded) Tj
+0 -12 Td
+(   IMMUTABLE    n/a -- this rung describes a property of the historical record, not a new) Tj
+0 -12 Td
+(construction    the full original evidentiary chain, permanently retained    the original) Tj
+0 -12 Td
+(FINALIZED hash, forever re-verifiable    queryable forever    rewriting or deleting the) Tj
+0 -12 Td
+(historical record    n/a    yes    yes    yes    its *successor* can be marked current; the) Tj
+0 -12 Td
+(record itself never disappears    is what Supersede/MarkSuperseded produce) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A.4 MAPPING THE FOUR REAL SUBSYSTEMS ONTO THE LADDER) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is the honest part: no subsystem implements all seven rungs with) Tj
+0 -12 Td
+(a literal one-to-one field. Each implements the subset the reviewer's) Tj
+0 -12 Td
+(own four completed audit rounds actually hardened.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EVIDENCE MANIFEST \(PKG/EVIDENCE/MANIFEST\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Ladder rung    Manifest's own vocabulary    Real mechanism) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   UNTRUSTED    a Manifest struct literal, or JSON about to be unmarshaled    nothing) Tj
+0 -12 Td
+(controls it yet) Tj
+0 -12 Td
+(   REGISTERED    StateDraft \(v1\)    RegisterDraft unconditionally forces State=DRAFT,) Tj
+0 -12 Td
+(Version=1, clears ManifestHash/ManifestSignature, regardless of caller input) Tj
+0 -12 Td
+(   VERIFIED    StateIngested / StateIntegrityAssessed / StateProvenanceComplete) Tj
+0 -12 Td
+(transitionPrerequisiteLocked requires a content-hash-bound RECEIVED/HASHED custody event and) Tj
+0 -12 Td
+(a recorded AcquisitionRecord for each respective transition) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4327 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(   DERIVED    *\(not separately named -- verification and derivation are the same step here:) Tj
+0 -12 Td
+(each transition's prerequisite check IS the derivation of "is this manifest ready"\)*) Tj
+0 -12 Td
+(transitionPrerequisiteLocked) Tj
+0 -12 Td
+(   AUTHORIZED    StateReadyForFinalization    requires a content-hash-bound REVIEWED custody) Tj
+0 -12 Td
+(event) Tj
+0 -12 Td
+(   FINALIZED    StateFinalized    Advance computes ManifestHash over the frozen manifest;) Tj
+0 -12 Td
+(refuses any further mutation via ErrFinalizedIsImmutable) Tj
+0 -12 Td
+(   IMMUTABLE    StateSuperseded \(the retired version\) + the new version at StateDraft) Tj
+0 -12 Td
+(Supersede -- requires parent.State == StateFinalized; the old version's ManifestHash is) Tj
+0 -12 Td
+(never rewritten) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EVIDENCE RECORD \(PKG/INSURANCE/EVIDENCE\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Ladder rung    Record's own vocabulary    Real mechanism) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   UNTRUSTED    a Record struct literal, or JSON about to be unmarshaled    nothing controls) Tj
+0 -12 Td
+(it yet) Tj
+0 -12 Td
+(   REGISTERED    StatusUnverified, RightsUnknownPendingContract    Registry.Submit) Tj
+0 -12 Td
+(unconditionally resets Status, Strength, Rights, CorrectionSuperseded, SupersededBy to their) Tj
+0 -12 Td
+(honest defaults, regardless of caller input) Tj
+0 -12 Td
+(   VERIFIED    *\(rights authority\)*    SetRights requires authorityID to name a) Tj
+0 -12 Td
+(provenance.Entry with TrustGranted == true, itself only settable by GrantTrust) Tj
+0 -12 Td
+(   DERIVED    Status \(post VerifyStatus\)    DeriveStatus\(Strength\) is the *only* function) Tj
+0 -12 Td
+(that ever computes Status; VerifyStatus stores its result) Tj
+0 -12 Td
+(   AUTHORIZED    Rights \(post SetRights\)    as above) Tj
+0 -12 Td
+(   FINALIZED    *\(no separate FINALIZED rung -- a Record does not "lock"; its correction) Tj
+0 -12 Td
+(path is supersession directly\)*    --) Tj
+0 -12 Td
+(   IMMUTABLE    CorrectionSuperseded=true, SupersededBy=<id>    MarkSuperseded -- requires) Tj
+0 -12 Td
+(non-empty actor/reason, refuses re-supersession \(ErrAlreadySuperseded\) and an illegitimate) Tj
+0 -12 Td
+(successor \(ErrIllegitimateSuccessor\); the original record and its content-addressed ID are) Tj
+0 -12 Td
+(never deleted or rewritten) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HYPOTHESIS \(PKG/INSURANCE/CAUSATION\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Ladder rung    Hypothesis's own vocabulary    Real mechanism) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   UNTRUSTED    a Hypothesis struct literal    nothing controls it yet) Tj
+0 -12 Td
+(   REGISTERED    StatusUnproven    HypothesisSet.Add \(fixed this round -- see Part C\)) Tj
+0 -12 Td
+(unconditionally forces Status=StatusUnproven, regardless of caller input) Tj
+0 -12 Td
+(   VERIFIED    *\(evidence IDs are references, not independently re-verified at this layer --) Tj
+0 -12 Td
+(see A.5\)*    AddSupportingEvidence/AddContradictingEvidence) Tj
+0 -12 Td
+(   DERIVED    StatusSupported / StatusPartiallySupported / StatusContradicted /) Tj
+0 -12 Td
+(StatusInsufficientEvidence    computeStatus/DeriveStatus, driven only by RecomputeStatuses) Tj
+0 -12 Td
+(and the Add*Evidence methods -- never settable directly) Tj
+0 -12 Td
+(   AUTHORIZED    *\(a Hypothesis is not itself authorized for use -- that happens one layer) Tj
+0 -12 Td
+(up, at Finding\)*    --) Tj
+0 -12 Td
+(   FINALIZED / IMMUTABLE    *\(a HypothesisSet is a live working model, not a finalized) Tj
+0 -12 Td
+(artifact -- it has no lock/supersede step of its own\)*    --) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(FINDING \(PKG/INSURANCE/FINDING + PKG/INSURANCE/CRE\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Ladder rung    Finding's own vocabulary    Real mechanism) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   UNTRUSTED    a Finding struct literal    nothing controls it yet) Tj
+0 -12 Td
+(   REGISTERED    StatusCandidate    Finding.Status is documented as "derived-only... never) Tj
+0 -12 Td
+(set directly by a caller with the intention that it stick") Tj
+0 -12 Td
+(   VERIFIED    *\(pre-Authorize\)*    VerifyFindingAgainstHypothesis, VerifyFindingProvenance) Tj
+0 -12 Td
+(   DERIVED    StatusFinding    Evaluate is the sole writer) Tj
+0 -12 Td
+(   AUTHORIZED    cre.AuthorizedFinding    Authorize / AuthorizeGrounded -- unexported fields) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 4145 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(make external construction a compile error, not merely a runtime check) Tj
+0 -12 Td
+(   FINALIZED    *\(construction-time -- AuthorizedFinding has no separate finalize step; it) Tj
+0 -12 Td
+(is born finalized\)*    AuthorizationHash computed once, inside Authorize) Tj
+0 -12 Td
+(   IMMUTABLE    *\(no supersession mechanism exists for a Finding today -- a superseding) Tj
+0 -12 Td
+(conclusion is expressed as a NEW AuthorizedFinding citing updated evidence, not an edit\)*) Tj
+0 -12 Td
+(--) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A.5 WHERE THE LADDER IS HONESTLY INCOMPLETE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Hypothesis's "VERIFIED" rung is weak by design. SupportingEvidence/) Tj
+0 -12 Td
+(ContradictingEvidence are plain string evidence-ID references;) Tj
+0 -12 Td
+(addEvidence does not check the referenced ID resolves to a real,) Tj
+0 -12 Td
+(grounded, FINALIZED manifest. This is intentional layering, not an) Tj
+0 -12 Td
+(oversight -- cre.AuthorizeGrounded's own doc comment says exactly) Tj
+0 -12 Td
+(this: "a reference is just a string ID... nothing in Authorize alone) Tj
+0 -12 Td
+(confirms that ID names evidence that actually exists." Grounding is) Tj
+0 -12 Td
+(deliberately deferred to the Finding layer \(AuthorizeGrounded, which) Tj
+0 -12 Td
+(requires every cited ID to resolve to a FINALIZED, hash-verified) Tj
+0 -12 Td
+(manifest\). A Hypothesis.Status of StatusSupported is therefore a) Tj
+0 -12 Td
+(true statement about *the evidence references on file*, not yet a) Tj
+0 -12 Td
+(claim that those references are grounded -- exactly as finding.Finding) Tj
+0 -12 Td
+(is a "well-evidenced candidate conclusion, not a verdict" until it) Tj
+0 -12 Td
+(clears AuthorizeGrounded.) Tj
+0 -12 Td
+(- Manifest has no single "DERIVED" rung because every one of its) Tj
+0 -12 Td
+(transitions is gated by the same mechanism) Tj
+0 -12 Td
+(\(transitionPrerequisiteLocked\) that both verifies AND effectively) Tj
+0 -12 Td
+(derives readiness in one step; splitting it into two named rungs would) Tj
+0 -12 Td
+(not correspond to two different functions in the real code.) Tj
+0 -12 Td
+(- Evidence Record and Finding have no FINALIZED lock. Correction) Tj
+0 -12 Td
+(happens by direct supersession \(Record\) or by simply not authorizing a) Tj
+0 -12 Td
+(stale Finding again \(Finding\) -- there is no ErrFinalizedIsImmutable) Tj
+0 -12 Td
+(equivalent for either type, because neither one's design ever promised) Tj
+0 -12 Td
+(in-place immutability the way Manifest's ManifestHash does.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is stated plainly rather than invented: a model claiming uniform) Tj
+0 -12 Td
+(coverage across all four subsystems would be fiction. What is real is) Tj
+0 -12 Td
+(that every subsystem separately, provably, closes the same category of) Tj
+0 -12 Td
+(authority-bypass gap -- which is exactly what Part B's invariant list) Tj
+0 -12 Td
+(formalizes.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A.6 TRUST AUTHORITY GRAPH \(ROOT OF TRUST, ALL FOUR SUBSYSTEMS\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(                    +-------------------------+) Tj
+0 -12 Td
+(                    |  External policy /       |) Tj
+0 -12 Td
+(                    |  attestation document     |) Tj
+0 -12 Td
+(                    |  \(outside this repo\)      |) Tj
+0 -12 Td
+(                    +------------+--------------+) Tj
+0 -12 Td
+(                                 |) Tj
+0 -12 Td
+(                                 v) Tj
+0 -12 Td
+(         provenance.Registry.GrantTrust\(id, policyRef, attestationRef, grantedBy, tick\)) Tj
+0 -12 Td
+(                                 |) Tj
+0 -12 Td
+(                                 v) Tj
+0 -12 Td
+(                    Entry.TrustGranted = true            <-- the ONLY root of trust) Tj
+0 -12 Td
+(                                 |                             this repository can grant) Tj
+0 -12 Td
+(              +------------------+-------------------+) Tj
+0 -12 Td
+(              v                                       v) Tj
+0 -12 Td
+(   evidence.Registry.SetRights\(...\)          \(any future authority-gated) Tj
+0 -12 Td
+(   requires TrustGranted==true                 mutator built the same way\)) Tj
+0 -12 Td
+(              |) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 3180 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(              v) Tj
+0 -12 Td
+(   Record.Rights = <authorized state>) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   manifest.Registry.RecordCustodyEvent\(actor, action, contentHash\)) Tj
+0 -12 Td
+(              |) Tj
+0 -12 Td
+(              v) Tj
+0 -12 Td
+(   transitionPrerequisiteLocked requires a content-hash-BOUND event) Tj
+0 -12 Td
+(              |) Tj
+0 -12 Td
+(              v) Tj
+0 -12 Td
+(   Advance\(... StateFinalized\) --computes--> ManifestHash) Tj
+0 -12 Td
+(              |) Tj
+0 -12 Td
+(              v) Tj
+0 -12 Td
+(   VerifyManifestHash independently re-derives and compares  <-- verification,) Tj
+0 -12 Td
+(                                                                   not trust) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   finding.Evaluate \(derivation\)  -->  cre.Authorize / AuthorizeGrounded) Tj
+0 -12 Td
+(   requires: VerifyFindingAgainstHypothesis \(real hypothesis in a real HypothesisSet\)) Tj
+0 -12 Td
+(             VerifyFindingProvenance \(real InferenceTrace\(s\)\)) Tj
+0 -12 Td
+(             [Grounded variant] every cited evidence ID resolves to a) Tj
+0 -12 Td
+(             FINALIZED, hash-verified manifest.Manifest) Tj
+0 -12 Td
+(              |) Tj
+0 -12 Td
+(              v) Tj
+0 -12 Td
+(   cre.AuthorizedFinding{unexported fields} <-- unconstructable outside cre) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   causation.HypothesisSet.Add forces Status=StatusUnproven) Tj
+0 -12 Td
+(              |) Tj
+0 -12 Td
+(              v) Tj
+0 -12 Td
+(   AddSupportingEvidence / AddContradictingEvidence / RecomputeStatuses) Tj
+0 -12 Td
+(              |) Tj
+0 -12 Td
+(              v) Tj
+0 -12 Td
+(   computeStatus \(pure function of recorded evidence references\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(No path in this graph lets a caller reach an authoritative end state) Tj
+0 -12 Td
+(\(TrustGranted=true, an authorized Rights state, StateFinalized, an) Tj
+0 -12 Td
+(AuthorizedFinding, or a derived Status/StatusSupported\) without) Tj
+0 -12 Td
+(passing through the one function this repository designates as that) Tj
+0 -12 Td
+(value's sole writer. Every arrow above is a real function call in the) Tj
+0 -12 Td
+(current codebase; there is no arrow this document invented.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART B -- FORMAL INVARIANT LIST \(INV-001 .. INV-010\): VERIQO'S SECURITY CONTRACT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Each invariant below states the reviewer's own wording, the real) Tj
+0 -12 Td
+(mechanism that enforces it, and the real test\(s\) that prove it holds --) Tj
+0 -12 Td
+(including the tests this round added. An invariant with no test citation) Tj
+0 -12 Td
+(would be a promise, not a contract; none of the ten are stated without) Tj
+0 -12 Td
+(one.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-001 -- NO CALLER MAY DIRECTLY CONSTRUCT AN AUTHORITATIVE STATE.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: every authority-bearing field is either \(a\) forced to a) Tj
+0 -12 Td
+(fail-closed default at the sole construction/registration entry point) Tj
+0 -12 Td
+(regardless of caller input, or \(b\) held in an unexported field) Tj
+0 -12 Td
+(unconstructable from outside its owning package.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Length 3618 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(- manifest.RegisterDraft forces State=DRAFT, clears ManifestHash/) Tj
+0 -12 Td
+(ManifestSignature.) Tj
+0 -12 Td
+(- evidence.Registry.Submit resets Status, Strength, Rights,) Tj
+0 -12 Td
+(CorrectionSuperseded, SupersededBy.) Tj
+0 -12 Td
+(- causation.HypothesisSet.Add forces Status=StatusUnproven) Tj
+0 -12 Td
+(\(this round's fix -- see Part C.1\).) Tj
+0 -12 Td
+(- cre.AuthorizedFinding's fields are all unexported; the zero value is) Tj
+0 -12 Td
+(the only value obtainable without calling Authorize.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestRegisterDraftStartsAtVersion1,) Tj
+0 -12 Td
+(TestSubmitResetsAuthorityBearingFields,) Tj
+0 -12 Td
+(TestJSONDeserializedRecordCannotManufactureAuthority,) Tj
+0 -12 Td
+(TestJSONDeserializedManifestCannotManufactureAuthority,) Tj
+0 -12 Td
+(TestForgedSnapshotStateFieldCannotBeRestored \(this round\),) Tj
+0 -12 Td
+(TestHypothesisSetAddNeverTrustsACallerAssertedSupportedStatus \(this) Tj
+0 -12 Td
+(round\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-002 -- AUTHORITATIVE STATE MUST BE DERIVED FROM VERIFIABLE EVIDENCE OR AN AUTHORIZED) Tj
+0 -12 Td
+(TRANSITION.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: evidence.DeriveStatus is the sole computer of Status;) Tj
+0 -12 Td
+(causation.computeStatus/DeriveStatus is the sole computer of) Tj
+0 -12 Td
+(Hypothesis.Status; finding.Evaluate is the sole computer of) Tj
+0 -12 Td
+(Finding.Status; manifest.Advance's transitionPrerequisiteLocked) Tj
+0 -12 Td
+(requires a real, recorded custody event or field before allowing each) Tj
+0 -12 Td
+(state transition.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestVerifyStatusDerivesFromStrength \(evidence package\),) Tj
+0 -12 Td
+(TestAdvanceRefusesIngestedWithNoCustodyEvent,) Tj
+0 -12 Td
+(TestAdvanceRefusesIntegrityAssessedWithoutHashedCustodyEvent,) Tj
+0 -12 Td
+(TestAdvanceRefusesProvenanceCompleteWithoutAcquisitionRecord,) Tj
+0 -12 Td
+(TestAdvanceRefusesReadyForFinalizationWithoutReviewedCustodyEvent,) Tj
+0 -12 Td
+(TestAdvanceRefusesFinalizationWithoutClassification,) Tj
+0 -12 Td
+(TestRecomputeStatusesWithDependencyGraph \(causation package\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-003 -- FINALIZED EVIDENCE CANNOT BE MUTATED WITHOUT A GOVERNED SUPERSESSION/REVOCATION) Tj
+0 -12 Td
+(TRANSITION.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: manifest.Advance refuses any transition once) Tj
+0 -12 Td
+(cur.State == StateFinalized \(ErrFinalizedIsImmutable\); Supersede) Tj
+0 -12 Td
+(requires the parent to already be StateFinalized) Tj
+0 -12 Td
+(\(ErrParentNotFinalized otherwise\); evidence.MarkSuperseded refuses a) Tj
+0 -12 Td
+(second supersession of the same record \(ErrAlreadySuperseded\) and an) Tj
+0 -12 Td
+(illegitimate successor \(ErrIllegitimateSuccessor\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestFinalizedManifestIsImmutable,) Tj
+0 -12 Td
+(TestSupersedeRefusesAnUnfinalizedParent,) Tj
+0 -12 Td
+(TestSupersedeCreatesNewVersionWithoutRewritingHistory,) Tj
+0 -12 Td
+(TestConcurrentDoubleFinalizeHasExactlyOneWinner \(this round -- proves) Tj
+0 -12 Td
+(the guard holds even under concurrent contention, not just sequentially\),) Tj
+0 -12 Td
+(TestConcurrentFinalizeAndSupersedeNeverSupersedesAnUnfinalizedParent) Tj
+0 -12 Td
+(\(this round\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-004 -- A VALID HASH DOES NOT ESTABLISH PROVENANCE BY ITSELF.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: hasCustodyActionBoundToContent requires a HASHED/) Tj
+0 -12 Td
+(REVIEWED custody event whose own ContentHash matches the manifest's) Tj
+0 -12 Td
+(*current* SHA256 -- the mere *existence* of a HASHED event for this) Tj
+0 -12 Td
+(EvidenceID is insufficient. cre.AuthorizeGrounded requires every) Tj
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 16 0 R >>
+endobj
+18 0 obj
+<< /Length 3539 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(cited evidence ID to resolve to a manifest whose hash independently) Tj
+0 -12 Td
+(re-verifies via VerifyManifestHash, not merely a Finding.Hash that is) Tj
+0 -12 Td
+(internally self-consistent.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestAdvanceRefusesHashedEventBoundToDifferentContent,) Tj
+0 -12 Td
+(TestAdvanceRefusesReviewedEventBoundToDifferentContent,) Tj
+0 -12 Td
+(TestVerifyManifestHashDetectsTampering, the AuthorizeGrounded) Tj
+0 -12 Td
+(ErrEvidenceNotGrounded test suite \(pkg/insurance/cre\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-005 -- EVERY EVIDENCE PREREQUISITE MUST BE IDENTITY-BOUND TO THE SAME EVIDENCE CONTENT.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: the same hasCustodyActionBoundToContent check as) Tj
+0 -12 Td
+(INV-004, plus CustodyEvent.ContentHash itself being covered by the) Tj
+0 -12 Td
+(custody hash chain \(so a forged binding cannot be inserted without) Tj
+0 -12 Td
+(detection\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestCustodyEventContentHashIsHashChainCovered,) Tj
+0 -12 Td
+(TestAdvanceRefusesHashedEventWithNoContentHashAtAll,) Tj
+0 -12 Td
+(TestReorderedCustodyChainFailsVerification.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-006 -- SERIALIZATION CANNOT MANUFACTURE AUTHORITY.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: RegisterDraft and Submit reset authority-bearing) Tj
+0 -12 Td
+(fields on *any* input, including a value that arrived via) Tj
+0 -12 Td
+(json.Unmarshal -- a deserializer sets exported fields exactly the way a) Tj
+0 -12 Td
+(struct literal does, and neither construction path distinguishes the) Tj
+0 -12 Td
+(two.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestJSONDeserializedRecordCannotManufactureAuthority,) Tj
+0 -12 Td
+(TestJSONDeserializedManifestCannotManufactureAuthority,) Tj
+0 -12 Td
+(TestForgedSnapshotStateFieldCannotBeRestored \(this round -- the direct) Tj
+0 -12 Td
+("forged snapshot" framing: an honest JSON snapshot is intercepted and its) Tj
+0 -12 Td
+(state/manifest_hash fields rewritten, then shown to independently) Tj
+0 -12 Td
+(fail VerifyManifestHash AND to be forced back to DRAFT by) Tj
+0 -12 Td
+(RegisterDraft regardless\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-007 -- REPLAY CANNOT MANUFACTURE AUTHORITY.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: transitionPrerequisiteLocked's gate is evaluated) Tj
+0 -12 Td
+(identically on every call to Advance, whether that call is the first) Tj
+0 -12 Td
+(time an event happens or a replayed reconstruction of history -- there is) Tj
+0 -12 Td
+(no "replay mode" flag or alternate code path anywhere in Registry that) Tj
+0 -12 Td
+(skips prerequisite checking.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestReplayOmittingReviewedEventCannotReachFinalized) Tj
+0 -12 Td
+(\(this round -- a replay log that drops the REVIEWED event is refused) Tj
+0 -12 Td
+(ErrTransitionPrerequisiteNotMet and permanently cannot reach) Tj
+0 -12 Td
+(FINALIZED, confirmed by retry\), TestConcurrentReplayDuringLiveMutationIsUnaffected) Tj
+0 -12 Td
+(\(this round -- an independent replay concurrent with live mutation still) Tj
+0 -12 Td
+(converges on the exact same authoritative result\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-008 -- SNAPSHOT RESTORATION CANNOT MANUFACTURE AUTHORITY.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: Registry has no Restore/Import/LoadSnapshot API) Tj
+0 -12 Td
+(anywhere. RegisterDraft is the *only* function that accepts an) Tj
+0 -12 Td
+(arbitrary Manifest value from a caller, and it unconditionally forces) Tj
+0 -12 Td
+(State=DRAFT and clears the hash fields regardless of what that value) Tj
+0 -12 Td
+(claims.) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 18 0 R >>
+endobj
+20 0 obj
+<< /Length 3808 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(Proven by: TestForgedSnapshotStateFieldCannotBeRestored \(this) Tj
+0 -12 Td
+(round\), plus the repository-wide grep from the prior round confirming) Tj
+0 -12 Td
+(pkg/storage/snapshot and pkg/replay import neither) Tj
+0 -12 Td
+(pkg/evidence/manifest nor pkg/insurance/evidence \(and vice versa\) --) Tj
+0 -12 Td
+(there is no live snapshot-restore code path touching these types at all) Tj
+0 -12 Td
+(today; see Part D for the honest scope note this implies.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-009 -- REPLICATION CANNOT MANUFACTURE AUTHORITY.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: every hash this repository computes over authoritative) Tj
+0 -12 Td
+(content \(computeManifestHash, computeCustodyHash, jcs.MustHash in) Tj
+0 -12 Td
+(cre.Authorize\) is a pure function of semantic content -- no) Tj
+0 -12 Td
+(time.Now\(\), no randomness, no machine-local state. Two independent) Tj
+0 -12 Td
+(Registry instances \("Node A", "Node B"\) driven through the identical) Tj
+0 -12 Td
+(sequence of real, gated calls must therefore compute byte-identical) Tj
+0 -12 Td
+(authoritative state, which is exactly what replication correctness) Tj
+0 -12 Td
+(requires.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestReplayReproducesIdenticalFinalizedState \(this round) Tj
+0 -12 Td
+(-- two independent registries converge on identical ManifestHash and) Tj
+0 -12 Td
+(CustodyChainHead, and both independently re-verify\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INV-010 -- AUTHORITY CANNOT BE SELF-BOOTSTRAPPED THROUGH A DOWNSTREAM GATE.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Mechanism: provenance.Registry.GrantTrust is the *only* function) Tj
+0 -12 Td
+(that can ever set Entry.TrustGranted = true; Register unconditionally) Tj
+0 -12 Td
+(forces TrustGranted=false regardless of caller input. No downstream) Tj
+0 -12 Td
+(consumer of trust \(SetRights, and by extension cre.Authorize's own) Tj
+0 -12 Td
+(hypothesis/evidence checks\) has any code path that grants trust itself --) Tj
+0 -12 Td
+(each only *checks* trust that was already, separately, attributably) Tj
+0 -12 Td
+(granted.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Proven by: TestRegisterNeverAutoGrantsTrustRegardlessOfCallerInput,) Tj
+0 -12 Td
+(TestNamedNeverAutoTrustSourcesStayUntrustedUntilExplicitGrant,) Tj
+0 -12 Td
+(TestSetRightsRefusesUntrustedAuthority,) Tj
+0 -12 Td
+(TestConcurrentSetRightsChangesConvergeToASingleAuthorizedValue \(this) Tj
+0 -12 Td
+(round -- proves the untrusted-caller refusal holds even when racing) Tj
+0 -12 Td
+(against legitimate concurrent authorized writers, not just sequentially\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART C -- WHAT THIS ROUND FOUND AND CLOSED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(C.1 NEW FINDING: CAUSATION.HYPOTHESISSET.ADD DID NOT RESET A CALLER-SUPPLIED STATUS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Writing INV-001 as a literal, checkable claim \("no caller may directly) Tj
+0 -12 Td
+(construct an authoritative state"\) required checking it against every) Tj
+0 -12 Td
+(subsystem the model in Part A maps -- not just the three already covered) Tj
+0 -12 Td
+(by the prior four rounds. Doing so surfaced a real, previously) Tj
+0 -12 Td
+(unaudited gap: HypothesisSet.Add only defaulted Status when the) Tj
+0 -12 Td
+(caller left it blank \(if h.Status == "" { h.Status = StatusUnproven }\)) Tj
+0 -12 Td
+(-- a caller supplying Hypothesis{Status: StatusSupported,) Tj
+0 -12 Td
+(SupportingEvidence: []string{"EV-forged-1"}} had that value accepted) Tj
+0 -12 Td
+(verbatim, bypassing computeStatus entirely. This is the exact shape of) Tj
+0 -12 Td
+(bypass the Final Authority Hardening Round found and fixed in) Tj
+0 -12 Td
+(evidence.Registry.Submit.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A repository-wide grep confirmed zero production callers construct a) Tj
+0 -12 Td
+(causation.Hypothesis{} literal or call Add with a non-default) Tj
+ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 20 0 R >>
+endobj
+22 0 obj
+<< /Length 4139 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(Status anywhere outside tests today -- this is a structural gap, not a) Tj
+0 -12 Td
+(live exploit, exactly the same honest category as the GrantTrust) Tj
+0 -12 Td
+(root-of-trust audit and the snapshot/replay absence audit from prior) Tj
+0 -12 Td
+(rounds. Consistent with this engagement's standing discipline of closing) Tj
+0 -12 Td
+(such gaps defensively rather than waiting for a caller to find them,) Tj
+0 -12 Td
+(Add now unconditionally forces Status = StatusUnproven on every) Tj
+0 -12 Td
+(input, matching RegisterDraft/Submit's own pattern exactly.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Regression proof \(break-test-fix-restore\): the reset was temporarily) Tj
+0 -12 Td
+(narrowed back to the old empty-string-only default;) Tj
+0 -12 Td
+(TestHypothesisSetAddNeverTrustsACallerAssertedSupportedStatus failed) Tj
+0 -12 Td
+(with expected a caller-asserted StatusSupported to be discarded on Add) Tj
+0 -12 Td
+(\(got "SUPPORTED"\); the fix was restored and the test passes again. The) Tj
+0 -12 Td
+(pre-existing TestHypothesisSetAddRejectsDuplicateAndInvalid test, which) Tj
+0 -12 Td
+(had asserted the OLD \(bypassable\) behavior -- that an unrecognised) Tj
+0 -12 Td
+(Status value was rejected -- was updated to assert the new, correct) Tj
+0 -12 Td
+(behavior: Add always succeeds and the stored Hypothesis always reads) Tj
+0 -12 Td
+(StatusUnproven, regardless of what the caller supplied.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(C.2 DISTRIBUTED REPLAY / SNAPSHOT-FORGERY AUDIT \(TASK CLOSING INV-007/008/009\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer named three concrete proofs. Each is answered honestly) Tj
+0 -12 Td
+(against what this codebase actually contains:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. "Node A -> FINALIZED Evidence -> snapshot -> Node B restore must) Tj
+0 -12 Td
+(produce exactly the same authority state." No live) Tj
+0 -12 Td
+(snapshot/distributed-restore mechanism touches manifest.Manifest or) Tj
+0 -12 Td
+(evidence.Record in this repository today \(confirmed by) Tj
+0 -12 Td
+(repository-wide grep: pkg/storage/snapshot and pkg/replay import) Tj
+0 -12 Td
+(neither package, and vice versa\) -- there is nothing live to run this) Tj
+0 -12 Td
+(exact scenario against. The honest, code-grounded substitute is) Tj
+0 -12 Td
+(TestReplayReproducesIdenticalFinalizedState: two fully independent) Tj
+0 -12 Td
+(Registry instances, driven through the identical sequence of real,) Tj
+0 -12 Td
+(gated calls, are proven to compute byte-identical ManifestHash and) Tj
+0 -12 Td
+(CustodyChainHead, and both independently re-verify -- which is) Tj
+0 -12 Td
+(exactly what "the same authority state" means for a hash-addressed) Tj
+0 -12 Td
+(system, since the hash IS the authority state's fingerprint.) Tj
+0 -12 Td
+(2. "Snapshot with forged status must be rejected.") Tj
+0 -12 Td
+(TestForgedSnapshotStateFieldCannotBeRestored marshals a genuine) Tj
+0 -12 Td
+(StateDraft manifest to JSON, rewrites the intercepted bytes to claim) Tj
+0 -12 Td
+(FINALIZED with a fabricated hash, and proves the forgery is inert) Tj
+0 -12 Td
+(two independent ways: VerifyManifestHash rejects the fabricated) Tj
+0 -12 Td
+(hash, AND there is no Restore/Import API on Registry at all --) Tj
+0 -12 Td
+(RegisterDraft is the only construction path from an arbitrary value,) Tj
+0 -12 Td
+(and it forces State=DRAFT regardless.) Tj
+0 -12 Td
+(3. "Replay omits REVIEWED event must not result in FINALIZED.") Tj
+0 -12 Td
+(TestReplayOmittingReviewedEventCannotReachFinalized faithfully) Tj
+0 -12 Td
+(replays every real event except REVIEWED and proves both the) Tj
+0 -12 Td
+(immediate refusal \(ErrTransitionPrerequisiteNotMet\) and that the) Tj
+0 -12 Td
+(gap is permanent -- retrying Advance\(..., StateFinalized, ...\) still) Tj
+0 -12 Td
+(fails, and Latest\(\) never reports StateFinalized.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(C.3 CONCURRENCY SEMANTIC-CORRECTNESS AUDIT \(TASK CLOSING THE "RACE-FREE != STATE-MACHINE-) Tj
+0 -12 Td
+(SAFE" ASK\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Seven new tests, one per named scenario, all passing under -race and) Tj
+0 -12 Td
+(stable across 20 repeated runs:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Named scenario    Test    Semantic guarantee proven) Tj
+ET
+endstream
+endobj
+23 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 22 0 R >>
+endobj
+24 0 obj
+<< /Length 4487 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   double finalize    TestConcurrentDoubleFinalizeHasExactlyOneWinner    of N concurrent) Tj
+0 -12 Td
+(finalize\(\) calls, exactly one succeeds; the manifest ends FINALIZED with a hash that) Tj
+0 -12 Td
+(independently verifies) Tj
+0 -12 Td
+(   finalize + mutate    TestConcurrentFinalizeAndCustodyMutateNeverStalesTheHash    50) Tj
+0 -12 Td
+(concurrent legitimate custody mutations racing a finalize\(\) never stale ManifestHash; the) Tj
+0 -12 Td
+(append-only custody log still independently verifies) Tj
+0 -12 Td
+(   finalize + supersede) Tj
+0 -12 Td
+(TestConcurrentFinalizeAndSupersedeNeverSupersedesAnUnfinalizedParent    supersede\(\) never) Tj
+0 -12 Td
+(succeeds against a not-yet-finalized parent no matter the race outcome; a losing supersede\(\)) Tj
+0 -12 Td
+(succeeds legitimately on retry; the original FINALIZED hash survives the race unchanged) Tj
+0 -12 Td
+(   supersede + submit) Tj
+0 -12 Td
+(TestConcurrentMarkSupersededAndDuplicateSubmitNeverResurrectsEvidence    20 concurrent) Tj
+0 -12 Td
+(duplicate Submit attempts against a record concurrently being superseded are all refused) Tj
+0 -12 Td
+(\(ErrDuplicateEvidence\); the supersession's own fields are never torn or overwritten by a) Tj
+0 -12 Td
+(losing submit) Tj
+0 -12 Td
+(   concurrent rights change) Tj
+0 -12 Td
+(TestConcurrentSetRightsChangesConvergeToASingleAuthorizedValue    two authorized authorities) Tj
+0 -12 Td
+(racing different target rights states always converge to exactly one of the two legitimate) Tj
+0 -12 Td
+(values; an untrusted third caller racing the same operation is refused every time,) Tj
+0 -12 Td
+(regardless of interleaving) Tj
+0 -12 Td
+(   duplicate transition    TestConcurrentDuplicateAdvanceTransitionHasExactlyOneWinner    of) Tj
+0 -12 Td
+(20 concurrent identical DRAFT->INGESTED transitions, exactly one wins; the rest observe the) Tj
+0 -12 Td
+(post-transition state and are refused ErrInvalidTransition, never silently re-applied) Tj
+0 -12 Td
+(   replay during mutation    TestConcurrentReplayDuringLiveMutationIsUnaffected    an) Tj
+0 -12 Td
+(independent replay running concurrently with live post-finalization mutation of the original) Tj
+0 -12 Td
+(still reproduces the exact original ManifestHash; neither interferes with the other) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This directly answers the reviewer's own framing: go test -race) Tj
+0 -12 Td
+(already proved no *unsynchronized* memory access occurs \(Registry) Tj
+0 -12 Td
+(serializes every method via its own mutex\) -- these seven tests prove the) Tj
+0 -12 Td
+(*semantic* outcome of contested transitions is always correct, not) Tj
+0 -12 Td
+(merely that the contest itself is memory-safe.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART D -- RECALIBRATED STATUS VS. THE REVIEWER'S OWN TABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Layer    Reviewer's status    This round's honest status) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Evidence authority    Engineering hardened    Unchanged: still Engineering hardened) Tj
+0 -12 Td
+(\(Level 2\)) Tj
+0 -12 Td
+(   Manifest authority    Engineering hardened    Unchanged: still Engineering hardened) Tj
+0 -12 Td
+(\(Level 2\)) Tj
+0 -12 Td
+(   Finding authority    Engineering hardened    Unchanged: still Engineering hardened \(Level) Tj
+0 -12 Td
+(2\)) Tj
+0 -12 Td
+(   Hypothesis authority    Engineering hardened    One real gap found and closed this round) Tj
+0 -12 Td
+(\(C.1\) -- now Engineering hardened on the same basis as the other three, not merely by) Tj
+0 -12 Td
+(omission of audit) Tj
+0 -12 Td
+(   Trust root    No app self-bootstrap found / Deployment governance remains    Unchanged:) Tj
+0 -12 Td
+(GrantTrust's ultimate root is still an external policy/attestation document outside this) Tj
+0 -12 Td
+(repository's code -- that boundary is structural, not a gap this repository's code can close) Tj
+0 -12 Td
+(   Serialization authority    Major bypass addressed    Unchanged, now with the explicit) Tj
+0 -12 Td
+("forged snapshot" framing proven \(C.2.2\)) Tj
+0 -12 Td
+(   Replay/replication authority    Needs final adversarial validation    Closed this round) Tj
+0 -12 Td
+(-- three tests directly answering the three named proofs \(C.2\), honestly scoped to what this) Tj
+0 -12 Td
+(codebase actually contains \(no live snapshot/replay integration exists to test against a) Tj
+0 -12 Td
+(fortiori\)) Tj
+0 -12 Td
+(   Concurrency/state-transition semantics    Needs validation    Closed this round -- seven) Tj
+ET
+endstream
+endobj
+25 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 24 0 R >>
+endobj
+26 0 obj
+<< /Length 3195 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(tests, one per named scenario, all passing under -race \(C.3\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This remains Level 2 \(Engineering Verified\) work on this engagement's) Tj
+0 -12 Td
+(own 4-level maturity model. No claim of Level 3 \(controlled external) Tj
+0 -12 Td
+(validation\) or Level 4 \(production proven\) is made anywhere in this) Tj
+0 -12 Td
+(report. The Trust Authority Model in Part A is a specification grounded) Tj
+0 -12 Td
+(in, and traceable to, real code and real tests -- it is not a promise that) Tj
+0 -12 Td
+(a live distributed cluster has been run against it, because no such) Tj
+0 -12 Td
+(cluster exists in this repository to run.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(gofmt -l .                                    clean) Tj
+0 -12 Td
+(go build ./...                                clean) Tj
+0 -12 Td
+(go vet ./...                                  clean) Tj
+0 -12 Td
+(go test ./...                                 full repository suite, all packages pass) Tj
+0 -12 Td
+(go test -race \(manifest, evidence, causation,) Tj
+0 -12 Td
+(  and every other affected package\)           clean, no data races) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Package-level detail:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- pkg/evidence/manifest: 33/33 tests pass \(3 replay/forgery + 5) Tj
+0 -12 Td
+(concurrency tests new this round\)) Tj
+0 -12 Td
+(- pkg/insurance/evidence: 64/64 tests pass \(2 concurrency tests new) Tj
+0 -12 Td
+(this round\)) Tj
+0 -12 Td
+(- pkg/insurance/causation: all tests pass \(1 fixed test + 1 new) Tj
+0 -12 Td
+(adversarial test for the Add fix\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- The Trust Authority Model \(Part A\) is a specification unifying four) Tj
+0 -12 Td
+(real, already-hardened subsystems -- it does not introduce a fifth,) Tj
+0 -12 Td
+(generic authority type, because no such type exists in the running) Tj
+0 -12 Td
+(code and inventing one here would not be truthful to what actually) Tj
+0 -12 Td
+(ships.) Tj
+0 -12 Td
+(- The distributed-replay proofs \(Part C.2\) are the honest substitute for) Tj
+0 -12 Td
+(a live Node-A/Node-B snapshot-restore test: no such live integration) Tj
+0 -12 Td
+(exists in this repository between the storage/replay layer and the) Tj
+0 -12 Td
+(Evidence/Manifest authority layer, and this is stated plainly rather) Tj
+0 -12 Td
+(than padded with an inapplicable test.) Tj
+0 -12 Td
+(- The concurrency proofs \(Part C.3\) demonstrate semantic correctness) Tj
+0 -12 Td
+(under real concurrent load against this repository's actual) Tj
+0 -12 Td
+(Registry types; they do not simulate network partitions, multi-process) Tj
+0 -12 Td
+(concurrency, or an actual distributed consensus protocol, none of) Tj
+0 -12 Td
+(which exist in this codebase to test against.) Tj
+0 -12 Td
+(- The trust root \(GrantTrust's ultimate authorization\) remains, as) Tj
+0 -12 Td
+(every prior round has said, an external policy/attestation act outside) Tj
+0 -12 Td
+(this repository's code -- no amount of engineering work inside this) Tj
+0 -12 Td
+(repository closes that boundary, because it is not this repository's) Tj
+0 -12 Td
+(boundary to close.) Tj
+ET
+endstream
+endobj
+27 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 26 0 R >>
+endobj
+28 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 29
+0000000000 65535 f 
+0000000015 00000 n 
+0000000148 00000 n 
+0000000218 00000 n 
+0000000286 00000 n 
+0000003708 00000 n 
+0000003844 00000 n 
+0000007645 00000 n 
+0000007781 00000 n 
+0000012890 00000 n 
+0000013026 00000 n 
+0000017406 00000 n 
+0000017544 00000 n 
+0000021742 00000 n 
+0000021880 00000 n 
+0000025113 00000 n 
+0000025251 00000 n 
+0000028922 00000 n 
+0000029060 00000 n 
+0000032652 00000 n 
+0000032790 00000 n 
+0000036651 00000 n 
+0000036789 00000 n 
+0000040981 00000 n 
+0000041119 00000 n 
+0000045659 00000 n 
+0000045797 00000 n 
+0000049045 00000 n 
+0000049183 00000 n 
+trailer
+<< /Size 29 /Root 28 0 R >>
+startxref
+49233
+%%EOF

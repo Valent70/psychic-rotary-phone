@@ -248,27 +248,37 @@ func TestVerifyFindingAgainstHypothesisRejectsUnknownHypothesisID(t *testing.T) 
 // and a ConfidenceBasis that matches the cited hypothesis's own Status
 // field exactly, is still not proof the Finding is authoritative if that
 // Status was never actually earned from real evidence in the first
-// place. causation.HypothesisSet.Add does not force Status to be
-// evidence-derived -- a caller can Add a Hypothesis whose Status already
-// claims StatusSupported with zero SupportingEvidence attached, and Add
-// accepts it as long as it names a known status value. This proves that
-// exact attack -- a hand-fabricated Status with no real evidence behind
-// it at all -- is caught by VerifyFindingAgainstHypothesis's second,
-// evidence-derivation check, not just its first, matches-the-hypothesis
-// check (which this fabricated data would trivially pass, since f cites
-// the same, real, hypothesis-holding HypothesisSet).
+// place.
+//
+// As of this repository's Trust Authority Model round,
+// causation.HypothesisSet.Add itself now forces Status=StatusUnproven on
+// every input (INV-001: no caller may directly construct an
+// authoritative state) -- so the fabrication this test drives can no
+// longer even get INTO the HypothesisSet in the first place. What this
+// test now proves is the honest end-to-end consequence of that fix: a
+// caller who Adds a Hypothesis claiming StatusSupported with net
+// contradicting evidence gets back a HypothesisSet that stores
+// StatusUnproven regardless, so a Finding whose ConfidenceBasis still
+// claims StatusSupported is refused by VerifyFindingAgainstHypothesis's
+// FIRST check (ErrFindingDoesNotMatchHypothesis: ConfidenceBasis no
+// longer matches the hypothesis's real, honest Status) -- the fabrication
+// never survives long enough to reach the deeper, second check
+// (ErrHypothesisStatusNotEvidenceDerived), which remains in place as
+// defense-in-depth against a hypothetical future regression in
+// causation.HypothesisSet's own construction path, even though no live
+// call path in this repository can reach it today.
 func TestVerifyFindingAgainstHypothesisRejectsHypothesisWithFabricatedStatus(t *testing.T) {
 	hs, err := causation.NewHypothesisSet("case-fab", "claim-fab", "What caused the loss?")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Fabricated: Status claims StatusSupported directly, but the
-	// hypothesis's own evidence lists -- one supporting item against TWO
-	// contradicting items -- would legitimately derive, at most,
-	// StatusContradicted (cc > sc). causation.HypothesisSet.Add does not
-	// force Status to be evidence-derived, so this Add succeeds even
-	// though the Status field openly contradicts the evidence sitting
-	// right next to it.
+	// Attempted fabrication: Status claims StatusSupported directly, but
+	// the hypothesis's own evidence lists -- one supporting item against
+	// TWO contradicting items -- would legitimately derive, at most,
+	// StatusContradicted (cc > sc). Add succeeds (a known Status value is
+	// no longer even inspected), but silently discards the claimed
+	// Status and stores StatusUnproven instead -- see this test's own
+	// doc comment.
 	const hFab causation.HypothesisID = "H-fabricated"
 	if err := hs.Add(causation.Hypothesis{
 		ID:                    hFab,
@@ -282,6 +292,9 @@ func TestVerifyFindingAgainstHypothesisRejectsHypothesisWithFabricatedStatus(t *
 	hFabValue, ok := hs.Get(hFab)
 	if !ok {
 		t.Fatal("just-added hypothesis not found")
+	}
+	if hFabValue.Status != causation.StatusUnproven {
+		t.Fatalf("expected Add to discard the caller-claimed StatusSupported and store StatusUnproven, got %q", hFabValue.Status)
 	}
 	if got := causation.DeriveStatus(hFabValue, nil); got != causation.StatusContradicted {
 		t.Fatalf("fixture's evidence lists must derive StatusContradicted for this test to be meaningful, got %s", got)
@@ -300,21 +313,24 @@ func TestVerifyFindingAgainstHypothesisRejectsHypothesisWithFabricatedStatus(t *
 	if len(finding.MissingFields(f)) != 0 {
 		t.Fatalf("fixture must reach StatusFinding for this test to be meaningful, missing=%v", finding.MissingFields(f))
 	}
-	// f's own Hash verifies, and its SupportedBy/ContradictedBy/
-	// ConfidenceBasis all match hFab's own stored fields exactly -- yet
-	// this must still be refused, because hFab's Status itself was never
-	// evidence-derived; it directly contradicts what its own evidence
-	// lists support.
+	// f's own Hash verifies, and its SupportedBy/ContradictedBy match
+	// hFab's own stored evidence lists exactly -- but its ConfidenceBasis
+	// still claims the caller's original fabricated StatusSupported,
+	// which no longer matches hFab's real, honest, Add-forced Status
+	// (StatusUnproven). This is refused at the first, blunter check
+	// (ErrFindingDoesNotMatchHypothesis) precisely because the deeper
+	// fabrication this test used to drive can no longer get stored in
+	// the first place.
 	err = VerifyFindingAgainstHypothesis(f, hs, hFab)
 	if err == nil {
-		t.Fatal("expected a hypothesis with a fabricated Status to be refused")
+		t.Fatal("expected a Finding whose ConfidenceBasis no longer matches its hypothesis's real Status to be refused")
 	}
-	if !errors.Is(err, ErrHypothesisStatusNotEvidenceDerived) {
-		t.Fatalf("expected ErrHypothesisStatusNotEvidenceDerived, got %v", err)
+	if !errors.Is(err, ErrFindingDoesNotMatchHypothesis) {
+		t.Fatalf("expected ErrFindingDoesNotMatchHypothesis, got %v", err)
 	}
 	// Also confirm the full authorization gate refuses it, not just the
 	// lower-level provenance check in isolation.
-	if _, err := Authorize(f, hs, hFab, nil, 1); !errors.Is(err, ErrHypothesisStatusNotEvidenceDerived) {
-		t.Fatalf("expected Authorize to also refuse via ErrHypothesisStatusNotEvidenceDerived, got %v", err)
+	if _, err := Authorize(f, hs, hFab, nil, 1); !errors.Is(err, ErrFindingDoesNotMatchHypothesis) {
+		t.Fatalf("expected Authorize to also refuse via ErrFindingDoesNotMatchHypothesis, got %v", err)
 	}
 }

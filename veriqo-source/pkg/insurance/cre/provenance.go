@@ -69,15 +69,17 @@ var ErrHypothesisStatusNotEvidenceDerived = errors.New("cre: hypothesis Status i
 // identical evidence in a different order is not thereby fabricating
 // anything.
 //
-// A second, deeper check closes a gap one level further back:
-// causation.HypothesisSet.Add itself does not force Status to be
-// evidence-derived -- a caller can Add a Hypothesis with SupportedBy
-// fabricated data already sitting in its own Status field, no evidence
-// attached at all, and Add accepts it as long as it is a KNOWN status
-// value. If VerifyFindingAgainstHypothesis only compared f.ConfidenceBasis
-// against h.Status, a Finding citing such a hypothesis would pass even
-// though h.Status was never actually earned. So this also recomputes the
-// status h's own evidence lists would produce, via causation.DeriveStatus
+// A second, deeper check closes a gap one level further back. As of this
+// repository's Trust Authority Model round, causation.HypothesisSet.Add
+// itself forces Status=StatusUnproven on every input, so h.Status can no
+// longer diverge from what h's own evidence lists actually support via
+// any live call path in this repository -- the direct-comparison check
+// above (f.ConfidenceBasis != h.Status) already catches a stale/fabricated
+// ConfidenceBasis on its own. This second check is kept anyway as
+// defense-in-depth against a hypothetical FUTURE regression in
+// causation.HypothesisSet's own construction path (e.g. a later change
+// that reintroduces a caller-settable Status): it recomputes the status
+// h's own evidence lists would produce, via causation.DeriveStatus
 // (the exported form of the causation package's own internal
 // computeStatus), and refuses if h.Status is STRONGER than that
 // recomputation. The comparison is deliberately one-directional, not

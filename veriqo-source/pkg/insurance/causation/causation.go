@@ -368,8 +368,19 @@ func NewHypothesisSet(caseID, claimID, question string) (*HypothesisSet, error) 
 }
 
 // Add registers a new Hypothesis in the set. Refuses a duplicate
-// HypothesisID and an unrecognised Status (an empty Status defaults to
-// StatusUnproven, matching NewHypothesis).
+// HypothesisID. Status is always forced to StatusUnproven, matching
+// NewHypothesis, regardless of what the caller passed in h -- exactly
+// like manifest.RegisterDraft forcing State=DRAFT and evidence.Submit
+// resetting Status to StatusUnverified: a Hypothesis's Status is an
+// AUTHORITATIVE, derived value (see computeStatus/DeriveStatus, driven
+// only by AddSupportingEvidence/AddContradictingEvidence/
+// AddMissingEvidence/RecomputeStatuses), never something a caller -- or
+// a JSON deserializer, which sets exported fields exactly the same way
+// a struct literal does -- may assert directly by handing Add a
+// pre-populated Hypothesis{Status: StatusSupported}. This closes the
+// same class of gap INV-001 ("no caller may directly construct an
+// authoritative state") names for every other subsystem in this
+// repository.
 func (hs *HypothesisSet) Add(h Hypothesis) error {
 	if h.ID == "" {
 		return ErrEmptyHypothesisID
@@ -377,12 +388,7 @@ func (hs *HypothesisSet) Add(h Hypothesis) error {
 	if h.Description == "" {
 		return ErrEmptyDescription
 	}
-	if h.Status == "" {
-		h.Status = StatusUnproven
-	}
-	if !IsKnownStatus(h.Status) {
-		return fmt.Errorf("%w: %q", ErrUnknownStatusValue, h.Status)
-	}
+	h.Status = StatusUnproven
 
 	hs.mu.Lock()
 	defer hs.mu.Unlock()

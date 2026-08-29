@@ -1,8 +1,10 @@
 package manifest
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -736,5 +738,164 @@ func TestReorderedCustodyChainFailsVerification(t *testing.T) {
 
 	if err := reg.VerifyCustodyChain("EV-1"); !errors.Is(err, ErrCustodyChainBroken) {
 		t.Fatalf("expected ErrCustodyChainBroken for a reordered custody chain, got %v", err)
+	}
+}
+
+// ---- Trust Authority Model: replay / snapshot-restore determinism ----
+//
+// Pekerjaan_Besar_yang_harus_ditutup_sampai_selesai.docx's own framing:
+// "Node A -> FINALIZED Evidence -> snapshot -> Node B restore ->
+// menghasilkan exactly same authority state." This package has no live
+// integration with pkg/storage/snapshot or pkg/replay (a repository-wide
+// grep confirms neither imports this package, or vice versa) -- there is
+// no distributed Raft snapshot/restore path to exercise against Manifest
+// today. What IS provable, and is proven below: replaying the exact same
+// sequence of real, gated calls against a completely independent, fresh
+// Registry ("Node B") reproduces byte-identical authoritative state --
+// the same ManifestHash, the same CustodyChainHead -- because every hash
+// in this package is a pure function of the semantic content and nothing
+// else (no time.Now(), no randomness, matching this repository's
+// standing DARI/replay-determinism discipline used throughout, e.g.
+// pkg/moat/entity's own "Rebuild reconstructs the exact same canonical
+// IDs purely from the ledger"). And a forged or truncated "snapshot" is
+// proven inert against that same real path.
+
+// TestReplayReproducesIdenticalFinalizedState is the positive half:
+// "Node A" and "Node B" are two entirely independent Registry instances.
+// Driving BOTH through the identical sequence of real RegisterDraft /
+// RecordCustodyEvent / Advance calls produces byte-identical
+// authoritative state on both -- proving authority state is a pure,
+// replayable function of the real events, not of which process happened
+// to compute it.
+func TestReplayReproducesIdenticalFinalizedState(t *testing.T) {
+	build := func() (*Registry, Manifest) {
+		reg := NewRegistry()
+		if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+			t.Fatalf("RegisterDraft: %v", err)
+		}
+		m := advanceThroughFullLifecycle(t, reg, "EV-1", 10)
+		return reg, m
+	}
+	nodeAReg, nodeA := build()
+	nodeBReg, nodeB := build()
+
+	if nodeA.ManifestHash == "" || nodeB.ManifestHash == "" {
+		t.Fatal("expected both nodes to compute a real ManifestHash")
+	}
+	if nodeA.ManifestHash != nodeB.ManifestHash {
+		t.Fatalf("Node A and Node B computed DIFFERENT ManifestHash for the identical replayed sequence: A=%s B=%s", nodeA.ManifestHash, nodeB.ManifestHash)
+	}
+	if nodeA.CustodyChainHead != nodeB.CustodyChainHead {
+		t.Fatalf("Node A and Node B computed DIFFERENT CustodyChainHead for the identical replayed sequence: A=%s B=%s", nodeA.CustodyChainHead, nodeB.CustodyChainHead)
+	}
+	if err := VerifyManifestHash(nodeA); err != nil {
+		t.Fatalf("Node A's replayed state must independently verify: %v", err)
+	}
+	if err := VerifyManifestHash(nodeB); err != nil {
+		t.Fatalf("Node B's replayed state must independently verify: %v", err)
+	}
+	if err := nodeAReg.VerifyCustodyChain("EV-1"); err != nil {
+		t.Fatalf("Node A's custody chain must independently verify: %v", err)
+	}
+	if err := nodeBReg.VerifyCustodyChain("EV-1"); err != nil {
+		t.Fatalf("Node B's custody chain must independently verify: %v", err)
+	}
+}
+
+// TestForgedSnapshotStateFieldCannotBeRestored simulates the specific
+// attack named: a real "snapshot" (the honest JSON serialization of a
+// genuinely DRAFT manifest) is intercepted in transit and its state
+// field is rewritten to claim FINALIZED, with a fabricated hash to
+// match. This proves such a forged snapshot is inert two ways: (1) it
+// independently fails VerifyManifestHash, because the "hash" was never
+// really computed by computeManifestHash over these fields, and (2)
+// there is no Restore/Import API anywhere on Registry that would ever
+// accept an arbitrary Manifest value as "the new latest version" for
+// some EvidenceID -- RegisterDraft forces State=DRAFT and clears hash
+// fields regardless of what is passed in, and Advance/Supersede are
+// both independently gated. A forged snapshot has no path into a real
+// Registry's authoritative state at all.
+func TestForgedSnapshotStateFieldCannotBeRestored(t *testing.T) {
+	reg := NewRegistry()
+	draft, err := reg.RegisterDraft(validDraft("EV-1"))
+	if err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	// The honest snapshot of a real DRAFT manifest.
+	honestSnapshot, err := json.Marshal(draft)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	// An attacker rewrites the intercepted snapshot bytes.
+	forgedSnapshot := []byte(strings.Replace(string(honestSnapshot), `"state":"DRAFT"`, `"state":"FINALIZED","manifest_hash":"sha256:forged-not-really-computed"`, 1))
+
+	var forged Manifest
+	if err := json.Unmarshal(forgedSnapshot, &forged); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if forged.State != StateFinalized {
+		t.Fatalf("test setup: expected the forged snapshot to claim FINALIZED, got %s", forged.State)
+	}
+	if err := VerifyManifestHash(forged); err == nil {
+		t.Fatal("expected the forged snapshot's fabricated ManifestHash to fail independent verification")
+	}
+
+	// "Node B" -- a fresh Registry -- has no way to accept this value as
+	// authoritative. RegisterDraft is the only construction path from
+	// an arbitrary Manifest, and it forces State back to DRAFT.
+	nodeB := NewRegistry()
+	restored, err := nodeB.RegisterDraft(forged)
+	if err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if restored.State != StateDraft {
+		t.Fatalf("expected RegisterDraft to force State=DRAFT regardless of the forged input, got %s", restored.State)
+	}
+	if restored.ManifestHash != "" {
+		t.Fatal("expected RegisterDraft to clear the forged ManifestHash, not carry it forward")
+	}
+}
+
+// TestReplayOmittingReviewedEventCannotReachFinalized is the second
+// named attack: a replay log that DROPS the REVIEWED custody event
+// (whether from a bug, a truncated log, or a deliberate attempt to skip
+// the review step) must never let its target reach FINALIZED, no
+// matter how many of the OTHER real, legitimate events are replayed
+// faithfully.
+func TestReplayOmittingReviewedEventCannotReachFinalized(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	// Faithfully replay every event EXCEPT the REVIEWED one.
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-received", "PTY-1", CustodyReceived, 10, "received", ""); err != nil {
+		t.Fatalf("RecordCustodyEvent(RECEIVED): %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "evt-hashed", "PTY-1", CustodyHashed, 10, "hashed", "sha256:deadbeef"); err != nil {
+		t.Fatalf("RecordCustodyEvent(HASHED): %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
+		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
+	}
+	// REVIEWED event dropped from the replay log here.
+	_, err := reg.Advance("EV-1", StateReadyForFinalization, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet when replay omits the REVIEWED event, got %v", err)
+	}
+	// And FINALIZED remains unreachable no matter how many more times
+	// this is retried -- the replay log's gap is permanent, not a
+	// transient failure that a retry works around.
+	if _, err := reg.Advance("EV-1", StateFinalized, 10); err == nil {
+		t.Fatal("expected FINALIZED to remain unreachable while READY_FOR_FINALIZATION was never legitimately reached")
+	}
+	latest, _ := reg.Latest("EV-1")
+	if latest.State == StateFinalized {
+		t.Fatal("a replay that omitted the REVIEWED event must never result in FINALIZED")
 	}
 }
