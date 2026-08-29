@@ -122,10 +122,19 @@ func TestFacadeBindsEveryStepToOneCanonicalCaseLineage(t *testing.T) {
 		}
 	}
 
-	if err := f.VerifyEvidence(50, map[string]evidence.Status{
-		surveyA.EvidenceID(): evidence.StatusAuthenticitySupported,
-		surveyB.EvidenceID(): evidence.StatusAuthenticitySupported,
-	}, nil); err != nil {
+	// Status is derived from Strength, never supplied directly (see
+	// evidence.Registry.VerifyStatus).
+	supportedStrength := evidence.Strength{
+		Authenticity: evidence.AuthenticitySupported, Integrity: evidence.IntegrityVerified,
+		Provenance: evidence.ProvenanceVerified, Completeness: evidence.CompletenessComplete,
+		Relevance: evidence.RelevanceHigh, TemporalConsistency: evidence.TemporalConsistencySupported,
+		EntityConsistency: evidence.EntityConsistencySupported, IndependentCorroboration: evidence.CorroborationNone,
+		ContradictionLevel: evidence.ContradictionLevelNone,
+	}
+	if err := f.VerifyEvidence(50, map[string]evidence.Strength{
+		surveyA.EvidenceID(): supportedStrength,
+		surveyB.EvidenceID(): supportedStrength,
+	}); err != nil {
 		t.Fatalf("VerifyEvidence: %v", err)
 	}
 

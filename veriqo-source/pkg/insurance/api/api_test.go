@@ -39,6 +39,82 @@ func mustOntologyEvidence(t *testing.T, subject, source string, observedAt uint6
 	return e
 }
 
+// TestVerifyEvidenceDerivesStatusEndToEndThroughFacade responds to the
+// Authority Boundary Audit follow-up (Perlu_ditutup_dan_ditingkatkan.docx):
+// Facade.VerifyEvidence used to accept a caller-supplied
+// map[string]evidence.Status directly, so any caller reaching this
+// public API could hand an evidence record StatusCorroborated with
+// nothing behind the claim. This drives the real Facade through the
+// minimum real lifecycle needed to reach EVIDENCE_VERIFIED and submits
+// a Strength that is internally self-contradictory in the worst way --
+// integrity COMPROMISED (tampering detected) alongside HIGH
+// corroboration and full completeness, i.e. exactly what a forger would
+// submit hoping the "favorable" dimensions win. Confirms the record
+// ends up ALTERATION_DETECTED, never StatusCorroborated or
+// StatusAuthenticitySupported -- and that this is the record actually
+// stored in the case's own Evidence registry (f.c.Evidence), not merely
+// what DeriveStatus returns in isolation.
+func TestVerifyEvidenceDerivesStatusEndToEndThroughFacade(t *testing.T) {
+	const caseID = "CASE-VERIFY-DERIVE-1"
+	claimTypes := claim.NewTypeRegistry()
+	for _, def := range claim.DefaultTypes() {
+		if err := claimTypes.Register(def); err != nil {
+			t.Fatalf("registering default claim type %s: %v", def.Type, err)
+		}
+	}
+	f, err := New(caseID, 0, claimTypes)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if err := f.IdentifyParties(10, []PartySpec{
+		{ID: "PTY-CLAIMANT", Name: "Claimant Co", Roles: []party.Role{party.RoleClaimant}},
+	}); err != nil {
+		t.Fatalf("IdentifyParties: %v", err)
+	}
+	polHistory, err := policy.NewHistory("POL-1")
+	if err != nil {
+		t.Fatalf("policy.NewHistory: %v", err)
+	}
+	if err := polHistory.Add(policy.Version{
+		PolicyID: "POL-1", VersionID: "V1", Kind: policy.KindOriginal, EffectiveFrom: 0,
+	}); err != nil {
+		t.Fatalf("adding policy version: %v", err)
+	}
+	if err := f.RegisterPolicy(20, "POL-1", polHistory); err != nil {
+		t.Fatalf("RegisterPolicy: %v", err)
+	}
+	cl, err := claim.New("CLM-1", caseID, claim.TypeCargoDamage, "PTY-CLAIMANT", claimTypes)
+	if err != nil {
+		t.Fatalf("claim.New: %v", err)
+	}
+	if err := f.RegisterClaim(30, cl); err != nil {
+		t.Fatalf("RegisterClaim: %v", err)
+	}
+	forged := mustRecord(t, caseID, "forged_survey", "unknown_source", 1000, "PTY-CLAIMANT", evidence.OriginClaimant)
+	if err := f.IngestEvidence(40, []evidence.Record{forged}, nil); err != nil {
+		t.Fatalf("IngestEvidence: %v", err)
+	}
+
+	worstCaseForger := evidence.Strength{
+		Authenticity: evidence.AuthenticitySupported, Integrity: evidence.IntegrityCompromised,
+		Completeness: evidence.CompletenessComplete, IndependentCorroboration: evidence.CorroborationHigh,
+		ContradictionLevel: evidence.ContradictionLevelNone,
+	}
+	if err := f.VerifyEvidence(50, map[string]evidence.Strength{
+		forged.EvidenceID(): worstCaseForger,
+	}); err != nil {
+		t.Fatalf("VerifyEvidence: %v", err)
+	}
+
+	stored, ok := f.c.Evidence.Get(forged.EvidenceID())
+	if !ok {
+		t.Fatal("expected the record to still be present in the case's Evidence registry")
+	}
+	if stored.Status != evidence.StatusAlterationDetected {
+		t.Fatalf("expected a compromised record to be stored as ALTERATION_DETECTED regardless of how favorable its other dimensions look, got %v", stored.Status)
+	}
+}
+
 func mustRecord(t *testing.T, caseID, subject, source string, observedAt uint64, sourceParty party.PartyID, origin evidence.Origin) evidence.Record {
 	t.Helper()
 	rec, err := evidence.New(caseID, mustOntologyEvidence(t, subject, source, observedAt), sourceParty, origin)
@@ -140,14 +216,19 @@ func TestFullCaseLifecycleEndToEnd(t *testing.T) {
 		t.Fatalf("expected surveyA's two independent parents to reduce to 2 roots (photo, statement), got %v", roots)
 	}
 
-	// Stage 5: EVIDENCE_VERIFIED.
-	if err := f.VerifyEvidence(50,
-		map[string]evidence.Status{
-			surveyA.EvidenceID(): evidence.StatusAuthenticitySupported,
-			surveyB.EvidenceID(): evidence.StatusAuthenticitySupported,
-		},
-		nil,
-	); err != nil {
+	// Stage 5: EVIDENCE_VERIFIED. Status is derived from Strength, never
+	// supplied directly (see evidence.Registry.VerifyStatus).
+	supportedStrength := evidence.Strength{
+		Authenticity: evidence.AuthenticitySupported, Integrity: evidence.IntegrityVerified,
+		Provenance: evidence.ProvenanceVerified, Completeness: evidence.CompletenessComplete,
+		Relevance: evidence.RelevanceHigh, TemporalConsistency: evidence.TemporalConsistencySupported,
+		EntityConsistency: evidence.EntityConsistencySupported, IndependentCorroboration: evidence.CorroborationNone,
+		ContradictionLevel: evidence.ContradictionLevelNone,
+	}
+	if err := f.VerifyEvidence(50, map[string]evidence.Strength{
+		surveyA.EvidenceID(): supportedStrength,
+		surveyB.EvidenceID(): supportedStrength,
+	}); err != nil {
 		t.Fatalf("VerifyEvidence: %v", err)
 	}
 

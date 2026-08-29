@@ -458,20 +458,81 @@ func (reg *Registry) Get(evidenceID string) (Record, bool) {
 	return r, ok
 }
 
-// SetStatus updates a Record's verification status in place.
-func (reg *Registry) SetStatus(evidenceID string, status Status) error {
-	if !IsKnownStatus(status) {
-		return fmt.Errorf("evidence: unknown status %q", status)
+// DeriveStatus computes the ONLY Status a Record may legitimately carry
+// for a given Strength assessment -- the authoritative replacement for
+// the removed Registry.SetStatus, which let any caller assign ANY
+// Status (including StatusCorroborated or StatusAuthenticitySupported)
+// with nothing behind it: a real, structural trust bypass -- an
+// Authority Boundary Audit finding this function and VerifyStatus close.
+// s must already be a real assessment (Validate rejects the zero
+// value); this never accepts an unassessed Strength as license to
+// guess a Status.
+//
+// The mapping is a decomposed priority chain, not a weighted score --
+// matching this repository's own guardrail against collapsing
+// multi-dimensional evidence into one opaque confidence number, and the
+// same discipline causation.computeStatus already uses. Order matters:
+// an integrity compromise is checked first because a tampered record's
+// derived Status must never read as "supported" no matter how
+// corroborated it otherwise looks; net contradiction is checked next
+// for the same reason; then authenticity/temporal/entity disputes; then
+// incompleteness. Only once none of those fire does corroboration or
+// plain authenticity support determine the result; a Strength with
+// nothing conclusive either way derives StatusUnverified -- the same
+// fail-closed default New() already assigns.
+func DeriveStatus(s Strength) (Status, error) {
+	if err := s.Validate(); err != nil {
+		return "", err
 	}
+	switch {
+	case s.Integrity == IntegrityCompromised:
+		return StatusAlterationDetected, nil
+	case s.ContradictionLevel == ContradictionLevelHigh || s.ContradictionLevel == ContradictionLevelMedium:
+		return StatusContradicted, nil
+	case s.Authenticity == AuthenticityDisputed,
+		s.TemporalConsistency == TemporalConsistencyDisputed,
+		s.EntityConsistency == EntityConsistencyDisputed:
+		return StatusAuthenticityDisputed, nil
+	case s.Completeness == CompletenessInsufficient:
+		return StatusIncomplete, nil
+	case (s.IndependentCorroboration == CorroborationHigh || s.IndependentCorroboration == CorroborationMedium) &&
+		s.ContradictionLevel == ContradictionLevelNone:
+		return StatusCorroborated, nil
+	case s.Authenticity == AuthenticitySupported:
+		return StatusAuthenticitySupported, nil
+	default:
+		return StatusUnverified, nil
+	}
+}
+
+// VerifyStatus derives evidenceID's Status from its own already-recorded
+// Strength assessment via DeriveStatus, stores the result, and returns
+// it -- the ONLY way a Record's Status changes after New(). This
+// replaces the removed SetStatus, under which any caller could assign
+// any Status with no relationship whatsoever to the record's own
+// recorded evidence (pkg/insurance/api's Facade.VerifyEvidence took a
+// caller-supplied map[string]Status directly, so an external caller
+// could hand any evidence ID StatusCorroborated with nothing backing
+// the claim). Refuses (ErrStrengthNotAssessed) when no real Strength
+// assessment has been recorded yet via SetStrength -- there is nothing
+// to derive a Status from. Safe to call again after a later SetStrength
+// call re-assesses the same record: Status always reflects whatever
+// Strength is currently on file, never a stale, independently-drifted
+// value.
+func (reg *Registry) VerifyStatus(evidenceID string) (Status, error) {
 	reg.mu.Lock()
 	defer reg.mu.Unlock()
 	r, ok := reg.records[evidenceID]
 	if !ok {
-		return fmt.Errorf("%w: %s", ErrEvidenceNotFound, evidenceID)
+		return "", fmt.Errorf("%w: %s", ErrEvidenceNotFound, evidenceID)
+	}
+	status, err := DeriveStatus(r.Strength)
+	if err != nil {
+		return "", err
 	}
 	r.Status = status
 	reg.records[evidenceID] = r
-	return nil
+	return status, nil
 }
 
 // SetStrength updates a Record's multi-dimensional strength assessment.

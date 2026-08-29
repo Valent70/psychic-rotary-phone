@@ -95,17 +95,37 @@ func claimWithVersion(cl claim.Claim, versionID string) claim.Claim {
 	return cl
 }
 
-// verificationStatuses is what a reviewer has already determined about
-// each record. Independent and regulatory sources are recorded as
-// authenticity-supported; party-submitted records stay UNVERIFIED,
-// which is the honest default and keeps the gap/coverage engines
-// working on a realistic evidence set rather than an all-green one.
-func verificationStatuses(built BuiltEvidence) map[string]insevidence.Status {
-	out := map[string]insevidence.Status{}
+// verificationStrengths is the real, multi-dimensional Strength
+// assessment a reviewer has already determined for each record --
+// Status is no longer suppliable directly (evidence.Registry.VerifyStatus
+// now derives it; see that package's own DeriveStatus). Independent,
+// regulatory, and surveyor sources are recorded with a Strength that
+// legitimately derives to AUTHENTICITY_SUPPORTED (this fixture's own
+// stand-in for "a reviewer checked this and found it genuine, complete,
+// and uncontradicted" -- deliberately NOT high corroboration, since
+// nothing here claims a second independent source actually agrees);
+// party-submitted records are left with no Strength recorded at all, so
+// they stay at StatusUnverified, the honest default -- exactly
+// reproducing this fixture's prior behavior, but now routed through the
+// same derivation path every real caller uses instead of a bypassable
+// direct Status assignment. This keeps the gap/coverage engines working
+// on a realistic evidence set rather than an all-green one.
+func verificationStrengths(built BuiltEvidence) map[string]insevidence.Strength {
+	out := map[string]insevidence.Strength{}
 	for _, rec := range built.Records {
 		switch rec.Origin {
 		case insevidence.OriginIndependent, insevidence.OriginRegulatory, insevidence.OriginSurveyor:
-			out[rec.EvidenceID()] = insevidence.StatusAuthenticitySupported
+			out[rec.EvidenceID()] = insevidence.Strength{
+				Authenticity:             insevidence.AuthenticitySupported,
+				Integrity:                insevidence.IntegrityVerified,
+				Provenance:               insevidence.ProvenanceVerified,
+				Completeness:             insevidence.CompletenessComplete,
+				Relevance:                insevidence.RelevanceHigh,
+				TemporalConsistency:      insevidence.TemporalConsistencySupported,
+				EntityConsistency:        insevidence.EntityConsistencySupported,
+				IndependentCorroboration: insevidence.CorroborationNone,
+				ContradictionLevel:       insevidence.ContradictionLevelNone,
+			}
 		}
 	}
 	return out

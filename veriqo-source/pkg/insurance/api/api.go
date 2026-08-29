@@ -266,21 +266,27 @@ func (f *Facade) IngestEvidence(tick uint64, records []evidence.Record, dependen
 	return f.c.Advance(insurancecase.StateEvidenceIngested, tick)
 }
 
-// VerifyEvidence applies status/strength updates already determined by
-// the caller (authenticity checks, corroboration review, ...) and
-// advances the case to EVIDENCE_VERIFIED. Blueprint §32 step 5. This
-// package performs no authenticity judgment itself — it only records
-// what the caller has already determined, exactly like
-// evidence.Registry.SetStatus/SetStrength do.
-func (f *Facade) VerifyEvidence(tick uint64, statuses map[string]evidence.Status, strengths map[string]evidence.Strength) error {
-	for id, s := range statuses {
-		if err := f.c.Evidence.SetStatus(id, s); err != nil {
-			return fmt.Errorf("api: setting status for %s: %w", id, err)
-		}
-	}
+// VerifyEvidence records each evidence item's real, multi-dimensional
+// Strength assessment already determined by the caller (authenticity
+// checks, corroboration review, ...), DERIVES each record's Status from
+// that Strength via evidence.Registry.VerifyStatus, and advances the
+// case to EVIDENCE_VERIFIED. Blueprint §32 step 5. This package still
+// performs no authenticity judgment itself — the caller's Strength
+// assessment is exactly what SetStrength always recorded — but Status
+// is deliberately no longer a parameter here: an Authority Boundary
+// Audit found that accepting a caller-supplied map[string]evidence.
+// Status directly was a real, structural trust bypass (a caller could
+// hand any evidence ID StatusCorroborated or StatusAuthenticitySupported
+// with nothing behind the claim, and this facade would record it
+// verbatim). The only Status a record can end up with now is the one
+// its own recorded Strength legitimately derives to.
+func (f *Facade) VerifyEvidence(tick uint64, strengths map[string]evidence.Strength) error {
 	for id, s := range strengths {
 		if err := f.c.Evidence.SetStrength(id, s); err != nil {
 			return fmt.Errorf("api: setting strength for %s: %w", id, err)
+		}
+		if _, err := f.c.Evidence.VerifyStatus(id); err != nil {
+			return fmt.Errorf("api: deriving status for %s: %w", id, err)
 		}
 	}
 	return f.c.Advance(insurancecase.StateEvidenceVerified, tick)

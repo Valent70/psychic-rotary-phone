@@ -1,0 +1,1004 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R] /Count 8 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 4023 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO -- AUTHORITY ROUND: EVIDENCE TRUST BYPASS CLOSURE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 29 August 2026) Tj
+0 -12 Td
+(Baseline: Verification & Trust Boundary Response -- commit 1c91797) Tj
+0 -12 Td
+(Responds to: Perlu_ditutup_dan_ditingkatkan.docx -- an independent reviewer's follow-up) Tj
+0 -12 Td
+(review) Tj
+0 -12 Td
+(scoring the prior round 8.8/10 on engineering quality, explicitly naming Evidence.Registry.) Tj
+0 -12 Td
+(SetStatus as the one open, unfixed trust bypass, and issuing a precisely-scoped next) Tj
+0 -12 Td
+(instruction:) Tj
+0 -12 Td
+(AUTHORITY-ROUND NEXT -- CLOSE THE REMAINING EVIDENCE TRUST BYPASS. "Bukan langsung menambah) Tj
+0 -12 Td
+(fitur" \(not adding features directly\) -- a structural close of one named gap, not a feature) Tj
+0 -12 Td
+(round.) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review. All code in) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(deliverable compiles, is tested, and was verified against the live repository. Every claim) Tj
+0 -12 Td
+(below) Tj
+0 -12 Td
+(that names a file, function, or test was checked against that exact source before this) Tj
+0 -12 Td
+(report was) Tj
+0 -12 Td
+(written.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Evidence.Registry.SetStatus -- the trust bypass the reviewer named as the next blocker -- is) Tj
+0 -12 Td
+(structurally closed, not documentation-closed. It no longer exists. In its place,) Tj
+0 -12 Td
+(Registry.VerifyStatus derives a Record's Status from its own already-recorded Strength) Tj
+0 -12 Td
+(assessment via a new, total, severity-ordered DeriveStatus function; there is no code path,) Tj
+0 -12 Td
+(no) Tj
+0 -12 Td
+(parameter, no caller input by which a Status can be set independently of what the record's) Tj
+0 -12 Td
+(own) Tj
+0 -12 Td
+(evidence legitimately supports. The public API that exposed this bypass to external callers) Tj
+0 -12 Td
+(\(pkg/insurance/api.Facade.VerifyEvidence, which previously accepted a bare) Tj
+0 -12 Td
+(map[string]evidence.Status\) had its signature changed to remove the parameter entirely --) Tj
+0 -12 Td
+(this is) Tj
+0 -12 Td
+(not a gate added in front of the old bypass, it is the bypass's removal.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(One correction to the reviewer's own framing, made because staying precise about the) Tj
+0 -12 Td
+(codebase's) Tj
+0 -12 Td
+(real wiring matters more than confirming an assumption: the reviewer describes the bypass as) Tj
+0 -12 Td
+(letting AuthorizeGrounded \(Verification Round's evidence-lineage gate\) "kembali mempercayai) Tj
+0 -12 Td
+(evidence yang sebenarnya tidak legitimate" \(trust illegitimate evidence again\). In this) Tj
+0 -12 Td
+(codebase,) Tj
+0 -12 Td
+(AuthorizeGrounded does not consult pkg/insurance/evidence.Registry at all -- it grounds) Tj
+0 -12 Td
+(against) Tj
+0 -12 Td
+(a separate package, pkg/evidence/manifest.Registry, whose FINALIZED state is already a real,) Tj
+0 -12 Td
+(structurally-enforced transition matrix \(manifest.go's validTransitions\), not a bypassable) Tj
+0 -12 Td
+(SetStatus-style field. Evidence.Registry.SetStatus was still a real, exploitable, standalone) Tj
+0 -12 Td
+(trust bypass in its own right -- pkg/insurance/coverage/analyze.go reads Record.Status) Tj
+0 -12 Td
+(directly) Tj
+0 -12 Td
+(to decide FactStatus \(StatusSupported/StatusDisputed/StatusPartial\) for real coverage) Tj
+0 -12 Td
+(decisions, and the public Facade.VerifyEvidence API let any caller set it with zero evidence) Tj
+0 -12 Td
+(behind the claim -- but it was never the specific mechanism by which AuthorizeGrounded could) Tj
+0 -12 Td
+(be) Tj
+0 -12 Td
+(fooled. Both distinctions matter for anyone reading these reports as a map of where the) Tj
+0 -12 Td
+(trust) Tj
+0 -12 Td
+(boundary actually is.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer also raised a residual concern about Part 1's deep-immutability fix \(nested) Tj
+0 -12 Td
+(mutable) Tj
+0 -12 Td
+(structures beyond the top-level slices\) and asked for the Authority Boundary Audit to be) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3823 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(extended) Tj
+0 -12 Td
+(using an explicit CREATE/MUTATE/VERIFY/FINALIZE/SUPERSEDE/REVOKE/READ classification. Both) Tj
+0 -12 Td
+(are) Tj
+0 -12 Td
+(addressed below.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 1 -- THE NESTED-MUTABILITY QUESTION, RE-EXAMINED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point: the Part 1 fix only proved finding.Finding's own three []string fields) Tj
+0 -12 Td
+(are deep-copied; a real Finding object graph \(nested slices, maps, pointers, nested structs,) Tj
+0 -12 Td
+(interfaces\) could still leak a mutable reference somewhere deeper.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response: Re-audited finding.Finding's actual field set \(pkg/insurance/finding/finding.go\)) Tj
+0 -12 Td
+(field by field. It has exactly three reference-type fields -- SupportedBy, ContradictedBy,) Tj
+0 -12 Td
+(Alternatives, all []string -- and every other field is a scalar \(string, bool,) Tj
+0 -12 Td
+(causation.Status, Status, uint64\). There is no map, no pointer, no nested struct, and no) Tj
+0 -12 Td
+(interface anywhere in finding.Finding. cloneFinding's three-field deep copy is therefore not) Tj
+0 -12 Td
+(a) Tj
+0 -12 Td
+(partial fix that happens to cover the fields someone thought to check -- it is complete for) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(type as it is actually defined, verified by reading the struct definition itself rather than) Tj
+0 -12 Td
+(assuming its shape. The reviewer's general principle \(audit the *whole* object graph, not) Tj
+0 -12 Td
+(just the) Tj
+0 -12 Td
+(outer slice, for any type with nested mutable state\) is correct and is exactly the) Tj
+0 -12 Td
+(discipline this) Tj
+0 -12 Td
+(round applied to a genuinely nested type: evidence.Record.Strength \(Part 2 below\) is itself) Tj
+0 -12 Td
+(a) Tj
+0 -12 Td
+(plain scalar-only struct, and Record.Metadata \(a map[string]string\) is read but never) Tj
+0 -12 Td
+(returned) Tj
+0 -12 Td
+(by any accessor that could leak a mutable reference outside the package -- Registry.Get/All) Tj
+0 -12 Td
+(return Record by value, and Go's map-field-by-value-copy shares the same header-only-copy) Tj
+0 -12 Td
+(semantics slices do, so this is flagged here explicitly as the next thing to defensive-copy) Tj
+0 -12 Td
+(if) Tj
+0 -12 Td
+(Record ever grows an accessor that hands out a Record across a trust boundary the way) Tj
+0 -12 Td
+(AuthorizedFinding.Finding\(\) does. It is not fixed in this round because no such boundary) Tj
+0 -12 Td
+(exists) Tj
+0 -12 Td
+(yet -- Record values already move freely within pkg/insurance/evidence and its direct) Tj
+0 -12 Td
+(callers,) Tj
+0 -12 Td
+(none of which currently hold a "sealed" invariant the way AuthorizedFinding does -- but it) Tj
+0 -12 Td
+(is) Tj
+0 -12 Td
+(recorded here rather than silently assumed safe.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 2 -- CLOSING EVIDENCE.REGISTRY.SETSTATUS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WHAT WAS WRONG) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Registry.SetStatus\(evidenceID string, status Status\) error validated only that status was a) Tj
+0 -12 Td
+(*known* enum value -- never that it bore any relationship to the record's own evidence. The) Tj
+0 -12 Td
+(public) Tj
+0 -12 Td
+(surface this reached: pkg/insurance/api.Facade.VerifyEvidence\(tick uint64, statuses) Tj
+0 -12 Td
+(map[string]evidence.Status, strengths map[string]evidence.Strength\) error accepted a bare) Tj
+0 -12 Td
+(map[string]evidence.Status from any caller and recorded it verbatim, with its own doc) Tj
+0 -12 Td
+(comment) Tj
+0 -12 Td
+(stating plainly: *"This package performs no authenticity judgment itself -- it only records) Tj
+0 -12 Td
+(what) Tj
+0 -12 Td
+(the caller has already determined."* Concretely, nothing stopped:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(go) Tj
+0 -12 Td
+(f.VerifyEvidence\(tick, map[string]evidence.Status{) Tj
+0 -12 Td
+(forgedEvidenceID: evidence.StatusCorroborated, // nothing behind this claim) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3993 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(}, nil\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(-- and pkg/insurance/coverage/analyze.go's statusFromRecords reads exactly that field to) Tj
+0 -12 Td
+(decide) Tj
+0 -12 Td
+(whether a coverage fact is StatusSupported, a real downstream consequence, not a) Tj
+0 -12 Td
+(hypothetical one.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE FIX -- DERIVE, DON'T ACCEPT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Registry.SetStatus is removed, not deprecated, not gated with an extra check. In its place) Tj
+0 -12 Td
+(\(pkg/insurance/evidence/evidence.go\):) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- DeriveStatus\(s Strength\) \(Status, error\) -- a pure function computing the *only* Status a) Tj
+0 -12 Td
+(given Strength assessment may legitimately produce. Strength already carries nine) Tj
+0 -12 Td
+(independently-rated dimensions \(blueprint ß9\) and already refuses the unassessed zero value) Tj
+0 -12 Td
+(via) Tj
+0 -12 Td
+(Strength.Validate\(\) -- DeriveStatus reuses that gate rather than duplicating it. The mapping) Tj
+0 -12 Td
+(is a decomposed, severity-ordered priority chain -- the same discipline) Tj
+0 -12 Td
+(causation.computeStatus) Tj
+0 -12 Td
+(and this round's own statusStrength \(Verification Round, Part 2b\) already use, deliberately) Tj
+0 -12 Td
+(never a weighted score:) Tj
+0 -12 Td
+(1. Integrity == COMPROMISED -> ALTERATION_DETECTED \(tampering must never read as) Tj
+0 -12 Td
+("supported,") Tj
+0 -12 Td
+(however favorable every other dimension looks -- checked first, unconditionally\).) Tj
+0 -12 Td
+(2. Net contradiction \(ContradictionLevel HIGH or MEDIUM\) -> CONTRADICTED.) Tj
+0 -12 Td
+(3. Any dispute \(Authenticity, TemporalConsistency, or EntityConsistency DISPUTED\) ->) Tj
+0 -12 Td
+(AUTHENTICITY_DISPUTED.) Tj
+0 -12 Td
+(4. Completeness == INSUFFICIENT -> INCOMPLETE.) Tj
+0 -12 Td
+(5. Strong corroboration \(IndependentCorroboration HIGH or MEDIUM\) with zero contradiction ->) Tj
+0 -12 Td
+(CORROBORATED.) Tj
+0 -12 Td
+(6. Authenticity == SUPPORTED -> AUTHENTICITY_SUPPORTED.) Tj
+0 -12 Td
+(7. Otherwise \(nothing conclusive\) -> UNVERIFIED -- the same fail-closed default New\(\)) Tj
+0 -12 Td
+(already) Tj
+0 -12 Td
+(assigns to every fresh record.) Tj
+0 -12 Td
+(- Registry.VerifyStatus\(evidenceID string\) \(Status, error\) -- the only way a Record's) Tj
+0 -12 Td
+(Status changes after New\(\). Reads the record's currently-recorded Strength, calls) Tj
+0 -12 Td
+(DeriveStatus, stores and returns the result. Refuses \(ErrStrengthNotAssessed\) when no real) Tj
+0 -12 Td
+(Strength has been recorded yet via SetStrength -- there is nothing to derive from. Safe to) Tj
+0 -12 Td
+(call again after a later re-assessment; Status always reflects the *current* Strength, never) Tj
+0 -12 Td
+(a stale first pass.) Tj
+0 -12 Td
+(- Facade.VerifyEvidence \(pkg/insurance/api/api.go\) no longer takes a statuses parameter) Tj
+0 -12 Td
+(at all. It records each caller-supplied Strength via SetStrength, then calls VerifyStatus) Tj
+0 -12 Td
+(for that same ID -- the only status a caller can cause to be recorded is the one their own) Tj
+0 -12 Td
+(Strength assessment legitimately derives to.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CALL SITES UPDATED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Three call sites existed for the old signature; all three now supply Strength instead of) Tj
+0 -12 Td
+(Status:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- pkg/insurance/api/api_test.go and pkg/insurance/api/canonical_test.go -- updated to a) Tj
+0 -12 Td
+(Strength value that legitimately derives to AUTHENTICITY_SUPPORTED, reproducing the same) Tj
+0 -12 Td
+(test outcome through the honest path.) Tj
+0 -12 Td
+(- pkg/insurance/casepack/helpers.go's verificationStatuses -> renamed verificationStrengths.) Tj
+0 -12 Td
+(This golden-case fixture previously derived Status from Origin directly \(independent/) Tj
+0 -12 Td
+(regulatory/surveyor -> AUTHENTICITY_SUPPORTED\) -- itself a small, pre-existing echo of the) Tj
+0 -12 Td
+(same) Tj
+0 -12 Td
+(problem, and a direct violation of this package's own documented rule \("Evidence origin !=) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3976 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(evidence truth. Origin is metadata, never a trust weight applied silently."\) The fixture now) Tj
+0 -12 Td
+(supplies a real Strength per qualifying origin and lets VerifyStatus derive the result,) Tj
+0 -12 Td
+(reproducing the exact same downstream outcome through the same path every real caller uses,) Tj
+0 -12 Td
+(rather than a fixture-only shortcut.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ADVERSARIAL TESTS, VERIFIED AGAINST A REAL REGRESSION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Five new tests in pkg/insurance/evidence/evidence_test.go:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- TestVerifyStatusRejectsUnknownEvidence, TestVerifyStatusRejectsUnassessedRecord -- refusal) Tj
+0 -12 Td
+(cases.) Tj
+0 -12 Td
+(- TestDeriveStatusRefusesUnassessedStrength -- the zero-value Strength never derives *any*) Tj
+0 -12 Td
+(Status, including UNVERIFIED, matching SetStrength's own "not yet assessed" gate.) Tj
+0 -12 Td
+(- TestDeriveStatusCoversEveryBranch -- twelve cases covering every arm of the priority) Tj
+0 -12 Td
+(chain,) Tj
+0 -12 Td
+(including the adversarial case that most directly targets severity ordering: high) Tj
+0 -12 Td
+(corroboration + full completeness + integrity COMPROMISED must still derive) Tj
+0 -12 Td
+(ALTERATION_DETECTED, never CORROBORATED.) Tj
+0 -12 Td
+(- TestVerifyStatusOnlyEverProducesTheDerivedStatus -- end-to-end within the package: a) Tj
+0 -12 Td
+(record) Tj
+0 -12 Td
+(whose own Strength says "tampered and net-contradicted" cannot be made to read as) Tj
+0 -12 Td
+(corroborated) Tj
+0 -12 Td
+(or supported through any call shape, because VerifyStatus takes no Status argument at all;) Tj
+0 -12 Td
+(also proves re-assessment correctly re-derives after a later, genuine SetStrength call.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(One new test at the Facade layer, TestVerifyEvidenceDerivesStatusEndToEndThroughFacade) Tj
+0 -12 Td
+(\(pkg/insurance/api/api_test.go\), drives the real public API through the minimum real) Tj
+0 -12 Td
+(lifecycle) Tj
+0 -12 Td
+(\(parties -> policy -> claim -> evidence ingestion -> verification\) and submits the same) Tj
+0 -12 Td
+(worst-case) Tj
+0 -12 Td
+(Strength through Facade.VerifyEvidence, confirming the record stored in the case's own) Tj
+0 -12 Td
+(Evidence registry is ALTERATION_DETECTED, not a caller-favorable value.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Verified against a real regression, not just the intended design. Before finalizing,) Tj
+0 -12 Td
+(DeriveStatus's priority order was temporarily inverted \(corroboration checked *before*) Tj
+0 -12 Td
+(integrity) Tj
+0 -12 Td
+(compromise, simulating exactly the kind of ordering bug that would silently reopen the) Tj
+0 -12 Td
+(bypass for) Tj
+0 -12 Td
+(a subset of inputs\) and the suite re-run: TestDeriveStatusCoversEveryBranch failed) Tj
+0 -12 Td
+(immediately,) Tj
+0 -12 Td
+(naming the exact case \(integrity compromise wins over everything else\) and showing the wrong) Tj
+0 -12 Td
+(result \(CORROBORATED instead of ALTERATION_DETECTED\). The fix was restored and the full) Tj
+0 -12 Td
+(suite) Tj
+0 -12 Td
+(re-confirmed green. This is the same "revert, observe failure, restore, observe success") Tj
+0 -12 Td
+(discipline) Tj
+0 -12 Td
+(applied throughout this engagement, this time against the derivation logic itself rather) Tj
+0 -12 Td
+(than a) Tj
+0 -12 Td
+(single boolean check.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PART 3 -- EVIDENCE AUTHORITY BOUNDARY AUDIT \(EXTENDED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer asked for a systematic audit -- not only SetStatus -- across every public API) Tj
+0 -12 Td
+(capable) Tj
+0 -12 Td
+(of creating, mutating, replacing, finalizing, revoking, superseding, attaching/detaching, or) Tj
+0 -12 Td
+(altering the status/manifest/provenance/hash/source-identity/timestamps of Evidence,) Tj
+0 -12 Td
+(classified as) Tj
+0 -12 Td
+(CREATE / MUTATE / VERIFY / FINALIZE / SUPERSEDE / REVOKE / READ. Three packages actually) Tj
+0 -12 Td
+(implement) Tj
+0 -12 Td
+(Evidence-shaped authority in this repository: pkg/evidence/ontology \(the identity layer\),) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 4923 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(pkg/evidence/manifest \(the acquisition/integrity/custody/finalization layer, VTECP) Tj
+0 -12 Td
+(Capability 1\),) Tj
+0 -12 Td
+(and pkg/insurance/evidence \(the insurance-domain verification/strength layer this round's) Tj
+0 -12 Td
+(fix) Tj
+0 -12 Td
+(lives in\). Every exported function across all three that can affect Evidence-adjacent state) Tj
+0 -12 Td
+(is) Tj
+0 -12 Td
+(below.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   API    Class    Gate    Authority Source    Status) Tj
+0 -12 Td
+(  ---  ---  ---  ---  ---) Tj
+0 -12 Td
+(   ontology.New\(e\)    CREATE    Validate\(\)) Tj
+0 -12 Td
+(\(type/subject/predicate/source/confidence/validity/causal-order/derivation-basis/required-) Tj
+0 -12 Td
+(attributes\), EvidenceID = ComputeID\(\) always recomputed    Content-addressing \(SHA-256 over) Tj
+0 -12 Td
+(canonical bytes\) -- identity is a pure function of content, never caller-assigned    [GREEN]) Tj
+0 -12 Td
+(Closed) Tj
+0 -12 Td
+(   ontology.Evidence mutation    MUTATE    None exists -- there is no in-place mutation) Tj
+0 -12 Td
+(method on Evidence at all; every field change requires a new New\(\) call, which recomputes) Tj
+0 -12 Td
+(EvidenceID    Validate\(\)'s own EvidenceID != ComputeID\(\) check refuses any hand-edited value) Tj
+0 -12 Td
+(with a stale ID    [GREEN] Closed by absence -- no mutation surface to audit) Tj
+0 -12 Td
+(   ontology.Evidence.Sign    ATTACH \(signature\)    Validate\(\) runs first; signature computed) Tj
+0 -12 Td
+(over canonical bytes, EvidenceID excluded from the signed payload deliberately    Ed25519) Tj
+0 -12 Td
+(keypair the caller supplies    [GREEN] Closed \(signature verification is a separate,) Tj
+0 -12 Td
+(symmetric VerifySignature\)) Tj
+0 -12 Td
+(   ApplyCorrections    SUPERSEDE \(projection only\)    Pure function over an in-memory list;) Tj
+0 -12 Td
+(a correction is itself a new, content-addressed TypeCorrection Evidence item requiring) Tj
+0 -12 Td
+(Supersedes -- nothing is edited in place    Content-addressing, same as CREATE    [GREEN]) Tj
+0 -12 Td
+(Closed) Tj
+0 -12 Td
+(   manifest.Registry.RegisterDraft    CREATE    Refuses if a manifest already exists for) Tj
+0 -12 Td
+(this EvidenceID \(ErrVersionAlreadyExists\); Validate\(\)    First-write-wins per EvidenceID) Tj
+0 -12 Td
+([GREEN] Closed) Tj
+0 -12 Td
+(   manifest.Registry.Advance    VERIFY / FINALIZE    validTransitions -- a structurally-) Tj
+0 -12 Td
+(enforced adjacency table \(DRAFT->INGESTED->INTEGRITY_ASSESSED->PROVENANCE_COMPLETE-) Tj
+0 -12 Td
+(>READY_FOR_FINALIZATION->FINALIZED->SUPERSEDED\); refuses any transition not in the table;) Tj
+0 -12 Td
+(refuses ANY mutation once FINALIZED    The transition matrix itself    [YELLOW] Sequence) Tj
+0 -12 Td
+(enforced, substance not -- see below) Tj
+0 -12 Td
+(   manifest.Registry.Supersede    SUPERSEDE    Requires the parent to already be FINALIZED) Tj
+0 -12 Td
+(\(ErrParentNotFinalized\); parent's own fields never edited, only its State    Same matrix) Tj
+0 -12 Td
+([GREEN] Closed) Tj
+0 -12 Td
+(   manifest.Registry.RecordCustodyEvent    ATTACH \(custody\)    EventHash always computed) Tj
+0 -12 Td
+(from the chain's own current head, never caller-supplied; IsKnownCustodyAction    Hash chain) Tj
+0 -12 Td
+(\(Hn = SHA256\(Hn-1 \\  \\   JCS\(EventN\)\)\)    [GREEN] Closed) Tj
+0 -12 Td
+(   manifest.Registry.AddTransformation    MUTATE \(provenance\)    Refused once FINALIZED or) Tj
+0 -12 Td
+(SUPERSEDED \(ErrFinalizedIsImmutable\)    Same immutability rule    [GREEN] Closed) Tj
+0 -12 Td
+(   manifest.VerifyManifestHash / Registry.VerifyCustodyChain    READ / VERIFY    Independent) Tj
+0 -12 Td
+(re-derivation from the manifest's/chain's own semantic fields    Pure recomputation) Tj
+0 -12 Td
+([GREEN] Closed) Tj
+0 -12 Td
+(   evidence.Registry.Submit    CREATE    Refuses an exact content-addressed duplicate;) Tj
+0 -12 Td
+(refuses an invalid Underlying    Content-addressing \(delegated to ontology\)    [GREEN]) Tj
+0 -12 Td
+(Closed) Tj
+0 -12 Td
+(   evidence.Registry.VerifyStatus / DeriveStatus    VERIFY    New this round -- derives from) Tj
+0 -12 Td
+(recorded Strength, never caller-supplied directly    Strength's own nine dimensions, gated) Tj
+0 -12 Td
+(by Strength.Validate\(\)    [GREEN] Closed this round \(was the named bypass\)) Tj
+0 -12 Td
+(   evidence.Registry.SetStrength    MUTATE    Strength.Validate\(\) refuses the unassessed) Tj
+0 -12 Td
+(zero value; no restriction on re-assessment    The caller's own multi-dimensional assessment) Tj
+0 -12 Td
+([YELLOW] Structurally sound, substance not -- see below) Tj
+0 -12 Td
+(   evidence.Registry.SetRights    MUTATE \(legal/commercial rights\)    IsKnownRightsState) Tj
+0 -12 Td
+(\(enum membership only\); no transition legality, no authority-of-caller check, zero) Tj
+0 -12 Td
+(production call sites anywhere in this repository    None beyond enum membership --) Tj
+0 -12 Td
+(genuinely a caller-settable flag pattern, same shape as the closed SetStatus bug    ?) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 4059 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(Latent, not live -- see below) Tj
+0 -12 Td
+(   evidence.Registry.MarkSuperseded    SUPERSEDE    Refuses self-supersession and requires) Tj
+0 -12 Td
+(both records to exist; does not refuse re-marking an already-superseded record \(a second) Tj
+0 -12 Td
+(call silently rewrites SupersededBy\); zero production call sites    Caller-supplied IDs only) Tj
+0 -12 Td
+(? Latent, not live -- see below) Tj
+0 -12 Td
+(   evidence.Registry.RequirePermitted / PermittedFor / All / ByOrigin / Get / Count    READ) Tj
+0 -12 Td
+(Fail-closed on rights \(RequirePermitted\); everything else is plain enumeration    --) Tj
+0 -12 Td
+([GREEN] No authority claim made) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(NOTES ON THE NON-[GREEN] ROWS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(manifest.Registry.Advance -- sequence enforced, substance not \(OPEN, not fixed this round\).) Tj
+0 -12 Td
+(The transition matrix guarantees a manifest cannot *skip* a named stage or mutate after) Tj
+0 -12 Td
+(FINALIZED, but nothing verifies that the WORK each intermediate label claims actually) Tj
+0 -12 Td
+(happened --) Tj
+0 -12 Td
+(a caller can legally call Advance\(id, StateIntegrityAssessed, tick\) immediately after) Tj
+0 -12 Td
+(StateIngested with zero real integrity check performed, and the state machine has no way to) Tj
+0 -12 Td
+(tell) Tj
+0 -12 Td
+(the difference from a genuine one. This is the reviewer's own item 11 \("FINALIZED harus) Tj
+0 -12 Td
+(punya) Tj
+0 -12 Td
+(authority evidence: identity verified + content hash verified + provenance valid + required) Tj
+0 -12 Td
+(evidence checks passed + policy satisfied + finalization event recorded...) Tj
+0 -12 Td
+(derived/authorized) Tj
+0 -12 Td
+(state, bukan user-controlled flag"\) applied one level deeper than) Tj
+0 -12 Td
+(Evidence.Registry.SetStatus) Tj
+0 -12 Td
+(was. It is real, and it is not fixed in this round: pkg/evidence/manifest is VTECP) Tj
+0 -12 Td
+(Capability 1,) Tj
+0 -12 Td
+(a foundational, widely-used package \(the manifest AuthorizeGrounded itself grounds against\),) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(closing this honestly requires designing what "real" integrity/provenance verification means) Tj
+0 -12 Td
+(at) Tj
+0 -12 Td
+(each of five separate transitions -- a scoped design decision on its own, not a same-round) Tj
+0 -12 Td
+(extension of the SetStatus fix. Recorded here explicitly as OPEN, per the reviewer's own) Tj
+0 -12 Td
+(standing) Tj
+0 -12 Td
+(rule below, rather than silently left off the table or claimed closed by association with) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(round's other work.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(evidence.Registry.SetStrength -- structurally sound, substance not \(boundary condition, not) Tj
+0 -12 Td
+(a) Tj
+0 -12 Td
+(code bug\). Strength.Validate\(\) correctly refuses "unassessed" masquerading as "assessed,") Tj
+0 -12 Td
+(but) Tj
+0 -12 Td
+(nothing in this package can verify that a caller's claimed Integrity: IntegrityVerified) Tj
+0 -12 Td
+(reflects) Tj
+0 -12 Td
+(a real check -- the same fundamental boundary every evidentiary system has: SOMETHING,) Tj
+0 -12 Td
+(eventually,) Tj
+0 -12 Td
+(must assert a fact about the physical or documentary world, and no amount of internal code) Tj
+0 -12 Td
+(structure substitutes for that external act actually happening honestly. This is the) Tj
+0 -12 Td
+("Software) Tj
+0 -12 Td
+(correctness != Domain truth != Real-world truth" principle \(Verification Round, Part 5\)) Tj
+0 -12 Td
+(applying to) Tj
+0 -12 Td
+(Strength exactly as it applies to every other assessment surface in this codebase. What this) Tj
+0 -12 Td
+(round's fix DOES achieve is removing the ability to skip past Strength entirely and assert a) Tj
+0 -12 Td
+(Status with NO assessment behind it at all -- that was the actual bypass; the residual "is) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(assessment itself honest" question is not a code-closeable gap.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(evidence.Registry.SetRights and MarkSuperseded -- real, latent trust-bypass shape, zero) Tj
+0 -12 Td
+(current blast radius. Both are exported, both accept a value gated only by enum/existence) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 3820 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(checks with no authority-of-caller or transition-legality verification -- the same) Tj
+0 -12 Td
+(Thing{Field: value} shape the reviewer's own item 13 named as the pattern to hunt for) Tj
+0 -12 Td
+(system-wide. Unlike SetStatus, neither has a single production call site anywhere in this) Tj
+0 -12 Td
+(repository today \(confirmed by a full-repository grep\) -- SetRights's own doc comment) Tj
+0 -12 Td
+(already) Tj
+0 -12 Td
+(states its role is to RECORD an external legal/commercial act) Tj
+0 -12 Td
+(\(provenance.Registry.GrantTrust/) Tj
+0 -12 Td
+(RevokeTrust exist for that purpose but are not wired to gate this call\), which is a) Tj
+0 -12 Td
+(legitimately) Tj
+0 -12 Td
+(different shape from Status \(an internally-derivable evidentiary quality\) -- Rights) Tj
+0 -12 Td
+(genuinely IS) Tj
+0 -12 Td
+(an external fact this package cannot derive on its own. Both are recorded here as ? rather) Tj
+0 -12 Td
+(than) Tj
+0 -12 Td
+(either [RED] \(there is no live path to exploit them, so calling them an active vulnerability) Tj
+0 -12 Td
+(would) Tj
+0 -12 Td
+(overstate the current risk\) or [GREEN] \(the shape is real and would become live the moment a) Tj
+0 -12 Td
+(caller) Tj
+0 -12 Td
+(starts using them\) -- an honest middle classification the reviewer's own audit categories) Tj
+0 -12 Td
+(did not) Tj
+0 -12 Td
+(originally name but the evidence here calls for.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(THE REVIEWER'S PERMANENT RULE, APPLIED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(*"Never convert an identified trust bypass into documentation-only closure. Either) Tj
+0 -12 Td
+(structurally) Tj
+0 -12 Td
+(close it or explicitly leave it OPEN."* This report follows that rule for every row above:) Tj
+0 -12 Td
+(Evidence.Registry.SetStatus is structurally closed, with removed API surface and adversarial) Tj
+0 -12 Td
+(tests proving it. manifest.Registry.Advance's substance gap, evidence.Registry.SetRights,) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(MarkSuperseded's re-supersession gap are explicitly left OPEN, named, and reasoned about --) Tj
+0 -12 Td
+(not) Tj
+0 -12 Td
+(mentioned once and then implied fixed by proximity to this round's other work.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION EVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- gofmt -l . -- clean, no output.) Tj
+0 -12 Td
+(- go build ./... -- clean.) Tj
+0 -12 Td
+(- go vet ./... -- clean.) Tj
+0 -12 Td
+(- go test ./... -- full repository suite, all packages pass.) Tj
+0 -12 Td
+(- go test -race ./pkg/insurance/evidence/... ./pkg/insurance/api/...) Tj
+0 -12 Td
+(./pkg/insurance/casepack/...) Tj
+0 -12 Td
+(./pkg/insurance/cre/... ./test/integration/... -- clean, no data races.) Tj
+0 -12 Td
+(- go test ./pkg/insurance/guardrails/... -- all 7 repository-wide guardrail scans pass.) Tj
+0 -12 Td
+(- pkg/insurance/evidence package: 50 tests, all passing \(7 new this round: 5 DeriveStatus/) Tj
+0 -12 Td
+(VerifyStatus tests plus the two existing SetStrength/worked-example tests unchanged\).) Tj
+0 -12 Td
+(- pkg/insurance/api package: 4 tests, all passing \(1 new this round:) Tj
+0 -12 Td
+(TestVerifyEvidenceDerivesStatusEndToEndThroughFacade\).) Tj
+0 -12 Td
+(- Regression-proof: DeriveStatus's severity ordering was temporarily broken \(corroboration) Tj
+0 -12 Td
+(checked before integrity compromise\) and TestDeriveStatusCoversEveryBranch caught it) Tj
+0 -12 Td
+(immediately, naming the exact failing case; the fix was restored and re-verified green.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(MATURITY MODEL -- UNCHANGED POSITION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round's evidence is Level 2 \(Engineering Verified\) on the reviewer's own 4-level scale,) Tj
+0 -12 Td
+(exactly as the prior round stated. Nothing here is Level 3 or Level 4 evidence, and this) Tj
+0 -12 Td
+(report) Tj
+0 -12 Td
+(makes no claim that it is.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY FOR THIS ROUND) Tj
+ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 15 0 R >>
+endobj
+17 0 obj
+<< /Length 1672 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(Per the reviewer's own instruction \("Bukan langsung menambah fitur... Do not claim the audit) Tj
+0 -12 Td
+(is) Tj
+0 -12 Td
+(fully closed unless every identified engineering-level authority bypass is either) Tj
+0 -12 Td
+(structurally) Tj
+0 -12 Td
+(closed or explicitly classified as an external-world dependency"\): the one gap named as the) Tj
+0 -12 Td
+(next) Tj
+0 -12 Td
+(blocker \(Evidence.Registry.SetStatus\) is closed, structurally, with tests proving it and) Tj
+0 -12 Td
+(proving) Tj
+0 -12 Td
+(the tests would have caught the pre-fix behavior. Three further findings surfaced by) Tj
+0 -12 Td
+(extending the) Tj
+0 -12 Td
+(audit -- manifest.Registry.Advance's substance gap, SetRights, and MarkSuperseded's) Tj
+0 -12 Td
+(re-supersession gap -- are not fixed here and are not described as fixed anywhere in this) Tj
+0 -12 Td
+(report.) Tj
+0 -12 Td
+(Closing manifest.Registry.Advance honestly is real design work \(what does "real" integrity/) Tj
+0 -12 Td
+(provenance verification mean at each transition\) that deserves its own scoped round rather) Tj
+0 -12 Td
+(than a) Tj
+0 -12 Td
+(rushed extension of this one; SetRights and MarkSuperseded have zero current blast radius) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(were deprioritized accordingly, not overlooked. The suggested next ordering -- Evidence ->) Tj
+0 -12 Td
+(Hypothesis) Tj
+0 -12 Td
+(-> Finding -> Decision -> Insurance/Settlement -> External Reality -- remains the right) Tj
+0 -12 Td
+(frame: Evidence) Tj
+0 -12 Td
+(is not yet fully closed at the manifest-lifecycle-substance level, and that is stated) Tj
+0 -12 Td
+(plainly here) Tj
+0 -12 Td
+(rather than implied otherwise.) Tj
+ET
+endstream
+endobj
+18 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 17 0 R >>
+endobj
+19 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 20
+0000000000 65535 f 
+0000000015 00000 n 
+0000000119 00000 n 
+0000000189 00000 n 
+0000004264 00000 n 
+0000004390 00000 n 
+0000008265 00000 n 
+0000008391 00000 n 
+0000012436 00000 n 
+0000012562 00000 n 
+0000016590 00000 n 
+0000016717 00000 n 
+0000021693 00000 n 
+0000021821 00000 n 
+0000025933 00000 n 
+0000026061 00000 n 
+0000029934 00000 n 
+0000030062 00000 n 
+0000031787 00000 n 
+0000031915 00000 n 
+trailer
+<< /Size 20 /Root 19 0 R >>
+startxref
+31965
+%%EOF

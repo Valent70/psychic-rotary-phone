@@ -122,10 +122,239 @@ func TestSameEvidenceSubmittedByThreeParties(t *testing.T) {
 	}
 }
 
-func TestSetStatusRejectsUnknownEvidence(t *testing.T) {
+func TestVerifyStatusRejectsUnknownEvidence(t *testing.T) {
 	reg := NewRegistry()
-	if err := reg.SetStatus("nonexistent", StatusCorroborated); !errors.Is(err, ErrEvidenceNotFound) {
+	if _, err := reg.VerifyStatus("nonexistent"); !errors.Is(err, ErrEvidenceNotFound) {
 		t.Fatalf("expected ErrEvidenceNotFound, got %v", err)
+	}
+}
+
+// TestVerifyStatusRejectsUnassessedRecord responds to the Authority
+// Boundary Audit follow-up (Perlu_ditutup_dan_ditingkatkan.docx):
+// Registry.SetStatus used to let ANY caller assign ANY Status --
+// including StatusCorroborated -- to a record with zero recorded
+// Strength behind it. VerifyStatus has nothing to derive a Status from
+// until SetStrength has actually been called, and refuses rather than
+// guessing.
+func TestVerifyStatusRejectsUnassessedRecord(t *testing.T) {
+	reg := NewRegistry()
+	ev := mustEvidence(t, "S1", "src", 100)
+	rec, _ := New("CASE-1", ev, "PTY-001", OriginClaimant)
+	reg.Submit(rec)
+	if _, err := reg.VerifyStatus(rec.EvidenceID()); !errors.Is(err, ErrStrengthNotAssessed) {
+		t.Fatalf("expected ErrStrengthNotAssessed, got %v", err)
+	}
+	got, _ := reg.Get(rec.EvidenceID())
+	if got.Status != StatusUnverified {
+		t.Fatalf("expected Status to remain StatusUnverified when VerifyStatus refuses, got %v", got.Status)
+	}
+}
+
+// TestDeriveStatusRefusesUnassessedStrength mirrors SetStrength's own
+// "not yet assessed" gate: the zero-value Strength must never derive to
+// any Status, including StatusUnverified -- that would let a caller
+// distinguish "genuinely reviewed, nothing conclusive" from "never
+// reviewed at all" by accident, exactly the ambiguity Strength.Validate
+// already exists to prevent for SetStrength.
+func TestDeriveStatusRefusesUnassessedStrength(t *testing.T) {
+	if _, err := DeriveStatus(Strength{}); !errors.Is(err, ErrStrengthNotAssessed) {
+		t.Fatalf("expected ErrStrengthNotAssessed, got %v", err)
+	}
+}
+
+// TestDeriveStatusCoversEveryBranch exercises every arm of DeriveStatus's
+// priority chain, proving the derivation is total (every reachable
+// Strength combination lands on a real Status, never a panic or an
+// empty result) and that severity ordering is honored: a Strength that
+// would otherwise look "supported" or "corroborated" but ALSO shows
+// integrity compromise or net contradiction must still derive the more
+// severe Status, never the more favorable one.
+func TestDeriveStatusCoversEveryBranch(t *testing.T) {
+	cases := []struct {
+		name string
+		s    Strength
+		want Status
+	}{
+		{
+			"integrity compromise wins over everything else",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityCompromised,
+				Completeness: CompletenessComplete, IndependentCorroboration: CorroborationHigh,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusAlterationDetected,
+		},
+		{
+			"high contradiction wins over authenticity support",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, ContradictionLevel: ContradictionLevelHigh,
+			},
+			StatusContradicted,
+		},
+		{
+			"medium contradiction also contradicts",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, ContradictionLevel: ContradictionLevelMedium,
+			},
+			StatusContradicted,
+		},
+		{
+			"disputed authenticity",
+			Strength{
+				Authenticity: AuthenticityDisputed, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusAuthenticityDisputed,
+		},
+		{
+			"disputed temporal consistency, authenticity itself unknown",
+			Strength{
+				Authenticity: AuthenticityUnknown, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, TemporalConsistency: TemporalConsistencyDisputed,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusAuthenticityDisputed,
+		},
+		{
+			"disputed entity consistency, authenticity itself unknown",
+			Strength{
+				Authenticity: AuthenticityUnknown, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, EntityConsistency: EntityConsistencyDisputed,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusAuthenticityDisputed,
+		},
+		{
+			"insufficient completeness, nothing else conclusive",
+			Strength{
+				Authenticity: AuthenticityUnknown, Integrity: IntegrityVerified,
+				Completeness: CompletenessInsufficient, ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusIncomplete,
+		},
+		{
+			"high corroboration with zero contradiction",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, IndependentCorroboration: CorroborationHigh,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusCorroborated,
+		},
+		{
+			"medium corroboration with zero contradiction",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, IndependentCorroboration: CorroborationMedium,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusCorroborated,
+		},
+		{
+			"high corroboration but nonzero (low) contradiction does not qualify as CORROBORATED",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, IndependentCorroboration: CorroborationHigh,
+				ContradictionLevel: ContradictionLevelLow,
+			},
+			StatusAuthenticitySupported,
+		},
+		{
+			"plain authenticity support, no corroboration",
+			Strength{
+				Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+				Completeness: CompletenessComplete, IndependentCorroboration: CorroborationNone,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusAuthenticitySupported,
+		},
+		{
+			"nothing conclusive at all stays UNVERIFIED",
+			Strength{
+				Authenticity: AuthenticityUnknown, Integrity: IntegrityUnknown,
+				Completeness: CompletenessPartial, IndependentCorroboration: CorroborationLow,
+				ContradictionLevel: ContradictionLevelNone,
+			},
+			StatusUnverified,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := DeriveStatus(tc.s)
+			if err != nil {
+				t.Fatalf("DeriveStatus: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("DeriveStatus(%+v) = %v, want %v", tc.s, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestVerifyStatusOnlyEverProducesTheDerivedStatus is the direct
+// adversarial proof for the Authority Boundary Audit finding: under the
+// OLD API (Registry.SetStatus), a caller with a compromised record --
+// tampering detected, net contradiction -- could still call
+// SetStatus(id, StatusCorroborated) and have it recorded verbatim, and
+// nothing downstream could tell the difference from a genuinely
+// corroborated record. VerifyStatus makes that unrepresentable: no
+// matter what a caller wants the Status to say, the ONLY value that can
+// ever be stored is whatever the record's own recorded Strength
+// legitimately derives to.
+func TestVerifyStatusOnlyEverProducesTheDerivedStatus(t *testing.T) {
+	reg := NewRegistry()
+	ev := mustEvidence(t, "S1", "src", 100)
+	rec, _ := New("CASE-1", ev, "PTY-001", OriginClaimant)
+	reg.Submit(rec)
+
+	// A record whose OWN evidence says it was tampered with and is net
+	// contradicted -- the worst case, exactly what a forger would want
+	// to hide behind a favorable Status.
+	compromised := Strength{
+		Authenticity: AuthenticitySupported, Integrity: IntegrityCompromised,
+		Completeness: CompletenessComplete, IndependentCorroboration: CorroborationHigh,
+		ContradictionLevel: ContradictionLevelHigh,
+	}
+	if err := reg.SetStrength(rec.EvidenceID(), compromised); err != nil {
+		t.Fatalf("SetStrength: %v", err)
+	}
+	got, err := reg.VerifyStatus(rec.EvidenceID())
+	if err != nil {
+		t.Fatalf("VerifyStatus: %v", err)
+	}
+	// There is no code path -- no parameter, no caller input -- by which
+	// this could come back as StatusCorroborated or
+	// StatusAuthenticitySupported: VerifyStatus takes no Status
+	// argument at all. The severity-ordered priority chain in
+	// DeriveStatus is what decides, and integrity compromise outranks
+	// everything else.
+	if got != StatusAlterationDetected {
+		t.Fatalf("expected a compromised, contradicted record to derive StatusAlterationDetected regardless of how favorable its other dimensions look, got %v", got)
+	}
+	stored, _ := reg.Get(rec.EvidenceID())
+	if stored.Status != StatusAlterationDetected {
+		t.Fatalf("expected the stored record's own Status to match, got %v", stored.Status)
+	}
+
+	// Re-assessing with a genuinely clean Strength must re-derive to a
+	// different Status -- VerifyStatus always reflects the CURRENT
+	// Strength, never a stale first assessment.
+	clean := Strength{
+		Authenticity: AuthenticitySupported, Integrity: IntegrityVerified,
+		Completeness: CompletenessComplete, IndependentCorroboration: CorroborationNone,
+		ContradictionLevel: ContradictionLevelNone,
+	}
+	if err := reg.SetStrength(rec.EvidenceID(), clean); err != nil {
+		t.Fatalf("SetStrength (re-assessment): %v", err)
+	}
+	got2, err := reg.VerifyStatus(rec.EvidenceID())
+	if err != nil {
+		t.Fatalf("VerifyStatus (re-assessment): %v", err)
+	}
+	if got2 != StatusAuthenticitySupported {
+		t.Fatalf("expected re-assessment with clean Strength to derive StatusAuthenticitySupported, got %v", got2)
 	}
 }
 

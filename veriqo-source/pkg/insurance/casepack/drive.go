@@ -192,10 +192,11 @@ func Drive(c Case, ledger *lineage.Ledger) (*Result, error) {
 	res.Order = order
 
 	// --- Step 5: evidence verification --------------------------------
-	// Statuses are what a reviewer has already determined about each
-	// record; the facade only records them. Nothing here judges
-	// authenticity, matching evidence.Registry.SetStatus's own rule.
-	if err := f.VerifyEvidence(ticks.verify, verificationStatuses(built), nil); err != nil {
+	// Strengths are what a reviewer has already determined about each
+	// record; the facade records them and derives Status from them.
+	// Nothing here judges authenticity itself, matching
+	// evidence.Registry.VerifyStatus's own rule.
+	if err := f.VerifyEvidence(ticks.verify, verificationStrengths(built)); err != nil {
 		return nil, fmt.Errorf("%s: VerifyEvidence: %w", c.ID, err)
 	}
 
