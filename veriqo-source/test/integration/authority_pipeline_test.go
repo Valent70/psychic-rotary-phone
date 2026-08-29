@@ -75,18 +75,13 @@ func TestAuthorityCannotBeLostAcrossThePipeline(t *testing.T) {
 		URI: "evidence://pipeline-survey-1.pdf", Filename: "pipeline-survey-1.pdf", MediaType: "application/pdf",
 		ByteSize: 2048, SHA256: "cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff6",
 		Method: "UPLOAD", Collector: "surveyor-pipeline", Source: "independent-surveyor", AcquiredAt: tick, ReceivedAt: tick,
+		HashStatus: "COMPUTED", Classification: "INTERNAL",
+		AcquisitionRecord: "uploaded by independent surveyor via case portal",
 	})
 	if err != nil {
 		t.Fatalf("Detection: RegisterDraft: %v", err)
 	}
-	cur := draft
-	for _, s := range []manifest.State{manifest.StateIngested, manifest.StateIntegrityAssessed,
-		manifest.StateProvenanceComplete, manifest.StateReadyForFinalization, manifest.StateFinalized} {
-		cur, err = manifests.Advance(evidenceObj.ObjectID, s, tick)
-		if err != nil {
-			t.Fatalf("Detection: Advance(%s): %v", s, err)
-		}
-	}
+	cur := advanceManifestToFinalized(t, manifests, draft.EvidenceID, tick)
 	// A second, minor piece of contradicting evidence -- also grounded,
 	// so the finding legitimately cites two real evidence items rather
 	// than one real and one merely-referenced-by-string.
@@ -95,15 +90,12 @@ func TestAuthorityCannotBeLostAcrossThePipeline(t *testing.T) {
 		URI: "evidence://pipeline-counterpoint-1.pdf", Filename: "pipeline-counterpoint-1.pdf", MediaType: "application/pdf",
 		ByteSize: 512, SHA256: "dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa1",
 		Method: "UPLOAD", Collector: "surveyor-pipeline", Source: "independent-surveyor", AcquiredAt: tick, ReceivedAt: tick,
+		HashStatus: "COMPUTED", Classification: "INTERNAL",
+		AcquisitionRecord: "uploaded by independent surveyor via case portal",
 	}); err != nil {
 		t.Fatalf("Detection: RegisterDraft (contradicting): %v", err)
 	}
-	for _, s := range []manifest.State{manifest.StateIngested, manifest.StateIntegrityAssessed,
-		manifest.StateProvenanceComplete, manifest.StateReadyForFinalization, manifest.StateFinalized} {
-		if _, err := manifests.Advance("ev-minor-contradiction", s, tick); err != nil {
-			t.Fatalf("Detection: Advance (contradicting) (%s): %v", s, err)
-		}
-	}
+	advanceManifestToFinalized(t, manifests, "ev-minor-contradiction", tick)
 
 	// ---- Inference: a governed local trace, gated on an ACTIVE model ----
 	lifecycleReg := lifecycle.NewRegistry()

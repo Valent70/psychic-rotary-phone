@@ -303,12 +303,94 @@ func (r *Registry) Versions(evidenceID string) []Manifest {
 	return out
 }
 
+// ErrTransitionPrerequisiteNotMet is Advance's refusal when
+// validTransitions WOULD allow cur.State -> to in the abstract, but the
+// substantive work that specific transition claims has not actually
+// been recorded for THIS evidenceID. "Sequence integrity != transition
+// authority" (Authority Round 2, responding to Perlu_ditutup_dan_
+// ditingkatkan.docx's own framing): validTransitions alone only proves
+// a transition is legal in principle -- nothing previously proved the
+// PRECONDITION that makes it legal for this specific manifest was ever
+// satisfied, so a caller could call Advance five times in strict order
+// with zero real integrity assessment, provenance validation, or review
+// ever performed, and reach FINALIZED anyway ("fake process -> valid
+// sequence -> FINALIZED").
+var ErrTransitionPrerequisiteNotMet = errors.New("manifest: transition's substantive prerequisite has not been recorded for this evidence")
+
+// hasCustodyAction reports whether chain contains at least one event of
+// the given action -- the check transitionPrerequisiteLocked uses to
+// confirm real work happened, never merely that a caller claims it did.
+func hasCustodyAction(chain []CustodyEvent, action CustodyAction) bool {
+	for _, e := range chain {
+		if e.Action == action {
+			return true
+		}
+	}
+	return false
+}
+
+// transitionPrerequisiteLocked checks, for the SPECIFIC evidenceID and
+// candidate transition, that real work backing it is actually on file
+// -- never trusting that calling Advance in the right order is itself
+// proof. Every check is against data that is already structurally
+// forge-resistant: a hash-chained CustodyEvent no caller can inject
+// without going through RecordCustodyEvent (itself attributed to an
+// actor, at a tick, hash-linked to everything before it), or a Manifest
+// field that already existed but was previously unenforced. This adds
+// no new external policy dependency -- it enforces existing data this
+// package already collects. Callers must still be honest about WHEN
+// they record a custody event (nothing can force that, the same
+// boundary every evidentiary system has -- see this repository's
+// "Software correctness != Domain truth" principle) but a false claim
+// now costs an attributed, hash-chained, independently-verifiable
+// record instead of nothing at all.
+func (r *Registry) transitionPrerequisiteLocked(evidenceID string, cur Manifest, to State) error {
+	chain := r.custody[evidenceID]
+	switch to {
+	case StateIngested:
+		if !hasCustodyAction(chain, CustodyReceived) && !hasCustodyAction(chain, CustodyRegistered) {
+			return fmt.Errorf("%w: %s -> %s requires a recorded RECEIVED or REGISTERED custody event", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+	case StateIntegrityAssessed:
+		if cur.HashStatus == "" {
+			return fmt.Errorf("%w: %s -> %s requires HashStatus to be recorded", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+		if !hasCustodyAction(chain, CustodyHashed) {
+			return fmt.Errorf("%w: %s -> %s requires a recorded HASHED custody event", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+	case StateProvenanceComplete:
+		if cur.AcquisitionRecord == "" {
+			return fmt.Errorf("%w: %s -> %s requires AcquisitionRecord to be recorded", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+	case StateReadyForFinalization:
+		if !hasCustodyAction(chain, CustodyReviewed) {
+			return fmt.Errorf("%w: %s -> %s requires a recorded REVIEWED custody event", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+	case StateFinalized:
+		if cur.Classification == "" {
+			return fmt.Errorf("%w: %s -> %s requires Classification to be recorded", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+		if len(chain) == 0 {
+			return fmt.Errorf("%w: %s -> %s requires a non-empty custody chain", ErrTransitionPrerequisiteNotMet, cur.State, to)
+		}
+		if err := r.verifyCustodyChainLocked(evidenceID); err != nil {
+			return fmt.Errorf("%w: %s -> %s: custody chain does not independently verify: %v", ErrTransitionPrerequisiteNotMet, cur.State, to, err)
+		}
+	}
+	return nil
+}
+
 // Advance moves evidenceID's latest manifest to a new state — the ONLY
 // way a manifest's State ever changes prior to finalization. Refuses
 // any transition not in validTransitions (structurally impossible, not
-// merely disallowed by convention) and refuses any mutation whatsoever
+// merely disallowed by convention), refuses any mutation whatsoever
 // once the latest version is already FINALIZED (LAW-04) — a caller who
-// wants to correct a finalized manifest must call Supersede instead.
+// wants to correct a finalized manifest must call Supersede instead —
+// and, since Authority Round 2, refuses any transition whose
+// substantive prerequisite (transitionPrerequisiteLocked) has not
+// actually been recorded: Advance answers "has every authoritative
+// prerequisite for the next state been satisfied?", not merely "is this
+// the next state in sequence?".
 func (r *Registry) Advance(evidenceID string, to State, tick uint64) (Manifest, error) {
 	if !IsKnownState(to) {
 		return Manifest{}, fmt.Errorf("manifest: unknown target state %q", to)
@@ -333,6 +415,9 @@ func (r *Registry) Advance(evidenceID string, to State, tick uint64) (Manifest, 
 	}
 	if !ok {
 		return Manifest{}, fmt.Errorf("%w: %s -> %s", ErrInvalidTransition, cur.State, to)
+	}
+	if err := r.transitionPrerequisiteLocked(evidenceID, cur, to); err != nil {
+		return Manifest{}, err
 	}
 	cur.State = to
 	if to == StateFinalized {
@@ -431,9 +516,17 @@ func (r *Registry) CustodyChain(evidenceID string) []CustodyEvent {
 // "prove this custody chain was not tampered with."
 func (r *Registry) VerifyCustodyChain(evidenceID string) error {
 	r.mu.RLock()
-	chain := append([]CustodyEvent(nil), r.custody[evidenceID]...)
-	r.mu.RUnlock()
+	defer r.mu.RUnlock()
+	return r.verifyCustodyChainLocked(evidenceID)
+}
 
+// verifyCustodyChainLocked is VerifyCustodyChain's own logic, factored
+// out so Advance's transitionPrerequisiteLocked (which already holds
+// r.mu.Lock when it needs this) can call it directly without either
+// re-entering the mutex (a deadlock: sync.RWMutex is not reentrant) or
+// duplicating the verification logic itself.
+func (r *Registry) verifyCustodyChainLocked(evidenceID string) error {
+	chain := r.custody[evidenceID]
 	prev := GenesisHash
 	for i, e := range chain {
 		if e.PreviousHash != prev {

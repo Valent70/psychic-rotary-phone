@@ -14,8 +14,46 @@ func validDraft(evidenceID string) Manifest {
 		Method: "manual upload", Collector: "PTY-1", Source: "claimant",
 		AcquiredAt: 10, ReceivedAt: 10, System: "veriqo-cre", SystemVersion: "v1",
 		HashStatus: "COMPUTED", SignatureStatus: "UNSIGNED",
-		Classification: "INTERNAL",
+		Classification:    "INTERNAL",
+		AcquisitionRecord: "manual upload logged by claims handler PTY-1",
 	}
+}
+
+// advanceThroughFullLifecycle drives evidenceID from DRAFT all the way
+// to FINALIZED, recording the real custody events each transition's
+// prerequisite now requires (Authority Round 2's transitionPrerequisiteLocked)
+// -- the honest way to reach FINALIZED, mirroring what any real caller
+// must now do. A caller who skips one of these RecordCustodyEvent calls
+// gets ErrTransitionPrerequisiteNotMet, exercised directly by this
+// file's own adversarial tests below.
+func advanceThroughFullLifecycle(t *testing.T, reg *Registry, evidenceID string, tick uint64) Manifest {
+	t.Helper()
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-received", "PTY-1", CustodyReceived, tick, "received"); err != nil {
+		t.Fatalf("RecordCustodyEvent(RECEIVED): %v", err)
+	}
+	if _, err := reg.Advance(evidenceID, StateIngested, tick); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-hashed", "PTY-1", CustodyHashed, tick, "hashed"); err != nil {
+		t.Fatalf("RecordCustodyEvent(HASHED): %v", err)
+	}
+	if _, err := reg.Advance(evidenceID, StateIntegrityAssessed, tick); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	if _, err := reg.Advance(evidenceID, StateProvenanceComplete, tick); err != nil {
+		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent(evidenceID, evidenceID+"-reviewed", "PTY-1", CustodyReviewed, tick, "reviewed"); err != nil {
+		t.Fatalf("RecordCustodyEvent(REVIEWED): %v", err)
+	}
+	if _, err := reg.Advance(evidenceID, StateReadyForFinalization, tick); err != nil {
+		t.Fatalf("Advance to READY_FOR_FINALIZATION: %v", err)
+	}
+	m, err := reg.Advance(evidenceID, StateFinalized, tick)
+	if err != nil {
+		t.Fatalf("Advance to FINALIZED: %v", err)
+	}
+	return m
 }
 
 func TestRegisterDraftStartsAtVersion1(t *testing.T) {
@@ -58,15 +96,7 @@ func TestFinalizationStateMachineFollowsExactSequence(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	sequence := []State{
-		StateIngested, StateIntegrityAssessed, StateProvenanceComplete,
-		StateReadyForFinalization, StateFinalized,
-	}
-	for _, to := range sequence {
-		if _, err := reg.Advance("EV-1", to, 10); err != nil {
-			t.Fatalf("Advance to %s: %v", to, err)
-		}
-	}
+	advanceThroughFullLifecycle(t, reg, "EV-1", 10)
 	m, err := reg.Latest("EV-1")
 	if err != nil {
 		t.Fatalf("Latest: %v", err)
@@ -99,11 +129,7 @@ func TestFinalizedManifestIsImmutable(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	for _, to := range []State{StateIngested, StateIntegrityAssessed, StateProvenanceComplete, StateReadyForFinalization, StateFinalized} {
-		if _, err := reg.Advance("EV-1", to, 10); err != nil {
-			t.Fatalf("Advance to %s: %v", to, err)
-		}
-	}
+	advanceThroughFullLifecycle(t, reg, "EV-1", 10)
 	// Attempting ANY further advance -- even to the one legal next
 	// state (SUPERSEDED) -- via Advance must be refused; only
 	// Supersede() may move a FINALIZED manifest forward, and even that
@@ -123,11 +149,7 @@ func TestSupersedeCreatesNewVersionWithoutRewritingHistory(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	for _, to := range []State{StateIngested, StateIntegrityAssessed, StateProvenanceComplete, StateReadyForFinalization, StateFinalized} {
-		if _, err := reg.Advance("EV-1", to, 10); err != nil {
-			t.Fatalf("Advance to %s: %v", to, err)
-		}
-	}
+	advanceThroughFullLifecycle(t, reg, "EV-1", 10)
 	v1Before, _ := reg.Latest("EV-1")
 
 	corrected := validDraft("EV-1")
@@ -177,11 +199,7 @@ func TestVerifyManifestHashDetectsTampering(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	for _, to := range []State{StateIngested, StateIntegrityAssessed, StateProvenanceComplete, StateReadyForFinalization, StateFinalized} {
-		if _, err := reg.Advance("EV-1", to, 10); err != nil {
-			t.Fatalf("Advance to %s: %v", to, err)
-		}
-	}
+	advanceThroughFullLifecycle(t, reg, "EV-1", 10)
 	m, _ := reg.Latest("EV-1")
 	if err := VerifyManifestHash(m); err != nil {
 		t.Fatalf("expected the genuine manifest to verify, got %v", err)
@@ -295,11 +313,7 @@ func TestAddTransformationRefusedAfterFinalization(t *testing.T) {
 	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	for _, to := range []State{StateIngested, StateIntegrityAssessed, StateProvenanceComplete, StateReadyForFinalization, StateFinalized} {
-		if _, err := reg.Advance("EV-1", to, 10); err != nil {
-			t.Fatalf("Advance to %s: %v", to, err)
-		}
-	}
+	advanceThroughFullLifecycle(t, reg, "EV-1", 10)
 	_, err := reg.AddTransformation("EV-1", Transformation{TransformType: "OCR"})
 	if !errors.Is(err, ErrFinalizedIsImmutable) {
 		t.Fatalf("expected ErrFinalizedIsImmutable, got %v", err)
@@ -330,5 +344,208 @@ func TestKnownStateAndCustodyActionVocabulariesAreClosed(t *testing.T) {
 	}
 	if IsKnownCustodyAction("BOGUS") {
 		t.Fatal("an unknown custody action must never report as known")
+	}
+}
+
+// ---- Authority Round 2: transitionPrerequisiteLocked adversarial tests ----
+//
+// Perlu_ditutup_dan_ditingkatkan.docx's own framing: "Sequence integrity
+// != transition authority" -- validTransitions alone only proves a
+// transition is legal in the abstract (state A -> state B is an allowed
+// edge), never that the SPECIFIC evidenceID actually earned it. Every
+// test below drives a manifest to the edge of a real transition WITHOUT
+// performing the substantive work that transition claims, and confirms
+// Advance refuses it via ErrTransitionPrerequisiteNotMet -- proving
+// "fake process -> valid sequence -> FINALIZED" is no longer possible.
+
+func TestAdvanceRefusesIngestedWithNoCustodyEvent(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	// No RecordCustodyEvent call at all -- a caller trying to fake
+	// "receipt" happened just by calling Advance in the right order.
+	_, err := reg.Advance("EV-1", StateIngested, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesIntegrityAssessedWithoutHashedCustodyEvent(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	// HashStatus is set (validDraft sets it), but no HASHED custody
+	// event was ever recorded -- a caller claiming "we hashed it"
+	// without the attributed, hash-chained record to back the claim.
+	_, err := reg.Advance("EV-1", StateIntegrityAssessed, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesIntegrityAssessedWithoutHashStatus(t *testing.T) {
+	reg := NewRegistry()
+	d := validDraft("EV-1")
+	d.HashStatus = ""
+	if _, err := reg.RegisterDraft(d); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	_, err := reg.Advance("EV-1", StateIntegrityAssessed, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesProvenanceCompleteWithoutAcquisitionRecord(t *testing.T) {
+	reg := NewRegistry()
+	d := validDraft("EV-1")
+	d.AcquisitionRecord = ""
+	if _, err := reg.RegisterDraft(d); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	_, err := reg.Advance("EV-1", StateProvenanceComplete, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesReadyForFinalizationWithoutReviewedCustodyEvent(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
+		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
+	}
+	// No REVIEWED custody event -- a caller trying to skip the
+	// independent review step entirely.
+	_, err := reg.Advance("EV-1", StateReadyForFinalization, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet, got %v", err)
+	}
+}
+
+func TestAdvanceRefusesFinalizationWithoutClassification(t *testing.T) {
+	reg := NewRegistry()
+	d := validDraft("EV-1")
+	d.Classification = ""
+	if _, err := reg.RegisterDraft(d); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	for _, action := range []CustodyAction{CustodyReceived} {
+		if _, err := reg.RecordCustodyEvent("EV-1", "EVT-"+string(action), "PTY-1", action, 10, "x"); err != nil {
+			t.Fatalf("RecordCustodyEvent(%s): %v", action, err)
+		}
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
+		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateReadyForFinalization, 10); err != nil {
+		t.Fatalf("Advance to READY_FOR_FINALIZATION: %v", err)
+	}
+	_, err := reg.Advance("EV-1", StateFinalized, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet, got %v", err)
+	}
+}
+
+// TestAdvanceRefusesFinalizationWithATamperedCustodyChain is the
+// strongest form of the FINALIZED gate: even when every field-level
+// prerequisite is satisfied, Advance independently re-verifies the
+// WHOLE custody chain's hash linkage before allowing FINALIZED, and
+// refuses if any prior event was corrupted -- proving finalization
+// depends on genuine end-to-end chain integrity, not merely on each
+// individual event having once been recorded honestly.
+func TestAdvanceRefusesFinalizationWithATamperedCustodyChain(t *testing.T) {
+	reg := NewRegistry()
+	if _, err := reg.RegisterDraft(validDraft("EV-1")); err != nil {
+		t.Fatalf("RegisterDraft: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-received", "PTY-1", CustodyReceived, 10, "received"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIngested, 10); err != nil {
+		t.Fatalf("Advance to INGESTED: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-hashed", "PTY-1", CustodyHashed, 10, "hashed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateIntegrityAssessed, 10); err != nil {
+		t.Fatalf("Advance to INTEGRITY_ASSESSED: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateProvenanceComplete, 10); err != nil {
+		t.Fatalf("Advance to PROVENANCE_COMPLETE: %v", err)
+	}
+	if _, err := reg.RecordCustodyEvent("EV-1", "EVT-reviewed", "PTY-1", CustodyReviewed, 10, "reviewed"); err != nil {
+		t.Fatalf("RecordCustodyEvent: %v", err)
+	}
+	if _, err := reg.Advance("EV-1", StateReadyForFinalization, 10); err != nil {
+		t.Fatalf("Advance to READY_FOR_FINALIZATION: %v", err)
+	}
+	// Corrupt the in-memory chain directly to simulate a tampered
+	// record -- the same technique TestCustodyChainDetectsTampering
+	// uses, exercising the detection path rather than the write path
+	// (which never permits this).
+	reg.mu.Lock()
+	chain := reg.custody["EV-1"]
+	chain[0].Reason = "tampered after the fact"
+	reg.mu.Unlock()
+
+	_, err := reg.Advance("EV-1", StateFinalized, 10)
+	if !errors.Is(err, ErrTransitionPrerequisiteNotMet) {
+		t.Fatalf("expected ErrTransitionPrerequisiteNotMet for a tampered custody chain, got %v", err)
 	}
 }

@@ -89,21 +89,13 @@ func TestVTECPCapabilitiesIntegrateAsOneSystem(t *testing.T) {
 		URI: "evidence://survey-report-1.pdf", Filename: "survey-report-1.pdf", MediaType: "application/pdf",
 		ByteSize: 204800, SHA256: "aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd4",
 		Method: "UPLOAD", Collector: "surveyor-1", Source: "independent-surveyor", AcquiredAt: tick, ReceivedAt: tick,
+		HashStatus: "COMPUTED", Classification: "INTERNAL",
+		AcquisitionRecord: "uploaded by independent surveyor via case portal",
 	})
 	if err != nil {
 		t.Fatalf("RegisterDraft: %v", err)
 	}
-	states := []manifest.State{
-		manifest.StateIngested, manifest.StateIntegrityAssessed,
-		manifest.StateProvenanceComplete, manifest.StateReadyForFinalization, manifest.StateFinalized,
-	}
-	cur := draft
-	for _, s := range states {
-		cur, err = manifestRegistry.Advance(evidenceObj.ObjectID, s, tick)
-		if err != nil {
-			t.Fatalf("Advance(%s): %v", s, err)
-		}
-	}
+	cur := advanceManifestToFinalized(t, manifestRegistry, draft.EvidenceID, tick)
 	if err := manifest.VerifyManifestHash(cur); err != nil {
 		t.Fatalf("VerifyManifestHash: %v", err)
 	}

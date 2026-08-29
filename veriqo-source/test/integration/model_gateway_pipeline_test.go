@@ -137,18 +137,13 @@ func TestModelGatewayFullPipeline(t *testing.T) {
 		URI: "evidence://gateway-survey-1.pdf", Filename: "gateway-survey-1.pdf", MediaType: "application/pdf",
 		ByteSize: 51200, SHA256: "bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee5",
 		Method: "UPLOAD", Collector: "surveyor-gw", Source: "independent-surveyor", AcquiredAt: tick, ReceivedAt: tick,
+		HashStatus: "COMPUTED", Classification: "INTERNAL",
+		AcquisitionRecord: "uploaded by independent surveyor via case portal",
 	})
 	if err != nil {
 		t.Fatalf("Stage 4: RegisterDraft: %v", err)
 	}
-	cur := draft
-	for _, s := range []manifest.State{manifest.StateIngested, manifest.StateIntegrityAssessed,
-		manifest.StateProvenanceComplete, manifest.StateReadyForFinalization, manifest.StateFinalized} {
-		cur, err = manifestRegistry.Advance(evidenceObj.ObjectID, s, tick)
-		if err != nil {
-			t.Fatalf("Stage 4: Advance(%s): %v", s, err)
-		}
-	}
+	cur := advanceManifestToFinalized(t, manifestRegistry, draft.EvidenceID, tick)
 	if err := manifest.VerifyManifestHash(cur); err != nil {
 		t.Fatalf("Stage 4: VerifyManifestHash: %v", err)
 	}

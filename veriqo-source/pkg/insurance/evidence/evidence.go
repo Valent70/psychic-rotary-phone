@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	"veriqo/pkg/evidence/ontology"
@@ -564,15 +565,46 @@ var ErrUnknownRightsState = errors.New("evidence: unknown provenance.RightsState
 // surface WHY.
 var ErrRightsPermitNothing = errors.New("evidence: this record's rights state does not permit the requested use")
 
-// SetRights updates a Record's rights state in place. This is a
-// recording operation, exactly like SetStatus: rights are granted or
-// revoked by a legal/commercial act elsewhere (see
-// provenance.Registry.GrantTrust/RevokeTrust), and this package only
-// carries the result. It never derives a rights state from anything --
-// not from Origin, not from Status, not from possession.
-func (reg *Registry) SetRights(evidenceID string, state provenance.RightsState) error {
+// ErrRightsGrantNotAuthorized is SetRights's refusal when authorityID
+// does not name a genuinely trusted entity in the given
+// provenance.Registry -- see SetRights's own doc comment for why this
+// gate exists.
+var ErrRightsGrantNotAuthorized = errors.New("evidence: rights can only be set by an entity whose trust has actually been granted in the given provenance.Registry")
+
+// SetRights updates a Record's rights state in place -- but ONLY when
+// authorityID names a real entity in provReg whose trust has actually
+// been granted (Entry.TrustGranted, set only by a real, attributed
+// provenance.Registry.GrantTrust call recording a policy reference, an
+// actor, and a tick -- never by this function, and never by any
+// caller-supplied flag). This closes an Authority Boundary Audit
+// finding named explicitly in Authority Round 2
+// (Perlu_ditutup_dan_ditingkatkan.docx item 9): "Kalau caller dapat
+// melakukan SetRights(...), maka pertanyaan kita: Siapa yang memiliki
+// authority untuk memberikan rights? Harus ada authoritative source"
+// (Policy + Identity + Authorization + Governance event -- not a bare
+// "caller -> SetRights()" call). Reuses pkg/evidence/provenance's own
+// existing trust-grant model rather than inventing a second one:
+// GrantTrust is already the sole way an Entry's TrustGranted becomes
+// true, already requires a non-empty PolicyRef (and an AttestationRef
+// too, for an EVIDENCE_PROVIDER), and already records who granted it
+// and when.
+//
+// This remains, as before, a RECORDING operation: rights are still
+// granted or revoked by a legal/commercial act elsewhere, and this
+// function never derives a rights state from Origin, Status, or
+// possession. What changes is that "elsewhere" must now be a real,
+// attributed grant on file in provReg, not merely a function call any
+// caller with a *Registry reference could make.
+func (reg *Registry) SetRights(evidenceID string, state provenance.RightsState, provReg *provenance.Registry, authorityID string) error {
 	if !provenance.IsKnownRightsState(state) {
 		return fmt.Errorf("%w: %q", ErrUnknownRightsState, state)
+	}
+	if provReg == nil {
+		return fmt.Errorf("%w: no provenance registry supplied to authorize this grant", ErrRightsGrantNotAuthorized)
+	}
+	authority, ok := provReg.Get(authorityID)
+	if !ok || !authority.TrustGranted {
+		return fmt.Errorf("%w: %s", ErrRightsGrantNotAuthorized, authorityID)
 	}
 	reg.mu.Lock()
 	defer reg.mu.Unlock()
@@ -585,15 +617,66 @@ func (reg *Registry) SetRights(evidenceID string, state provenance.RightsState) 
 	return nil
 }
 
+var (
+	// ErrEmptySupersessionActor is MarkSuperseded's refusal when actor
+	// is blank -- "siapa yang melakukan supersession" (who performed
+	// the supersession) must be on file, not merely inferable.
+	ErrEmptySupersessionActor = errors.New("evidence: MarkSuperseded requires a non-empty actor")
+	// ErrEmptySupersessionReason is MarkSuperseded's refusal when
+	// reason is blank -- "mengapa" (why) must be recorded, not left to
+	// be reconstructed later from context that may not survive.
+	ErrEmptySupersessionReason = errors.New("evidence: MarkSuperseded requires a non-empty reason")
+	// ErrAlreadySuperseded is MarkSuperseded's refusal when
+	// supersededID has already been superseded once -- a second call
+	// silently rewriting SupersededBy would break the very lineage
+	// this function exists to keep immutable.
+	ErrAlreadySuperseded = errors.New("evidence: this record has already been superseded and cannot be superseded again")
+	// ErrIllegitimateSuccessor is MarkSuperseded's refusal when
+	// bySupersedingID itself already reads as superseded -- "apakah B
+	// legitimate successor" (is B a legitimate successor): a record
+	// that is not itself current cannot be the new current version.
+	ErrIllegitimateSuccessor = errors.New("evidence: the superseding record is itself already superseded, not a legitimate current successor")
+)
+
 // MarkSuperseded records that supersededID has been replaced by
-// bySupersedingID. It does NOT delete, edit or overwrite the superseded
-// record's content -- the original Record and its content-addressed
-// EvidenceID stay exactly as submitted, which is what makes the earlier
-// state still replayable. Only the two correction markers change, and
-// from that moment Permits denies every use of the superseded record.
-func (reg *Registry) MarkSuperseded(supersededID, bySupersedingID string) error {
+// bySupersedingID, attributed to actor, for reason, at tick -- "siapa,
+// mengapa, kapan" (who, why, when), the audit trail Authority Round 2
+// (Perlu_ditutup_dan_ditingkatkan.docx item 10) named explicitly as
+// missing: "Jangan sampai: caller -> MarkSuperseded(A) -> A disappears
+// from effective evidence. Itu bisa sangat berbahaya bagi audit trail."
+// It does NOT delete, edit or overwrite the superseded record's content
+// -- the original Record and its content-addressed EvidenceID stay
+// exactly as submitted, which is what makes the earlier state still
+// replayable. Only the correction markers change (CorrectionSuperseded,
+// SupersededBy, and one new entry appended to ChainOfCustody -- an
+// already-existing field this package previously left unpopulated,
+// reused here rather than inventing a second audit-trail mechanism),
+// and from that moment Permits denies every use of the superseded
+// record. A never disappears: Get and All still return it, with its
+// full history intact, exactly as MarkSuperseded's own doc comment
+// always promised for its content -- this closes the gap between that
+// promise and the audit trail actually proving it.
+//
+// Refuses a record that has already been superseded (ErrAlreadySuperseded)
+// -- a second call cannot silently rewrite which record replaced it --
+// and refuses a successor that is itself already superseded
+// (ErrIllegitimateSuccessor) -- a non-current record can never become
+// the new current one. What this function does NOT do: automatically
+// re-evaluate any prior decision that cited supersededID (the
+// reviewer's own "apakah keputusan yang sebelumnya menggunakan A harus
+// dire-evaluate" question) -- that is a downstream consumer's
+// responsibility, not this registry's; a consumer that needs to know
+// should check CorrectionSuperseded on every record it still holds a
+// reference to before relying on it again.
+func (reg *Registry) MarkSuperseded(supersededID, bySupersedingID, actor, reason string, tick uint64) error {
 	if supersededID == bySupersedingID {
 		return errors.New("evidence: a record cannot supersede itself")
+	}
+	if strings.TrimSpace(actor) == "" {
+		return ErrEmptySupersessionActor
+	}
+	if strings.TrimSpace(reason) == "" {
+		return ErrEmptySupersessionReason
 	}
 	reg.mu.Lock()
 	defer reg.mu.Unlock()
@@ -601,11 +684,22 @@ func (reg *Registry) MarkSuperseded(supersededID, bySupersedingID string) error 
 	if !ok {
 		return fmt.Errorf("%w: %s", ErrEvidenceNotFound, supersededID)
 	}
-	if _, ok := reg.records[bySupersedingID]; !ok {
+	if old.CorrectionSuperseded {
+		return fmt.Errorf("%w: %s (already superseded by %s)", ErrAlreadySuperseded, supersededID, old.SupersededBy)
+	}
+	successor, ok := reg.records[bySupersedingID]
+	if !ok {
 		return fmt.Errorf("%w: superseding record %s", ErrEvidenceNotFound, bySupersedingID)
+	}
+	if successor.CorrectionSuperseded {
+		return fmt.Errorf("%w: %s", ErrIllegitimateSuccessor, bySupersedingID)
 	}
 	old.CorrectionSuperseded = true
 	old.SupersededBy = bySupersedingID
+	old.ChainOfCustody = append(append([]CustodyEntry(nil), old.ChainOfCustody...), CustodyEntry{
+		Holder: actor, Action: "SUPERSEDED", Tick: tick,
+		Reference: fmt.Sprintf("superseded by %s: %s", bySupersedingID, reason),
+	})
 	reg.records[supersededID] = old
 	return nil
 }
