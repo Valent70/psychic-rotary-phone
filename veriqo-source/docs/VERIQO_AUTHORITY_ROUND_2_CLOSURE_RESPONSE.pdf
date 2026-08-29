@@ -1,0 +1,823 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R] /Count 7 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Length 3726 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(VERIQO -- AUTHORITY ROUND 2: MANIFEST, RIGHTS & SUPERSESSION CLOSURE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Assessment date: 29 August 2026) Tj
+0 -12 Td
+(Baseline: Authority Round: Evidence Trust Bypass Closure -- commit fbfc523) Tj
+0 -12 Td
+(Responds to: Evidence_authority_closure.docx -- an independent reviewer's follow-up review) Tj
+0 -12 Td
+(of) Tj
+0 -12 Td
+(Authority Round 1, agreeing Evidence.Registry.SetStatus is a major blocker genuinely closed,) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(issuing this round's mandate: close all three findings that round's own report left) Tj
+0 -12 Td
+(explicitly) Tj
+0 -12 Td
+(OPEN -- manifest.Registry.Advance's substance gap \(treated as the highest priority\),) Tj
+0 -12 Td
+(evidence.Registry.SetRights, and MarkSuperseded -- plus a new Canonical Authority / Single) Tj
+0 -12 Td
+(Source of Truth Audit, with the same close-or-explicitly-leave-OPEN discipline applied) Tj
+0 -12 Td
+(throughout.) Tj
+0 -12 Td
+(Assessment mode: local engineering qualification and reproducibility review. All code in) Tj
+0 -12 Td
+(this) Tj
+0 -12 Td
+(deliverable compiles, is tested, and was verified against the live repository. Every claim) Tj
+0 -12 Td
+(below) Tj
+0 -12 Td
+(that names a file, function, or test was checked against that exact source before this) Tj
+0 -12 Td
+(report was) Tj
+0 -12 Td
+(written.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(EXECUTIVE VERDICT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(All three findings Authority Round 1 left OPEN are now structurally closed, each verified) Tj
+0 -12 Td
+(with the) Tj
+0 -12 Td
+(same "temporarily disable the fix, confirm the new tests fail with a clear diagnostic,) Tj
+0 -12 Td
+(restore the) Tj
+0 -12 Td
+(fix, confirm they pass" discipline used throughout this engagement:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. manifest.Registry.Advance previously proved a transition was legal in the abstract) Tj
+0 -12 Td
+(\(validTransitions allows A -> B\) but never that the SPECIFIC evidence had actually earned) Tj
+0 -12 Td
+(it -- the reviewer's own diagnosis, "Sequence integrity != transition authority," was) Tj
+0 -12 Td
+(exactly) Tj
+0 -12 Td
+(right. Advance now additionally requires real, attributed, hash-chained evidence of the) Tj
+0 -12 Td
+(substantive work each transition claims, checked against data already on file rather than) Tj
+0 -12 Td
+(any) Tj
+0 -12 Td
+(new external dependency.) Tj
+0 -12 Td
+(2. evidence.Registry.SetRights previously accepted any known RightsState from any caller) Tj
+0 -12 Td
+(with no check on who was granting it. It now requires an authority whose trust has genuinely) Tj
+0 -12 Td
+(been granted through pkg/evidence/provenance's own existing trust-grant model -- reused, not) Tj
+0 -12 Td
+(duplicated.) Tj
+0 -12 Td
+(3. MarkSuperseded previously recorded no audit trail and permitted silent re-supersession.) Tj
+0 -12 Td
+(It) Tj
+0 -12 Td
+(now requires an actor and a reason, records both on the record's own \(previously) Tj
+0 -12 Td
+(unpopulated\)) Tj
+0 -12 Td
+(ChainOfCustody, and refuses both re-supersession and naming an already-superseded record as) Tj
+0 -12 Td
+(someone else's successor.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A new Canonical Authority Audit addresses the reviewer's "split-registry contradiction") Tj
+0 -12 Td
+(concern) Tj
+0 -12 Td
+(directly and mechanically, not just in prose: two tests prove) Tj
+0 -12 Td
+(pkg/insurance/evidence.Registry and) Tj
+0 -12 Td
+(pkg/evidence/manifest.Registry can never make a colliding claim about the same evidence,) Tj
+0 -12 Td
+(because) Tj
+0 -12 Td
+(they track disjoint properties with disjoint vocabularies and neither can read or mutate the) Tj
+0 -12 Td
+(other's state.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PRIORITY 1 -- MANIFEST.REGISTRY.ADVANCE: SEQUENCE INTEGRITY VS. TRANSITION AUTHORITY) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 4087 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(Reviewer's point, quoted directly: *"Advance\(\) mungkin membuktikan: 'Transition ini legal) Tj
+0 -12 Td
+(menurut state machine.' Tetapi belum tentu membuktikan: 'Condition yang membuat transition) Tj
+0 -12 Td
+(ini) Tj
+0 -12 Td
+(legal benar-benar terpenuhi.'"* \(Advance might prove "this transition is legal per the state) Tj
+0 -12 Td
+(machine." But it doesn't necessarily prove "the condition that makes this transition legal) Tj
+0 -12 Td
+(was) Tj
+0 -12 Td
+(actually satisfied."\) The reviewer's own worked example: VERIFIED -> FINALIZED is allowed) Tj
+0 -12 Td
+(per the state machine, but nothing previously proved required verification evidence exists,) Tj
+0 -12 Td
+(hashes) Tj
+0 -12 Td
+(match, provenance is complete, or policy is satisfied -- "fake process -> valid sequence ->) Tj
+0 -12 Td
+(FINALIZED," structurally the same class of bug as the SetStatus bypass Round 1 closed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The fix. pkg/evidence/manifest/manifest.go adds transitionPrerequisiteLocked, called from) Tj
+0 -12 Td
+(inside Advance immediately after the existing sequence check passes and before any state) Tj
+0 -12 Td
+(mutation. It requires, per transition, real work already on file for that specific) Tj
+0 -12 Td
+(EvidenceID --) Tj
+0 -12 Td
+(never a new external policy dependency, only enforcement of data this package already) Tj
+0 -12 Td
+(collects:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Transition    New prerequisite) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   DRAFT -> INGESTED    A RECEIVED or REGISTERED custody event has actually been recorded) Tj
+0 -12 Td
+(   INGESTED -> INTEGRITY_ASSESSED    HashStatus is recorded and a HASHED custody event) Tj
+0 -12 Td
+(exists) Tj
+0 -12 Td
+(   INTEGRITY_ASSESSED -> PROVENANCE_COMPLETE    AcquisitionRecord is recorded) Tj
+0 -12 Td
+(   PROVENANCE_COMPLETE -> READY_FOR_FINALIZATION    A REVIEWED custody event has actually) Tj
+0 -12 Td
+(been recorded) Tj
+0 -12 Td
+(   READY_FOR_FINALIZATION -> FINALIZED    Classification is recorded, the custody chain is) Tj
+0 -12 Td
+(non-empty, and the entire chain independently re-verifies \(verifyCustodyChainLocked\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The FINALIZED gate is the strongest: it does not just check that a REVIEWED event exists) Tj
+0 -12 Td
+(somewhere, it cryptographically re-derives every hash in the custody chain from genesis, so) Tj
+0 -12 Td
+(a) Tj
+0 -12 Td
+(manifest cannot be finalized if any earlier custody record was corrupted after the fact --) Tj
+0 -12 Td
+(even one) Tj
+0 -12 Td
+(that individually looked fine when it was written. VerifyCustodyChain was refactored into a) Tj
+0 -12 Td
+(lock-free verifyCustodyChainLocked specifically so Advance \(which already holds the) Tj
+0 -12 Td
+(registry's) Tj
+0 -12 Td
+(write lock\) can call it directly without re-entering sync.RWMutex, which would deadlock.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Honest limit, stated plainly. This closes "a caller can skip the substantive work and just) Tj
+0 -12 Td
+(call) Tj
+0 -12 Td
+(Advance in the right order" -- it cannot close "a caller who genuinely lies while calling) Tj
+0 -12 Td
+(RecordCustodyEvent\(..., CustodyReviewed, ...\) without actually reviewing anything." Nothing) Tj
+0 -12 Td
+(can) Tj
+0 -12 Td
+(close that; it is the same domain-truth boundary this engagement has named repeatedly) Tj
+0 -12 Td
+(\(Verification) Tj
+0 -12 Td
+(Round, Part 5\). What changes is the cost of the lie: it now requires an attributed,) Tj
+0 -12 Td
+(timestamped,) Tj
+0 -12 Td
+(hash-chained, independently-verifiable record instead of nothing at all -- a structurally) Tj
+0 -12 Td
+(different) Tj
+0 -12 Td
+(and much higher bar than "call five functions in order.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Adversarial tests, verified against a real regression. Seven new tests in) Tj
+0 -12 Td
+(pkg/evidence/manifest/manifest_test.go -- one per prerequisite, plus) Tj
+0 -12 Td
+(TestAdvanceRefusesFinalizationWithATamperedCustodyChain, which builds a fully legitimate) Tj
+0 -12 Td
+(manifest) Tj
+0 -12 Td
+(up to READY_FOR_FINALIZATION, corrupts one historical custody event's Reason field directly) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 4309 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(\(the same technique the pre-existing TestCustodyChainDetectsTampering uses\), and confirms) Tj
+0 -12 Td
+(Advance\(..., StateFinalized, ...\) refuses. Before finalizing, the prerequisite check itself) Tj
+0 -12 Td
+(was) Tj
+0 -12 Td
+(temporarily removed from Advance and the suite re-run: all seven new tests failed with the) Tj
+0 -12 Td
+(exact) Tj
+0 -12 Td
+(expected diagnostic \(expected ErrTransitionPrerequisiteNotMet, got <nil>\), confirming they) Tj
+0 -12 Td
+(genuinely exercise the fix rather than passing vacuously. The fix was restored and all 24) Tj
+0 -12 Td
+(tests in) Tj
+0 -12 Td
+(the package -- the 17 pre-existing plus these 7 -- pass.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every pre-existing test that drives a manifest to FINALIZED \(in pkg/evidence/manifest,) Tj
+0 -12 Td
+(pkg/insurance/cre, and three files in test/integration\) was updated to record the real) Tj
+0 -12 Td
+(custody) Tj
+0 -12 Td
+(events the new gate requires, via a new shared helper \(advanceThroughFullLifecycle in the) Tj
+0 -12 Td
+(manifest package's own tests, advanceManifestToFinalized in test/integration\) -- this is the) Tj
+0 -12 Td
+(honest way to reach FINALIZED now, and every one of these tests still proves what it always) Tj
+0 -12 Td
+(proved, just through the real path instead of a bypassable one.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PRIORITY 2 -- EVIDENCE.REGISTRY.SETRIGHTS: AN AUTHORITATIVE SOURCE, NOT A BARE CALL) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's point: *"Kalau caller dapat melakukan SetRights\(...\), maka pertanyaan kita: Siapa) Tj
+0 -12 Td
+(yang memiliki authority untuk memberikan rights? Harus ada authoritative source. Misalnya:) Tj
+0 -12 Td
+(Policy +) Tj
+0 -12 Td
+(Identity + Authorization + Governance event. Bukan: caller -> SetRights\(\)."*) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The fix. SetRights now requires two additional parameters: a *provenance.Registry and an) Tj
+0 -12 Td
+(authorityID. It refuses \(ErrRightsGrantNotAuthorized\) unless that ID names a real) Tj
+0 -12 Td
+(provenance.Entry whose TrustGranted is genuinely true -- and TrustGranted can only ever) Tj
+0 -12 Td
+(become true through provenance.Registry.GrantTrust, which already existed in this) Tj
+0 -12 Td
+(repository,) Tj
+0 -12 Td
+(already requires a non-empty policy reference \(and, for an EVIDENCE_PROVIDER, an attestation) Tj
+0 -12 Td
+(reference too\), and already records who granted it and at which tick. This is exactly the) Tj
+0 -12 Td
+(reviewer's own "Policy + Identity + Authorization + Governance event" shape -- reused) Tj
+0 -12 Td
+(wholesale from) Tj
+0 -12 Td
+(pkg/evidence/provenance, not reinvented: Entry.ID/Kind is identity, TrustGranted is) Tj
+0 -12 Td
+(authorization, PolicyRef is policy, and the GrantTrust call itself, with GrantedBy and) Tj
+0 -12 Td
+(GrantedAtTick, is the governance event.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This remains, as it always was, a recording operation -- rights are still granted or revoked) Tj
+0 -12 Td
+(by a) Tj
+0 -12 Td
+(real legal/commercial act elsewhere, and SetRights still never derives a rights state from) Tj
+0 -12 Td
+(Origin, Status, or possession. What changed is that "elsewhere" must now be a real,) Tj
+0 -12 Td
+(attributed) Tj
+0 -12 Td
+(grant already on file, not merely a function call any holder of a *Registry reference could) Tj
+0 -12 Td
+(make.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Adversarial tests, verified against a real regression. Four new tests in) Tj
+0 -12 Td
+(pkg/insurance/evidence/rights_test.go: a nil provenance registry, an authority that was) Tj
+0 -12 Td
+(registered but never granted trust, an authority that does not exist at all, and -- the) Tj
+0 -12 Td
+(closing) Tj
+0 -12 Td
+(proof -- an authority whose trust is granted, succeeds, is then revoked via the pre-existing) Tj
+0 -12 Td
+(RevokeTrust, and immediately fails again. Before finalizing, the authorization check was) Tj
+0 -12 Td
+(temporarily removed and the suite re-run: both new refusal tests failed) Tj
+0 -12 Td
+(\(expected ErrRightsGrantNotAuthorized ... got <nil>\) before the fix was restored. All three) Tj
+0 -12 Td
+(pre-existing call sites \(in pkg/insurance/evidence/rights_test.go\) were updated via a shared) Tj
+0 -12 Td
+(trustedAuthorityRegistry test helper.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PRIORITY 3 -- MARKSUPERSEDED: AN AUDIT TRAIL AND A PROTECTED LINEAGE) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3800 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(Reviewer's point: *"Kita harus tahu: siapa yang melakukan supersession; mengapa; berdasarkan) Tj
+0 -12 Td
+(evidence apa; kapan; apakah A sudah finalized; apakah B legitimate successor; apakah lineage) Tj
+0 -12 Td
+(tetap) Tj
+0 -12 Td
+(immutable... Jangan sampai: caller -> MarkSuperseded\(A\) -> A disappears from effective) Tj
+0 -12 Td
+(evidence."*) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The fix. MarkSuperseded now takes actor and reason alongside tick, refuses either being) Tj
+0 -12 Td
+(blank \(ErrEmptySupersessionActor, ErrEmptySupersessionReason\), and appends one new) Tj
+0 -12 Td
+(CustodyEntry{Holder: actor, Action: "SUPERSEDED", Tick: tick, Reference: "...reason..."} to) Tj
+0 -12 Td
+(the) Tj
+0 -12 Td
+(superseded record's own ChainOfCustody -- a field this package already defined on every) Tj
+0 -12 Td
+(Record) Tj
+0 -12 Td
+(but had never actually populated anywhere, reused here rather than inventing a second audit) Tj
+0 -12 Td
+(mechanism. Two further refusals close the remaining gaps the reviewer named:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Re-supersession \(ErrAlreadySuperseded\): a record that is already CorrectionSuperseded) Tj
+0 -12 Td
+(cannot be superseded a second time -- a prior version's own lineage can no longer be) Tj
+0 -12 Td
+(silently) Tj
+0 -12 Td
+(rewritten to point somewhere else.) Tj
+0 -12 Td
+(- Illegitimate successor \(ErrIllegitimateSuccessor\): a record that is itself already) Tj
+0 -12 Td
+(superseded cannot be named as the current replacement for something else -- "is B a) Tj
+0 -12 Td
+(legitimate) Tj
+0 -12 Td
+(successor" is now a checked precondition, not an assumption.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A disappears from effective evidence never happens: Get and All already returned superseded) Tj
+0 -12 Td
+(records before this round \(unchanged, still queryable, still fully intact\), and this round) Tj
+0 -12 Td
+(adds the) Tj
+0 -12 Td
+(proof that they stay that way with a full audit trail attached, not just a bare boolean) Tj
+0 -12 Td
+(flip.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What this does NOT do, stated honestly: it does not automatically re-evaluate any prior) Tj
+0 -12 Td
+(decision) Tj
+0 -12 Td
+(that cited the superseded record \(the reviewer's own "apakah keputusan yang sebelumnya) Tj
+0 -12 Td
+(menggunakan) Tj
+0 -12 Td
+(A harus dire-evaluate" question\). That is a downstream consumer's responsibility -- any) Tj
+0 -12 Td
+(caller) Tj
+0 -12 Td
+(holding a reference to a record should check CorrectionSuperseded before relying on it again) Tj
+0 -12 Td
+(-- not) Tj
+0 -12 Td
+(something this registry can or should decide on a consumer's behalf.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Adversarial tests, verified against a real regression. Five new tests in) Tj
+0 -12 Td
+(pkg/insurance/evidence/rights_test.go, including direct proof that a second, conflicting) Tj
+0 -12 Td
+(supersession attempt cannot rewrite SupersededBy away from the first, legitimate successor,) Tj
+0 -12 Td
+(and) Tj
+0 -12 Td
+(that a record already superseded by one thing cannot then be used to supersede something) Tj
+0 -12 Td
+(else.) Tj
+0 -12 Td
+(Before finalizing, both new refusal checks were temporarily removed and the suite re-run:) Tj
+0 -12 Td
+(both) Tj
+0 -12 Td
+(failed with the exact expected diagnostic before the fix was restored.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CANONICAL AUTHORITY / SINGLE SOURCE OF TRUTH AUDIT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Reviewer's concern: *"Kalau keduanya bisa mengatakan: Evidence X = FINALIZED, maka kita) Tj
+0 -12 Td
+(harus) Tj
+0 -12 Td
+(menjawab: Which registry is authoritative? Tidak boleh ada dua sumber kebenaran tanpa) Tj
+0 -12 Td
+(hierarchy."*) Tj
+0 -12 Td
+(Mapping every Evidence property to exactly one authoritative owner:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Property    Authoritative owner    Mutable?    Derived?    External dependency) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 4079 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(  ---  ---  ---  ---  ---) Tj
+0 -12 Td
+(   Identity \(EvidenceID\)    pkg/evidence/ontology.Evidence.ComputeID\(\)    No    Yes \(SHA-256) Tj
+0 -12 Td
+(over canonical bytes\)    No) Tj
+0 -12 Td
+(   Content \(underlying fields\)    ontology.Evidence, via New\(\) only    No after construction) Tj
+0 -12 Td
+(No    Possibly \(the original assertion is a real-world claim\)) Tj
+0 -12 Td
+(   Hash \(ManifestHash\)    pkg/evidence/manifest.Manifest, computed by Advance/Supersede) Tj
+0 -12 Td
+(No    Yes \(JCS over semantic fields\)    No) Tj
+0 -12 Td
+(   Provenance \(AcquisitionRecord, TransformationChain\)    manifest.Manifest, gated by) Tj
+0 -12 Td
+(AddTransformation's finalization refusal    Controlled    No    Yes \(acquisition is a real-) Tj
+0 -12 Td
+(world event\)) Tj
+0 -12 Td
+(   Verification status \(evidence.Status\)    pkg/insurance/evidence.Registry, via) Tj
+0 -12 Td
+(VerifyStatus/DeriveStatus only, since Authority Round 1    Yes \(re-derivable\)    Yes, from) Tj
+0 -12 Td
+(Strength    No) Tj
+0 -12 Td
+(   Rights \(provenance.RightsState\)    evidence.Registry.SetRights, now gated by) Tj
+0 -12 Td
+(provenance.Registry.GrantTrust    Controlled    No    Yes \(rights are a real) Tj
+0 -12 Td
+(legal/commercial grant\)) Tj
+0 -12 Td
+(   Supersession    evidence.Registry.MarkSuperseded \(this package\) and) Tj
+0 -12 Td
+(manifest.Registry.Supersede \(that package\), each scoped to their own object    Controlled,) Tj
+0 -12 Td
+(one-way    No    No) Tj
+0 -12 Td
+(   Finalization \(manifest.State == FINALIZED\)    manifest.Registry.Advance, now gated by) Tj
+0 -12 Td
+(transitionPrerequisiteLocked    No \(immutable once reached\)    Yes/authorized, since this) Tj
+0 -12 Td
+(round    No) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Resolving the "two registries" question directly. This repository has exactly two registries) Tj
+0 -12 Td
+(that both track state "about" a piece of evidence -- pkg/insurance/evidence.Registry) Tj
+0 -12 Td
+(\(verification) Tj
+0 -12 Td
+(status and multi-dimensional strength\) and pkg/evidence/manifest.Registry \(acquisition,) Tj
+0 -12 Td
+(integrity,) Tj
+0 -12 Td
+(custody, finalization\). They are not two competing sources of truth for the *same* property;) Tj
+0 -12 Td
+(they) Tj
+0 -12 Td
+(are the sole authorities for two *different* properties, both anchored to the one real) Tj
+0 -12 Td
+(single source) Tj
+0 -12 Td
+(of identity \(ontology.Evidence.EvidenceID, content-addressed\). Two new tests in) Tj
+0 -12 Td
+(pkg/insurance/evidence/canonical_authority_test.go make this a mechanically checked fact) Tj
+0 -12 Td
+(rather) Tj
+0 -12 Td
+(than an assertion in prose:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- TestStatusAndManifestStateVocabulariesAreDisjoint proves no string value in) Tj
+0 -12 Td
+(evidence.Status's) Tj
+0 -12 Td
+(vocabulary appears in manifest.State's vocabulary, or vice versa -- in particular,) Tj
+0 -12 Td
+(evidence.Status has no FINALIZED value at all; only manifest.State does, so "Evidence X) Tj
+0 -12 Td
+(= FINALIZED" is structurally a claim only manifest.Registry can ever make in this codebase.) Tj
+0 -12 Td
+(- TestAdvancingOneRegistryNeverChangesTheOther drives a real manifest.Registry for one) Tj
+0 -12 Td
+(EvidenceID all the way to FINALIZED, and confirms a real evidence.Registry for the exact) Tj
+0 -12 Td
+(same EvidenceID is completely unaffected \(Status stays UNVERIFIED\), then the reverse:) Tj
+0 -12 Td
+(calling) Tj
+0 -12 Td
+(SetStrength/VerifyStatus on the evidence.Registry side leaves the manifest.Registry's) Tj
+0 -12 Td
+(FINALIZED manifest -- state and hash both -- untouched.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION EVIDENCE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- gofmt -l . -- clean, no output.) Tj
+0 -12 Td
+(- go build ./... -- clean.) Tj
+0 -12 Td
+(- go vet ./... -- clean.) Tj
+0 -12 Td
+(- go test ./... -- full repository suite, all packages pass.) Tj
+0 -12 Td
+(- go test -race ./pkg/insurance/evidence/... ./pkg/evidence/manifest/...) Tj
+0 -12 Td
+(./pkg/insurance/api/...) Tj
+0 -12 Td
+(./pkg/insurance/casepack/... ./pkg/insurance/cre/... ./test/integration/... -- clean, no) Tj
+0 -12 Td
+(data) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 3805 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(races.) Tj
+0 -12 Td
+(- go test ./pkg/insurance/guardrails/... -- all 7 repository-wide guardrail scans pass.) Tj
+0 -12 Td
+(- pkg/evidence/manifest package: 24 tests, all passing \(7 new this round\).) Tj
+0 -12 Td
+(- pkg/insurance/evidence package: 58 tests, all passing \(13 new this round: 6 SetRights, 5) Tj
+0 -12 Td
+(MarkSuperseded, 2 Canonical Authority\).) Tj
+0 -12 Td
+(- Three regressions verified: manifest.Advance's prerequisite check, SetRights's authority) Tj
+0 -12 Td
+(check, and MarkSuperseded's re-supersession/successor checks were each temporarily disabled) Tj
+0 -12 Td
+(in) Tj
+0 -12 Td
+(turn; every corresponding new test failed with its exact expected diagnostic; each fix was) Tj
+0 -12 Td
+(then) Tj
+0 -12 Td
+(restored and the full suite re-confirmed green.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ADVERSARIAL REGRESSION CHECKLIST, MAPPED TO THE REVIEWER'S OWN LIST) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Reviewer's item    Covered by) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   fake Advance / skipped prerequisite    TestAdvanceRefusesIngestedWithNoCustodyEvent and) Tj
+0 -12 Td
+(five sibling tests, one per transition) Tj
+0 -12 Td
+(   fake Finalization    TestAdvanceRefusesFinalizationWithoutClassification,) Tj
+0 -12 Td
+(TestAdvanceRefusesFinalizationWithATamperedCustodyChain) Tj
+0 -12 Td
+(   fake Rights    TestSetRightsRefusesNilProvenanceRegistry,) Tj
+0 -12 Td
+(TestSetRightsRefusesUntrustedAuthority) Tj
+0 -12 Td
+(   fake Supersession    TestMarkSupersededRequiresActorAndReason,) Tj
+0 -12 Td
+(TestMarkSupersededRefusesAnAlreadySupersededSuccessor) Tj
+0 -12 Td
+(   post-finalization mutation    TestFinalizedManifestIsImmutable,) Tj
+0 -12 Td
+(TestAddTransformationRefusedAfterFinalization \(pre-existing, still enforced under the new) Tj
+0 -12 Td
+(gate\)) Tj
+0 -12 Td
+(   unauthorized / wrong-predecessor transition    TestFinalizationRefusesSkippingAState) Tj
+0 -12 Td
+(\(pre-existing\) plus the new prerequisite tests) Tj
+0 -12 Td
+(   duplicate finalization / rollback    TestFinalizedManifestIsImmutable --) Tj
+0 -12 Td
+(ErrFinalizedIsImmutable refuses ANY further Advance once FINALIZED, including a repeat) Tj
+0 -12 Td
+(FINALIZED call or an attempted rollback) Tj
+0 -12 Td
+(   lineage break    TestMarkSupersededRefusesReSupersession,) Tj
+0 -12 Td
+(TestSupersedeCreatesNewVersionWithoutRewritingHistory \(pre-existing\)) Tj
+0 -12 Td
+(   split-registry contradiction    TestStatusAndManifestStateVocabulariesAreDisjoint,) Tj
+0 -12 Td
+(TestAdvancingOneRegistryNeverChangesTheOther) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(MATURITY MODEL -- UNCHANGED POSITION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round's evidence is Level 2 \(Engineering Verified\) on the reviewer's own 4-level scale,) Tj
+0 -12 Td
+(exactly) Tj
+0 -12 Td
+(as both prior rounds stated. Nothing here is Level 3 or Level 4 evidence, and this report) Tj
+0 -12 Td
+(makes no) Tj
+0 -12 Td
+(claim that it is.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY FOR THIS ROUND) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every finding Authority Round 1 left explicitly OPEN is closed in this round:) Tj
+0 -12 Td
+(manifest.Registry.) Tj
+0 -12 Td
+(Advance's substance gap, SetRights, and MarkSuperseded. No new gap was discovered and left) Tj
+0 -12 Td
+(undocumented -- the one deliberate, stated limit is transitionPrerequisiteLocked's own) Tj
+0 -12 Td
+(honest) Tj
+0 -12 Td
+(boundary: it proves a real, attributed, hash-chained record exists for each claimed step,) Tj
+0 -12 Td
+(not that) Tj
+0 -12 Td
+(the human or process behind that record was truthful when they created it. That limit is) Tj
+0 -12 Td
+(named) Tj
+0 -12 Td
+(explicitly here, not implied away, and is the same domain-truth boundary this engagement has) Tj
+0 -12 Td
+(applied consistently to Strength, to Hypothesis.Status, and now to manifest custody events.) Tj
+0 -12 Td
+(This) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 119 >>
+stream
+BT
+/F1 9 Tf
+54 756 Td
+(round makes no external validation, counterparty, customer, or production claim anywhere.) Tj
+ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R >> >> /Contents 15 0 R >>
+endobj
+17 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 18
+0000000000 65535 f 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000182 00000 n 
+0000003960 00000 n 
+0000004086 00000 n 
+0000008225 00000 n 
+0000008351 00000 n 
+0000012712 00000 n 
+0000012838 00000 n 
+0000016690 00000 n 
+0000016817 00000 n 
+0000020949 00000 n 
+0000021077 00000 n 
+0000024935 00000 n 
+0000025063 00000 n 
+0000025234 00000 n 
+0000025362 00000 n 
+trailer
+<< /Size 18 /Root 17 0 R >>
+startxref
+25412
+%%EOF
