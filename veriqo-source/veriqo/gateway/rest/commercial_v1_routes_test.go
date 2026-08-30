@@ -288,6 +288,53 @@ func TestCommercialV1RoutesFullLifecycleHappyPath(t *testing.T) {
 	}
 }
 
+// TestCommercialV1RoutesMetricsReflectRealActivity proves GET
+// /v1/metrics -- item 20's observability surface -- is wired to real
+// Store activity over a genuine HTTP round trip, not a static stub.
+func TestCommercialV1RoutesMetricsReflectRealActivity(t *testing.T) {
+	store := commercialapi.NewStore()
+	reg, err := registry.New()
+	if err != nil {
+		t.Fatalf("registry.New: %v", err)
+	}
+	srv := NewServer("127.0.0.1:0", reg, nil, ServerOptions{CommercialStore: store})
+	ts := httptest.NewServer(srv.Handler)
+	defer ts.Close()
+
+	getMetrics := func() map[string]any {
+		resp := doJSON(t, http.MethodGet, ts.URL+"/v1/metrics", nil)
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /v1/metrics: expected 200, got %d", resp.StatusCode)
+		}
+		var m map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+			t.Fatalf("decoding metrics response: %v", err)
+		}
+		return m
+	}
+
+	before := getMetrics()
+
+	const tenant = "tenant-v1http-metrics"
+	const caseID = "CASE-V1HTTP-METRICS-1"
+	const evidenceID = "EV-V1HTTP-METRICS-1"
+	resp := doJSON(t, http.MethodPost, ts.URL+"/v1/cases", map[string]any{"tenant_id": tenant, "case_id": caseID, "tick": 0})
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodPost, ts.URL+"/v1/evidence", v1SubmitEvidenceBody(tenant, caseID, evidenceID, 10))
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("POST /v1/evidence: expected 201, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	after := getMetrics()
+	beforeIngestion, _ := before["evidence_ingestion_total"].(float64)
+	afterIngestion, _ := after["evidence_ingestion_total"].(float64)
+	if afterIngestion != beforeIngestion+1 {
+		t.Fatalf("expected evidence_ingestion_total to increment by 1 after a real submission, before=%v after=%v", beforeIngestion, afterIngestion)
+	}
+}
+
 // TestCommercialV1RoutesTenantIsolationOverHTTP proves the Store's
 // structural, key-namespaced tenant isolation holds at the HTTP layer
 // too, not just in direct Go calls: Tenant B, given Tenant A's own

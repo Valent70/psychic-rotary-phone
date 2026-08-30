@@ -185,6 +185,48 @@ func TestGenerateDossierPopulatesRealCorroborationAndContradictions(t *testing.T
 	}
 }
 
+// TestMetricsReflectRealActivity proves pkg/commercial/telemetry's
+// counters are wired to real Store branches, not decorative: a
+// successful evidence submission increments evidence_ingestion_total, a
+// successful decision records a real (non-negative) latency sample, and
+// a deliberately-invalid action authorization (missing PolicyRef)
+// increments authorization_denials -- the exact failure category item
+// 20 names.
+func TestMetricsReflectRealActivity(t *testing.T) {
+	s := NewStore()
+	const tenant, caseID = "tenant-A", "CASE-API-METRICS-1"
+
+	before := s.Metrics().Snapshot()
+
+	if err := s.CreateCase(tenant, caseID, 0); err != nil {
+		t.Fatalf("CreateCase: %v", err)
+	}
+	mustSubmitEvidence(t, s, tenant, caseID, "EV-API-1", 10)
+	if _, err := s.DecideCase(decideInput(tenant, caseID)); err != nil {
+		t.Fatalf("DecideCase: %v", err)
+	}
+
+	badAction := actionInput(tenant, caseID)
+	badAction.PolicyRef = ""
+	if _, _, err := s.ActOnCase(badAction); err == nil {
+		t.Fatal("expected ActOnCase to refuse an action with an empty PolicyRef")
+	}
+
+	after := s.Metrics().Snapshot()
+	if after.EvidenceIngestionTotal != before.EvidenceIngestionTotal+1 {
+		t.Fatalf("expected evidence_ingestion_total to increment by 1, got before=%d after=%d",
+			before.EvidenceIngestionTotal, after.EvidenceIngestionTotal)
+	}
+	if after.DecisionCount != before.DecisionCount+1 {
+		t.Fatalf("expected decision_count to increment by 1, got before=%d after=%d",
+			before.DecisionCount, after.DecisionCount)
+	}
+	if after.AuthorizationDenials != before.AuthorizationDenials+1 {
+		t.Fatalf("expected authorization_denials to increment by 1, got before=%d after=%d",
+			before.AuthorizationDenials, after.AuthorizationDenials)
+	}
+}
+
 func TestDecideCaseRejectsUnknownCase(t *testing.T) {
 	s := NewStore()
 	if _, err := s.DecideCase(decideInput("tenant-A", "CASE-DOES-NOT-EXIST")); !errors.Is(err, ErrCaseNotFound) {

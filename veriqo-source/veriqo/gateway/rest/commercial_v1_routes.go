@@ -57,6 +57,7 @@ func commercialV1Routes(store *commercialapi.Store) map[string]http.HandlerFunc 
 		"GET /v1/cases/{id}/dossier":    handleV1GetDossier(store),
 		"GET /v1/cases/{id}/replay":     handleV1Replay(store),
 		"POST /v1/packages/verify":      handleV1VerifyPackage(),
+		"GET /v1/metrics":               handleV1Metrics(store),
 	}
 }
 
@@ -396,6 +397,16 @@ func handleV1Replay(store *commercialapi.Store) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
+	}
+}
+
+// handleV1Metrics serves this Store's item-20 operational counters
+// (pkg/commercial/telemetry.Snapshot). It is deliberately not
+// tenant-scoped: these are operator-facing operational metrics, not
+// tenant data, the same distinction /healthz already draws.
+func handleV1Metrics(store *commercialapi.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, store.Metrics().Snapshot())
 	}
 }
 

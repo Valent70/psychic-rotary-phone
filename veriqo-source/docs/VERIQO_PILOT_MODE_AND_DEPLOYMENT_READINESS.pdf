@@ -1,0 +1,502 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R] /Count 4 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 4555 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO PILOT MODE AND DEPLOYMENT READINESS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This document answers Commercialization Sprint items 10 and 18-20 by) Tj
+0 -12 Td
+(name: Pilot Mode \(item 18\), minimal multi-tenancy \(item 19\),) Tj
+0 -12 Td
+(observability \(item 20\), and the production security blocker) Tj
+0 -12 Td
+(classification \(item 10\). It reports the real, current state of the) Tj
+0 -12 Td
+(codebase honestly -- every "DONE" line below names the exact code and) Tj
+0 -12 Td
+(test that backs it; every "GAP" line names the exact thing that does not) Tj
+0 -12 Td
+(exist yet, rather than being silently assumed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ITEM 18 -- PILOT MODE CHECKLIST) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Capability    Status    Real backing) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Tenant isolation    DONE    pkg/commercial/api.Store keys every case/evidence record by) Tj
+0 -12 Td
+(tenantID+"/"+ID \(caseKey/evidenceKey\) -- a cross-tenant lookup fails at "not found" before) Tj
+0 -12 Td
+(any ownership check runs. See item 19 below for the full detail and its adversarial tests.) Tj
+0 -12 Td
+(   Case isolation    DONE    Same mechanism as tenant isolation -- each case's evidence,) Tj
+0 -12 Td
+(decision, action, and dossier are scoped to that one tenantID+"/"+caseID key; nothing about) Tj
+0 -12 Td
+(one case leaks into another's CaseView, Dossier, or Replay result.) Tj
+0 -12 Td
+(   Audit    DONE    pkg/platform/audit.AuditStore \(hash-chained, Auditor{}.VerifyChain-) Tj
+0 -12 Td
+(checkable\) backs both the Commercial API's own Decision/Action ledger writes) Tj
+0 -12 Td
+(\(Store.Ledger\(\)\) and every HTTP request via security.AuditMiddleware) Tj
+0 -12 Td
+(\(veriqo/gateway/rest/server.go\).) Tj
+0 -12 Td
+(   RBAC    DONE    security.RBACMiddleware \(pkg/platform/security/security.go\) gates route) Tj
+0 -12 Td
+(prefixes by JWT role; proven for the insurance routes in insurance_decide_route_test.go) Tj
+0 -12 Td
+(\(TestInsuranceDecideRouteRejectsWrongRole\). The Commercial API v1 routes compose the SAME) Tj
+0 -12 Td
+(middleware stack in NewServer -- they are not a second, parallel auth system.) Tj
+0 -12 Td
+(   API keys    DONE    security.APIKeyMiddleware, composed in NewServer alongside JWT/RBAC.) Tj
+0 -12 Td
+(   OIDC    GAP    No OpenID Connect integration exists. security.JWTMiddleware verifies a) Tj
+0 -12 Td
+(locally HS256-signed token \(security.SignHS256\), not a third-party IdP's token. A pilot) Tj
+0 -12 Td
+(customer wanting SSO via their own IdP needs this built; it is not a redesign of the) Tj
+0 -12 Td
+(existing JWT layer, just a second, additional verification path.) Tj
+0 -12 Td
+(   Evidence retention    PARTIAL / GAP    pkg/governance/data implements a real) Tj
+0 -12 Td
+(retention/purge lifecycle \(ACTIVE -> RETENTION_ELIGIBLE -> HELD -> REDACTION_REQUIRED ->) Tj
+0 -12 Td
+(REDACTED -> PURGE_ELIGIBLE -> PURGED\) that preserves audit integrity even after content is) Tj
+0 -12 Td
+(purged, and pkg/insurance/preservation implements legal-hold orders. Neither is wired into) Tj
+0 -12 Td
+(pkg/commercial/api.Store's evidence path yet -- a Commercial API v1 caller today has no way) Tj
+0 -12 Td
+(to place a hold or trigger retention on evidence they submitted. The mechanism exists; the) Tj
+0 -12 Td
+(integration does not.) Tj
+0 -12 Td
+(   Export    DONE    dossier.WriteMachinePackage \(the Evidence Dossier v1 "Machine" form\)) Tj
+0 -12 Td
+(and Store.WriteDossierPackage/GET /v1/cases/{id}/dossier?format=package -- a real .zip a) Tj
+0 -12 Td
+(customer can download and independently verify.) Tj
+0 -12 Td
+(   Usage metrics    DONE    pkg/commercial/telemetry + GET /v1/metrics -- see item 20 below.) Tj
+0 -12 Td
+(   Health    PARTIAL    GET /healthz reports {"status":"ok","persistence":...}. It is a) Tj
+0 -12 Td
+(single combined check, not separate liveness/readiness probes -- see item 20.) Tj
+0 -12 Td
+(   Logging    DONE    loggingMiddleware \(veriqo/gateway/rest/server.go\) logs) Tj
+0 -12 Td
+(method/path/status/latency for every request, with explicit log-injection sanitization) Tj
+0 -12 Td
+(\(strconv.Quote on the request path\).) Tj
+0 -12 Td
+(   Support diagnostics    GAP    No dedicated support/diagnostics endpoint \(e.g. a bundle of) Tj
+0 -12 Td
+(recent logs + config + version for a support ticket\) exists. GET /healthz and GET) Tj
+0 -12 Td
+(/v1/metrics are the closest real artifacts a support engineer could use today.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ITEM 19 -- MINIMAL MULTI-TENANCY) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 4093 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(What the reviewer's model names: Tenant -> Users / Cases / Evidence /) Tj
+0 -12 Td
+(Policies / Decisions / Actions / Dossiers, with the Tenant ID) Tj
+0 -12 Td
+(cryptographically/authorization-bound on every path.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What actually exists:) Tj
+0 -12 Td
+(- Cases, Evidence, Decisions, Actions, Dossiers are all real,) Tj
+0 -12 Td
+(tenant-scoped entities in pkg/commercial/api.Store -- every one of) Tj
+0 -12 Td
+(CreateCase, SubmitEvidence, DecideCase, ActOnCase,) Tj
+0 -12 Td
+(GenerateDossier, Replay takes a tenantID and enforces it via the) Tj
+0 -12 Td
+(key-namespacing mechanism described above.) Tj
+0 -12 Td
+(- Users and Policies are NOT first-class tenant-scoped entities) Tj
+0 -12 Td
+(in this codebase. security.RBACMiddleware's RoleTable is global) Tj
+0 -12 Td
+(\(one role-to-path-prefix map for the whole deployment\), and JWT) Tj
+0 -12 Td
+(Claims.Subject/Claims.Role identify a caller but are not) Tj
+0 -12 Td
+(themselves tied to a specific tenant record anywhere in Store. This) Tj
+0 -12 Td
+(is the honest gap named in commercial_v1_routes.go's own doc) Tj
+0 -12 Td
+(comment: *"TenantID is currently a caller-supplied field \(request body) Tj
+0 -12 Td
+(or query parameter\), not yet cryptographically bound to the verified) Tj
+0 -12 Td
+(JWT identity."* A caller who knows another tenant's ID can currently) Tj
+0 -12 Td
+(supply it in a request and reach Store's tenant-scoped isolation) Tj
+0 -12 Td
+(logic on THAT tenant's behalf -- isolation between tenants once inside) Tj
+0 -12 Td
+(Store is real and tested, but nothing yet stops a caller from) Tj
+0 -12 Td
+(claiming to be a different tenant than their JWT identity actually) Tj
+0 -12 Td
+(maps to. Closing this requires a real tenant-identity registry) Tj
+0 -12 Td
+(\(Users/Tenant mapping\) and binding TenantID to the verified JWT) Tj
+0 -12 Td
+(subject at the middleware layer -- named here as the next integration) Tj
+0 -12 Td
+(step, not silently assumed done.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The three mandatory tests the reviewer names, and where they live:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Requirement    Test) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   Tenant A cannot read Tenant B    TestTenantAIsolationFromTenantB) Tj
+0 -12 Td
+(\(pkg/commercial/api/store_test.go, 8 sub-tests\) and) Tj
+0 -12 Td
+(TestCommercialV1RoutesTenantIsolationOverHTTP) Tj
+0 -12 Td
+(\(veriqo/gateway/rest/commercial_v1_routes_test.go\) -- both prove a 404, not tenant B's data,) Tj
+0 -12 Td
+(when tenant A requests tenant B's case or evidence by ID.) Tj
+0 -12 Td
+(   Tenant A cannot modify Tenant B    Same TestTenantAIsolationFromTenantB sub-tests) Tj
+0 -12 Td
+(cannot_modify_via_decide and cannot_act_on_case;) Tj
+0 -12 Td
+(TestCommercialV1RoutesTenantIsolationOverHTTP proves the same over HTTP for POST) Tj
+0 -12 Td
+(/v1/cases/{id}/decide.) Tj
+0 -12 Td
+(   Tenant A cannot replay Tenant B authorization    TestTenantAIsolationFromTenantB's) Tj
+0 -12 Td
+(cannot_replay_authorization sub-test.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ITEM 20 -- OBSERVABILITY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Signal    Status    Real backing) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Metrics    DONE    pkg/commercial/telemetry.Metrics, exposed at GET /v1/metrics. Every) Tj
+0 -12 Td
+(one of the 9 named counters is wired to a real Store branch \(see that package's own doc) Tj
+0 -12 Td
+(comment for exactly which\): evidence_ingestion_total, evidence_verification_failures,) Tj
+0 -12 Td
+(custody_chain_failures, decision_latency \(as decision_latency_avg_millis + decision_count\),) Tj
+0 -12 Td
+(authorization_denials, action_failures, ledger_commit_failures, replay_failures,) Tj
+0 -12 Td
+(external_adapter_failures. TestMetricsReflectRealActivity \(store_test.go\) and) Tj
+0 -12 Td
+(TestCommercialV1RoutesMetricsReflectRealActivity \(commercial_v1_routes_test.go\) prove these) Tj
+0 -12 Td
+(move with real activity, not statically. Honest exception: external_adapter_failures always) Tj
+0 -12 Td
+(reads zero in this reference build -- item 11's real insurer/adjuster/P&I/AIS integrations) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 4259 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(are external pilot integrations, not built in this engagement, so nothing calls an external) Tj
+0 -12 Td
+(adapter yet for this counter to ever increment on.) Tj
+0 -12 Td
+(   Logs    DONE    loggingMiddleware, per-request, sanitized against log injection.) Tj
+0 -12 Td
+(   Traces    GAP    No distributed tracing \(OpenTelemetry spans or equivalent\) exists. A) Tj
+0 -12 Td
+(request's path through JWT -> RBAC -> APIKey -> handler -> Store is visible only as one log) Tj
+0 -12 Td
+(line today, not as a span tree.) Tj
+0 -12 Td
+(   Health    PARTIAL    One combined GET /healthz, not separate /readyz \(ready to accept) Tj
+0 -12 Td
+(traffic\) and /livez \(process is alive, restart if not\) endpoints a real orchestrator) Tj
+0 -12 Td
+(\(Kubernetes, etc.\) would want to probe independently.) Tj
+0 -12 Td
+(   Readiness / Liveness    GAP    See above -- no separate liveness/readiness distinction) Tj
+0 -12 Td
+(exists yet.) Tj
+0 -12 Td
+(   Audit    DONE    Covered under item 18 above; the same pkg/platform/audit.AuditStore) Tj
+0 -12 Td
+(backs both business-decision audit and HTTP-request audit.) Tj
+0 -12 Td
+(   Alerts    GAP    No alerting integration \(paging, threshold-based notification\) exists.) Tj
+0 -12 Td
+(GET /v1/metrics' real counters are what a pilot deployment's own monitoring stack would need) Tj
+0 -12 Td
+(to scrape and alert on -- this codebase does not push alerts itself.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(ITEM 10 -- PRODUCTION SECURITY BLOCKER CLASSIFICATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This engagement's earlier rounds already built and honestly tracked the) Tj
+0 -12 Td
+(8 production blockers item 10 asks for -- see) Tj
+0 -12 Td
+(docs/governance/production-blockers.json \(the machine-readable) Tj
+0 -12 Td
+(contract\) and evidence/blockers-qualification-report.json \(the live,) Tj
+0 -12 Td
+(independently-recomputed qualification result, not a stale label\).) Tj
+0 -12 Td
+(Reproduced here for this document's own completeness, in item 10's own) Tj
+0 -12 Td
+(MUST-CLOSE vs. CAN-BE-PILOT-ENVIRONMENT framing:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(MUST CLOSE BEFORE PAID PILOT \(per item 10's own list\):) Tj
+0 -12 Td
+(- HSM/KMS-backed production signing -- blocker hsm_kms) Tj
+0 -12 Td
+(- Durable persistent ledger -- no dedicated blocker entry exists for) Tj
+0 -12 Td
+(this specific item; honestly, pkg/commercial/api.Store is) Tj
+0 -12 Td
+(explicitly documented as an in-memory reference implementation \(see) Tj
+0 -12 Td
+(that package's own doc comment\) that loses every case and evidence) Tj
+0 -12 Td
+(record on process restart. This is a real, named gap this document) Tj
+0 -12 Td
+(is not aware of any existing blocker covering.) Tj
+0 -12 Td
+(- Production identity/mTLS -- blocker spire_mtls) Tj
+0 -12 Td
+(- Secure object storage + retention -- partially covered by) Tj
+0 -12 Td
+(pkg/governance/data's retention lifecycle \(see item 18 above\); no) Tj
+0 -12 Td
+(dedicated "secure object storage" blocker entry exists for the) Tj
+0 -12 Td
+(evidence bytes themselves \(this codebase stores evidence metadata and) Tj
+0 -12 Td
+(hashes in manifest.Manifest, never the raw bytes -- object storage) Tj
+0 -12 Td
+(for the raw bytes is external to this codebase by design, and its) Tj
+0 -12 Td
+(security is a deployment-time concern, not something this repository) Tj
+0 -12 Td
+(can qualify on its own\).) Tj
+0 -12 Td
+(- Vulnerability scanning -- blocker supply_chain_scan) Tj
+0 -12 Td
+(- Backup/restore -- no dedicated blocker entry; ties back to the) Tj
+0 -12 Td
+(durable-persistent-ledger gap above, since there is currently nothing) Tj
+0 -12 Td
+(durable in the Commercial API layer to back up.) Tj
+0 -12 Td
+(- Production logging/monitoring -- item 20 above is the current state;) Tj
+0 -12 Td
+(genuinely partial \(metrics/logs/audit real, traces/alerts/separate) Tj
+0 -12 Td
+(health probes are gaps\).) Tj
+0 -12 Td
+(- Security incident response procedure -- no dedicated blocker) Tj
+0 -12 Td
+(entry; this is an organizational/process artifact, not code, and is) Tj
+0 -12 Td
+(named here as outstanding rather than silently assumed to exist.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CAN BE PILOT ENVIRONMENT \(per item 10's own list; must show) Tj
+0 -12 Td
+(NOT_YET_PRODUCTION_QUALIFIED, never hidden\):) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 2313 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(- Multi-region -- blocker multi_region_dr) Tj
+0 -12 Td
+(- 100-node physical qualification -- blocker scale_qualification) Tj
+0 -12 Td
+(- 72-hour soak at production scale -- blocker soak_72h) Tj
+0 -12 Td
+(- Independent penetration test -- blocker pentest) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Current status of all 8 tracked blockers \(from) Tj
+0 -12 Td
+(evidence/blockers-qualification-report.json, this session's own fresh) Tj
+0 -12 Td
+(read, not a cached or stale claim\): every one of pentest,) Tj
+0 -12 Td
+(scale_qualification, multi_region_dr, hsm_kms, live_data,) Tj
+0 -12 Td
+(soak_72h, spire_mtls, supply_chain_scan reads) Tj
+0 -12 Td
+(READY_FOR_REAL_QUALIFICATION. That status means: the MECHANISM this) Tj
+0 -12 Td
+(codebase would need for a real qualification run \(fixture-mode and) Tj
+0 -12 Td
+(synthetic-mode test harnesses, failure-injection matrices, measurement) Tj
+0 -12 Td
+(capture\) is built and proven; the REAL external qualification itself) Tj
+0 -12 Td
+(\(an actual signed pentest vendor report, actual 100 physical/cloud) Tj
+0 -12 Td
+(nodes, actual procured HSM/KMS tenancy, actual multi-region) Tj
+0 -12 Td
+(infrastructure, an actual 72-hour run at production scale\) has not) Tj
+0 -12 Td
+(happened, because it requires real external infrastructure and vendors) Tj
+0 -12 Td
+(this engagement does not have. Per item 10's own instruction, this is) Tj
+0 -12 Td
+(reported here as NOT_YET_PRODUCTION_QUALIFIED, not hidden or implied) Tj
+0 -12 Td
+(otherwise.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SUMMARY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Pilot Mode's tenant/case isolation, audit, RBAC, API-key auth, evidence) Tj
+0 -12 Td
+(export, and usage metrics are real and tested. OIDC, evidence-retention) Tj
+0 -12 Td
+(integration into the Commercial API path, distributed tracing, separate) Tj
+0 -12 Td
+(liveness/readiness probes, alerting, and support diagnostics are named) Tj
+0 -12 Td
+(gaps, not silently-assumed features. Every one of the 8 tracked) Tj
+0 -12 Td
+(production security blockers has a proven mechanism but no completed) Tj
+0 -12 Td
+(real-world external qualification -- this deployment is pilot-ready) Tj
+0 -12 Td
+(under the caveats above, not yet fully production-qualified, which is) Tj
+0 -12 Td
+(exactly item 10's own required framing.) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 13
+0000000000 65535 f 
+0000000015 00000 n 
+0000000091 00000 n 
+0000000161 00000 n 
+0000000229 00000 n 
+0000004836 00000 n 
+0000004972 00000 n 
+0000009117 00000 n 
+0000009253 00000 n 
+0000013564 00000 n 
+0000013700 00000 n 
+0000016066 00000 n 
+0000016204 00000 n 
+trailer
+<< /Size 13 /Root 12 0 R >>
+startxref
+16254
+%%EOF

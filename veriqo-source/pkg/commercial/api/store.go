@@ -34,8 +34,11 @@ import (
 	"fmt"
 	"sync"
 
+	"time"
+
 	"veriqo/pkg/commercial/dossier"
 	"veriqo/pkg/commercial/evidencefabric"
+	"veriqo/pkg/commercial/telemetry"
 	"veriqo/pkg/commercial/verticalslice"
 	"veriqo/pkg/evidence/manifest"
 	"veriqo/pkg/insurance/action"
@@ -146,6 +149,7 @@ type Store struct {
 	ledger    *audit.AuditStore
 	cases     map[string]*caseEntry
 	evidence  map[string]*evidenceEntry
+	metrics   *telemetry.Metrics
 }
 
 // NewStore constructs an empty Store with a fresh manifest registry
@@ -156,6 +160,7 @@ func NewStore() *Store {
 		ledger:    audit.NewAuditStore(),
 		cases:     make(map[string]*caseEntry),
 		evidence:  make(map[string]*evidenceEntry),
+		metrics:   telemetry.New(),
 	}
 }
 
@@ -164,6 +169,11 @@ func NewStore() *Store {
 // need the raw hash-chained record set -- never for callers to append
 // to directly; every write still goes through Store's own methods.
 func (s *Store) Ledger() *audit.AuditStore { return s.ledger }
+
+// Metrics exposes the Store's item-20 operational counters, read-only --
+// see pkg/commercial/telemetry's own doc comment for exactly which
+// method increments which counter.
+func (s *Store) Metrics() *telemetry.Metrics { return s.metrics }
 
 func caseKey(tenantID, caseID string) string         { return tenantID + "/" + caseID }
 func evidenceKey(tenantID, evidenceID string) string { return tenantID + "/" + evidenceID }
@@ -221,6 +231,7 @@ func (s *Store) SubmitEvidence(in EvidenceInput) (evidencefabric.EvidenceRecord,
 	if ce, ok := s.cases[caseKey(in.TenantID, in.CaseID)]; ok {
 		ce.evidenceIDs = append(ce.evidenceIDs, in.EvidenceID)
 	}
+	s.metrics.IncEvidenceIngestion()
 
 	return evidencefabric.FromRegistry(s.manifests, in.EvidenceID, in.Domain)
 }
@@ -259,9 +270,11 @@ func (s *Store) VerifyEvidence(tenantID, evidenceID string) (bool, error) {
 		return false, err
 	}
 	if err := manifest.VerifyManifestHash(m); err != nil {
+		s.metrics.IncEvidenceVerificationFail()
 		return false, nil
 	}
 	if err := s.manifests.VerifyCustodyChain(evidenceID); err != nil {
+		s.metrics.IncCustodyChainFailure()
 		return false, nil
 	}
 	return true, nil
@@ -328,6 +341,7 @@ func (s *Store) GetCase(tenantID, caseID string) (CaseView, error) {
 // -- there is no way to reach a Decision citing evidence this Store
 // never received.
 func (s *Store) DecideCase(in DecideInput) (decision.Decision, error) {
+	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ce, ok := s.cases[caseKey(in.TenantID, in.CaseID)]
@@ -378,6 +392,7 @@ func (s *Store) DecideCase(in DecideInput) (decision.Decision, error) {
 		return decision.Decision{}, fmt.Errorf("commercialapi: DecideCase: %w", err)
 	}
 	if _, err := decision.AppendToLedger(s.ledger, in.LedgerActor, d); err != nil {
+		s.metrics.IncLedgerCommitFailure()
 		return decision.Decision{}, fmt.Errorf("commercialapi: DecideCase: %w", err)
 	}
 
@@ -385,6 +400,7 @@ func (s *Store) DecideCase(in DecideInput) (decision.Decision, error) {
 	ce.decideInput = &inCopy
 	ce.af = af
 	ce.d = d
+	s.metrics.RecordDecisionLatency(time.Since(start))
 	return d, nil
 }
 
@@ -407,16 +423,20 @@ func (s *Store) ActOnCase(in ActionInput) (action.ActionAuthorization, verticals
 
 	aa, err := action.AuthorizeAction(ce.d, in.Actor, in.PolicyRef, in.Scope, in.PermittedAction, in.Conditions, in.AuthorizedAt, in.ExpiresAt)
 	if err != nil {
+		s.metrics.IncAuthorizationDenial()
 		return action.ActionAuthorization{}, verticalslice.Receipt{}, fmt.Errorf("commercialapi: ActOnCase: %w", err)
 	}
 	if _, err := action.AppendToLedger(s.ledger, in.LedgerActor, aa); err != nil {
+		s.metrics.IncLedgerCommitFailure()
 		return action.ActionAuthorization{}, verticalslice.Receipt{}, fmt.Errorf("commercialapi: ActOnCase: %w", err)
 	}
 	if err := action.AuthorizeExecution(aa, ce.d, in.ExecutingActor, in.PermittedAction, in.Scope, in.ExecutionAt); err != nil {
+		s.metrics.IncActionFailure()
 		return action.ActionAuthorization{}, verticalslice.Receipt{}, fmt.Errorf("commercialapi: ActOnCase: %w", err)
 	}
 	execRec, err := action.AppendExecutionToLedger(s.ledger, in.LedgerActor, aa, in.ExecutionAt)
 	if err != nil {
+		s.metrics.IncLedgerCommitFailure()
 		return action.ActionAuthorization{}, verticalslice.Receipt{}, fmt.Errorf("commercialapi: ActOnCase: %w", err)
 	}
 	receipt := verticalslice.BuildReceipt(aa, ce.d, execRec, in.ExecutingActor, in.ExecutionAt)
@@ -586,5 +606,8 @@ func (s *Store) Replay(tenantID, caseID string) (ReplayResult, error) {
 		result.Converged = result.Converged && (ce.aa.Hash() == replayedAA.Hash())
 	}
 
+	if !result.Converged {
+		s.metrics.IncReplayFailure()
+	}
 	return result, nil
 }
