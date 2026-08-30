@@ -145,6 +145,46 @@ func TestFullCaseLifecycleThroughTheStore(t *testing.T) {
 	}
 }
 
+// TestGenerateDossierPopulatesRealCorroborationAndContradictions
+// proves the dossier's Corroboration/Contradictions rows are derived
+// from the real, independently-grounded Finding.SupportedBy/
+// ContradictedBy evidence citations -- not left empty the way
+// dossier.New's own zero-Corroboration default would otherwise read,
+// which would misleadingly suggest no contradiction was ever
+// considered when one plainly was.
+func TestGenerateDossierPopulatesRealCorroborationAndContradictions(t *testing.T) {
+	s := NewStore()
+	const tenant = "tenant-A"
+	const caseID = "CASE-API-CONTRADICT-1"
+
+	if err := s.CreateCase(tenant, caseID, 0); err != nil {
+		t.Fatalf("CreateCase: %v", err)
+	}
+	mustSubmitEvidence(t, s, tenant, caseID, "EV-SUPPORT-1", 10)
+	mustSubmitEvidence(t, s, tenant, caseID, "EV-CONTRADICT-1", 10)
+
+	di := decideInput(tenant, caseID)
+	di.SupportingEvidenceIDs = []string{"EV-SUPPORT-1"}
+	di.ContradictingEvidenceIDs = []string{"EV-CONTRADICT-1"}
+	if _, err := s.DecideCase(di); err != nil {
+		t.Fatalf("DecideCase: %v", err)
+	}
+	if _, _, err := s.ActOnCase(actionInput(tenant, caseID)); err != nil {
+		t.Fatalf("ActOnCase: %v", err)
+	}
+
+	dos, err := s.GenerateDossier(tenant, caseID)
+	if err != nil {
+		t.Fatalf("GenerateDossier: %v", err)
+	}
+	if len(dos.Corroboration) != 1 || dos.Corroboration[0] != "EV-SUPPORT-1 supports hypothesis H1" {
+		t.Fatalf("expected a real Corroboration row citing EV-SUPPORT-1, got %+v", dos.Corroboration)
+	}
+	if len(dos.Contradictions) != 1 || dos.Contradictions[0] != "EV-CONTRADICT-1 contradicts hypothesis H1" {
+		t.Fatalf("expected a real Contradictions row citing EV-CONTRADICT-1, got %+v", dos.Contradictions)
+	}
+}
+
 func TestDecideCaseRejectsUnknownCase(t *testing.T) {
 	s := NewStore()
 	if _, err := s.DecideCase(decideInput("tenant-A", "CASE-DOES-NOT-EXIST")); !errors.Is(err, ErrCaseNotFound) {

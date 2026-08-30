@@ -464,7 +464,31 @@ func (s *Store) GenerateDossier(tenantID, caseID string) (dossier.Dossier, error
 		Manifests: s.manifests, AuthorizedFinding: ce.af, Decision: ce.d,
 		ActionAuthorization: ce.aa, Receipt: ce.receipt,
 	}
-	return dossier.New(dossier.Input{Scope: caseID, Result: result, Evidence: evidenceRecords})
+
+	// dossier.New deliberately never invents Corroboration/Contradictions
+	// on its own (see that package's own doc comment) -- it is this
+	// Store's job, as the caller holding the real AuthorizedFinding, to
+	// translate the Finding's own SupportedBy/ContradictedBy evidence
+	// citations (already independently grounded by cre.AuthorizeGrounded
+	// against FINALIZED, hash-verified manifests) into the dossier's
+	// human-readable Corroboration/Contradictions rows.
+	var hypothesisID string
+	if ce.decideInput != nil {
+		hypothesisID = string(ce.decideInput.Hypothesis.ID)
+	}
+	f := ce.af.Finding()
+	var corroboration, contradictions []string
+	for _, evID := range f.SupportedBy {
+		corroboration = append(corroboration, fmt.Sprintf("%s supports hypothesis %s", evID, hypothesisID))
+	}
+	for _, evID := range f.ContradictedBy {
+		contradictions = append(contradictions, fmt.Sprintf("%s contradicts hypothesis %s", evID, hypothesisID))
+	}
+
+	return dossier.New(dossier.Input{
+		Scope: caseID, Result: result, Evidence: evidenceRecords,
+		Corroboration: corroboration, Contradictions: contradictions,
+	})
 }
 
 // WriteDossierPackage generates the case's dossier and writes its
