@@ -1,7 +1,7 @@
 %PDF-1.4
 %‚„œ”
 1 0 obj
-<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R] /Count 7 >>
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R] /Count 9 >>
 endobj
 2 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -139,7 +139,7 @@ endobj
 << /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
 endobj
 6 0 obj
-<< /Length 3733 >>
+<< /Length 4212 >>
 stream
 BT
 /F2 8 Tf
@@ -165,6 +165,201 @@ BT
 (literal content of CHANGE 4 below, restated up front so it cannot be) Tj
 0 -12 Td
 (skimmed past.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(PRIMARY-SOURCE VERIFICATION RETRY \(H, THIS ROUND\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's follow-up \(Masih_terlalu_banyak_gap.docx\) asked for) Tj
+0 -12 Td
+(this attempt to be retried against 2-3 more domains before finalizing) Tj
+0 -12 Td
+(this document regardless of outcome. That retry happened this round,) Tj
+0 -12 Td
+(and its result must be stated with the same precision as the first) Tj
+0 -12 Td
+(attempt, not rounded up to "resolved.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WebFetch remains blocked on every domain tried, this round) Tj
+0 -12 Td
+(included. In addition to the four domains the first attempt already) Tj
+0 -12 Td
+(recorded as EGRESS_BLOCKED \(uncitral.un.org,) Tj
+0 -12 Td
+(en.wikipedia.org, www.wto.org, unece.org\), this round's retry) Tj
+0 -12 Td
+(also tried academy.iccwbo.org \(ICC Academy's own MLETR overview) Tj
+0 -12 Td
+(article\) and handwiki.org \(a Wikipedia mirror\) -- both were rejected) Tj
+0 -12 Td
+(with the identical EGRESS_BLOCKED error before any content was) Tj
+0 -12 Td
+(retrieved. Six distinct domains have now been tried across two rounds;) Tj
+0 -12 Td
+(none succeeded. This is not evidence of a narrowing problem that one) Tj
+0 -12 Td
+(more retry would likely fix -- it reads as a blanket network-egress) Tj
+0 -12 Td
+(policy on this session's proxy, not a per-domain outage.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What DID change this round: WebSearch \(a separate tool from) Tj
+0 -12 Td
+(WebFetch, not subject to the same block\) returned real,) Tj
+0 -12 Td
+(search-engine-synthesized summaries -- with source URLs attached -- for) Tj
+0 -12 Td
+(several specific articles that the first round's total blank could not) Tj
+0 -12 Td
+(surface at all. Three queries returned genuinely new, sourced) Tj
+0 -12 Td
+(material:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- Article 10 \(functional equivalence conditions for a transferable) Tj
+0 -12 Td
+(document/instrument becoming an electronic transferable record\): the) Tj
+0 -12 Td
+(search synthesis named the two conditions MLETR imposes -- the) Tj
+0 -12 Td
+(electronic record must contain all information the corresponding) Tj
+0 -12 Td
+(paper document requires, AND a reliable method must be used to) Tj
+0 -12 Td
+(identify the record as such \(the synthesis was truncated before its) Tj
+0 -12 Td
+(second sub-condition completed\).) Tj
+0 -12 Td
+(- Article 11 \(functional equivalence for *possession*\): named as) Tj
+0 -12 Td
+(establishing the functional-equivalence rule for possession of a) Tj
+0 -12 Td
+(transferable document/instrument -- i.e. the article's *subject*,) Tj
+0 -12 Td
+(without its operative text.) Tj
+0 -12 Td
+(- Article 15 \(endorsement\): the synthesis stated that MLETR's) Tj
+0 -12 Td
+(endorsement requirement is met for an electronic transferable record) Tj
+0 -12 Td
+(if the information an endorsement would require is included, and) Tj
+0 -12 Td
+(that "an endorsement is composed of writing and a signature";) Tj
+0 -12 Td
+(separately, general MLETR background on bearer \("anonymous"\) vs.) Tj
+0 -12 Td
+(order \(endorsed\) paper-instrument transfer was surfaced.) Tj
+0 -12 Td
+(- Article 17 \(change of medium, paper to electronic\): named as one) Tj
+0 -12 Td
+(of the two change-of-medium articles \(17: paper -> electronic; 18:) Tj
+0 -12 Td
+(electronic -> paper\), with the specific note that "article 17 of the) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 3813 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(MLETR does not require that all information contained in a) Tj
+0 -12 Td
+(transferable document or instrument be contained in the replacing) Tj
+0 -12 Td
+(electronic transferable record" -- a real, citable qualifier this) Tj
+0 -12 Td
+(document did not have before this round.) Tj
+0 -12 Td
+(- Article 18 \(change of medium, electronic to paper /) Tj
+0 -12 Td
+(obsolescence\): named as the electronic-to-paper counterpart to) Tj
+0 -12 Td
+(Article 17.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Why this is still not primary-source verification, stated exactly:) Tj
+0 -12 Td
+(every one of the passages above is a search engine's own paraphrase) Tj
+0 -12 Td
+(*about* the UNCITRAL text, several explicitly citing UNCITRAL's own) Tj
+0 -12 Td
+(ebook PDF as its ultimate source -- it is not this session reading that) Tj
+0 -12 Td
+(PDF's actual article text. A paraphrase-of-a-paraphrase can drop a) Tj
+0 -12 Td
+(qualifier, miscount a sub-clause, or conflate two adjacent articles in) Tj
+0 -12 Td
+(ways this session has no independent way to catch without the source) Tj
+0 -12 Td
+(document in hand. Accordingly, no article's confidence level in the) Tj
+0 -12 Td
+(tables below is raised on the strength of this round's search) Tj
+0 -12 Td
+(results. Articles 13, 16, 17, and 18 remain explicitly LOW) Tj
+0 -12 Td
+(CONFIDENCE, per the reviewer's own explicit instruction that they) Tj
+0 -12 Td
+("jangan diberi status complete sebelum diverifikasi" -- and that) Tj
+0 -12 Td
+(instruction is read here as requiring verification against the actual) Tj
+0 -12 Td
+(primary text, not against a search engine's summary of it, however) Tj
+0 -12 Td
+(well-sourced that summary's citations look. The one honest addition) Tj
+0 -12 Td
+(this round makes is recording WHAT was found and WHERE it came from,) Tj
+0 -12 Td
+(so a human reviewer with unblocked network access has a concrete,) Tj
+0 -12 Td
+(sourced starting point rather than a blank page.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Sources surfaced this round \(search-result citations, not independently) Tj
+0 -12 Td
+(fetched or read in full\):) Tj
+0 -12 Td
+(- UNCITRAL MLETR ebook PDF: https://uncitral.un.org/sites/default/files/media-) Tj
+0 -12 Td
+(documents/uncitral/en/mletr_ebook_e.pdf) Tj
+0 -12 Td
+(- ICC Academy MLETR overview: https://academy.iccwbo.org/digital-trade/article/mletr-an-) Tj
+0 -12 Td
+(overview-of-uncitrals-model-law-on-electronic-transferable-records/) Tj
+0 -12 Td
+(- UNECE White Paper on Transfer under MLETR:) Tj
+0 -12 Td
+(https://unece.org/sites/default/files/2023-09/WhitePaper_Transfer-MLETR.pdf) Tj
+0 -12 Td
+(- Wikipedia, UNCITRAL Model Law on Electronic Transferable Records:) Tj
+0 -12 Td
+(https://en.wikipedia.org/wiki/UNCITRAL_Model_Law_on_Electronic_Transferable_Records) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Recommendation carried forward unchanged from the first attempt:) Tj
+0 -12 Td
+(before any of Articles 9-18 is relied upon for anything beyond this) Tj
+0 -12 Td
+(engineering audit's own internal roadmap, a human with unblocked) Tj
+0 -12 Td
+(network access \(or direct access to UNCITRAL's MLETR text through any) Tj
+0 -12 Td
+(channel\) must read the primary text directly and either confirm or) Tj
+0 -12 Td
+(correct every row below.) Tj
 0 -12 Td
 () Tj
 0 -12 Td
@@ -195,7 +390,18 @@ BT
 (The difference is not stylistic. The original phrasing implies Veriqo) Tj
 0 -12 Td
 (itself *satisfies* a statutory requirement. The revised phrasing states) Tj
-0 -12 Td
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4779 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (what Veriqo actually does: it produces evidence *about* whether a) Tj
 0 -12 Td
 (transaction's electronic transferable record \(ETR\) practice satisfied a) Tj
@@ -261,18 +467,7 @@ BT
 (as appropriate for the purpose    A hash-chained, JCS-canonicalized event record of the) Tj
 0 -12 Td
 (change-of-medium act itself \(who initiated it, when, under which policy\)) Tj
-ET
-endstream
-endobj
-7 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
-endobj
-8 0 obj
-<< /Length 5759 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (manifest.CustodyEvent \(action=TRANSFORMED/DERIVED\) chained via EventHash/PreviousHash) Tj
 0 -12 Td
 (Engineering Verified \(Level 2\) -- real, tested code in this repo    The reliable-method) Tj
@@ -324,7 +519,18 @@ BT
 (   4. Identification of the controller at the moment of change    The person entitled to) Tj
 0 -12 Td
 (control the record at the time of the medium change must be identifiable    Custody-event) Tj
-0 -12 Td
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 4715 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (Actor field, attributed and hash-chain-covered    CustodyEvent.Actor,) Tj
 0 -12 Td
 (hasCustodyActionBoundToContent    Engineering Verified for the custody-event mechanism) Tj
@@ -390,18 +596,7 @@ BT
 (independent party still needs access to the event log/snapshot and the verification tooling;) Tj
 0 -12 Td
 (Veriqo does not yet ship a standalone, non-Go, third-party-operable verifier    Yes -- for) Tj
-ET
-endstream
-endobj
-9 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
-endobj
-10 0 obj
-<< /Length 3759 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (court/regulator use, an independently-implemented \(not just independently-run\) verifier) Tj
 0 -12 Td
 (would strengthen the claim further) Tj
@@ -453,7 +648,18 @@ BT
 (control\), the eBL platform is PRIMARY and Veriqo is, at most, an) Tj
 0 -12 Td
 (evidence-support layer sitting alongside it -- and for "Exclusive) Tj
-0 -12 Td
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 4263 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (control" specifically, Veriqo is explicitly OUT OF SCOPE: Veriqo does) Tj
 0 -12 Td
 (not hold, assert, or adjudicate who currently controls an ETR. Where) Tj
@@ -519,18 +725,7 @@ BT
 (should be limited to internal hash-chain consistency, not) Tj
 0 -12 Td
 (cryptographic proof against a specific signer.) Tj
-ET
-endstream
-endobj
-11 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
-endobj
-12 0 obj
-<< /Length 3813 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (- Veriqo cannot claim identity assurance. Custody-event actors are) Tj
 0 -12 Td
 (recorded as attributed strings; whether "PTY-1" really was the party) Tj
@@ -582,7 +777,18 @@ BT
 (Finding authority packages safe *in isolation*. Whether that safety) Tj
 0 -12 Td
 (survives integration with VERIQO's own API, Workflow, Knowledge,) Tj
-0 -12 Td
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Length 4031 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (Intelligence, Decision, Ledger, and Cluster layers is the subject of) Tj
 0 -12 Td
 (the separate, not-yet-executed "OS Integration Audit" -- see the) Tj
@@ -648,18 +854,7 @@ BT
 (This v0.2 delivers that structure fully for Article 12 \(Change 2's) Tj
 0 -12 Td
 (table\) and the cross-cutting function boundary \(Change 3's table\). A) Tj
-ET
-endstream
-endobj
-13 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
-endobj
-14 0 obj
-<< /Length 5431 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (best-effort, GENERAL-FUNCTION-LEVEL first pass at the remaining seven) Tj
 0 -12 Td
 (articles follows below, using the same eight-column structure -- but) Tj
@@ -711,7 +906,18 @@ BT
 (by design) Tj
 0 -12 Td
 (   Art. 11 -- Transfer of control \(functional equivalent of endorsement/delivery\)) Tj
-0 -12 Td
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 16 0 R >>
+endobj
+18 0 obj
+<< /Length 5396 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (Executes and records the transfer act    Evidence capture of the transfer event as reported) Tj
 0 -12 Td
 (to Veriqo \(custody event\)    CustodyEvent \(action reflecting transfer\), hash chain    Same) Tj
@@ -777,18 +983,7 @@ BT
 (recognition of electronic transferable records; LOW confidence\)    Ensures the ETR is) Tj
 0 -12 Td
 (recognized across jurisdictions    Veriqo's evidence artifacts are jurisdiction-agnostic by) Tj
-ET
-endstream
-endobj
-15 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
-endobj
-16 0 obj
-<< /Length 2210 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (construction \(content-hash-based, no jurisdiction-specific encoding\) -- a NEUTRAL property) Tj
 0 -12 Td
 (that MAY be relevant to cross-border recognition arguments, but this is a legal argument) Tj
@@ -840,40 +1035,131 @@ BT
 (confidence" above means general-knowledge confidence, not) Tj
 0 -12 Td
 (primary-source-verified confidence, and this document does not conflate) Tj
-0 -12 Td
-(the two.) Tj
 ET
 endstream
 endobj
-17 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 16 0 R >>
+19 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 18 0 R >>
 endobj
-18 0 obj
+20 0 obj
+<< /Length 2757 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(the two.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(IMPORTANT CORRECTION surfaced by this round's retry \(H\) -- read this) Tj
+0 -12 Td
+(before trusting ANY article number above, including the "HIGHER) Tj
+0 -12 Td
+(confidence" ones. The "Primary-source verification retry" section) Tj
+0 -12 Td
+(above records WebSearch-surfaced, sourced material that appears to) Tj
+0 -12 Td
+(directly contradict this table's own article numbering:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- This table labels Article 12 as "Change of medium" and calls it) Tj
+0 -12 Td
+(the document's most-fully-mapped, HIGHER-confidence article.) Tj
+0 -12 Td
+(- This round's search results instead describe Articles 17 and 18) Tj
+0 -12 Td
+(as the two change-of-medium articles \(17: paper -> electronic; 18:) Tj
+0 -12 Td
+(electronic -> paper\) -- and this table's OWN row for Article 17) Tj
+0 -12 Td
+(already independently guessed "replacement... LOW confidence,) Tj
+0 -12 Td
+(may substantially overlap Article 12's own scope," which in) Tj
+0 -12 Td
+(hindsight reads as this table having partially sensed the collision) Tj
+0 -12 Td
+(without being able to resolve it.) Tj
+0 -12 Td
+(- Separately, this table labels Article 10 as "Control" and) Tj
+0 -12 Td
+(Article 11 as "Transfer of control," while this round's search) Tj
+0 -12 Td
+(results describe Article 10 as the general functional-equivalence) Tj
+0 -12 Td
+(conditions article and Article 11 as covering *possession*) Tj
+0 -12 Td
+(specifically -- a different scope than "control" as this table framed) Tj
+0 -12 Td
+(it -- and Article 15, not modelled in this table at all, as the) Tj
+0 -12 Td
+(endorsement article.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This session cannot resolve the discrepancy without the primary) Tj
+0 -12 Td
+(text -- it does not know whether the table's numbering \(built from) Tj
+0 -12 Td
+(general/training knowledge\) or this round's search-engine synthesis) Tj
+0 -12 Td
+(\(itself second-hand\) is the one that is wrong, or whether both are) Tj
+0 -12 Td
+(partially wrong. What it CAN do, and is doing here, is refuse to let) Tj
+0 -12 Td
+(the two silently coexist as if they agreed. Practical consequence:) Tj
+0 -12 Td
+(the "HIGHER confidence" label on Articles 9, 11, and 12 above is hereby) Tj
+0 -12 Td
+(downgraded in effect, if not in table formatting -- a live,) Tj
+0 -12 Td
+(independently-sourced signal now contradicts this document's own) Tj
+0 -12 Td
+(article-to-function assignments, which is a materially different, more) Tj
+0 -12 Td
+(serious situation than "unverified but plausible." Do not treat Article) Tj
+0 -12 Td
+(12's row as this document's strongest mapping until a human confirms,) Tj
+0 -12 Td
+(against the actual UNCITRAL text, which article number genuinely) Tj
+0 -12 Td
+(governs change of medium.) Tj
+ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 20 0 R >>
+endobj
+22 0 obj
 << /Type /Catalog /Pages 1 0 R >>
 endobj
 xref
-0 19
+0 23
 0000000000 65535 f 
 0000000015 00000 n 
-0000000112 00000 n 
-0000000182 00000 n 
-0000000250 00000 n 
-0000004398 00000 n 
-0000004534 00000 n 
-0000008319 00000 n 
-0000008455 00000 n 
-0000014266 00000 n 
-0000014402 00000 n 
-0000018214 00000 n 
-0000018352 00000 n 
-0000022218 00000 n 
-0000022356 00000 n 
-0000027840 00000 n 
-0000027978 00000 n 
-0000030241 00000 n 
-0000030379 00000 n 
+0000000126 00000 n 
+0000000196 00000 n 
+0000000264 00000 n 
+0000004412 00000 n 
+0000004548 00000 n 
+0000008812 00000 n 
+0000008948 00000 n 
+0000012813 00000 n 
+0000012949 00000 n 
+0000017781 00000 n 
+0000017919 00000 n 
+0000022687 00000 n 
+0000022825 00000 n 
+0000027141 00000 n 
+0000027279 00000 n 
+0000031363 00000 n 
+0000031501 00000 n 
+0000036950 00000 n 
+0000037088 00000 n 
+0000039898 00000 n 
+0000040036 00000 n 
 trailer
-<< /Size 19 /Root 18 0 R >>
+<< /Size 23 /Root 22 0 R >>
 startxref
-30429
+40086
 %%EOF

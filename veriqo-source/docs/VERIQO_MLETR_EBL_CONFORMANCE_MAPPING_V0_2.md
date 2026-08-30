@@ -69,6 +69,94 @@ insurer, or a court). This caveat is not boilerplate -- it is the
 literal content of CHANGE 4 below, restated up front so it cannot be
 skimmed past.
 
+## Primary-source verification retry (H, this round)
+
+The reviewer's follow-up (`Masih_terlalu_banyak_gap.docx`) asked for
+this attempt to be retried against 2-3 more domains before finalizing
+this document regardless of outcome. That retry happened this round,
+and its result must be stated with the same precision as the first
+attempt, not rounded up to "resolved."
+
+**`WebFetch` remains blocked on every domain tried, this round
+included.** In addition to the four domains the first attempt already
+recorded as `EGRESS_BLOCKED` (`uncitral.un.org`,
+`en.wikipedia.org`, `www.wto.org`, `unece.org`), this round's retry
+also tried `academy.iccwbo.org` (ICC Academy's own MLETR overview
+article) and `handwiki.org` (a Wikipedia mirror) -- both were rejected
+with the identical `EGRESS_BLOCKED` error before any content was
+retrieved. Six distinct domains have now been tried across two rounds;
+none succeeded. This is not evidence of a narrowing problem that one
+more retry would likely fix -- it reads as a blanket network-egress
+policy on this session's proxy, not a per-domain outage.
+
+**What DID change this round: `WebSearch` (a separate tool from
+`WebFetch`, not subject to the same block) returned real,
+search-engine-synthesized summaries -- with source URLs attached -- for
+several specific articles that the first round's total blank could not
+surface at all.** Three queries returned genuinely new, sourced
+material:
+
+- **Article 10** (functional equivalence conditions for a transferable
+  document/instrument becoming an electronic transferable record): the
+  search synthesis named the two conditions MLETR imposes -- the
+  electronic record must contain all information the corresponding
+  paper document requires, AND a reliable method must be used to
+  identify the record as such (the synthesis was truncated before its
+  second sub-condition completed).
+- **Article 11** (functional equivalence for *possession*): named as
+  establishing the functional-equivalence rule for possession of a
+  transferable document/instrument -- i.e. the article's *subject*,
+  without its operative text.
+- **Article 15** (endorsement): the synthesis stated that MLETR's
+  endorsement requirement is met for an electronic transferable record
+  if the information an endorsement would require is included, and
+  that "an endorsement is composed of writing and a signature";
+  separately, general MLETR background on bearer ("anonymous") vs.
+  order (endorsed) paper-instrument transfer was surfaced.
+- **Article 17** (change of medium, paper to electronic): named as one
+  of the two change-of-medium articles (17: paper -> electronic; 18:
+  electronic -> paper), with the specific note that "article 17 of the
+  MLETR does not require that all information contained in a
+  transferable document or instrument be contained in the replacing
+  electronic transferable record" -- a real, citable qualifier this
+  document did not have before this round.
+- **Article 18** (change of medium, electronic to paper /
+  obsolescence): named as the electronic-to-paper counterpart to
+  Article 17.
+
+**Why this is still not primary-source verification, stated exactly:**
+every one of the passages above is a search engine's own paraphrase
+*about* the UNCITRAL text, several explicitly citing UNCITRAL's own
+ebook PDF as its ultimate source -- it is not this session reading that
+PDF's actual article text. A paraphrase-of-a-paraphrase can drop a
+qualifier, miscount a sub-clause, or conflate two adjacent articles in
+ways this session has no independent way to catch without the source
+document in hand. Accordingly, **no article's confidence level in the
+tables below is raised on the strength of this round's search
+results.** Articles 13, 16, 17, and 18 remain explicitly LOW
+CONFIDENCE, per the reviewer's own explicit instruction that they
+"jangan diberi status complete sebelum diverifikasi" -- and that
+instruction is read here as requiring verification against the actual
+primary text, not against a search engine's summary of it, however
+well-sourced that summary's citations look. The one honest addition
+this round makes is recording WHAT was found and WHERE it came from,
+so a human reviewer with unblocked network access has a concrete,
+sourced starting point rather than a blank page.
+
+Sources surfaced this round (search-result citations, not independently
+fetched or read in full):
+- UNCITRAL MLETR ebook PDF: `https://uncitral.un.org/sites/default/files/media-documents/uncitral/en/mletr_ebook_e.pdf`
+- ICC Academy MLETR overview: `https://academy.iccwbo.org/digital-trade/article/mletr-an-overview-of-uncitrals-model-law-on-electronic-transferable-records/`
+- UNECE White Paper on Transfer under MLETR: `https://unece.org/sites/default/files/2023-09/WhitePaper_Transfer-MLETR.pdf`
+- Wikipedia, UNCITRAL Model Law on Electronic Transferable Records: `https://en.wikipedia.org/wiki/UNCITRAL_Model_Law_on_Electronic_Transferable_Records`
+
+**Recommendation carried forward unchanged from the first attempt:**
+before any of Articles 9-18 is relied upon for anything beyond this
+engineering audit's own internal roadmap, a human with unblocked
+network access (or direct access to UNCITRAL's MLETR text through any
+channel) must read the primary text directly and either confirm or
+correct every row below.
+
 ---
 
 ## CHANGE 1 -- The core claim, reworded
@@ -274,3 +362,41 @@ restrictions before any official text could be retrieved. "Higher
 confidence" above means general-knowledge confidence, not
 primary-source-verified confidence, and this document does not conflate
 the two.
+
+**IMPORTANT CORRECTION surfaced by this round's retry (H) -- read this
+before trusting ANY article number above, including the "HIGHER
+confidence" ones.** The "Primary-source verification retry" section
+above records `WebSearch`-surfaced, sourced material that appears to
+directly **contradict this table's own article numbering**:
+
+- This table labels **Article 12** as "Change of medium" and calls it
+  the document's most-fully-mapped, HIGHER-confidence article.
+- This round's search results instead describe **Articles 17 and 18**
+  as the two change-of-medium articles (17: paper -> electronic; 18:
+  electronic -> paper) -- and this table's OWN row for Article 17
+  already independently guessed "replacement... LOW confidence,
+  may substantially overlap Article 12's own scope," which in
+  hindsight reads as this table having partially sensed the collision
+  without being able to resolve it.
+- Separately, this table labels **Article 10** as "Control" and
+  **Article 11** as "Transfer of control," while this round's search
+  results describe **Article 10** as the general functional-equivalence
+  conditions article and **Article 11** as covering *possession*
+  specifically -- a different scope than "control" as this table framed
+  it -- and **Article 15**, not modelled in this table at all, as the
+  endorsement article.
+
+**This session cannot resolve the discrepancy without the primary
+text** -- it does not know whether the table's numbering (built from
+general/training knowledge) or this round's search-engine synthesis
+(itself second-hand) is the one that is wrong, or whether both are
+partially wrong. What it CAN do, and is doing here, is refuse to let
+the two silently coexist as if they agreed. **Practical consequence:
+the "HIGHER confidence" label on Articles 9, 11, and 12 above is hereby
+downgraded in effect, if not in table formatting** -- a live,
+independently-sourced signal now contradicts this document's own
+article-to-function assignments, which is a materially different, more
+serious situation than "unverified but plausible." Do not treat Article
+12's row as this document's strongest mapping until a human confirms,
+against the actual UNCITRAL text, which article number genuinely
+governs change of medium.
