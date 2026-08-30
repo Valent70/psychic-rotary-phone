@@ -1,0 +1,573 @@
+%PDF-1.4
+%ту╧╙
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R] /Count 5 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3392 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO COMMERCIAL READINESS REPORT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This is Commercialization Sprint Phase 9 \(item 23\): the single source of) Tj
+0 -12 Td
+(truth the reviewer's item 13 \(Commercial Readiness Matrix\) and item 25) Tj
+0 -12 Td
+(\(one-page executive summary\) ask for, plus item 21's documentation) Tj
+0 -12 Td
+(inventory and item 22's Commercialization Gate walkthrough. Every status) Tj
+0 -12 Td
+(below cites the real code, test, or document backing it -- nothing here) Tj
+0 -12 Td
+(is asserted without something to point at.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. EXECUTIVE SUMMARY -- VERIQO COMMERCIALIZATION GATE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(*\(Item 25's exact requested format.\)*) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Area    Status) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   CORE TRUST PIPELINE    GREEN) Tj
+0 -12 Td
+(   EVIDENCE FABRIC    GREEN) Tj
+0 -12 Td
+(   DECISION TRUST    GREEN) Tj
+0 -12 Td
+(   ACTION AUTHORIZATION    GREEN) Tj
+0 -12 Td
+(   DOSSIER    GREEN) Tj
+0 -12 Td
+(   REPLAY    GREEN) Tj
+0 -12 Td
+(   INDEPENDENT VERIFIER    GREEN) Tj
+0 -12 Td
+(   TENANT ISOLATION    GREEN/YELLOW -- isolation between tenants inside the Store is real) Tj
+0 -12 Td
+(and adversarially tested; TenantID is not yet cryptographically bound to the caller's) Tj
+0 -12 Td
+(verified JWT identity \(see з2, Tenant Isolation row\).) Tj
+0 -12 Td
+(   SECURITY    GREEN/YELLOW -- JWT/RBAC/API-key/audit are real and composed; OIDC,) Tj
+0 -12 Td
+(distributed tracing, and a security incident response procedure are not built \(see з2,) Tj
+0 -12 Td
+(Security row\).) Tj
+0 -12 Td
+(   DEPLOYMENT    YELLOW -- deployment guide exists; the Commercial API's Store is an in-) Tj
+0 -12 Td
+(memory reference implementation with no durable persistence or backup/restore yet \(see з2,) Tj
+0 -12 Td
+(Deployment row\).) Tj
+0 -12 Td
+(   REAL eBL    EXTERNAL PILOT) Tj
+0 -12 Td
+(   REAL AIS    EXTERNAL PILOT) Tj
+0 -12 Td
+(   REAL INSURANCE    EXTERNAL PILOT) Tj
+0 -12 Td
+(   PEN TEST    PENDING) Tj
+0 -12 Td
+(   MULTI-REGION    PENDING) Tj
+0 -12 Td
+(   72H SOAK    PENDING) Tj
+0 -12 Td
+(   INDEPENDENT AUDIT    PENDING) Tj
+0 -12 Td
+(   MLETR LEGAL QUALIFICATION    PENDING) Tj
+0 -12 Td
+(   OVERALL    PILOT-READY, NOT YET FULLY PRODUCTION-QUALIFIED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(2. COMMERCIAL READINESS MATRIX \(ITEM 13\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Capability    Status    Evidence) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Core Trust Pipeline \(Decision Trust Boundary, Trust Calculus, DARI guarantees,) Tj
+0 -12 Td
+(deterministic execution, ledger primitives\)    GREEN    Frozen per) Tj
+0 -12 Td
+(docs/VERIQO_CORE_TRUST_KERNEL_FREEZE.md; unchanged this sprint except two minimal, behavior-) Tj
+0 -12 Td
+(preserving exported-helper extractions \(manifest.VerifyCustodyChainRecords,) Tj
+0 -12 Td
+(claimworkflow.FinalizeManifestSpec\), each re-verified against the full pre-existing test) Tj
+0 -12 Td
+(suite.) Tj
+0 -12 Td
+(   Evidence Fabric \(canonical EvidenceRecord, 3 evidence classes\)    GREEN) Tj
+0 -12 Td
+(pkg/commercial/evidencefabric -- FromManifest/FromRegistry, 8 tests including tamper) Tj
+0 -12 Td
+(detection \(TestFromManifestDetectsTamperedManifest\) and all-3-domain-classes coverage.) Tj
+0 -12 Td
+(   Decision Trust \(grounded Finding -> Decision\)    GREEN    Reused verbatim from the frozen) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 4816 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(cre/decision packages; commercialapi.Store.DecideCase proven to refuse ungrounded evidence) Tj
+0 -12 Td
+(\(TestDecideCaseRejectsUngroundedEvidence\).) Tj
+0 -12 Td
+(   Action Authorization    GREEN    Reused verbatim from the frozen action package;) Tj
+0 -12 Td
+(ActOnCase proven to refuse acting before a decision exists) Tj
+0 -12 Td
+(\(TestActOnCaseRefusesBeforeDecision\).) Tj
+0 -12 Td
+(   Dossier \(Evidence Dossier v1\)    GREEN    pkg/commercial/dossier -- every reviewer-named) Tj
+0 -12 Td
+(field, human Markdown + machine .zip, real Corroboration/Contradictions derived from the) Tj
+0 -12 Td
+(actual grounded Finding \(not left empty -- see) Tj
+0 -12 Td
+(TestGenerateDossierPopulatesRealCorroborationAndContradictions\).) Tj
+0 -12 Td
+(   Replay    GREEN    verticalslice.Replay and Store.Replay, both proven to converge on) Tj
+0 -12 Td
+(identical hashes for unchanged inputs and diverge for a mutated one.) Tj
+0 -12 Td
+(   Independent Verifier    GREEN    pkg/commercial/packageverify + cmd/veriqo-commercial-) Tj
+0 -12 Td
+(verify -- a genuinely separate compiled binary, tested via exec.Command against real and) Tj
+0 -12 Td
+(tampered packages, honestly SKIPs signature verification \(no signing scheme exists in this) Tj
+0 -12 Td
+(reference build\) rather than silently passing it.) Tj
+0 -12 Td
+(   Commercial API v1    GREEN    All 11 named routes + GET /v1/metrics, wired into) Tj
+0 -12 Td
+(NewServer, proven end-to-end over real net/http) Tj
+0 -12 Td
+(\(TestCommercialV1RoutesFullLifecycleHappyPath: submit evidence -> verify -> custody ->) Tj
+0 -12 Td
+(decide -> act -> dossier \(JSON + package\) -> independently verify the package -> replay\).) Tj
+0 -12 Td
+(   Tenant Isolation    GREEN/YELLOW    Structural, key-namespaced isolation inside Store is) Tj
+0 -12 Td
+(real \(TestTenantAIsolationFromTenantB, TestCommercialV1RoutesTenantIsolationOverHTTP\). Gap:) Tj
+0 -12 Td
+(TenantID is caller-supplied, not yet bound to the verified JWT subject -- see) Tj
+0 -12 Td
+(docs/VERIQO_PILOT_MODE_AND_DEPLOYMENT_READINESS.md з"Item 19".) Tj
+0 -12 Td
+(   Security \(JWT/RBAC/API keys/audit\)    GREEN/YELLOW    Real and composed) Tj
+0 -12 Td
+(\(security.JWTMiddleware/RBACMiddleware/APIKeyMiddleware/AuditMiddleware\). Gaps: no OIDC, no) Tj
+0 -12 Td
+(distributed tracing, no written incident response procedure.) Tj
+0 -12 Td
+(   Observability \(metrics/logs/audit/health\)    GREEN/YELLOW    pkg/commercial/telemetry's 9) Tj
+0 -12 Td
+(named counters are real \(TestMetricsReflectRealActivity\); logging and audit are real. Gaps:) Tj
+0 -12 Td
+(no traces, no separate liveness/readiness probes, no alerting.) Tj
+0 -12 Td
+(   Deployment    YELLOW    docs/governance/PRODUCTION_DEPLOYMENT_AND_OPERATIONS_GUIDE.md) Tj
+0 -12 Td
+(exists for the broader platform. Gap: commercialapi.Store itself is in-memory only -- no) Tj
+0 -12 Td
+(durable persistence, no backup/restore for the Commercial API layer specifically.) Tj
+0 -12 Td
+(   Demo Cases \(eBL, Maritime, Insurance\)    GREEN    pkg/commercial/democases + cmd/veriqo-) Tj
+0 -12 Td
+(demo-cases; all 3 build real, independently-verifiable packages -- see) Tj
+0 -12 Td
+(docs/VERIQO_DEMO_CASES.md.) Tj
+0 -12 Td
+(   Real eBL / Real AIS / Real Insurance integrations    EXTERNAL PILOT    Per item 11, real) Tj
+0 -12 Td
+(insurer/adjuster/P&I/AIS/eBL-platform integrations are explicitly out of this engagement's) Tj
+0 -12 Td
+(scope -- they require external counterparties and data-sharing agreements this engagement) Tj
+0 -12 Td
+(cannot create.) Tj
+0 -12 Td
+(   Pen Test / Multi-Region / 72h Soak / Independent Audit    PENDING    Mechanism proven) Tj
+0 -12 Td
+(\(docs/governance/production-blockers.json, all 8 blockers READY_FOR_REAL_QUALIFICATION\);) Tj
+0 -12 Td
+(real external qualification \(an actual vendor engagement, actual multi-region infra, actual) Tj
+0 -12 Td
+(72-hour production-scale run\) has not happened.) Tj
+0 -12 Td
+(   MLETR Legal Qualification    PENDING    docs/VERIQO_MLETR_EBL_CONFORMANCE_MAPPING_V0_2.md) Tj
+0 -12 Td
+(records an honest, repeated primary-source-verification attempt that could not reach a legal) Tj
+0 -12 Td
+(authority able to confirm MLETR conformance from this engagement's position -- this remains) Tj
+0 -12 Td
+(a qualified legal opinion this engagement cannot produce.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(3. DOCUMENTATION INVENTORY \(ITEM 21\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Rather than fabricate placeholder documents for every item named, this) Tj
+0 -12 Td
+(inventory reports what already exists and covers the item, what is) Tj
+0 -12 Td
+(partially covered, and what is a genuine gap -- consistent with) Tj
+0 -12 Td
+(this engagement's discipline of never claiming a deliverable exists when) Tj
+0 -12 Td
+(it does not.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(TECHNICAL DOCUMENTATION) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 4627 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+() Tj
+0 -12 Td
+(   Named document    Status    Where) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   Architecture Overview    DONE    docs/ARCHITECTURE.md) Tj
+0 -12 Td
+(   API Specification    PARTIAL    Every Commercial API v1 route is documented in) Tj
+0 -12 Td
+(pkg/commercial/api/store.go's and commercial_v1_routes.go's own doc comments) Tj
+0 -12 Td
+(\(request/response shapes, status-code mapping\) -- no single standalone OpenAPI/API-spec) Tj
+0 -12 Td
+(document exists yet.) Tj
+0 -12 Td
+(   Security Model    DONE    docs/THREAT_MODEL.md,) Tj
+0 -12 Td
+(docs/governance/SECURITY_QUALIFICATION_PACK.md) Tj
+0 -12 Td
+(   Evidence Model    PARTIAL    pkg/commercial/evidencefabric's own doc comment is the) Tj
+0 -12 Td
+(canonical model description; no standalone customer-facing "Evidence Model" document exists.) Tj
+0 -12 Td
+(   Trust Model    DONE    docs/VERIQO_TRUST_AUTHORITY_MODEL_RESPONSE.md) Tj
+0 -12 Td
+(   Replay Specification    PARTIAL    verticalslice.Replay/Store.Replay's own doc comments) Tj
+0 -12 Td
+(describe the mechanism; no standalone spec document.) Tj
+0 -12 Td
+(   Verifier Specification    PARTIAL) Tj
+0 -12 Td
+(docs/governance/CASE_ROOM_AND_DOSSIER_VERIFIER_SPECIFICATION.md covers the earlier) Tj
+0 -12 Td
+(insurance-domain verifier; pkg/commercial/packageverify's own doc comment covers this) Tj
+0 -12 Td
+(sprint's Commercial verifier, but the two have not been consolidated into one spec.) Tj
+0 -12 Td
+(   Deployment Guide    DONE    docs/governance/PRODUCTION_DEPLOYMENT_AND_OPERATIONS_GUIDE.md) Tj
+0 -12 Td
+(   Backup/Restore    GAP    No document or mechanism exists -- ties directly to the) Tj
+0 -12 Td
+(Deployment gap above \(nothing durable in the Commercial API layer to back up yet\).) Tj
+0 -12 Td
+(   Incident Response    GAP    No document exists. Named as a MUST-CLOSE-BEFORE-PAID-PILOT) Tj
+0 -12 Td
+(item in docs/VERIQO_PILOT_MODE_AND_DEPLOYMENT_READINESS.md.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(CUSTOMER-FACING DOCUMENTATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Named document    Status    Where) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   VERIQO Overview    GAP    No customer-facing \(non-technical\) overview document exists;) Tj
+0 -12 Td
+(docs/ARCHITECTURE.md is written for engineers.) Tj
+0 -12 Td
+(   Pilot Guide    GAP    No document exists.) Tj
+0 -12 Td
+(   Case Walkthrough    DONE    docs/VERIQO_DEMO_CASES.md -- three full walkthroughs in the) Tj
+0 -12 Td
+(exact What-Knows/Does-Not-Know/Can-Prove/Legal-Question shape item 14-16 ask for.) Tj
+0 -12 Td
+(   Evidence Dossier Guide    PARTIAL    dossier.RenderMarkdown's field-by-field output and) Tj
+0 -12 Td
+(docs/VERIQO_DEMO_CASES.md's worked examples show what a dossier contains; no standalone "how) Tj
+0 -12 Td
+(to read your dossier" guide.) Tj
+0 -12 Td
+(   Integration Guide    GAP    No customer-facing "how to call the Commercial API v1 from) Tj
+0 -12 Td
+(your systems" guide exists \(distinct from the internal API Specification gap above\).) Tj
+0 -12 Td
+(   Security FAQ    GAP    No document exists.) Tj
+0 -12 Td
+(   Data Handling    PARTIAL    docs/data/VERIQO_EXTERNAL_DATA_RIGHTS_REGISTER.md covers) Tj
+0 -12 Td
+(data-rights obligations for external sources; no customer-facing data-handling document.) Tj
+0 -12 Td
+(   Limitations    PARTIAL    Every dossier's standardLimitations \(see) Tj
+0 -12 Td
+(pkg/commercial/dossier/dossier.go\) and docs/VERIQO_DEMO_CASES.md's "Remains a Legal) Tj
+0 -12 Td
+(Question" sections state real limitations per-case; no single consolidated Limitations) Tj
+0 -12 Td
+(document.) Tj
+0 -12 Td
+(   Legal positioning    GAP    Item 8's marketing-language discipline \("Court/Arbitration) Tj
+0 -12 Td
+(Evidence Support," never "Court-admissible guaranteed"\) is followed in every document this) Tj
+0 -12 Td
+(engagement writes, but no standalone legal-positioning document exists.) Tj
+0 -12 Td
+(   MLETR positioning    DONE    docs/VERIQO_MLETR_EBL_CONFORMANCE_MAPPING_V0_2.md) Tj
+0 -12 Td
+(   Electronic evidence positioning    PARTIAL    Covered inside the MLETR mapping and) Tj
+0 -12 Td
+(docs/THREAT_MODEL.md; no standalone document.) Tj
+0 -12 Td
+(   No-legal-conclusion policy    PARTIAL    Enforced in every dossier's Limitations section) Tj
+0 -12 Td
+(and this engagement's own language discipline; no standalone policy document.) Tj
+0 -12 Td
+(   Jurisdiction disclaimer    GAP    No document exists.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Why these gaps are named, not filled: several of the customer-facing) Tj
+0 -12 Td
+(gaps above \(VERIQO Overview, Pilot Guide, Security FAQ, Legal) Tj
+0 -12 Td
+(positioning, Jurisdiction disclaimer\) are sales/legal collateral that) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 3999 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(item 26 explicitly places AFTER the readiness gate, as part of business) Tj
+0 -12 Td
+(development this engagement is not asked to execute. Writing hollow) Tj
+0 -12 Td
+(placeholder versions of them now would be exactly the kind of) Tj
+0 -12 Td
+(unsubstantiated claim this engagement's discipline refuses to make; they) Tj
+0 -12 Td
+(are named here as real, specific next steps instead.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(4. COMMERCIALIZATION GATE \(ITEM 22\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Gate    Scope    Status) Tj
+0 -12 Td
+(  ---  ---  ---) Tj
+0 -12 Td
+(   GATE A -- Core    Frozen Core Trust Kernel \(Decision Trust Boundary, ActionAuthorization,) Tj
+0 -12 Td
+(Trust Calculus, DARI, ledger primitives\)    PASS -- frozen, unchanged except minimal API) Tj
+0 -12 Td
+(stabilization, fully re-verified.) Tj
+0 -12 Td
+(   GATE B -- Evidence Fabric    Canonical EvidenceRecord, vertical slice SOURCE->RECEIPT) Tj
+0 -12 Td
+(PASS -- pkg/commercial/evidencefabric + pkg/commercial/verticalslice, both tested.) Tj
+0 -12 Td
+(   GATE C -- Dossier & Verification    Evidence Dossier v1, independent standalone verifier) Tj
+0 -12 Td
+(PASS -- pkg/commercial/dossier, pkg/commercial/packageverify, cmd/veriqo-commercial-verify.) Tj
+0 -12 Td
+(   GATE D -- Commercial API    The 11 named /v1/... routes, no internal kernel types exposed) Tj
+0 -12 Td
+(PASS -- pkg/commercial/api + veriqo/gateway/rest/commercial_v1_routes.go, full HTTP-level) Tj
+0 -12 Td
+(lifecycle test.) Tj
+0 -12 Td
+(   GATE E -- Pilot Mode & Security    Tenant isolation, RBAC/JWT/API-key, audit,) Tj
+0 -12 Td
+(observability    PASS WITH NAMED GAPS -- see з2's YELLOW rows; nothing here is silently) Tj
+0 -12 Td
+(assumed complete.) Tj
+0 -12 Td
+(   GATE F -- Demonstrability    3 canonical demo cases, customer-facing case walkthrough) Tj
+0 -12 Td
+(PASS -- pkg/commercial/democases, docs/VERIQO_DEMO_CASES.md.) Tj
+0 -12 Td
+(   GATE G -- Production    HSM/KMS, durable ledger, production identity/mTLS, secure object) Tj
+0 -12 Td
+(storage, vulnerability scanning, backup/restore, production monitoring, incident response,) Tj
+0 -12 Td
+(multi-region, 100-node scale, 72h soak, independent pen test    NOT YET -- every mechanism) Tj
+0 -12 Td
+(this engagement can build without external infrastructure is built and proven) Tj
+0 -12 Td
+(\(READY_FOR_REAL_QUALIFICATION across all 8 tracked blockers\); real external qualification) Tj
+0 -12 Td
+(has not happened. Per item 10's own instruction, this is reported as) Tj
+0 -12 Td
+(NOT_YET_PRODUCTION_QUALIFIED, not hidden.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(5. WHAT'S NEXT \(ITEM 26 -- NOT THIS ENGAGEMENT'S JOB\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Per the reviewer's own item 26, the following belong to business) Tj
+0 -12 Td
+(development once a real pilot customer is engaged, and are explicitly) Tj
+0 -12 Td
+(outside what this engagement executes: customer acquisition, pilot) Tj
+0 -12 Td
+(proposal, data-sharing agreements, NDAs, paid-pilot commercial) Tj
+0 -12 Td
+(structuring, pricing, security questionnaires, customer onboarding, ROI) Tj
+0 -12 Td
+(measurement against real pilot data, and external data contracts \(for) Tj
+0 -12 Td
+(the real eBL/AIS/insurance integrations named EXTERNAL PILOT above\).) Tj
+0 -12 Td
+(This report's job ends at handing over an honest gate assessment; it) Tj
+0 -12 Td
+(does not attempt any of the above.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(6. BOTTOM LINE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIQO is PILOT-READY, NOT YET FULLY PRODUCTION-QUALIFIED. Every) Tj
+0 -12 Td
+(component a pilot customer would actually touch -- evidence submission,) Tj
+0 -12 Td
+(decision, authorization, dossier, replay, independent verification,) Tj
+0 -12 Td
+(tenant isolation, and three concrete demo cases -- is real, tested, and) Tj
+0 -12 Td
+(demonstrable today. What remains before a PAID pilot or general) Tj
+0 -12 Td
+(production release is real external qualification \(pen test, multi-) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 383 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(region, 72-hour soak, independent audit, MLETR legal qualification\) and) Tj
+0 -12 Td
+(a small number of named, specific engineering gaps \(OIDC, durable) Tj
+0 -12 Td
+(persistence for the Commercial API layer, distributed tracing, incident) Tj
+0 -12 Td
+(response procedure\) -- none of which require redesigning anything this) Tj
+0 -12 Td
+(sprint built.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000015 00000 n 
+0000000098 00000 n 
+0000000168 00000 n 
+0000000236 00000 n 
+0000003680 00000 n 
+0000003816 00000 n 
+0000008684 00000 n 
+0000008820 00000 n 
+0000013499 00000 n 
+0000013635 00000 n 
+0000017687 00000 n 
+0000017825 00000 n 
+0000018260 00000 n 
+0000018398 00000 n 
+trailer
+<< /Size 15 /Root 14 0 R >>
+startxref
+18448
+%%EOF
