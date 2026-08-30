@@ -10,6 +10,24 @@ real tests, or an honest statement of what still cannot be built until
 a named prerequisite exists -- consistent with this engagement's
 standing discipline throughout every prior round.
 
+**Terminology correction (added the following round, per
+`Masih_terlalu_banyak_gap.docx`):** every "End-to-End" / "system-level"
+claim in this document refers ONLY to the CORE TRUST PIPELINE --
+Evidence -> Manifest -> Hypothesis -> Finding -> AuthorizedFinding ->
+Decision -> Ledger. It does NOT cover, and never claimed to cover,
+External API -> Authentication -> Authorization -> Workflow -> Evidence,
+nor External insurance actor -> Broker -> Insurer -> Claim -> Evidence ->
+Decision -> Settlement. The reviewer correctly flagged that "system-
+level" reads as ambiguous with "the whole VERIQO OS" and required this
+be called **"Core Trust Pipeline E2E -- CLOSED,"** never "VERIQO OS E2E
+-- CLOSED," going forward -- "Perbedaannya sangat penting" (the
+difference is very important). This document's own historical section
+headings below are left as originally written (the CLOSURE deliverable
+this document is part of has already been committed and distributed);
+this note is the authoritative correction. See
+`VERIQO_CORE_TRUST_PIPELINE_TO_ACTION_CLOSURE.md`, the following
+round's closure report, for the corrected terminology used throughout.
+
 ---
 
 ## P0 -- Decision Trust Boundary: CLOSED

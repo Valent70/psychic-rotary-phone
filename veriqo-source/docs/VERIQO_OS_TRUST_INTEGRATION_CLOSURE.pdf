@@ -10,7 +10,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Courier >>
 endobj
 4 0 obj
-<< /Length 3843 >>
+<< /Length 3914 >>
 stream
 BT
 /F2 8 Tf
@@ -36,6 +36,42 @@ BT
 (a named prerequisite exists -- consistent with this engagement's) Tj
 0 -12 Td
 (standing discipline throughout every prior round.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Terminology correction \(added the following round, per) Tj
+0 -12 Td
+(Masih_terlalu_banyak_gap.docx\): every "End-to-End" / "system-level") Tj
+0 -12 Td
+(claim in this document refers ONLY to the CORE TRUST PIPELINE --) Tj
+0 -12 Td
+(Evidence -> Manifest -> Hypothesis -> Finding -> AuthorizedFinding ->) Tj
+0 -12 Td
+(Decision -> Ledger. It does NOT cover, and never claimed to cover,) Tj
+0 -12 Td
+(External API -> Authentication -> Authorization -> Workflow -> Evidence,) Tj
+0 -12 Td
+(nor External insurance actor -> Broker -> Insurer -> Claim -> Evidence ->) Tj
+0 -12 Td
+(Decision -> Settlement. The reviewer correctly flagged that "system-) Tj
+0 -12 Td
+(level" reads as ambiguous with "the whole VERIQO OS" and required this) Tj
+0 -12 Td
+(be called "Core Trust Pipeline E2E -- CLOSED," never "VERIQO OS E2E) Tj
+0 -12 Td
+(-- CLOSED," going forward -- "Perbedaannya sangat penting" \(the) Tj
+0 -12 Td
+(difference is very important\). This document's own historical section) Tj
+0 -12 Td
+(headings below are left as originally written \(the CLOSURE deliverable) Tj
+0 -12 Td
+(this document is part of has already been committed and distributed\);) Tj
+0 -12 Td
+(this note is the authoritative correction. See) Tj
+0 -12 Td
+(VERIQO_CORE_TRUST_PIPELINE_TO_ACTION_CLOSURE.md, the following) Tj
+0 -12 Td
+(round's closure report, for the corrected terminology used throughout.) Tj
 0 -12 Td
 () Tj
 0 -12 Td
@@ -96,7 +132,18 @@ BT
 (caller-supplied.) Tj
 0 -12 Td
 (- Canonicalization / deterministic execution: Decision.Hash is) Tj
-0 -12 Td
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 3899 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (computed via pkg/canonical/jcs over exactly those fields plus) Tj
 0 -12 Td
 (Outcome/Rationale/DecidedAt -- the same deterministic,) Tj
@@ -132,18 +179,7 @@ BT
 (- Bypass tests: TestVerifyDecisionProvenanceDetectsAMismatchedFinding) Tj
 0 -12 Td
 (\(a Decision genuinely authorized by one Finding cannot be laundered as) Tj
-ET
-endstream
-endobj
-5 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
-endobj
-6 0 obj
-<< /Length 3800 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (though authorized by a different one\) plus the system-level bypass) Tj
 0 -12 Td
 (suite described under P0 item 3 below.) Tj
@@ -225,7 +261,18 @@ BT
 (\(P1\) proven directly, not merely asserted, inside the same test.) Tj
 0 -12 Td
 () Tj
-0 -12 Td
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 3713 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (P0 -- BYPASS ATTACK SUITE: CLOSED, HONESTLY SCOPED) Tj
 0 -12 Td
 () Tj
@@ -261,18 +308,7 @@ BT
 (is the STRUCTURAL guarantee that makes a bypass impossible BY) Tj
 0 -12 Td
 (CONSTRUCTION regardless of which layer someday calls in: MakeDecision) Tj
-ET
-endstream
-endobj
-7 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
-endobj
-8 0 obj
-<< /Length 3703 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (accepts only a cre.AuthorizedFinding, whose every field is) Tj
 0 -12 Td
 (unexported, so no package anywhere in this repository -- including a) Tj
@@ -354,7 +390,18 @@ BT
 (Status: the STRUCTURAL half of this \(no orchestration layer can) Tj
 0 -12 Td
 (construct authority-bearing types directly, regardless of what it) Tj
-0 -12 Td
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 3946 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (tries\) is proven by the Bypass Attack Suite above. The LIVE half \(an) Tj
 0 -12 Td
 (actual HTTP request or workflow step, attempted against a real running) Tj
@@ -390,18 +437,7 @@ BT
 (\(in pkg/insurance/cre/provenance.go\) requires every) Tj
 0 -12 Td
 (SourceInferenceTraceID a Finding cites to resolve to a real, on-file) Tj
-ET
-endstream
-endobj
-9 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
-endobj
-10 0 obj
-<< /Length 3862 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (inference.InferenceTrace, and refuses a Finding citing a nonexistent) Tj
 0 -12 Td
 (or tampered trace) Tj
@@ -483,7 +519,18 @@ BT
 (real-world qualification layer once kernel integration closure is) Tj
 0 -12 Td
 (done\). This round does not claim any progress here, and none was) Tj
-0 -12 Td
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 2456 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
 (attempted -- it is explicitly out of scope until the P0/P1 items above) Tj
 0 -12 Td
 (are further matured \(in particular, the still-open API/Workflow) Tj
@@ -519,18 +566,7 @@ BT
 (test/integration \(new file\)                   3/3 tests pass \(full pipeline, replay) Tj
 0 -12 Td
 (                                               closure, bypass suite -- 6 subtests\)) Tj
-ET
-endstream
-endobj
-11 0 obj
-<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
-endobj
-12 0 obj
-<< /Length 1325 >>
-stream
-BT
-/F2 8 Tf
-54 756 Td
+0 -12 Td
 (pkg/insurance/guardrails                      all 7 repo-wide invariant scans pass,) Tj
 0 -12 Td
 (                                               confirmed to reach the new decision) Tj
@@ -584,18 +620,18 @@ xref
 0000000098 00000 n 
 0000000168 00000 n 
 0000000236 00000 n 
-0000004131 00000 n 
-0000004267 00000 n 
-0000008119 00000 n 
-0000008255 00000 n 
-0000012010 00000 n 
-0000012146 00000 n 
-0000016061 00000 n 
-0000016199 00000 n 
-0000017577 00000 n 
-0000017715 00000 n 
+0000004202 00000 n 
+0000004338 00000 n 
+0000008289 00000 n 
+0000008425 00000 n 
+0000012190 00000 n 
+0000012326 00000 n 
+0000016325 00000 n 
+0000016463 00000 n 
+0000018972 00000 n 
+0000019110 00000 n 
 trailer
 << /Size 15 /Root 14 0 R >>
 startxref
-17765
+19160
 %%EOF

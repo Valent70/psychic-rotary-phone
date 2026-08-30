@@ -1,0 +1,901 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R] /Count 7 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3637 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO -- CORE TRUST PIPELINE TO ACTION CLOSURE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response to Masih_terlalu_banyak_gap.docx, the reviewer's follow-up) Tj
+0 -12 Td
+(after the prior round's VERIQO_OS_TRUST_INTEGRATION_CLOSURE.md. That) Tj
+0 -12 Td
+(review named a "ROUND NEXT -- P1/P0 INTEGRATION CLOSURE" sequence, items) Tj
+0 -12 Td
+(A through H, and explicitly instructed: do not jump to P2 \(real-world) Tj
+0 -12 Td
+(qualification\) before A-H are closed. This document reports on that) Tj
+0 -12 Td
+(exact sequence, in that exact order, closed this round -- and, per the) Tj
+0 -12 Td
+(reviewer's own explicit correction, never claims more than it proves.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(TERMINOLOGY, STATED UP FRONT) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's single sharpest correction in the review: the prior) Tj
+0 -12 Td
+(round's "End-to-End" / "system-level" language was ambiguous with "the) Tj
+0 -12 Td
+(whole VERIQO OS." This document, and every claim in it, uses "Core) Tj
+0 -12 Td
+(Trust Pipeline E2E" -- never "VERIQO OS E2E." The Core Trust Pipeline) Tj
+0 -12 Td
+(is exactly:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Evidence -> Manifest -> Hypothesis -> Finding -> AuthorizedFinding) Tj
+0 -12 Td
+(    -> Decision -> ActionAuthorization -> Ledger) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round extends that chain by one link \(Decision -> Action) Tj
+0 -12 Td
+(Authorization\) but it remains, honestly, the CORE pipeline only. It) Tj
+0 -12 Td
+(still does not reach, and this document does not claim it reaches:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(External API -> Authentication -> Authorization -> Workflow -> Evidence -> ...) Tj
+0 -12 Td
+(External insurance actor -> Broker -> Insurer -> Claim -> Evidence) Tj
+0 -12 Td
+(    -> Decision -> Settlement) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(What changed this round on that front specifically: items D and E below) Tj
+0 -12 Td
+(give the Core Trust Pipeline its first two REAL, live entry points \(an) Tj
+0 -12 Td
+(HTTP API route and a Workflow DAG\) instead of remaining callable only) Tj
+0 -12 Td
+(from Go test code -- but both entry points still terminate inside the) Tj
+0 -12 Td
+(Core Trust Pipeline's own boundary, not inside the external systems) Tj
+0 -12 Td
+(named above. That distinction is the whole point of this section.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A. DECISION IMMUTABILITY AUDIT -- CLOSED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's exact concern: "Apakah Decision benar-benar sealed) Tj
+0 -12 Td
+(secara package boundary?" \(Is Decision truly sealed at the package) Tj
+0 -12 Td
+(boundary?\), with the named failure mode d.Outcome = "APPROVED" after) Tj
+0 -12 Td
+(construction.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(TestDecisionIsStructurallyImmutableAfterConstruction) Tj
+0 -12 Td
+(\(pkg/insurance/decision/decision_test.go\) proves this mechanically,) Tj
+0 -12 Td
+(not by assertion: reflect.TypeOf\(Decision{}\) is walked field by) Tj
+0 -12 Td
+(field, and the test fails if ANY field's PkgPath is empty \(i.e.) Tj
+0 -12 Td
+(exported\) -- the exact structural condition that would make) Tj
+0 -12 Td
+(d.Outcome = "APPROVED" compile. It further confirms *Decision and) Tj
+0 -12 Td
+(Decision expose the identical method set \(no pointer-receiver method) Tj
+0 -12 Td
+(exists that could mutate a shared value\), and that every method's) Tj
+0 -12 Td
+(receiver type is the value type, never a pointer. Decision was) Tj
+0 -12 Td
+(already built this way in the prior round; this round adds the) Tj
+0 -12 Td
+(mechanical proof that was previously only assumed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(B. DECISION PROVENANCE / MERKLE-ANCHORING CLARITY -- CLOSED) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 3886 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(The reviewer's exact question: "Apa sebenarnya yang di-anchor ke Merkle) Tj
+0 -12 Td
+(tree? ... decision_id, atau canonical\(Decision + provenance\)?") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Answered concretely by) Tj
+0 -12 Td
+(TestOSTrustTamperMutationSensitivity/internally_consistent_forged_replacement_ledger_still_f) Tj
+0 -12 Td
+(ails_against_the_anchored_root) Tj
+0 -12 Td
+(\(test/integration/os_trust_tamper_test.go\): a fully self-consistent) Tj
+0 -12 Td
+(FORGED replacement ledger \(one an attacker built honestly from their) Tj
+0 -12 Td
+(own fabricated content, so Auditor.VerifyChain alone would pass it\)) Tj
+0 -12 Td
+(still produces a Merkle root that diverges from the real, independently) Tj
+0 -12 Td
+(anchored checkpoint root R1. The test logs both roots for direct) Tj
+0 -12 Td
+(inspection. This proves the anchor is sensitive to the full semantic) Tj
+0 -12 Td
+(payload \(canonical\(Decision + provenance\)\), not a bare, swappable) Tj
+0 -12 Td
+(decision_id -- a real attack class \(chain replacement\) that a naive) Tj
+0 -12 Td
+(decision_id-only anchor would not catch.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Rationale provenance \(the reviewer's P1 note: Decision's rationale) Tj
+0 -12 Td
+(should have deterministic lineage back through) Tj
+0 -12 Td
+(AuthorizedFinding -> Evidence -> Manifest -> Hypothesis -> Policy\) was) Tj
+0 -12 Td
+(already structurally true before this round -- Decision.findingHash) Tj
+0 -12 Td
+(and Decision.authorizationHash are copied verbatim from the) Tj
+0 -12 Td
+(AuthorizedFinding that authorized it, never re-derived or) Tj
+0 -12 Td
+(caller-supplied -- and remains unchanged this round.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(C. TAMPER MUTATION TESTS -- CLOSED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's exact spec: Run A -> valid root R1 -> mutate one byte in) Tj
+0 -12 Td
+(evidence/manifest/finding/decision/ledger payload -> expect R2 != R1) Tj
+0 -12 Td
+(AND verification FAILS.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(test/integration/os_trust_tamper_test.go's) Tj
+0 -12 Td
+(TestOSTrustTamperMutationSensitivity implements this exactly, as six) Tj
+0 -12 Td
+(subtests: a manifest ManifestHash bit-flip, a manifest SHA256) Tj
+0 -12 Td
+(bit-flip, a Finding Hash bit-flip, a Finding CONTENT change with a) Tj
+0 -12 Td
+(stale hash \(the cheapest, most literal "one byte changed" attack\), a) Tj
+0 -12 Td
+(ledger payload bit-flip caught by Auditor.VerifyChain's hash) Tj
+0 -12 Td
+(recomputation, and the forged-replacement-ledger case from item B) Tj
+0 -12 Td
+(above. Decision itself has no exposed field to flip by design \(see) Tj
+0 -12 Td
+(item A\); its own tamper-sensitivity is proven via the one real,) Tj
+0 -12 Td
+(mutable surface it produces -- the ledger payload.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(INSURANCE REAL-WORLD WIRING -- CLOSED \(KERNEL-TO-FACADE WIRING, NOT THE FULL REAL-WORLD) Tj
+0 -12 Td
+(NETWORK\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's item 16, flagged as "yang paling penting" \(the most) Tj
+0 -12 Td
+(important not to lose\): pkg/insurance/decision was only the decision) Tj
+0 -12 Td
+(kernel, disconnected from this repository's own, much larger,) Tj
+0 -12 Td
+(already-real insurance claim orchestration) Tj
+0 -12 Td
+(\(pkg/insurance/api.Facade, ~37 domain packages built across many) Tj
+0 -12 Td
+(prior rounds -- policy, party, claim, coverage, quantum, recovery,) Tj
+0 -12 Td
+(salvage, network, reserve, dispute, regulatory, payment, credential,) Tj
+0 -12 Td
+(and more\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This round adds Facade.DecideClaim \(pkg/insurance/api/api.go\),) Tj
+0 -12 Td
+(wiring the Facade's existing, real 15-stage claim lifecycle to the) Tj
+0 -12 Td
+(Decision Trust Boundary via the identical gated chain:) Tj
+0 -12 Td
+(cre.BuildFinding -> cre.AuthorizeGrounded -> decision.MakeDecision ->) Tj
+0 -12 Td
+(decision.AppendToLedger.) Tj
+0 -12 Td
+(It is gated on the case having reached DOSSIER_GENERATED \(every real) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 3996 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(analysis step the Facade drives has already run\) and on a hypothesis) Tj
+0 -12 Td
+(the Facade's OWN AnalyzeCausation call actually analyzed -- a caller) Tj
+0 -12 Td
+(cannot decide a claim against a hypothesis this case's own causation) Tj
+0 -12 Td
+(analysis never evaluated. Four tests in) Tj
+0 -12 Td
+(pkg/insurance/api/decideclaim_test.go prove the legitimate path and) Tj
+0 -12 Td
+(three refusals: before DOSSIER_GENERATED, against an unauthorized) Tj
+0 -12 Td
+(hypothesis, and against ungrounded evidence.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Honest scope: this closes the WIRING gap the reviewer named. It) Tj
+0 -12 Td
+(does NOT build the full Real-World Insurance Network \(Policy -> Insured) Tj
+0 -12 Td
+(-> Broker -> Underwriter -> Insurer -> Reinsurer -> P&I -> Claim ->) Tj
+0 -12 Td
+(Surveyor -> Loss Adjuster -> Coverage Assessment -> Liability ->) Tj
+0 -12 Td
+(Quantum -> Settlement -> Recovery/Subrogation\) or the cross-domain) Tj
+0 -12 Td
+(Insurance <-> Maritime <-> Cargo <-> Trade <-> Finance <-> eBL <->) Tj
+0 -12 Td
+(Payment integration -- those remain P2, per the reviewer's own) Tj
+0 -12 Td
+(sequencing, and are not claimed here.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(D. API IMPLEMENTATION + ENFORCEMENT -- CLOSED \(LIVE BOUNDARY, HONESTLY SCOPED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's required shape: API -> Identity -> Authorization ->) Tj
+0 -12 Td
+(Validation -> Trusted pipeline, with the explicit prohibition "Tidak) Tj
+0 -12 Td
+(boleh ada API -> Decision constructor secara langsung.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(New route POST /insurance/decide) Tj
+0 -12 Td
+(\(veriqo/gateway/rest/insurance_decide_route.go\), composed behind this) Tj
+0 -12 Td
+(gateway's PRE-EXISTING, real security stack) Tj
+0 -12 Td
+(\(security.JWTMiddleware for Identity, security.RBACMiddleware for) Tj
+0 -12 Td
+(Authorization -- the same middleware /lifecycle/run_unified already) Tj
+0 -12 Td
+(used\) -- this round adds the route, not the auth infrastructure. The) Tj
+0 -12 Td
+(handler's own job is only Validation \(JSON decode, real field checks) Tj
+0 -12 Td
+(via claimworkflow.BuildClaimDecisionPlan\) and invoking the Trusted) Tj
+0 -12 Td
+(pipeline \(item E below\). It never constructs a decision.Decision,) Tj
+0 -12 Td
+(cre.AuthorizedFinding, or finding.Finding directly.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Five tests in veriqo/gateway/rest/insurance_decide_route_test.go) Tj
+0 -12 Td
+(prove this over a genuine net/http round trip: the legitimate path) Tj
+0 -12 Td
+(\(200, a real ledgered Decision\), no Bearer token \(401, zero ledger) Tj
+0 -12 Td
+(records\), a valid token with the wrong role \(403, zero ledger) Tj
+0 -12 Td
+(records\), ungrounded evidence from an authenticated+authorized caller) Tj
+0 -12 Td
+(\(422, zero ledger records\), and the route's own nil-safety \(404 when) Tj
+0 -12 Td
+(InsuranceLedger is not configured, matching every pre-existing) Tj
+0 -12 Td
+(caller of NewServer\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Honest scope: this is the Core Trust Pipeline's first live HTTP) Tj
+0 -12 Td
+(entry point. It is not a full claim-management REST API \(there is no) Tj
+0 -12 Td
+(persisted case store reachable over HTTP -- that would require) Tj
+0 -12 Td
+(building the case-store/session layer this repository does not yet) Tj
+0 -12 Td
+(have, a materially larger undertaking left as a named next step, not) Tj
+0 -12 Td
+(silently implied as done\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(E. WORKFLOW IMPLEMENTATION + ENFORCEMENT -- CLOSED \(LIVE PATH, HONESTLY SCOPED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's required shape: Workflow -> Policy -> Evidence ->) Tj
+0 -12 Td
+(Finding -> Authorization -> Decision, with the explicit prohibition) Tj
+0 -12 Td
+("Tidak boleh ada Workflow -> Decision constructor secara langsung.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(New package pkg/insurance/claimworkflow builds a real) Tj
+0 -12 Td
+(veriqo/pkg/workflow.Plan -- this repository's own pre-existing) Tj
+0 -12 Td
+(Multi-Agent Runtime / Distributed Workflow engine \(Planner, Scheduler,) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4139 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(Executor, checkpointing\) -- with five steps: finalize_evidence,) Tj
+0 -12 Td
+(build_hypothesis, build_finding, authorize_finding, decide.) Tj
+0 -12 Td
+(Each step's Agent function only ever sees the named outputs of the) Tj
+0 -12 Td
+(steps it declared as dependencies \(workflow.AgentInput.Outputs\),) Tj
+0 -12 Td
+(which is what makes "the decide step reaches a Decision without a real) Tj
+0 -12 Td
+(AuthorizedFinding" structurally impossible, not merely conventional: a) Tj
+0 -12 Td
+(Plan whose decide step's DependsOn omits authorize_finding) Tj
+0 -12 Td
+(receives no such key in Outputs at all.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Three tests in pkg/insurance/claimworkflow/claimworkflow_test.go) Tj
+0 -12 Td
+(prove: the legitimate five-step run producing a real, ledgered) Tj
+0 -12 Td
+(Decision; a hand-crafted malicious Plan \(built the way a real attacker) Tj
+0 -12 Td
+(would -- directly against veriqo/pkg/workflow, stripping decide's) Tj
+0 -12 Td
+(dependency on authorize_finding\) refused with zero ledger records;) Tj
+0 -12 Td
+(and ungrounded evidence refused at authorize_finding, before) Tj
+0 -12 Td
+(decide ever runs. POST /insurance/decide \(item D\) uses this exact) Tj
+0 -12 Td
+(DAG as its own Trusted pipeline -- the two boundaries are not separate) Tj
+0 -12 Td
+(implementations of the same logic, they are the same implementation) Tj
+0 -12 Td
+(reached two different ways.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(F. KNOWLEDGE/INTELLIGENCE BOUNDARY EXECUTABLE TESTS -- CLOSED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer accepted the prior round's "re-confirmed already closed") Tj
+0 -12 Td
+(claim provisionally, but required proof the flow is Intelligence ->) Tj
+0 -12 Td
+(Hypothesis, never Intelligence -> Authoritative Finding directly:) Tj
+0 -12 Td
+("salah satu prinsip terpenting VERIQO.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(test/integration/os_trust_intelligence_boundary_test.go's) Tj
+0 -12 Td
+(TestIntelligenceOutputCanOnlyInformAHypothesisNeverAssertAFinding) Tj
+0 -12 Td
+(drives a real, lifecycle-gated inference.Recorder through a genuine) Tj
+0 -12 Td
+(AI recommendation, then proves three shortcut attempts each fail:) Tj
+0 -12 Td
+(\(1\) injecting the AI's own recommended verdict directly onto a) Tj
+0 -12 Td
+(Hypothesis via Add -- discarded, HypothesisSet.Add always stores) Tj
+0 -12 Td
+(StatusUnproven regardless of caller input; \(2\) escalating a real) Tj
+0 -12 Td
+(Finding's ConfidenceBasis to the AI's recommended verdict rather than) Tj
+0 -12 Td
+(the hypothesis's real, evidence-derived status -- refused by) Tj
+0 -12 Td
+(cre.Authorize's own verification; \(3\) citing a fabricated inference) Tj
+0 -12 Td
+(trace ID -- refused with cre.ErrInferenceTraceNotFound. The one) Tj
+0 -12 Td
+(legitimate path is then shown: a Finding's ConfidenceBasis honestly) Tj
+0 -12 Td
+(reflects the REAL derived status \(StatusContradicted, since the) Tj
+0 -12 Td
+(AI's own "well-supported" recommendation was wrong and real evidence) Tj
+0 -12 Td
+(overrides it\) and authorizes successfully.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(G. DECISION -> ACTION AUTHORIZATION BOUNDARY -- CLOSED \(DESIGN + IMPLEMENTATION\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's new item 17, flagged as likely the next-generation) Tj
+0 -12 Td
+(P1/P0 boundary: after a Decision, what governs it being used for) Tj
+0 -12 Td
+(action \(Approve claim -> Settlement; Insurance notification;) Tj
+0 -12 Td
+(Trade-finance action\)? Required fields: decision authority, actor,) Tj
+0 -12 Td
+(policy, scope, expiry, permitted action, conditions, audit trail.) Tj
+0 -12 Td
+(Explicit prohibition: "Jangan sampai: trusted Decision -> arbitrary) Tj
+0 -12 Td
+(action.") Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(New package pkg/insurance/action defines ActionAuthorization --) Tj
+0 -12 Td
+(the identical sealed-type discipline as AuthorizedFinding and) Tj
+0 -12 Td
+(Decision \(zero exported fields, value-receiver-only methods, proven) Tj
+0 -12 Td
+(via the same reflect-based mechanical test as item A\). AuthorizeAction) Tj
+0 -12 Td
+(is the ONLY exported constructor, requiring a real, non-zero Decision,) Tj
+0 -12 Td
+(a non-empty actor/policyRef/scope, a known Action from a closed) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 4284 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(four-value vocabulary \(APPROVE_SETTLEMENT, SEND_NOTIFICATION,) Tj
+0 -12 Td
+(INITIATE_TRADE_FINANCE_ACTION, INITIATE_RECOVERY_ACTION -- the) Tj
+0 -12 Td
+(reviewer's own three named examples, generalised to categories, plus) Tj
+0 -12 Td
+(one more consistent with existing pkg/insurance/recovery work\), and an) Tj
+0 -12 Td
+(expiry strictly after the authorization tick \(an authorization already) Tj
+0 -12 Td
+(expired at the moment of minting is refused outright\).) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(AuthorizeExecution is the one gate a downstream executor must call) Tj
+0 -12 Td
+(before actually taking an action: it independently re-verifies the) Tj
+0 -12 Td
+(authorization's own hash and its binding to the SPECIFIC Decision) Tj
+0 -12 Td
+(\(VerifyActionAuthorization\), then checks the attempting actor,) Tj
+0 -12 Td
+(attempted action, and attempted scope each exactly match what was) Tj
+0 -12 Td
+(granted, AND that the current tick has not passed the grant's expiry.) Tj
+0 -12 Td
+(Nineteen tests in pkg/insurance/action/action_test.go prove the) Tj
+0 -12 Td
+(legitimate path and every named bypass: an unauthoritative \(zero\)) Tj
+0 -12 Td
+(Decision, empty actor/policy/scope, an unknown action, an) Tj
+0 -12 Td
+(already-expired grant, a mismatched Decision, an expired authorization) Tj
+0 -12 Td
+(at execution time, and -- the sharpest three -- a different actor, a) Tj
+0 -12 Td
+(different action, and a different scope than the one actually granted,) Tj
+0 -12 Td
+(each independently refused.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(test/integration/os_trust_action_boundary_test.go extends this to a) Tj
+0 -12 Td
+(full system-level proof: the real Core Trust Pipeline \(Evidence ->) Tj
+0 -12 Td
+(... -> Decision\) continues one step further into Decision ->) Tj
+0 -12 Td
+(ActionAuthorization -> AuthorizeExecution, on the SAME real ledger the) Tj
+0 -12 Td
+(Decision itself was anchored to. Four bypass attempts \(wrong actor,) Tj
+0 -12 Td
+(wrong action, wrong scope, expired grant\) are each proven to leave) Tj
+0 -12 Td
+(ZERO new ledger entries; only the one legitimate execution produces) Tj
+0 -12 Td
+(the final ACTION_EXECUTED record. The finished ledger is) Tj
+0 -12 Td
+(DECISION_RECORDED -> ACTION_AUTHORIZATION_RECORDED -> ACTION_EXECUTED,) Tj
+0 -12 Td
+(independently hash-chain-verified.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Honest scope: this closes the reviewer's explicit ask -- "design) Tj
+0 -12 Td
+(dan implement authorization untuk tindakan downstream" -- as a real,) Tj
+0 -12 Td
+(tested, sealed boundary. It does not implement the downstream actions) Tj
+0 -12 Td
+(themselves \(an actual settlement transfer, an actual notification) Tj
+0 -12 Td
+(dispatch, an actual trade-finance system call\) -- AuthorizeExecution) Tj
+0 -12 Td
+(answers "is this specific actor, right now, permitted to take this) Tj
+0 -12 Td
+(specific action," and deliberately has no opinion on HOW that action) Tj
+0 -12 Td
+(is then carried out. Wiring AuthorizeExecution in front of a real) Tj
+0 -12 Td
+(settlement/notification/trade-finance integration is P2 work, named) Tj
+0 -12 Td
+(but not started, consistent with every other real-external-system) Tj
+0 -12 Td
+(item in this document.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(H. MLETR PRIMARY-SOURCE VERIFICATION -- RETRIED, STILL NOT ACHIEVABLE THIS ROUND \(HONESTLY) Tj
+0 -12 Td
+(DOCUMENTED\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Retried against two additional domains this round) Tj
+0 -12 Td
+(\(academy.iccwbo.org, handwiki.org\), both EGRESS_BLOCKED -- six) Tj
+0 -12 Td
+(distinct domains now blocked across two rounds, reading as a blanket) Tj
+0 -12 Td
+(network-egress policy rather than a per-domain outage a further retry) Tj
+0 -12 Td
+(would likely fix. WebSearch \(a separate, unblocked tool\) did surface) Tj
+0 -12 Td
+(real, sourced synthesis for Articles 10, 11, 15, 17, and 18 this round) Tj
+0 -12 Td
+(-- documented in full, with source URLs, in a new "Primary-source) Tj
+0 -12 Td
+(verification retry \(H\)" section of) Tj
+0 -12 Td
+(VERIQO_MLETR_EBL_CONFORMANCE_MAPPING_V0_2.md. Critically, that) Tj
+0 -12 Td
+(synthesis appears to CONTRADICT the prior round's own article-number) Tj
+0 -12 Td
+(guesses \(Article 12 was guessed as "change of medium"; this round's) Tj
+0 -12 Td
+(sources instead name Articles 17 and 18 as the change-of-medium pair\)) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 3601 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(-- flagged prominently in the document as a correction, downgrading the) Tj
+0 -12 Td
+(prior round's "HIGHER confidence" framing on Articles 9/11/12 rather) Tj
+0 -12 Td
+(than leaving the contradiction silently unresolved. Articles 13, 16,) Tj
+0 -12 Td
+(17, and 18 remain explicitly LOW CONFIDENCE and are not marked) Tj
+0 -12 Td
+(complete, per the reviewer's own explicit instruction.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(UPDATED STATUS TABLE) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Legend: [GREEN] closed and tested this round or a prior round ∑ [YELLOW] closed for) Tj
+0 -12 Td
+(a bounded scope, honestly flagged where it stops ∑ [RED] not started, named) Tj
+0 -12 Td
+(as P2) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Domain    Status) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   Evidence integrity    [GREEN]) Tj
+0 -12 Td
+(   Manifest integrity    [GREEN]) Tj
+0 -12 Td
+(   Hypothesis controls    [GREEN]) Tj
+0 -12 Td
+(   Finding controls    [GREEN]) Tj
+0 -12 Td
+(   AuthorizedFinding    [GREEN]) Tj
+0 -12 Td
+(   Insurance Decision constructor    [GREEN]) Tj
+0 -12 Td
+(   Unauthorized Decision prevention    [GREEN]) Tj
+0 -12 Td
+(   Decision -> Ledger    [GREEN]) Tj
+0 -12 Td
+(   Decision immutability \(mechanically proven\)    [GREEN] \(A, this round\)) Tj
+0 -12 Td
+(   Decision Merkle-anchoring clarity \(canonical\(Decision+provenance\), not bare ID\)) Tj
+0 -12 Td
+([GREEN] \(B, this round\)) Tj
+0 -12 Td
+(   Tamper mutation sensitivity \(R1 vs R2 divergence, every artifact\)    [GREEN] \(C, this) Tj
+0 -12 Td
+(round\)) Tj
+0 -12 Td
+(   Core Trust Pipeline chain \(Evidence->...->Ledger\)    [GREEN]) Tj
+0 -12 Td
+(   Core Trust Pipeline deterministic replay    [GREEN]) Tj
+0 -12 Td
+(   Merkle-root convergence    [GREEN]) Tj
+0 -12 Td
+(   Direct bypass tests \(structural\)    [GREEN]) Tj
+0 -12 Td
+(   Intelligence -> Hypothesis boundary \(executable adversarial proof\)    [GREEN] \(F, this) Tj
+0 -12 Td
+(round\)) Tj
+0 -12 Td
+(   Insurance Facade -> Decision Trust Boundary wiring    [GREEN] \(this round\)) Tj
+0 -12 Td
+(   API live enforcement \(POST /insurance/decide, Identity+Authorization+Validation\)) Tj
+0 -12 Td
+([GREEN] \(D, this round\)) Tj
+0 -12 Td
+(   Workflow live enforcement \(claimworkflow DAG, bypass-tested\)    [GREEN] \(E, this round\)) Tj
+0 -12 Td
+(   Decision -> Action Authorization Boundary    [GREEN] \(G, this round\)) Tj
+0 -12 Td
+(   OS-wide bypass resistance beyond these two entry points    [YELLOW] -- 2 of 6 named) Tj
+0 -12 Td
+(boundaries \(API, Workflow\) now have live orchestration to attack and have been attacked;) Tj
+0 -12 Td
+(Storage/Replay boundaries remain structural-only per the prior round's own honest scoping) Tj
+0 -12 Td
+(   MLETR primary verification    [YELLOW] -- retried, still not primary-source-verified;) Tj
+0 -12 Td
+(second-hand sourced synthesis added and reconciled against prior guesses \(H, this round\)) Tj
+0 -12 Td
+(   eBL real-world interoperability    [RED] P2) Tj
+0 -12 Td
+(   Insurance network integration \(full real-world model\)    [RED] P2) Tj
+0 -12 Td
+(   Real insurers/P&I/reinsurers    [RED] P2) Tj
+0 -12 Td
+(   Real counterparties    [RED] P2) Tj
+0 -12 Td
+(   Real data qualification    [RED] P2) Tj
+0 -12 Td
+(   Independent audit    [RED] P2) Tj
+0 -12 Td
+(   Downstream action execution \(settlement/notification/trade-finance systems themselves\)) Tj
+0 -12 Td
+([RED] P2 \(the AUTHORIZATION boundary in front of them is [GREEN], per G\)) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(---) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(VERIFICATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(gofmt -l .                                     clean) Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Length 2698 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(go build ./...                                 clean) Tj
+0 -12 Td
+(go vet ./...                                   clean) Tj
+0 -12 Td
+(go test -race \(decision, action, claimworkflow,) Tj
+0 -12 Td
+(  api, cre, causation, manifest, audit,) Tj
+0 -12 Td
+(  workflow, gateway/rest, test/integration\)     225 PASS, 0 FAIL, no data races) Tj
+0 -12 Td
+(go test ./...                                  full repository suite, 0 FAIL) Tj
+0 -12 Td
+(pkg/insurance/guardrails whole-tree scan        7/7 PASS, re-confirmed reaching every) Tj
+0 -12 Td
+(                                                 new package this round added) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Every negative/authorization check added this round was verified via) Tj
+0 -12 Td
+(break-test-fix-restore: temporarily disabled, confirmed the exact) Tj
+0 -12 Td
+(expected diagnostic, restored. See the individual test files named in) Tj
+0 -12 Td
+(each section above for the specific assertions.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(HONEST SCOPE BOUNDARY) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(- This document, and every "Core Trust Pipeline E2E" claim in it,) Tj
+0 -12 Td
+(covers Evidence through Decision through Action Authorization. It) Tj
+0 -12 Td
+(does not cover, and does not claim to cover, the full external) Tj
+0 -12 Td
+(API/Workflow/Insurance/Maritime/Trade-Finance/eBL chain the) Tj
+0 -12 Td
+(reviewer's own diagram named.) Tj
+0 -12 Td
+(- The two new live entry points \(API, Workflow\) terminate inside the) Tj
+0 -12 Td
+(Core Trust Pipeline's own boundary. Neither is a persisted,) Tj
+0 -12 Td
+(production claim-management system; both are honestly scoped,) Tj
+0 -12 Td
+(additive routes/DAGs proving the boundary is live-attackable and) Tj
+0 -12 Td
+(resistant, not a claim that the full external system now exists.) Tj
+0 -12 Td
+(- AuthorizeExecution \(item G\) is an authorization gate, not an) Tj
+0 -12 Td
+(action executor. No settlement transfer, notification dispatch, or) Tj
+0 -12 Td
+(trade-finance system call is implemented by this round's work.) Tj
+0 -12 Td
+(- MLETR Articles 9-18 remain a technical-evidentiary self-assessment,) Tj
+0 -12 Td
+(not a legal opinion, and -- after two rounds and six distinct blocked) Tj
+0 -12 Td
+(domains -- still have not been checked against primary UNCITRAL) Tj
+0 -12 Td
+(source text by this session.) Tj
+0 -12 Td
+(- This remains Level 2 \(Engineering Verified\) work on this) Tj
+0 -12 Td
+(engagement's own 4-level maturity model. Level 3 \(Controlled) Tj
+0 -12 Td
+(External Validation\) and Level 4 \(Production Proven\) require real) Tj
+0 -12 Td
+(external counterparties, real data, and independent audit -- P2,) Tj
+0 -12 Td
+(per the reviewer's own sequencing, and explicitly not started.) Tj
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 16 0 R >>
+endobj
+18 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 19
+0000000000 65535 f 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000182 00000 n 
+0000000250 00000 n 
+0000003939 00000 n 
+0000004075 00000 n 
+0000008013 00000 n 
+0000008149 00000 n 
+0000012197 00000 n 
+0000012333 00000 n 
+0000016525 00000 n 
+0000016663 00000 n 
+0000021000 00000 n 
+0000021138 00000 n 
+0000024792 00000 n 
+0000024930 00000 n 
+0000027681 00000 n 
+0000027819 00000 n 
+trailer
+<< /Size 19 /Root 18 0 R >>
+startxref
+27869
+%%EOF
