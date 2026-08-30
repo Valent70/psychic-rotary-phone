@@ -121,7 +121,7 @@ func BuildClaimDecisionPlan(in ClaimDecisionInput, ledger *audit.AuditStore) (wo
 		Agent: func(a workflow.AgentInput) (any, error) {
 			m := manifest.NewRegistry()
 			for _, spec := range in.Manifests {
-				if err := finalizeOneManifest(m, spec, in.CaseID, a.Tick); err != nil {
+				if err := FinalizeManifestSpec(m, spec, in.CaseID, a.Tick); err != nil {
 					return nil, fmt.Errorf("finalizing manifest for %s: %w", spec.EvidenceID, err)
 				}
 			}
@@ -239,10 +239,10 @@ func BuildClaimDecisionPlan(in ClaimDecisionInput, ledger *audit.AuditStore) (wo
 	}, nil
 }
 
-// finalizeOneManifest drives one manifest.Registry entry through the
+// FinalizeManifestSpec drives one manifest.Registry entry through the
 // same real custody-chain sequence buildOSTrustPipeline (test/
 // integration/os_trust_integration_test.go) hand-builds.
-func finalizeOneManifest(m *manifest.Registry, spec ManifestSpec, caseID string, tick uint64) error {
+func FinalizeManifestSpec(m *manifest.Registry, spec ManifestSpec, caseID string, tick uint64) error {
 	evidenceID := spec.EvidenceID
 	if _, err := m.RegisterDraft(manifest.Manifest{
 		TenantID: "tenant-claimworkflow", CaseID: caseID, EvidenceID: evidenceID, Version: 1,

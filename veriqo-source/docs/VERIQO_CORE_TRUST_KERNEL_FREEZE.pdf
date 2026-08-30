@@ -1,0 +1,198 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R] /Count 2 >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 3794 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(VERIQO -- CORE TRUST KERNEL FREEZE FOR COMMERCIALIZATION) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Response to Tubtaskan_semua_secara_details.docx item 1 \(PRIORITAS) Tj
+0 -12 Td
+(UTAMA -- FREEZE CORE\). Effective as of commit aa010ed on branch) Tj
+0 -12 Td
+(claude/l99-gap-coverage-nv70zy, the packages listed below are) Tj
+0 -12 Td
+(FROZEN FOR COMMERCIALIZATION. This is a declared engineering) Tj
+0 -12 Td
+(policy for the remainder of the Commercialization Sprint, not a Go) Tj
+0 -12 Td
+(language mechanism -- there is no compiler enforcement, only this) Tj
+0 -12 Td
+(document and the discipline of every round that follows it.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WHAT "FROZEN" MEANS) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Allowed on frozen packages:) Tj
+0 -12 Td
+(- Bug fixes \(an incorrect result for a documented, intended input\)) Tj
+0 -12 Td
+(- Security fixes \(a genuine vulnerability, not a hardening preference\)) Tj
+0 -12 Td
+(- Integration fixes \(a wiring/adapter problem where a frozen package's) Tj
+0 -12 Td
+(own real, existing API is being called incorrectly by new) Tj
+0 -12 Td
+(commercial-layer code -- e.g. the DecideClaim/AuthorizeExecution) Tj
+0 -12 Td
+(wiring already completed in the prior round\)) Tj
+0 -12 Td
+(- Test hardening \(more coverage of EXISTING behavior; never a new) Tj
+0 -12 Td
+(invariant that changes behavior\)) Tj
+0 -12 Td
+(- API stabilization \(freezing wire-format compatibility, deprecation) Tj
+0 -12 Td
+(notices; never breaking an existing exported signature without a) Tj
+0 -12 Td
+(compelling security/correctness reason\)) Tj
+0 -12 Td
+(- Documentation) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(NOT allowed on frozen packages:) Tj
+0 -12 Td
+(- Architecture redesign for elegance, DX, or "cleaner code" alone) Tj
+0 -12 Td
+(- New abstractions with no concrete commercial-layer caller) Tj
+0 -12 Td
+(- Changing a sealed type's field set, hash input, or verification) Tj
+0 -12 Td
+(algorithm \(this would silently invalidate every already-anchored) Tj
+0 -12 Td
+(Decision/ActionAuthorization/manifest hash in any deployment\)) Tj
+0 -12 Td
+(- Adding new exported mutation surfaces to any sealed type) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(FROZEN PACKAGE LIST) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(   Area \(reviewer's own naming\)    Package\(s\)) Tj
+0 -12 Td
+(  ---  ---) Tj
+0 -12 Td
+(   Decision Trust Boundary    pkg/insurance/decision) Tj
+0 -12 Td
+(   ActionAuthorization    pkg/insurance/action) Tj
+0 -12 Td
+(   Insurance Decision integration    pkg/insurance/api \(Facade.DecideClaim and everything it) Tj
+0 -12 Td
+(wires\), pkg/insurance/claimworkflow) Tj
+0 -12 Td
+(   Workflow DAG    pkg/workflow) Tj
+0 -12 Td
+(   Trust Calculus    pkg/moat/decision, pkg/moat/intelligence/risk, pkg/trust,) Tj
+0 -12 Td
+(pkg/trust/state) Tj
+0 -12 Td
+(   Evidence foundations    pkg/evidence/manifest, pkg/insurance/evidence,) Tj
+0 -12 Td
+(pkg/insurance/causation, pkg/insurance/cre, pkg/insurance/finding) Tj
+0 -12 Td
+(   Knowledge foundations    pkg/inference, pkg/governance/lifecycle) Tj
+0 -12 Td
+(   Intelligence foundations    pkg/moat/intelligence/*) Tj
+0 -12 Td
+(   DARI guarantees \(Deterministic, Auditable, Replayable, Immutable\)    pkg/platform/audit) Tj
+0 -12 Td
+(\(Merkle/checkpoint/anchor\), pkg/canonical/jcs \(canonicalization\)) Tj
+0 -12 Td
+(   Deterministic execution    pkg/execution, pkg/lifecycle) Tj
+0 -12 Td
+(   Ledger primitives    pkg/platform/audit) Tj
+0 -12 Td
+(   Existing authorization controls    pkg/platform/security, pkg/authz) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Everything the Commercialization Sprint builds from this point forward) Tj
+0 -12 Td
+(is additive: new packages under a pkg/commercial/ tree, new) Tj
+0 -12 Td
+(cmd/ binaries, and new, separately-versioned HTTP routes -- calling) Tj
+0 -12 Td
+(into the frozen list above through its existing, real, tested public) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 919 >>
+stream
+BT
+/F2 8 Tf
+54 756 Td
+(API, never reaching into its internals or duplicating its logic. This) Tj
+0 -12 Td
+(mirrors the exact "additive, non-disruptive" precedent this) Tj
+0 -12 Td
+(engagement's own gateway routes \(/lifecycle/run_unified,) Tj
+0 -12 Td
+(/insurance/decide\) already established.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(WHY THIS MATTERS NOW) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The reviewer's own framing: VERIQO does not need to be "perfect" to) Tj
+0 -12 Td
+(find a pilot customer. Every round up to this one hardened the trust) Tj
+0 -12 Td
+(kernel's own internal correctness. The Commercialization Sprint's job) Tj
+0 -12 Td
+(is to make that kernel externally reachable, demonstrable, and) Tj
+0 -12 Td
+(defensible -- not to keep making it more internally elegant. A frozen) Tj
+0 -12 Td
+(kernel with an honestly-scoped commercial surface beats an) Tj
+0 -12 Td
+(ever-expanding kernel with no external interface at all.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 1 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 2 0 R /F2 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Type /Catalog /Pages 1 0 R >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000078 00000 n 
+0000000148 00000 n 
+0000000216 00000 n 
+0000004062 00000 n 
+0000004198 00000 n 
+0000005168 00000 n 
+0000005304 00000 n 
+trailer
+<< /Size 9 /Root 8 0 R >>
+startxref
+5353
+%%EOF

@@ -583,7 +583,20 @@ func (r *Registry) VerifyCustodyChain(evidenceID string) error {
 // re-entering the mutex (a deadlock: sync.RWMutex is not reentrant) or
 // duplicating the verification logic itself.
 func (r *Registry) verifyCustodyChainLocked(evidenceID string) error {
-	chain := r.custody[evidenceID]
+	return VerifyCustodyChainRecords(r.custody[evidenceID])
+}
+
+// VerifyCustodyChainRecords is VerifyCustodyChain's own pure logic,
+// exported as a standalone function of a plain []CustodyEvent -- no
+// live *Registry required. This exists so a genuinely independent,
+// out-of-process verifier (see cmd/veriqo-commercial-verify) can call
+// the EXACT SAME custody-chain verification this package's own
+// Registry uses internally, rather than re-implementing hash-chain
+// verification a second time and risking drift between "the check
+// Veriqo runs on itself" and "the check an outsider runs" -- the same
+// precedent cmd/veriqo-verify's own doc comment already establishes
+// for algorithmic replay.
+func VerifyCustodyChainRecords(chain []CustodyEvent) error {
 	prev := GenesisHash
 	for i, e := range chain {
 		if e.PreviousHash != prev {

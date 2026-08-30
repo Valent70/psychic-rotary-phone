@@ -36,6 +36,7 @@ import (
 	"strconv"
 	"time"
 
+	commercialapi "veriqo/pkg/commercial/api"
 	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/platform/security"
@@ -59,6 +60,14 @@ type ServerOptions struct {
 	// this route has ever reached. A nil value (every caller of this
 	// function before this route existed) simply omits the route.
 	InsuranceLedger *audit.AuditStore
+
+	// CommercialStore, when non-nil, additionally serves the Commercial
+	// API v1 surface (see commercial_v1_routes.go) -- POST/GET
+	// /v1/evidence, /v1/cases, ... -- over the given
+	// pkg/commercial/api.Store. A nil value (every caller of this
+	// function before this route family existed) simply omits every
+	// /v1/... route, matching InsuranceLedger's own nil-safety pattern.
+	CommercialStore *commercialapi.Store
 }
 
 // NewServer builds an *http.Server exposing every generated route
@@ -80,6 +89,9 @@ func NewServer(addr string, reg *registry.Registry, orch *lifecycle.Orchestrator
 		mux.HandleFunc(path, handler)
 	}
 	for path, handler := range insuranceRoutes(opts.InsuranceLedger) {
+		mux.HandleFunc(path, handler)
+	}
+	for path, handler := range commercialV1Routes(opts.CommercialStore) {
 		mux.HandleFunc(path, handler)
 	}
 	mux.HandleFunc("/healthz", healthHandler(reg))
