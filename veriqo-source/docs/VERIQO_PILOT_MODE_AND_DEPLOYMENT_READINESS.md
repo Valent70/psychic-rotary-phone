@@ -20,10 +20,10 @@ exist yet, rather than being silently assumed.
 | RBAC | **DONE** | `security.RBACMiddleware` (`pkg/platform/security/security.go`) gates route prefixes by JWT role; proven for the insurance routes in `insurance_decide_route_test.go` (`TestInsuranceDecideRouteRejectsWrongRole`). The Commercial API v1 routes compose the SAME middleware stack in `NewServer` -- they are not a second, parallel auth system. |
 | API keys | **DONE** | `security.APIKeyMiddleware`, composed in `NewServer` alongside JWT/RBAC. |
 | OIDC | **GAP** | No OpenID Connect integration exists. `security.JWTMiddleware` verifies a locally HS256-signed token (`security.SignHS256`), not a third-party IdP's token. A pilot customer wanting SSO via their own IdP needs this built; it is not a redesign of the existing JWT layer, just a second, additional verification path. |
-| Evidence retention | **PARTIAL / GAP** | `pkg/governance/data` implements a real retention/purge lifecycle (`ACTIVE -> RETENTION_ELIGIBLE -> HELD -> REDACTION_REQUIRED -> REDACTED -> PURGE_ELIGIBLE -> PURGED`) that preserves audit integrity even after content is purged, and `pkg/insurance/preservation` implements legal-hold orders. Neither is wired into `pkg/commercial/api.Store`'s evidence path yet -- a Commercial API v1 caller today has no way to place a hold or trigger retention on evidence they submitted. The mechanism exists; the integration does not. |
+| Evidence retention | **DONE (P0-C)** | `pkg/governance/data`'s real retention/purge lifecycle (`ACTIVE -> RETENTION_ELIGIBLE -> HELD -> REDACTION_REQUIRED -> REDACTED -> PURGE_ELIGIBLE -> PURGED`, preserving audit integrity even after content is purged) is now wired into `pkg/commercial/api.Store`'s evidence path: `SubmitEvidence` places every item under governance the moment it is finalized (required, not best-effort), and `pkg/commercial/api/preservation.go` exposes `SetRetentionPolicy`/`PlaceLegalHold`/`ReleaseLegalHold`/`EvaluateRetention`/`PurgeEvidence`/`PreservationLedger`/`VerifyPreservationChain`. Legal hold blocks purge both structurally (no `HELD` -> `PURGE_ELIGIBLE` edge) and via an explicit check. Six tests in `preservation_test.go`, including cross-tenant isolation of preservation state. **Residual gap**: these capabilities are reachable via direct Go `Store` calls only -- no `/v1/...` HTTP route exposes them yet. |
 | Export | **DONE** | `dossier.WriteMachinePackage` (the Evidence Dossier v1 "Machine" form) and `Store.WriteDossierPackage`/`GET /v1/cases/{id}/dossier?format=package` -- a real `.zip` a customer can download and independently verify. |
 | Usage metrics | **DONE** | `pkg/commercial/telemetry` + `GET /v1/metrics` -- see item 20 below. |
-| Health | **PARTIAL** | `GET /healthz` reports `{"status":"ok","persistence":...}`. It is a single combined check, not separate liveness/readiness probes -- see item 20. |
+| Health | **DONE (P0-6)** | `GET /healthz` reports `{"status":"ok","persistence":...}` as before, and is now joined by separate `GET /livez` (dependency-free -- proves only that the HTTP server is serving, so an orchestrator never restarts a healthy process over a temporarily-unready dependency) and `GET /readyz` (checks the Registry's persistence flag plus, when configured, the Commercial Store's own `Store.Healthy()`, returning 503 when it is not fit to serve). All three are exempt from the auth stack. See `livez_readyz_test.go`. |
 | Logging | **DONE** | `loggingMiddleware` (`veriqo/gateway/rest/server.go`) logs method/path/status/latency for every request, with explicit log-injection sanitization (`strconv.Quote` on the request path). |
 | Support diagnostics | **GAP** | No dedicated support/diagnostics endpoint (e.g. a bundle of recent logs + config + version for a support ticket) exists. `GET /healthz` and `GET /v1/metrics` are the closest real artifacts a support engineer could use today. |
 
@@ -41,23 +41,30 @@ cryptographically/authorization-bound on every path.
   `CreateCase`, `SubmitEvidence`, `DecideCase`, `ActOnCase`,
   `GenerateDossier`, `Replay` takes a `tenantID` and enforces it via the
   key-namespacing mechanism described above.
-- **Users** and **Policies** are NOT first-class tenant-scoped entities
-  in this codebase. `security.RBACMiddleware`'s `RoleTable` is global
-  (one role-to-path-prefix map for the whole deployment), and JWT
-  `Claims.Subject`/`Claims.Role` identify a caller but are not
-  themselves tied to a specific tenant record anywhere in `Store`. This
-  is the honest gap named in `commercial_v1_routes.go`'s own doc
-  comment: *"TenantID is currently a caller-supplied field (request body
-  or query parameter), not yet cryptographically bound to the verified
-  JWT identity."* A caller who knows another tenant's ID can currently
-  supply it in a request and reach `Store`'s tenant-scoped isolation
-  logic on THAT tenant's behalf -- isolation between tenants once inside
-  `Store` is real and tested, but nothing yet stops a caller from
-  claiming to be a different tenant than their JWT identity actually
-  maps to. Closing this requires a real tenant-identity registry
-  (Users/Tenant mapping) and binding `TenantID` to the verified JWT
-  subject at the middleware layer -- named here as the next integration
-  step, not silently assumed done.
+- **Users -> Tenant binding is now CLOSED (P0-C's sibling item, P0-B).**
+  The gap this section previously named -- *"TenantID is currently a
+  caller-supplied field (request body or query parameter), not yet
+  cryptographically bound to the verified JWT identity"* -- no longer
+  holds. `pkg/commercial/tenancy.Membership` is the real Subject ->
+  Tenant authorization registry, and `effectiveTenantID`
+  (`veriqo/gateway/rest/commercial_v1_routes.go`) is the single place
+  every tenant-scoped route resolves which tenant a request may act as.
+  When JWT auth is configured, the caller-supplied `tenant_id` must be
+  one that request's *verified* subject is granted -- refused with 403
+  otherwise, even for a perfectly valid JWT naming a different tenant --
+  so the invariant `effectiveTenantID == the authenticated subject's
+  authorized tenant` holds structurally. Leaving `Membership` nil while
+  JWT is configured fails closed (every authenticated request refused),
+  never silently falls back to trusting the client. When no JWT
+  middleware is configured at all, the pre-P0-B caller-supplied behavior
+  is retained deliberately: binding is meaningless when no verified
+  identity exists to bind to. Proven by
+  `commercial_v1_tenant_binding_test.go` (5 tests over real signed JWTs)
+  and `pkg/commercial/tenancy/tenancy_test.go` (6 tests).
+- **Policies** remain NOT first-class tenant-scoped entities:
+  `security.RBACMiddleware`'s `RoleTable` is still global (one
+  role-to-path-prefix map for the whole deployment). Tenant-scoped
+  policy is a real, named, still-open item -- not silently assumed done.
 
 **The three mandatory tests the reviewer names, and where they live**:
 
@@ -76,8 +83,8 @@ cryptographically/authorization-bound on every path.
 | Metrics | **DONE** | `pkg/commercial/telemetry.Metrics`, exposed at `GET /v1/metrics`. Every one of the 9 named counters is wired to a real `Store` branch (see that package's own doc comment for exactly which): `evidence_ingestion_total`, `evidence_verification_failures`, `custody_chain_failures`, `decision_latency` (as `decision_latency_avg_millis` + `decision_count`), `authorization_denials`, `action_failures`, `ledger_commit_failures`, `replay_failures`, `external_adapter_failures`. `TestMetricsReflectRealActivity` (`store_test.go`) and `TestCommercialV1RoutesMetricsReflectRealActivity` (`commercial_v1_routes_test.go`) prove these move with real activity, not statically. **Honest exception**: `external_adapter_failures` always reads zero in this reference build -- item 11's real insurer/adjuster/P&I/AIS integrations are external pilot integrations, not built in this engagement, so nothing calls an external adapter yet for this counter to ever increment on. |
 | Logs | **DONE** | `loggingMiddleware`, per-request, sanitized against log injection. |
 | Traces | **GAP** | No distributed tracing (OpenTelemetry spans or equivalent) exists. A request's path through JWT -> RBAC -> APIKey -> handler -> Store is visible only as one log line today, not as a span tree. |
-| Health | **PARTIAL** | One combined `GET /healthz`, not separate `/readyz` (ready to accept traffic) and `/livez` (process is alive, restart if not) endpoints a real orchestrator (Kubernetes, etc.) would want to probe independently. |
-| Readiness / Liveness | **GAP** | See above -- no separate liveness/readiness distinction exists yet. |
+| Health | **DONE (P0-6)** | `GET /healthz` (combined), plus the separate `/livez` and `/readyz` probes below. |
+| Readiness / Liveness | **DONE (P0-6)** | `GET /livez` is deliberately dependency-free (always 200 while the process serves); `GET /readyz` is genuinely dependency-aware, wired to `commercialapi.Store.Healthy()` -- a closed durable Store makes it report 503, proven by `TestReadyzReportsNotReadyOnceCommercialStoreIsClosed` rather than assumed. |
 | Audit | **DONE** | Covered under item 18 above; the same `pkg/platform/audit.AuditStore` backs both business-decision audit and HTTP-request audit. |
 | Alerts | **GAP** | No alerting integration (paging, threshold-based notification) exists. `GET /v1/metrics`' real counters are what a pilot deployment's own monitoring stack would need to scrape and alert on -- this codebase does not push alerts itself. |
 
@@ -95,12 +102,18 @@ MUST-CLOSE vs. CAN-BE-PILOT-ENVIRONMENT framing:
 
 **MUST CLOSE BEFORE PAID PILOT** (per item 10's own list):
 - HSM/KMS-backed production signing -- blocker `hsm_kms`
-- Durable persistent ledger -- **no dedicated blocker entry exists for
-  this specific item**; honestly, `pkg/commercial/api.Store` is
-  explicitly documented as an in-memory reference implementation (see
-  that package's own doc comment) that loses every case and evidence
-  record on process restart. This is a real, named gap this document
-  is not aware of any existing blocker covering.
+- Durable persistent ledger -- **CLOSED (P0-A).** `NewDurableStore`
+  (`pkg/commercial/api/durable.go`) backs every mutating Commercial API
+  call with the real `pkg/storage/wal` write-ahead log (fsync, CRC,
+  defect-classified recovery), reconstructing byte-identical state on
+  restart by replaying recorded inputs through the Store's own core
+  logic. Because that replay covers the audit ledger too, "production
+  audit durability" is substantively closed by the same mechanism.
+  Proven by `TestNewDurableStoreReconstructsIdenticalStateAfterRestart`,
+  `TestDurableStoreRecoversFromATornWrite` (a real crash-mid-write, not
+  just a clean shutdown), and a live restart test against the compiled
+  `veriqo-gateway` binary. `NewStore` remains in-memory-only and
+  unchanged for callers that want it.
 - Production identity/mTLS -- blocker `spire_mtls`
 - Secure object storage + retention -- partially covered by
   `pkg/governance/data`'s retention lifecycle (see item 18 above); no
@@ -111,9 +124,15 @@ MUST-CLOSE vs. CAN-BE-PILOT-ENVIRONMENT framing:
   security is a deployment-time concern, not something this repository
   can qualify on its own).
 - Vulnerability scanning -- blocker `supply_chain_scan`
-- Backup/restore -- **no dedicated blocker entry**; ties back to the
-  durable-persistent-ledger gap above, since there is currently nothing
-  durable in the Commercial API layer to back up.
+- Backup/restore -- **MECHANISM CLOSED (P0-A)**; `Store.Backup` copies
+  the whole durable WAL (fsyncing first, so the copy includes every
+  record a caller was told was durably written), and
+  `RestoreStoreFromBackup` replays it through the exact same code path
+  as ordinary crash recovery -- a backup is deliberately not a separate,
+  untested format. `TestStoreBackupAndRestoreRoundTrip` proves the round
+  trip; `Backup` returns `ErrNotDurable` rather than pretending for an
+  in-memory Store. **Residual gap**: no written operator runbook and no
+  drill against a live deployment.
 - Production logging/monitoring -- item 20 above is the current state;
   genuinely partial (metrics/logs/audit real, traces/alerts/separate
   health probes are gaps).
@@ -150,11 +169,26 @@ otherwise.
 ## Honest Summary
 
 Pilot Mode's tenant/case isolation, audit, RBAC, API-key auth, evidence
-export, and usage metrics are real and tested. OIDC, evidence-retention
-integration into the Commercial API path, distributed tracing, separate
-liveness/readiness probes, alerting, and support diagnostics are named
-gaps, not silently-assumed features. Every one of the 8 tracked
-production security blockers has a proven mechanism but no completed
-real-world external qualification -- this deployment is **pilot-ready
-under the caveats above, not yet fully production-qualified**, which is
-exactly item 10's own required framing.
+export, and usage metrics are real and tested. Since this document was
+first written, four of the gaps it named have been genuinely closed and
+are marked as such above with their backing tests: **durable
+persistence and backup/restore (P0-A), tenant identity binding
+(P0-B), evidence-retention/legal-hold integration into the Commercial
+API path (P0-C), and separate liveness/readiness probes (P0-6)** --
+along with cryptographic signing (P0-D) and an independent verifier
+that performs real signature/key-state verification (P0-E).
+
+**Still genuinely open**, named rather than silently assumed: OIDC,
+distributed tracing, alerting, support diagnostics, tenant-scoped
+policy, HTTP routes for the retention/signing capabilities, an incident
+response procedure, and an operational backup drill. Every one of the 8
+tracked production security blockers still has a proven mechanism but
+no completed real-world external qualification.
+
+For the precise, per-tier readiness verdict that replaces this
+document's earlier single-phrase "pilot-ready under the caveats above,
+not yet fully production-qualified" framing, see
+**`docs/VERIQO_READINESS_TIER_FRAMEWORK.md`**: DEMO-READY yes,
+DESIGN-PARTNER READY yes, PAID-PILOT READY conditionally (gating items
+closed; operational/documentation conditions enumerated there), NOT
+PRODUCTION QUALIFIED.

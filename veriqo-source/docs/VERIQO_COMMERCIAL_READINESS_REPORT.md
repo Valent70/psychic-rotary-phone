@@ -21,10 +21,10 @@ is asserted without something to point at.
 | ACTION AUTHORIZATION | **GREEN** |
 | DOSSIER | **GREEN** |
 | REPLAY | **GREEN** |
-| INDEPENDENT VERIFIER | **GREEN** |
-| TENANT ISOLATION | **GREEN/YELLOW** -- isolation between tenants inside the Store is real and adversarially tested; TenantID is not yet cryptographically bound to the caller's verified JWT identity (see §2, Tenant Isolation row). |
-| SECURITY | **GREEN/YELLOW** -- JWT/RBAC/API-key/audit are real and composed; OIDC, distributed tracing, and a security incident response procedure are not built (see §2, Security row). |
-| DEPLOYMENT | **YELLOW** -- deployment guide exists; the Commercial API's Store is an in-memory reference implementation with no durable persistence or backup/restore yet (see §2, Deployment row). |
+| INDEPENDENT VERIFIER | **GREEN** -- and, since P0-E, performing real Ed25519 signature and key-state verification against a caller-supplied trusted-key registry, not a permanent signature `SKIP` (see §2). |
+| TENANT ISOLATION | **GREEN** -- structural isolation inside the Store is real and adversarially tested, and since P0-B the effective tenant is derived from the verified JWT subject via `pkg/commercial/tenancy.Membership`, not from a caller-supplied field (see §2, Tenant Isolation row). |
+| SECURITY | **GREEN/YELLOW** -- JWT/RBAC/API-key/audit are real and composed, request bodies are size-bounded (P0-8); OIDC, distributed tracing, and a security incident response procedure are still not built (see §2, Security row). |
+| DEPLOYMENT | **GREEN/YELLOW** -- deployment guide exists, and since P0-A the Commercial API's Store is durable (WAL-backed, crash-recovering, with a proven backup/restore round trip). Remaining: no operational backup drill against a live deployment, no SLA/SLO draft (see §2, Deployment row). |
 | REAL eBL | **EXTERNAL PILOT** |
 | REAL AIS | **EXTERNAL PILOT** |
 | REAL INSURANCE | **EXTERNAL PILOT** |
@@ -33,7 +33,7 @@ is asserted without something to point at.
 | 72H SOAK | **PENDING** |
 | INDEPENDENT AUDIT | **PENDING** |
 | MLETR LEGAL QUALIFICATION | **PENDING** |
-| **OVERALL** | **PILOT-READY, NOT YET FULLY PRODUCTION-QUALIFIED** |
+| **OVERALL** | **See `docs/VERIQO_READINESS_TIER_FRAMEWORK.md` for the precise, per-tier verdict.** In short: **DEMO-READY yes; DESIGN-PARTNER READY yes; PAID-PILOT READY conditionally (all five gating items closed, named operational/documentation conditions remain); NOT PRODUCTION QUALIFIED.** *Revision note: this row previously read "PILOT-READY, NOT YET FULLY PRODUCTION-QUALIFIED" -- a single phrase that collapsed four commercially distinct commitment levels, correctly criticized as imprecise in review. It is replaced, not softened.* |
 
 ---
 
@@ -49,10 +49,10 @@ is asserted without something to point at.
 | Replay | GREEN | `verticalslice.Replay` and `Store.Replay`, both proven to converge on identical hashes for unchanged inputs and diverge for a mutated one. |
 | Independent Verifier | GREEN | `pkg/commercial/packageverify` + `cmd/veriqo-commercial-verify` -- a genuinely separate compiled binary, tested via `exec.Command` against real and tampered packages, honestly `SKIP`s signature verification (no signing scheme exists in this reference build) rather than silently passing it. |
 | Commercial API v1 | GREEN | All 11 named routes + `GET /v1/metrics`, wired into `NewServer`, proven end-to-end over real `net/http` (`TestCommercialV1RoutesFullLifecycleHappyPath`: submit evidence -> verify -> custody -> decide -> act -> dossier (JSON + package) -> independently verify the package -> replay). |
-| Tenant Isolation | GREEN/YELLOW | Structural, key-namespaced isolation inside `Store` is real (`TestTenantAIsolationFromTenantB`, `TestCommercialV1RoutesTenantIsolationOverHTTP`). **Gap**: `TenantID` is caller-supplied, not yet bound to the verified JWT subject -- see `docs/VERIQO_PILOT_MODE_AND_DEPLOYMENT_READINESS.md` §"Item 19". |
-| Security (JWT/RBAC/API keys/audit) | GREEN/YELLOW | Real and composed (`security.JWTMiddleware`/`RBACMiddleware`/`APIKeyMiddleware`/`AuditMiddleware`). **Gaps**: no OIDC, no distributed tracing, no written incident response procedure. |
-| Observability (metrics/logs/audit/health) | GREEN/YELLOW | `pkg/commercial/telemetry`'s 9 named counters are real (`TestMetricsReflectRealActivity`); logging and audit are real. **Gaps**: no traces, no separate liveness/readiness probes, no alerting. |
-| Deployment | YELLOW | `docs/governance/PRODUCTION_DEPLOYMENT_AND_OPERATIONS_GUIDE.md` exists for the broader platform. **Gap**: `commercialapi.Store` itself is in-memory only -- no durable persistence, no backup/restore for the Commercial API layer specifically. |
+| Tenant Isolation | GREEN | Structural, key-namespaced isolation inside `Store` is real (`TestTenantAIsolationFromTenantB`, `TestCommercialV1RoutesTenantIsolationOverHTTP`). **The prior round's named gap is CLOSED (P0-B)**: `effectiveTenantID` derives the acting tenant from the verified JWT subject via `pkg/commercial/tenancy.Membership`, refusing (403) any tenant that subject is not granted -- `commercial_v1_tenant_binding_test.go` (5 tests, real signed JWTs), `pkg/commercial/tenancy/tenancy_test.go` (6 tests). |
+| Security (JWT/RBAC/API keys/audit) | GREEN/YELLOW | Real and composed (`security.JWTMiddleware`/`RBACMiddleware`/`APIKeyMiddleware`/`AuditMiddleware`), plus request-body size bounds on every Commercial API v1 POST route (P0-8, `http.MaxBytesReader`, `TestOversizedRequestBodyIsRejected`). **Remaining gaps**: no OIDC, no distributed tracing, no written incident response procedure. |
+| Observability (metrics/logs/audit/health) | GREEN/YELLOW | `pkg/commercial/telemetry`'s 9 named counters are real (`TestMetricsReflectRealActivity`); logging and audit are real. **Liveness/readiness probes CLOSED (P0-6)**: `GET /livez` (dependency-free) and `GET /readyz` (reports 503 on a closed durable Store, proven by `TestReadyzReportsNotReadyOnceCommercialStoreIsClosed`). **Remaining gaps**: no traces, no alerting. |
+| Deployment | GREEN/YELLOW | `docs/governance/PRODUCTION_DEPLOYMENT_AND_OPERATIONS_GUIDE.md` exists for the broader platform. **The prior round's named gap is CLOSED (P0-A)**: `NewDurableStore` makes `commercialapi.Store` durable over the real `pkg/storage/wal` (fsync, CRC, defect-classified recovery), with `Backup`/`RestoreStoreFromBackup` and a proven round trip -- `TestNewDurableStoreReconstructsIdenticalStateAfterRestart`, `TestDurableStoreRecoversFromATornWrite`, `TestStoreBackupAndRestoreRoundTrip`, plus a live restart test against the compiled gateway binary. **Remaining**: no operational backup drill against a live deployment, no SLA/SLO draft. |
 | Demo Cases (eBL, Maritime, Insurance) | GREEN | `pkg/commercial/democases` + `cmd/veriqo-demo-cases`; all 3 build real, independently-verifiable packages -- see `docs/VERIQO_DEMO_CASES.md`. |
 | Real eBL / Real AIS / Real Insurance integrations | EXTERNAL PILOT | Per item 11, real insurer/adjuster/P&I/AIS/eBL-platform integrations are explicitly out of this engagement's scope -- they require external counterparties and data-sharing agreements this engagement cannot create. |
 | Pen Test / Multi-Region / 72h Soak / Independent Audit | PENDING | Mechanism proven (`docs/governance/production-blockers.json`, all 8 blockers `READY_FOR_REAL_QUALIFICATION`); real external qualification (an actual vendor engagement, actual multi-region infra, actual 72-hour production-scale run) has not happened. |
@@ -80,7 +80,7 @@ it does not.
 | Replay Specification | PARTIAL | `verticalslice.Replay`/`Store.Replay`'s own doc comments describe the mechanism; no standalone spec document. |
 | Verifier Specification | PARTIAL | `docs/governance/CASE_ROOM_AND_DOSSIER_VERIFIER_SPECIFICATION.md` covers the earlier insurance-domain verifier; `pkg/commercial/packageverify`'s own doc comment covers this sprint's Commercial verifier, but the two have not been consolidated into one spec. |
 | Deployment Guide | DONE | `docs/governance/PRODUCTION_DEPLOYMENT_AND_OPERATIONS_GUIDE.md` |
-| Backup/Restore | GAP | No document or mechanism exists -- ties directly to the Deployment gap above (nothing durable in the Commercial API layer to back up yet). |
+| Backup/Restore | PARTIAL | **Mechanism now exists (P0-A)**: `Store.Backup`/`RestoreStoreFromBackup` with a proven round trip (`TestStoreBackupAndRestoreRoundTrip`) -- backup and normal crash recovery share one code path by design, so a backup is not a separate untested format. **Remaining gap**: no written operator runbook, and no drill against a live deployment. |
 | Incident Response | GAP | No document exists. Named as a MUST-CLOSE-BEFORE-PAID-PILOT item in `docs/VERIQO_PILOT_MODE_AND_DEPLOYMENT_READINESS.md`. |
 
 ### Customer-facing documentation
@@ -142,14 +142,32 @@ does not attempt any of the above.
 
 ## 6. Bottom Line
 
-**VERIQO is PILOT-READY, NOT YET FULLY PRODUCTION-QUALIFIED.** Every
-component a pilot customer would actually touch -- evidence submission,
-decision, authorization, dossier, replay, independent verification,
-tenant isolation, and three concrete demo cases -- is real, tested, and
-demonstrable today. What remains before a PAID pilot or general
-production release is real external qualification (pen test, multi-
-region, 72-hour soak, independent audit, MLETR legal qualification) and
-a small number of named, specific engineering gaps (OIDC, durable
-persistence for the Commercial API layer, distributed tracing, incident
-response procedure) -- none of which require redesigning anything this
-sprint built.
+**The single-phrase verdict this section previously carried
+("PILOT-READY, NOT YET FULLY PRODUCTION-QUALIFIED") has been replaced
+by an explicit four-tier assessment** -- see
+`docs/VERIQO_READINESS_TIER_FRAMEWORK.md`, which is now the single
+source of truth for VERIQO's readiness position:
+
+- **DEMO-READY: YES.**
+- **DESIGN-PARTNER READY: YES.**
+- **PAID-PILOT READY: CONDITIONALLY.** All five gating items a first
+  paying customer would refuse to pay without are now closed -- durable
+  persistence (P0-A), tenant identity binding (P0-B), evidence
+  retention/legal hold (P0-C), cryptographic signing (P0-D), and an
+  independent verifier that performs real signature/key-state
+  verification rather than a permanent `SKIP` (P0-E). The remaining
+  conditions are operational and documentation work, enumerated
+  exhaustively in the tier framework's "Conditions Still Open" section
+  (HTTP surfaces for the retention/signing capabilities, OIDC, incident
+  response procedure, SLA/SLO draft, an operational backup drill,
+  HSM-grade key custody, and an external security review).
+- **PRODUCTION QUALIFIED: NO.** All 8 tracked blockers read
+  `READY_FOR_REAL_QUALIFICATION`; the real external qualification (pen
+  test, HSM/KMS tenancy, multi-region, 72-hour production-scale soak,
+  independent audit) has not happened, and `READY_FOR_REAL_
+  QUALIFICATION` is explicitly not `QUALIFIED`. MLETR legal
+  qualification likewise remains a legal opinion this engagement
+  cannot produce.
+
+None of the remaining work requires redesigning anything this or any
+prior sprint built.
