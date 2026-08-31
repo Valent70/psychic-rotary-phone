@@ -56,6 +56,7 @@ import (
 	"veriqo/pkg/commercial/telemetry"
 	"veriqo/pkg/commercial/verticalslice"
 	"veriqo/pkg/evidence/manifest"
+	"veriqo/pkg/governance/data"
 	"veriqo/pkg/insurance/action"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/cre"
@@ -175,6 +176,12 @@ type Store struct {
 	// the segment files to copy.
 	wal    *wal.Log
 	walDir string
+
+	// preservation is the real, already-built pkg/governance/data
+	// retention/legal-hold engine (see preservation.go) -- reused, not
+	// reinvented, for Commercialization Sprint P0-C.
+	preservation          *data.Engine
+	preservationPolicySet map[string]bool
 }
 
 // NewStore constructs an empty, in-memory-only Store with a fresh
@@ -183,11 +190,13 @@ type Store struct {
 // the durable alternative.
 func NewStore() *Store {
 	return &Store{
-		manifests: manifest.NewRegistry(),
-		ledger:    audit.NewAuditStore(),
-		cases:     make(map[string]*caseEntry),
-		evidence:  make(map[string]*evidenceEntry),
-		metrics:   telemetry.New(),
+		manifests:             manifest.NewRegistry(),
+		ledger:                audit.NewAuditStore(),
+		cases:                 make(map[string]*caseEntry),
+		evidence:              make(map[string]*evidenceEntry),
+		metrics:               telemetry.New(),
+		preservation:          data.New(),
+		preservationPolicySet: make(map[string]bool),
 	}
 }
 
@@ -270,6 +279,19 @@ func (s *Store) submitEvidenceCore(in EvidenceInput) (evidencefabric.EvidenceRec
 		ce.evidenceIDs = append(ce.evidenceIDs, in.EvidenceID)
 	}
 	s.metrics.IncEvidenceIngestion()
+
+	// Commercialization Sprint P0-C: every submitted evidence item is
+	// placed under governance the moment it is finalized -- see
+	// preservation.go. This is required, not best-effort: a failure
+	// here means the evidence is finalized in the manifest but has no
+	// retention/legal-hold coverage, which this Store refuses to leave
+	// silently unnoticed.
+	if err := s.ensurePreservationPolicyLocked(in.TenantID); err != nil {
+		return evidencefabric.EvidenceRecord{}, fmt.Errorf("commercialapi: SubmitEvidence: preservation policy: %w", err)
+	}
+	if _, err := s.preservation.Ingest(in.EvidenceID, in.TenantID, commercialEvidenceClass, nil, in.Tick); err != nil {
+		return evidencefabric.EvidenceRecord{}, fmt.Errorf("commercialapi: SubmitEvidence: preservation: %w", err)
+	}
 
 	return evidencefabric.FromRegistry(s.manifests, in.EvidenceID, in.Domain)
 }
