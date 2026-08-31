@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	commercialapi "veriqo/pkg/commercial/api"
 	"veriqo/pkg/commercial/dossier"
 	"veriqo/pkg/commercial/evidencefabric"
 	"veriqo/pkg/commercial/verticalslice"
@@ -20,6 +22,7 @@ import (
 	"veriqo/pkg/insurance/cre"
 	"veriqo/pkg/insurance/decision"
 	"veriqo/pkg/platform/audit"
+	"veriqo/pkg/platform/security/keys"
 )
 
 func finalizeManifest(t *testing.T, m *manifest.Registry, evidenceID, caseID string, tick uint64) {
@@ -197,6 +200,132 @@ func TestVerifierDetectsATamperedLedger(t *testing.T) {
 	output := string(out)
 	if !strings.Contains(output, "ledger_hash_chain") || !strings.Contains(output, "[FAIL]") {
 		t.Fatalf("expected a FAIL on ledger_hash_chain for a tampered ledger export, got:\n%s", output)
+	}
+}
+
+// buildSignedRealPackage is buildRealPackage's signed counterpart: a
+// real, working keys.Manager backed by keys.MemoryKeyProvider signs
+// everything via the actual Commercial API Store, and this returns
+// both the package path and a real trusted-keys.json file (the exact
+// shape -trusted-keys expects) containing that key's real public key.
+func buildSignedRealPackage(t *testing.T, dir, caseID string) (pkgPath, trustedKeysPath string) {
+	t.Helper()
+	provider := keys.NewMemoryKeyProvider()
+	md, err := provider.Generate("verify-cli-key-1", keys.PurposeEvidence, 0, 0)
+	if err != nil {
+		t.Fatalf("provider.Generate: %v", err)
+	}
+	mgr := keys.NewManager(provider)
+	if err := mgr.Register(md); err != nil {
+		t.Fatalf("mgr.Register: %v", err)
+	}
+	if err := mgr.Activate(md.KeyID); err != nil {
+		t.Fatalf("mgr.Activate: %v", err)
+	}
+
+	s := commercialapi.NewStore()
+	if err := s.EnableSigning(mgr); err != nil {
+		t.Fatalf("EnableSigning: %v", err)
+	}
+	const tenant = "tenant-verify-cli"
+	if err := s.CreateCase(tenant, caseID, 0); err != nil {
+		t.Fatalf("CreateCase: %v", err)
+	}
+	if _, err := s.SubmitEvidence(commercialapi.EvidenceInput{
+		TenantID: tenant, CaseID: caseID, EvidenceID: "EV-API-1",
+		SHA256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+		URI:    "evidence://verify-cli-survey.pdf", Filename: "verify-cli-survey.pdf",
+		MediaType: "application/pdf", ByteSize: 4096, Collector: "surveyor-verify-cli", Source: "independent-surveyor",
+		Domain: evidencefabric.DomainMetadata{Insurance: &evidencefabric.InsuranceMetadata{ClaimID: "CLM-1", PolicyID: "POL-1", EvidenceKind: "SURVEY"}},
+		Tick:   10,
+	}); err != nil {
+		t.Fatalf("SubmitEvidence: %v", err)
+	}
+	if _, err := s.DecideCase(commercialapi.DecideInput{
+		TenantID: tenant, CaseID: caseID,
+		Hypothesis:            causation.Hypothesis{ID: "H1", Description: "water ingress during transit"},
+		SupportingEvidenceIDs: []string{"EV-API-1"},
+		FindingID:             "finding-verify-cli-1",
+		Finding: cre.FindingInput{
+			CaseID: caseID, ContractBasis: "clause-1", ObligationRef: "obl-1",
+			EventRef: "event-1", QuantumRef: "calc-1", HumanReviewRequired: true,
+		},
+		Outcome: decision.OutcomeApproved, Rationale: "grounded, finalized evidence", LedgerActor: "verify-cli-decision", Tick: 10,
+	}); err != nil {
+		t.Fatalf("DecideCase: %v", err)
+	}
+	if _, _, err := s.ActOnCase(commercialapi.ActionInput{
+		TenantID: tenant, CaseID: caseID, Actor: "adjuster-verify-cli-1", PolicyRef: "policy-settlement-v1", Scope: caseID,
+		PermittedAction: action.ActionApproveSettlement, Conditions: []string{"reinspection_complete"},
+		AuthorizedAt: 10, ExpiresAt: 20, ExecutingActor: "adjuster-verify-cli-1", ExecutionAt: 15,
+		LedgerActor: "verify-cli-action",
+	}); err != nil {
+		t.Fatalf("ActOnCase: %v", err)
+	}
+
+	pkgPath = filepath.Join(dir, "signed-package.zip")
+	if _, err := s.WriteDossierPackage(tenant, caseID, pkgPath); err != nil {
+		t.Fatalf("WriteDossierPackage: %v", err)
+	}
+
+	registry := map[string]map[string]any{
+		md.KeyID: {"public_key": md.PublicKey, "revoked": false},
+	}
+	data, err := json.Marshal(registry)
+	if err != nil {
+		t.Fatalf("marshaling trusted-keys registry: %v", err)
+	}
+	trustedKeysPath = filepath.Join(dir, "trusted-keys.json")
+	if err := os.WriteFile(trustedKeysPath, data, 0o600); err != nil {
+		t.Fatalf("writing trusted-keys.json: %v", err)
+	}
+	return pkgPath, trustedKeysPath
+}
+
+// TestVerifierWithTrustedKeysVerifiesRealSignatures proves the
+// standalone binary's own -trusted-keys flag works end to end: a real
+// signed package, a real trusted-keys.json file, run through the
+// actual compiled binary as a separate process -- signature checks
+// must PASS, not SKIP, when a trusted registry is supplied.
+func TestVerifierWithTrustedKeysVerifiesRealSignatures(t *testing.T) {
+	bin := buildVerifierBinary(t)
+	dir := t.TempDir()
+	pkgPath, trustedKeysPath := buildSignedRealPackage(t, dir, "CASE-VERIFY-CLI-SIGNED-1")
+
+	cmd := exec.Command(bin, "-package", pkgPath, "-trusted-keys", trustedKeysPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("expected the verifier to exit 0 for a real, correctly signed package with its real trusted keys: %v\n%s", err, out)
+	}
+	output := string(out)
+	if !strings.Contains(output, "VERDICT: ALL CHECKS PASSED") {
+		t.Fatalf("expected ALL CHECKS PASSED, got:\n%s", output)
+	}
+	if !strings.Contains(output, "[PASS] package_signature") {
+		t.Fatalf("expected a real PASS on package_signature with a trusted registry supplied, got:\n%s", output)
+	}
+	if !strings.Contains(output, "[PASS] key_state") {
+		t.Fatalf("expected a real PASS on key_state with a trusted registry supplied, got:\n%s", output)
+	}
+}
+
+// TestVerifierWithoutTrustedKeysSkipsSignaturesHonestly proves the
+// same signed package, run WITHOUT -trusted-keys, honestly reports
+// SKIP on signature/key-state -- never a false PASS just because the
+// package happens to carry a signature.
+func TestVerifierWithoutTrustedKeysSkipsSignaturesHonestly(t *testing.T) {
+	bin := buildVerifierBinary(t)
+	dir := t.TempDir()
+	pkgPath, _ := buildSignedRealPackage(t, dir, "CASE-VERIFY-CLI-SIGNED-2")
+
+	cmd := exec.Command(bin, "-package", pkgPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("expected exit 0 (Skip is not a failure): %v\n%s", err, out)
+	}
+	output := string(out)
+	if !strings.Contains(output, "[SKIP] package_signature") {
+		t.Fatalf("expected an honest SKIP on package_signature with no -trusted-keys supplied, got:\n%s", output)
 	}
 }
 

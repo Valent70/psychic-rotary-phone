@@ -117,7 +117,7 @@ func TestVerifyZipAcceptsARealPackage(t *testing.T) {
 	}
 	defer r.Close()
 
-	results, err := VerifyZip(&r.Reader)
+	results, err := VerifyZip(&r.Reader, nil)
 	if err != nil {
 		t.Fatalf("VerifyZip: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestVerifyZipRejectsAMissingDossierEntry(t *testing.T) {
 	}
 	defer r.Close()
 
-	if _, err := VerifyZip(&r.Reader); err == nil {
+	if _, err := VerifyZip(&r.Reader, nil); err == nil {
 		t.Fatal("expected VerifyZip to fail outright for a package with no dossier.json at all")
 	}
 }

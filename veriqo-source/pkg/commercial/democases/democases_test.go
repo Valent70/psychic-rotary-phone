@@ -55,7 +55,7 @@ func runCaseAssertions(t *testing.T, c Case, wantEvidenceCount int) {
 	}
 	defer r.Close()
 
-	results, err := packageverify.VerifyZip(&r.Reader)
+	results, err := packageverify.VerifyZip(&r.Reader, nil)
 	if err != nil {
 		t.Fatalf("VerifyZip: %v", err)
 	}

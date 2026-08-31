@@ -503,7 +503,16 @@ func handleV1Metrics(store *commercialapi.Store) http.HandlerFunc {
 // handleV1VerifyPackage is stateless and requires no tenant scoping --
 // verifying an independently-held Machine Package is, by design, a
 // capability anyone holding the file has, per pkg/commercial/
-// packageverify's whole purpose.
+// packageverify's whole purpose. HONEST SCOPE: this HTTP convenience
+// route always verifies with a nil trusted-key registry (every
+// signature/key-state check reports SKIP, never a false PASS) --
+// accepting a caller-supplied registry over this raw-body-upload route
+// needs a request shape (multipart, most likely) this route does not
+// have yet, named here rather than silently assumed. The standalone
+// cmd/veriqo-commercial-verify CLI -- the actual "independent
+// verifier" this whole capability exists for -- already supports
+// -trusted-keys fully; this route is a same-process convenience, not
+// the verifier of record.
 func handleV1VerifyPackage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tmp, err := os.CreateTemp("", "veriqo-verify-upload-*.zip")
@@ -525,7 +534,7 @@ func handleV1VerifyPackage() http.HandlerFunc {
 		}
 		defer zr.Close()
 
-		results, err := packageverify.VerifyZip(&zr.Reader)
+		results, err := packageverify.VerifyZip(&zr.Reader, nil)
 		if err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
 			return
