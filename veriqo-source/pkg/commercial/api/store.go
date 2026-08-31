@@ -23,10 +23,25 @@
 // the adversarial proof (cannot read, cannot modify, cannot replay
 // another tenant's case).
 //
-// HONEST SCOPE: Store is an in-memory reference implementation. It is
-// NOT a durable, persisted store -- restarting the process loses every
-// case and evidence record. See docs/VERIQO_PILOT_MODE_AND_DEPLOYMENT_READINESS.md's
-// MUST-CLOSE-BEFORE-PAID-PILOT list, "durable persistent ledger."
+// DURABILITY: NewStore builds an in-memory-only Store (restarting the
+// process loses every case and evidence record) -- unchanged from this
+// package's original shape, and still what every existing test and the
+// zero-value-safe HTTP nil-store path uses. NewDurableStore, added to
+// close the reviewer's explicit "PILOT-READY perlu kita pecah" critique
+// (Commercial API Store belum durable is not a cosmetic gap: it touches
+// data persistence, disaster recovery, evidence preservation, legal
+// hold, audit continuity, backup, restore, RPO/RTO, and customer
+// trust), makes every mutating call durable via pkg/storage/wal -- a
+// real write-ahead log with fsync, CRC, and defect-classified recovery
+// this repository already built and proved for the consensus layer.
+// See durable.go for the mechanism: every successful CreateCase/
+// SubmitEvidence/DecideCase/ActOnCase call appends its own INPUT (not a
+// derived diff) to the WAL, and NewDurableStore reconstructs identical
+// state on startup by replaying those inputs back through this Store's
+// own real methods -- sound because manifest.Registry and
+// audit.AuditStore are both already deterministic given the same call
+// sequence (no wall-clock or random state feeds either one), so no new
+// export/import surface was needed on either FROZEN package.
 package commercialapi
 
 import (
@@ -46,6 +61,7 @@ import (
 	"veriqo/pkg/insurance/cre"
 	"veriqo/pkg/insurance/decision"
 	"veriqo/pkg/platform/audit"
+	"veriqo/pkg/storage/wal"
 )
 
 var (
@@ -58,6 +74,7 @@ var (
 	ErrTenantMismatch    = errors.New("commercialapi: the requested resource belongs to a different tenant")
 	ErrNotYetDecided     = errors.New("commercialapi: this case has not been decided yet -- call decide before actions/dossier/replay")
 	ErrAlreadyDecided    = errors.New("commercialapi: this case has already been decided -- decide is not re-callable")
+	ErrNotDurable        = errors.New("commercialapi: this Store is in-memory only (built with NewStore, not NewDurableStore) -- there is nothing on disk to back up")
 )
 
 // EvidenceInput is POST /v1/evidence's request shape.
@@ -150,10 +167,20 @@ type Store struct {
 	cases     map[string]*caseEntry
 	evidence  map[string]*evidenceEntry
 	metrics   *telemetry.Metrics
+
+	// wal is nil for an in-memory-only Store (NewStore). NewDurableStore
+	// sets it; every mutating public method appends its own input to it
+	// on success -- see durable.go. walDir is tracked separately (wal.Log
+	// does not expose its own configured directory) so Backup can locate
+	// the segment files to copy.
+	wal    *wal.Log
+	walDir string
 }
 
-// NewStore constructs an empty Store with a fresh manifest registry
-// and a fresh audit ledger.
+// NewStore constructs an empty, in-memory-only Store with a fresh
+// manifest registry and a fresh audit ledger. Nothing written to it
+// survives a process restart -- see NewDurableStore (durable.go) for
+// the durable alternative.
 func NewStore() *Store {
 	return &Store{
 		manifests: manifest.NewRegistry(),
@@ -183,6 +210,17 @@ func evidenceKey(tenantID, evidenceID string) string { return tenantID + "/" + e
 // manifest.Registry state machine every other real evidence pipeline
 // in this repository uses) and returns its canonical projection.
 func (s *Store) SubmitEvidence(in EvidenceInput) (evidencefabric.EvidenceRecord, error) {
+	rec, err := s.submitEvidenceCore(in)
+	if err != nil {
+		return rec, err
+	}
+	if err := s.appendWAL(in.Tick, walCommand{Kind: walCmdSubmitEvidence, Evidence: &in}); err != nil {
+		return evidencefabric.EvidenceRecord{}, err
+	}
+	return rec, nil
+}
+
+func (s *Store) submitEvidenceCore(in EvidenceInput) (evidencefabric.EvidenceRecord, error) {
 	if in.TenantID == "" {
 		return evidencefabric.EvidenceRecord{}, ErrEmptyTenantID
 	}
@@ -294,8 +332,18 @@ func (s *Store) GetCustody(tenantID, evidenceID string) ([]manifest.CustodyEvent
 	return s.manifests.CustodyChain(evidenceID), nil
 }
 
-// CreateCase registers a new, empty case for tenantID.
+// CreateCase registers a new, empty case for tenantID. When this Store
+// is durable (NewDurableStore), the call is appended to the WAL on
+// success before returning -- a caller who sees a nil error has a
+// durably logged case, not just an in-memory one.
 func (s *Store) CreateCase(tenantID, caseID string, tick uint64) error {
+	if err := s.createCaseCore(tenantID, caseID, tick); err != nil {
+		return err
+	}
+	return s.appendWAL(tick, walCommand{Kind: walCmdCreateCase, CreateCase: &createCaseArgs{TenantID: tenantID, CaseID: caseID, Tick: tick}})
+}
+
+func (s *Store) createCaseCore(tenantID, caseID string, tick uint64) error {
 	if tenantID == "" {
 		return ErrEmptyTenantID
 	}
@@ -341,6 +389,17 @@ func (s *Store) GetCase(tenantID, caseID string) (CaseView, error) {
 // -- there is no way to reach a Decision citing evidence this Store
 // never received.
 func (s *Store) DecideCase(in DecideInput) (decision.Decision, error) {
+	d, err := s.decideCaseCore(in)
+	if err != nil {
+		return d, err
+	}
+	if err := s.appendWAL(in.Tick, walCommand{Kind: walCmdDecideCase, Decide: &in}); err != nil {
+		return decision.Decision{}, err
+	}
+	return d, nil
+}
+
+func (s *Store) decideCaseCore(in DecideInput) (decision.Decision, error) {
 	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -408,6 +467,17 @@ func (s *Store) DecideCase(in DecideInput) (decision.Decision, error) {
 // action.AuthorizeAction -> action.AuthorizeExecution -> the real
 // ledger appends -- requires the case to already be decided.
 func (s *Store) ActOnCase(in ActionInput) (action.ActionAuthorization, verticalslice.Receipt, error) {
+	aa, receipt, err := s.actOnCaseCore(in)
+	if err != nil {
+		return aa, receipt, err
+	}
+	if err := s.appendWAL(in.AuthorizedAt, walCommand{Kind: walCmdActOnCase, Action: &in}); err != nil {
+		return action.ActionAuthorization{}, verticalslice.Receipt{}, err
+	}
+	return aa, receipt, nil
+}
+
+func (s *Store) actOnCaseCore(in ActionInput) (action.ActionAuthorization, verticalslice.Receipt, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ce, ok := s.cases[caseKey(in.TenantID, in.CaseID)]

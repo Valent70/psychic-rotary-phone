@@ -1,7 +1,7 @@
 // Command veriqo-gateway runs the REST Gateway as a standalone, real
 // OS process: `veriqo-gateway --addr=:8080 [--state=/path] [--api-key=...]
 // [--jwt-secret=...] [--rbac=role:prefix,prefix;role2:prefix] [--audit]
-// [--tls-cert=... --tls-key=...] [--mtls-ca=...]`.
+// [--tls-cert=... --tls-key=...] [--mtls-ca=...] [--commercial-wal-dir=/path]`.
 // It builds exactly one veriqo/registry.Registry and serves every
 // generated route (see veriqo/gateway/rest) over it, with the full
 // security stack (API Key, JWT, RBAC, Audit, TLS/mTLS) from
@@ -22,8 +22,10 @@ import (
 	"strings"
 	"syscall"
 
+	commercialapi "veriqo/pkg/commercial/api"
 	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/platform/security"
+	"veriqo/pkg/storage/wal"
 	"veriqo/veriqo/gateway/rest"
 	"veriqo/veriqo/kernel"
 	"veriqo/veriqo/registry"
@@ -62,6 +64,7 @@ func main() {
 	tlsCert := flag.String("tls-cert", "", "path to a TLS certificate file (optional; empty = plain HTTP)")
 	tlsKey := flag.String("tls-key", "", "path to the TLS private key file (required if --tls-cert is set)")
 	mtlsCA := flag.String("mtls-ca", "", "path to a CA cert file; if set with --tls-cert/--tls-key, requires and verifies client certificates (mutual TLS)")
+	commercialWALDir := flag.String("commercial-wal-dir", "", "path to a directory for the Commercial API v1 durable store (WAL-backed; optional -- empty = the /v1/... routes are absent, matching commercialapi.Store's own nil-safety)")
 	flag.Parse()
 
 	var regOpts []registry.Option
@@ -100,6 +103,18 @@ func main() {
 	if *enableAudit {
 		srvOpts.Audit = audit.NewAuditStore()
 	}
+	var commercialStore *commercialapi.Store
+	if *commercialWALDir != "" {
+		var report *wal.RecoveryReport
+		commercialStore, report, err = commercialapi.NewDurableStore(*commercialWALDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "veriqo-gateway: opening Commercial API durable store:", err)
+			os.Exit(1)
+		}
+		log.Printf("veriqo-gateway: Commercial API durable store opened at %s (recovered=%d replayed=%d lost=%d failed_closed=%t)",
+			*commercialWALDir, report.RecoveredRecords, report.ReplayedRecords, report.LostRecords, report.FailedClosed)
+		srvOpts.CommercialStore = commercialStore
+	}
 	srv := rest.NewServer(*addr, reg, k.Lifecycle, srvOpts)
 
 	if (*tlsCert == "") != (*tlsKey == "") {
@@ -120,8 +135,8 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("veriqo-gateway: listening on %s (persistence=%t, api_key=%t, jwt=%t, rbac=%t, audit=%t, tls=%t, mtls=%t)",
-			*addr, reg.HasPersistence(), *apiKey != "", *jwtSecret != "", *rbacSpec != "", *enableAudit, *tlsCert != "", *mtlsCA != "")
+		log.Printf("veriqo-gateway: listening on %s (persistence=%t, api_key=%t, jwt=%t, rbac=%t, audit=%t, tls=%t, mtls=%t, commercial_durable=%t)",
+			*addr, reg.HasPersistence(), *apiKey != "", *jwtSecret != "", *rbacSpec != "", *enableAudit, *tlsCert != "", *mtlsCA != "", commercialStore != nil)
 		var err error
 		if *tlsCert != "" {
 			err = srv.ListenAndServeTLS(*tlsCert, *tlsKey)
@@ -138,6 +153,11 @@ func main() {
 	<-sig
 	if err := k.Shutdown(); err != nil {
 		log.Printf("veriqo-gateway: kernel shutdown: %v", err)
+	}
+	if commercialStore != nil {
+		if err := commercialStore.Close(); err != nil {
+			log.Printf("veriqo-gateway: closing Commercial API durable store: %v", err)
+		}
 	}
 	_ = srv.Close()
 }
