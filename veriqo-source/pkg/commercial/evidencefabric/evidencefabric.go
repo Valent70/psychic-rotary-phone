@@ -188,6 +188,30 @@ type EvidenceRecord struct {
 	Timing     Timing         `json:"timing"`
 	Trust      Trust          `json:"trust"`
 	Domain     DomainMetadata `json:"domain_metadata"`
+
+	// Signature is the Commercial API's own real cryptographic
+	// signature over this item's Integrity.ManifestHash, set by
+	// pkg/commercial/api.Store when signing is enabled (see that
+	// package's EnableSigning) -- deliberately layered OUTSIDE
+	// pkg/evidence/manifest (FROZEN; its own SignatureStatus/
+	// SignatureAlgorithm/Signer/ManifestSignature fields stay honestly
+	// unset by this projection, a named gap, not silently worked
+	// around). nil means unsigned -- this reference build's honest
+	// default absent EnableSigning, never hidden as if it were signed.
+	Signature *EvidenceSignature `json:"signature,omitempty"`
+}
+
+// EvidenceSignature is a real Ed25519 signature (via
+// pkg/platform/security/keys' KeyProvider/Manager -- real key
+// lifecycle: PENDING -> ACTIVE -> RETIRED -> REVOKED, with retroactive
+// revocation) over one evidence item's ManifestHash.
+type EvidenceSignature struct {
+	Algorithm          string `json:"algorithm"`
+	KeyID              string `json:"key_id"`
+	KeyVersion         int    `json:"key_version"`
+	Signature          string `json:"signature"` // hex-encoded
+	SignedManifestHash string `json:"signed_manifest_hash"`
+	SignedAtTick       uint64 `json:"signed_at_tick"`
 }
 
 // FromManifest projects a real manifest.Manifest and its real custody

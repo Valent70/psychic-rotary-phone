@@ -45,6 +45,8 @@
 package commercialapi
 
 import (
+	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -62,6 +64,7 @@ import (
 	"veriqo/pkg/insurance/cre"
 	"veriqo/pkg/insurance/decision"
 	"veriqo/pkg/platform/audit"
+	"veriqo/pkg/platform/security/keys"
 	"veriqo/pkg/storage/wal"
 )
 
@@ -182,6 +185,16 @@ type Store struct {
 	// reinvented, for Commercialization Sprint P0-C.
 	preservation          *data.Engine
 	preservationPolicySet map[string]bool
+
+	// keyManager is nil until EnableSigning is called (see crypto.go) --
+	// this reference build's honest default is unsigned evidence and
+	// dossiers, never silently claimed otherwise.
+	keyManager *keys.Manager
+	// signatures holds each evidence item's real EvidenceSignature (by
+	// evidenceKey), so every projection of that evidence -- GetEvidence,
+	// GenerateDossier's own inventory rebuild, not just SubmitEvidence's
+	// immediate return value -- shows the same real signature.
+	signatures map[string]evidencefabric.EvidenceSignature
 }
 
 // NewStore constructs an empty, in-memory-only Store with a fresh
@@ -197,6 +210,7 @@ func NewStore() *Store {
 		metrics:               telemetry.New(),
 		preservation:          data.New(),
 		preservationPolicySet: make(map[string]bool),
+		signatures:            make(map[string]evidencefabric.EvidenceSignature),
 	}
 }
 
@@ -293,7 +307,22 @@ func (s *Store) submitEvidenceCore(in EvidenceInput) (evidencefabric.EvidenceRec
 		return evidencefabric.EvidenceRecord{}, fmt.Errorf("commercialapi: SubmitEvidence: preservation: %w", err)
 	}
 
-	return evidencefabric.FromRegistry(s.manifests, in.EvidenceID, in.Domain)
+	rec, err := evidencefabric.FromRegistry(s.manifests, in.EvidenceID, in.Domain)
+	if err != nil {
+		return evidencefabric.EvidenceRecord{}, err
+	}
+
+	// Commercialization Sprint P0-D: sign the real, independently
+	// re-derived manifest hash when signing is enabled -- see crypto.go.
+	// Unsigned (nil Signature) is this reference build's honest default
+	// absent EnableSigning, never hidden as if it were signed.
+	if sig, err := s.signEvidenceIfEnabledLocked(rec.Integrity.ManifestHash, in.Tick); err != nil {
+		return evidencefabric.EvidenceRecord{}, fmt.Errorf("commercialapi: SubmitEvidence: signing: %w", err)
+	} else if sig != nil {
+		rec.Signature = sig
+		s.signatures[evidenceKey(in.TenantID, in.EvidenceID)] = *sig
+	}
+	return rec, nil
 }
 
 // GetEvidence returns the canonical projection for a previously
@@ -301,6 +330,7 @@ func (s *Store) submitEvidenceCore(in EvidenceInput) (evidencefabric.EvidenceRec
 func (s *Store) GetEvidence(tenantID, evidenceID string) (evidencefabric.EvidenceRecord, error) {
 	s.mu.Lock()
 	entry, ok := s.evidence[evidenceKey(tenantID, evidenceID)]
+	sig, signed := s.signatures[evidenceKey(tenantID, evidenceID)]
 	s.mu.Unlock()
 	if !ok {
 		return evidencefabric.EvidenceRecord{}, ErrEvidenceNotFound
@@ -308,7 +338,14 @@ func (s *Store) GetEvidence(tenantID, evidenceID string) (evidencefabric.Evidenc
 	if entry.tenantID != tenantID {
 		return evidencefabric.EvidenceRecord{}, ErrTenantMismatch
 	}
-	return evidencefabric.FromRegistry(s.manifests, evidenceID, entry.in.Domain)
+	rec, err := evidencefabric.FromRegistry(s.manifests, evidenceID, entry.in.Domain)
+	if err != nil {
+		return evidencefabric.EvidenceRecord{}, err
+	}
+	if signed {
+		rec.Signature = &sig
+	}
+	return rec, nil
 }
 
 // VerifyEvidence independently re-verifies a previously submitted
@@ -560,6 +597,7 @@ func (s *Store) GenerateDossier(tenantID, caseID string) (dossier.Dossier, error
 	for _, evID := range ce.evidenceIDs {
 		s.mu.Lock()
 		entry := s.evidence[evidenceKey(tenantID, evID)]
+		sig, signed := s.signatures[evidenceKey(tenantID, evID)]
 		s.mu.Unlock()
 		var domain evidencefabric.DomainMetadata
 		if entry != nil {
@@ -568,6 +606,9 @@ func (s *Store) GenerateDossier(tenantID, caseID string) (dossier.Dossier, error
 		rec, err := evidencefabric.FromRegistry(s.manifests, evID, domain)
 		if err != nil {
 			return dossier.Dossier{}, fmt.Errorf("commercialapi: GenerateDossier: %w", err)
+		}
+		if signed {
+			rec.Signature = &sig
 		}
 		evidenceRecords = append(evidenceRecords, rec)
 	}
@@ -597,10 +638,34 @@ func (s *Store) GenerateDossier(tenantID, caseID string) (dossier.Dossier, error
 		contradictions = append(contradictions, fmt.Sprintf("%s contradicts hypothesis %s", evID, hypothesisID))
 	}
 
-	return dossier.New(dossier.Input{
+	d, err := dossier.New(dossier.Input{
 		Scope: caseID, Result: result, Evidence: evidenceRecords,
 		Corroboration: corroboration, Contradictions: contradictions,
 	})
+	if err != nil {
+		return dossier.Dossier{}, err
+	}
+
+	// Commercialization Sprint P0-D: sign the package hash, never the
+	// other way around -- PackageHash is already computed by New over
+	// every field except itself (and, per dossier's own VerifyPackageHash,
+	// except PackageSignature too, since a signature over content can
+	// never itself be part of what got hashed).
+	s.mu.Lock()
+	sigBytes, keyID, keyVersion, err := s.signDigestLocked(context.Background(), []byte(d.PackageHash), ce.d.DecidedAt())
+	s.mu.Unlock()
+	switch {
+	case errors.Is(err, ErrSigningNotEnabled):
+		// Unsigned is this reference build's honest default.
+	case err != nil:
+		return dossier.Dossier{}, fmt.Errorf("commercialapi: GenerateDossier: signing: %w", err)
+	default:
+		d.PackageSignature = &dossier.PackageSignature{
+			Algorithm: "Ed25519", KeyID: keyID, KeyVersion: keyVersion,
+			Signature: hex.EncodeToString(sigBytes), SignedPackageHash: d.PackageHash, SignedAtTick: ce.d.DecidedAt(),
+		}
+	}
+	return d, nil
 }
 
 // WriteDossierPackage generates the case's dossier and writes its

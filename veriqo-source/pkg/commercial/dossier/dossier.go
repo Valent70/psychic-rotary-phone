@@ -136,6 +136,26 @@ type Dossier struct {
 	Limitations              []string                        `json:"limitations"`
 	VerificationInstructions []string                        `json:"verification_instructions"`
 	PackageHash              string                          `json:"package_hash"`
+
+	// PackageSignature is a real Ed25519 signature over PackageHash,
+	// set by pkg/commercial/api.Store after New returns when signing
+	// is enabled (see that package's EnableSigning) -- never included
+	// in the PackageHash computation itself (see New/VerifyPackageHash):
+	// the hash is signed, never the other way around. nil means
+	// unsigned -- this reference build's honest default, never hidden
+	// as if it were signed.
+	PackageSignature *PackageSignature `json:"package_signature,omitempty"`
+}
+
+// PackageSignature is a real Ed25519 signature (via
+// pkg/platform/security/keys) over one Dossier's PackageHash.
+type PackageSignature struct {
+	Algorithm         string `json:"algorithm"`
+	KeyID             string `json:"key_id"`
+	KeyVersion        int    `json:"key_version"`
+	Signature         string `json:"signature"` // hex-encoded
+	SignedPackageHash string `json:"signed_package_hash"`
+	SignedAtTick      uint64 `json:"signed_at_tick"`
 }
 
 // RawEvidence is one evidence item's RAW manifest.Manifest and its
@@ -279,6 +299,11 @@ func New(in Input) (Dossier, error) {
 func VerifyPackageHash(d Dossier) error {
 	want := d.PackageHash
 	d.PackageHash = ""
+	// PackageSignature (when present) is a signature OVER PackageHash,
+	// computed and attached after New already produced PackageHash --
+	// it was never part of what got hashed, so it must be excluded
+	// here too, the same way PackageHash excludes itself.
+	d.PackageSignature = nil
 	got := jcs.MustHash(d)
 	if got != want {
 		return fmt.Errorf("dossier: PackageHash mismatch: recorded=%s recomputed=%s", want, got)
