@@ -1,0 +1,897 @@
+openapi: 3.0.3
+
+# VERIQO Commercial API v1 -- standalone OpenAPI specification.
+#
+# This closes the review's P1 item 1 ("OpenAPI Specification --
+# standalone, not just code comments"). Every path, parameter, status
+# code and schema below is transcribed from the real implementation:
+# veriqo/gateway/rest/commercial_v1_routes.go (routing, request shapes,
+# status-code mapping via statusForStoreError), pkg/commercial/api
+# (Store method semantics), pkg/commercial/evidencefabric (the
+# EvidenceRecord projection), and pkg/commercial/dossier.
+#
+# HONEST SCOPE NOTES, stated here rather than discovered at integration
+# time:
+#   * Ticks are logical, not wall-clock. Every `tick`/`*_at` field is a
+#     caller-supplied monotonic logical time, by design -- the Core
+#     Trust Kernel is deterministic and never reads the system clock.
+#   * The Dossier and Decision schemas below are described at the level
+#     the API actually guarantees; `Dossier` in particular is a large
+#     composite object whose exact field set is defined by
+#     pkg/commercial/dossier.Dossier. It is modelled here as an object
+#     with the fields customers integrate against, not exhaustively.
+#   * Retention, legal hold, and signing are real, tested capabilities
+#     (pkg/commercial/api/preservation.go, crypto.go) but are NOT yet
+#     exposed as HTTP routes -- they are reachable only through the Go
+#     API today. They are deliberately absent from this specification
+#     rather than specified aspirationally.
+
+info:
+  title: VERIQO Commercial API
+  version: "1.0.0"
+  description: |
+    Evidence infrastructure for disputes, claims, and trade events:
+    submit evidence, have its integrity and chain of custody
+    independently verifiable, reach a grounded Decision, authorize an
+    Action, and export a Dossier that a third party can verify without
+    trusting VERIQO.
+
+    **Authentication.** All `/v1/...` routes sit behind the gateway's
+    composed security stack (Audit -> JWT -> RBAC -> API key). Which
+    layers are active is a deployment configuration; a pilot deployment
+    is normally configured with JWT (Bearer) plus an API key.
+
+    **Tenant binding.** When JWT authentication is configured, the
+    `tenant_id` you supply must be one the authenticated subject is
+    granted (via the deployment's tenant membership registry). Supplying
+    a tenant you are not granted returns `403`, even with an otherwise
+    valid token. When no JWT layer is configured at all, `tenant_id` is
+    taken as supplied -- there is no verified identity to bind it to.
+
+    **Request size limits.** JSON routes accept up to 1 MiB;
+    `POST /v1/packages/verify` accepts up to 64 MiB of raw `.zip`.
+    Exceeding these returns `400`.
+  contact:
+    name: VERIQO
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://{host}
+    description: A VERIQO deployment
+    variables:
+      host:
+        default: veriqo.example.com
+
+security:
+  - bearerAuth: []
+    apiKeyAuth: []
+
+tags:
+  - name: Evidence
+    description: Submit, retrieve, verify, and inspect the custody of evidence.
+  - name: Cases
+    description: Create cases, reach decisions, authorize actions, export dossiers, replay.
+  - name: Verification
+    description: Independently verify an exported Machine Package.
+  - name: Operations
+    description: Health, readiness, and operational metrics.
+
+paths:
+  /v1/evidence:
+    post:
+      tags: [Evidence]
+      summary: Submit an evidence item
+      description: |
+        Drives one evidence item through the real
+        SOURCE -> ACQUIRE -> PRESERVE -> HASH -> PROVENANCE -> MANIFEST
+        -> CUSTODY pipeline and returns its canonical projection. The
+        item is placed under retention governance at finalization; this
+        is required, not best-effort, so a governance failure fails the
+        submission rather than leaving evidence ungoverned.
+
+        VERIQO stores evidence **metadata and hashes**, never the raw
+        bytes -- you supply the `sha256` you computed and a `uri` where
+        the bytes live in your own custody.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitEvidenceRequest'
+      responses:
+        '201':
+          description: Evidence accepted, finalized, and under governance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceRecord'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /v1/evidence/{id}:
+    get:
+      tags: [Evidence]
+      summary: Retrieve an evidence item's canonical projection
+      parameters:
+        - $ref: '#/components/parameters/EvidenceId'
+        - $ref: '#/components/parameters/TenantIdQuery'
+      responses:
+        '200':
+          description: The evidence record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceRecord'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/evidence/{id}/verify:
+    post:
+      tags: [Evidence]
+      summary: Re-verify an evidence item's integrity, live
+      description: |
+        Independently re-computes the manifest hash and re-walks the
+        custody chain **right now** -- it does not return a cached
+        verification result recorded at submission time.
+      parameters:
+        - $ref: '#/components/parameters/EvidenceId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenant_id: { type: string }
+      responses:
+        '200':
+          description: |
+            Verification ran. `verified: false` means the manifest hash
+            or custody chain did **not** re-verify -- a substantive
+            finding, not an error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified: { type: boolean }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/evidence/{id}/custody:
+    get:
+      tags: [Evidence]
+      summary: Retrieve the full chain of custody
+      parameters:
+        - $ref: '#/components/parameters/EvidenceId'
+        - $ref: '#/components/parameters/TenantIdQuery'
+      responses:
+        '200':
+          description: Every custody event recorded for this item, in order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyEvent'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/cases:
+    post:
+      tags: [Cases]
+      summary: Create a case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, case_id]
+              properties:
+                tenant_id: { type: string }
+                case_id: { type: string }
+                tick:
+                  type: integer
+                  format: int64
+                  description: Logical creation time.
+      responses:
+        '201':
+          description: Case created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  case_id: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: A case with this ID already exists for this tenant.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/cases/{id}:
+    get:
+      tags: [Cases]
+      summary: Retrieve a case summary
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/TenantIdQuery'
+      responses:
+        '200':
+          description: A curated case summary -- never internal kernel types.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseView'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/cases/{id}/decide:
+    post:
+      tags: [Cases]
+      summary: Reach a grounded Decision on a case
+      description: |
+        Drives the real DECISION stage: build a Finding, authorize it
+        against already-finalized evidence, make the Decision, and
+        append it to the audit ledger.
+
+        **Every evidence ID cited must already have been submitted and
+        finalized.** There is no path to a Decision citing evidence this
+        deployment never received -- an ungrounded citation is refused
+        with `422`.
+
+        A case can be decided exactly once (`409` on a second attempt).
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideRequest'
+      responses:
+        '200':
+          description: The Decision, as a curated projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decision'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: This case has already been decided; decide is not re-callable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: |
+            The Decision could not be grounded -- e.g. cited evidence is
+            not finalized, or the Finding failed authorization.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/cases/{id}/actions:
+    post:
+      tags: [Cases]
+      summary: Authorize and execute an action on a decided case
+      description: |
+        Requires the case to already be decided (`422` otherwise).
+        Authorization and execution are separate real gates: an
+        authorization that does not cover the attempted execution is
+        refused, and both the authorization and the execution are
+        appended to the audit ledger.
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionRequest'
+      responses:
+        '200':
+          description: The authorization and its execution receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Case not yet decided, or the action was refused by the authorization gate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/cases/{id}/dossier:
+    get:
+      tags: [Cases]
+      summary: Export the case's Evidence Dossier
+      description: |
+        Returns the dossier's **Human** form (JSON) by default, or its
+        **Machine** form (a `.zip` Machine Package) when
+        `?format=package` is given. The Machine Package is what a third
+        party feeds to the standalone verifier.
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/TenantIdQuery'
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [package]
+          description: Omit for JSON; `package` for a downloadable `.zip`.
+      responses:
+        '200':
+          description: The dossier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dossier'
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: This case has not been decided yet -- there is nothing to export.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/cases/{id}/replay:
+    get:
+      tags: [Cases]
+      summary: Re-derive the case's Decision and Action, and compare hashes
+      description: |
+        Re-runs the case's own recorded inputs against its
+        already-finalized evidence and reports whether the resulting
+        hashes converge byte-identically with what was originally
+        recorded. `converged: false` is a substantive finding.
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/TenantIdQuery'
+      responses:
+        '200':
+          description: The replay comparison.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayResult'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: This case has not been decided yet -- there is nothing to replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/packages/verify:
+    post:
+      tags: [Verification]
+      summary: Verify a Machine Package (same-process convenience route)
+      description: |
+        Upload a Machine Package `.zip` (raw body, up to 64 MiB) and
+        receive the verifier's check results.
+
+        **HONEST SCOPE:** this route always verifies with **no trusted
+        key registry**, so every signature and key-state check reports
+        `SKIP` -- never a false `PASS`. It cannot accept a caller-supplied
+        registry over this raw-body upload shape.
+
+        For real cryptographic signature verification, use the
+        standalone `veriqo-commercial-verify` CLI with `-trusted-keys`.
+        That CLI is the verifier of record: it is a separate binary that
+        takes only the `.zip` and your own out-of-band key registry, so
+        it does not require trusting this server at all -- which is the
+        entire point.
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: All checks passed (SKIP lines are not failures).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+        '400':
+          description: The upload was not a readable Machine Package, or exceeded 64 MiB.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: One or more checks FAILED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+
+  /v1/metrics:
+    get:
+      tags: [Operations]
+      summary: Operational counters
+      description: |
+        Operator-facing operational metrics, deliberately **not**
+        tenant-scoped -- these are operational signals, not tenant data.
+      responses:
+        '200':
+          description: A snapshot of the operational counters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+
+  /healthz:
+    get:
+      tags: [Operations]
+      summary: Combined health check
+      security: []
+      responses:
+        '200':
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  persistence: { type: boolean }
+
+  /livez:
+    get:
+      tags: [Operations]
+      summary: Liveness probe
+      description: |
+        Deliberately dependency-free: returns 200 whenever the HTTP
+        server is serving, so an orchestrator never restarts a healthy
+        process merely because one dependency is temporarily unready.
+      security: []
+      responses:
+        '200':
+          description: The process is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: alive }
+
+  /readyz:
+    get:
+      tags: [Operations]
+      summary: Readiness probe
+      description: |
+        Dependency-aware. Reports `503` when a configured dependency is
+        not fit to serve -- for example a durable Commercial Store that
+        has been closed during shutdown.
+      security: []
+      responses:
+        '200':
+          description: Ready to receive traffic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '503':
+          description: Not ready -- do not route traffic here.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    EvidenceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: The evidence ID you supplied at submission.
+    CaseId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: The case ID you supplied at creation.
+    TenantIdQuery:
+      name: tenant_id
+      in: query
+      required: true
+      schema: { type: string }
+      description: |
+        The tenant to act as. Under JWT authentication this must be a
+        tenant the authenticated subject is granted, or the request is
+        refused with 403.
+
+  responses:
+    BadRequest:
+      description: Malformed request body, missing required field, or body over the size limit.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: |
+        The authenticated subject is not authorized to act as this
+        tenant, or the resource belongs to a different tenant.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: |
+        No such case or evidence for this tenant. Note that a resource
+        belonging to another tenant is reported as **not found**, not as
+        forbidden -- tenant scoping is structural, so a cross-tenant
+        lookup never reaches an ownership check.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unprocessable:
+      description: The request was well-formed but the operation was refused on its merits.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+    SubmitEvidenceRequest:
+      type: object
+      required: [tenant_id, evidence_id]
+      properties:
+        tenant_id: { type: string }
+        case_id:
+          type: string
+          description: Optional; when it names an existing case, the item is attached to it.
+        evidence_id: { type: string }
+        sha256:
+          type: string
+          description: The SHA-256 you computed over the evidence bytes, which stay in your custody.
+        uri: { type: string, description: Where the bytes live, in your own storage. }
+        filename: { type: string }
+        media_type: { type: string }
+        byte_size: { type: integer, format: int64 }
+        collector: { type: string, description: Who or what acquired this evidence. }
+        source: { type: string, description: The originating system or party. }
+        domain:
+          $ref: '#/components/schemas/DomainMetadata'
+        tick: { type: integer, format: int64, description: Logical acquisition time. }
+
+    DomainMetadata:
+      type: object
+      description: At most one of these is normally populated.
+      properties:
+        maritime:
+          type: object
+          properties:
+            vessel_identity: { type: string }
+            port_code: { type: string }
+            event_kind: { type: string, example: AIS_STATUS }
+            location: { type: string }
+        insurance:
+          type: object
+          properties:
+            claim_id: { type: string }
+            policy_id: { type: string }
+            party_id: { type: string }
+            evidence_kind: { type: string, example: SURVEY }
+        trade:
+          type: object
+          properties:
+            document_type: { type: string, example: EBL }
+            transfer_event_id: { type: string }
+            holder_identity: { type: string }
+
+    EvidenceRecord:
+      type: object
+      description: The canonical evidence projection -- never an internal kernel type.
+      properties:
+        identity:
+          type: object
+          properties:
+            evidence_id: { type: string }
+            case_id: { type: string }
+            tenant_id: { type: string }
+            version: { type: integer }
+        provenance:
+          type: object
+          properties:
+            acquisition_record: { type: string }
+            transformation_count: { type: integer }
+            custody_chain_head: { type: string }
+        integrity:
+          type: object
+          properties:
+            sha256: { type: string }
+            sha512: { type: string }
+            hash_status: { type: string }
+            signature_status: { type: string }
+            manifest_hash: { type: string }
+            state: { type: string, example: FINALIZED }
+            verified:
+              type: boolean
+              description: Independently re-derived at projection time, not a stored flag.
+        custody:
+          type: array
+          items: { $ref: '#/components/schemas/CustodyEvent' }
+        source:
+          type: object
+          properties:
+            method: { type: string }
+            collector: { type: string }
+            origin: { type: string }
+            system: { type: string }
+        timing:
+          type: object
+          properties:
+            acquired_at: { type: integer, format: int64 }
+            received_at: { type: integer, format: int64 }
+            finalized_at: { type: integer, format: int64 }
+        trust:
+          type: object
+          properties:
+            classification: { type: string }
+            markings: { type: array, items: { type: string } }
+            legal_hold: { type: boolean }
+        domain_metadata:
+          $ref: '#/components/schemas/DomainMetadata'
+        signature:
+          $ref: '#/components/schemas/EvidenceSignature'
+
+    EvidenceSignature:
+      type: object
+      nullable: true
+      description: |
+        Present only when this deployment has signing enabled. **Absent
+        means unsigned** -- the honest default, never concealed as if
+        signed.
+      properties:
+        algorithm: { type: string, example: Ed25519 }
+        key_id: { type: string }
+        key_version: { type: integer }
+        signature: { type: string, description: Hex-encoded. }
+        signed_manifest_hash: { type: string }
+        signed_at_tick: { type: integer, format: int64 }
+
+    CustodyEvent:
+      type: object
+      properties:
+        event_id: { type: string }
+        actor: { type: string }
+        tick: { type: integer, format: int64 }
+        action: { type: string, example: RECEIVED }
+        reason: { type: string }
+
+    CaseView:
+      type: object
+      properties:
+        case_id: { type: string }
+        tenant_id: { type: string }
+        created_at: { type: integer, format: int64 }
+        evidence_ids: { type: array, items: { type: string } }
+        decided: { type: boolean }
+        outcome: { type: string }
+        acted_on: { type: boolean }
+
+    DecideRequest:
+      type: object
+      required: [tenant_id, hypothesis, finding_id, outcome]
+      properties:
+        tenant_id: { type: string }
+        hypothesis:
+          type: object
+          properties:
+            id: { type: string }
+            description: { type: string }
+        supporting_evidence_ids:
+          type: array
+          items: { type: string }
+          description: Must all already be submitted and finalized.
+        contradicting_evidence_ids:
+          type: array
+          items: { type: string }
+          description: |
+            Recording contradicting evidence is expected, not
+            exceptional -- a case with real contradictions should say so.
+        finding_id: { type: string }
+        finding:
+          type: object
+          properties:
+            contract_basis: { type: string }
+            obligation_ref: { type: string }
+            event_ref: { type: string }
+            quantum_ref: { type: string }
+            source_inference_trace_id: { type: string }
+            human_review_required: { type: boolean }
+            human_reviewed_by: { type: string }
+        outcome:
+          type: string
+          description: e.g. APPROVED, DECLINED, ESCALATED.
+        rationale: { type: string }
+        ledger_actor: { type: string }
+        tick: { type: integer, format: int64 }
+
+    Decision:
+      type: object
+      properties:
+        outcome: { type: string }
+        rationale: { type: string }
+        decided_at: { type: integer, format: int64 }
+        hash: { type: string }
+        finding_hash: { type: string }
+        authorization_hash: { type: string }
+        hypothesis_id: { type: string }
+
+    ActionRequest:
+      type: object
+      required: [tenant_id, actor, permitted_action]
+      properties:
+        tenant_id: { type: string }
+        actor: { type: string }
+        policy_ref: { type: string }
+        scope: { type: string }
+        permitted_action: { type: string, example: APPROVE_SETTLEMENT }
+        conditions: { type: array, items: { type: string } }
+        authorized_at: { type: integer, format: int64 }
+        expires_at: { type: integer, format: int64 }
+        executing_actor: { type: string }
+        execution_at: { type: integer, format: int64 }
+        ledger_actor: { type: string }
+
+    ActionResponse:
+      type: object
+      properties:
+        authorization:
+          type: object
+          properties:
+            actor: { type: string }
+            policy_ref: { type: string }
+            scope: { type: string }
+            permitted_action: { type: string }
+            conditions: { type: array, items: { type: string } }
+            authorized_at: { type: integer, format: int64 }
+            expires_at: { type: integer, format: int64 }
+            hash: { type: string }
+        receipt:
+          type: object
+          properties:
+            receipt_id: { type: string }
+            executed_by: { type: string }
+            executed_at: { type: integer, format: int64 }
+            ledger_record_hash: { type: string }
+
+    Dossier:
+      type: object
+      description: |
+        The Evidence Dossier. Modelled here at the level customers
+        integrate against; the authoritative field set is
+        pkg/commercial/dossier.Dossier.
+      properties:
+        case:
+          type: object
+          properties:
+            case_id:
+              type: string
+              description: The Decision's own FindingHash -- the case's cryptographic identity.
+            scope:
+              type: string
+              description: The case ID as you supplied it.
+        evidence_inventory:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceRecord' }
+        corroboration:
+          type: array
+          items: { type: string }
+        contradictions:
+          type: array
+          items: { type: string }
+        limitations:
+          type: array
+          items: { type: string }
+          description: |
+            Always populated. States what this dossier does **not**
+            establish -- notably that it takes no legal position.
+        package_hash:
+          type: string
+          description: Computed over every field except itself and package_signature.
+        package_signature:
+          type: object
+          nullable: true
+          description: Present only when signing is enabled; absent means unsigned.
+          properties:
+            algorithm: { type: string, example: Ed25519 }
+            key_id: { type: string }
+            key_version: { type: integer }
+            signature: { type: string }
+            signed_package_hash: { type: string }
+            signed_at_tick: { type: integer, format: int64 }
+
+    ReplayResult:
+      type: object
+      properties:
+        original_decision_hash: { type: string }
+        replayed_decision_hash: { type: string }
+        original_action_authorization_hash: { type: string }
+        replayed_action_authorization_hash: { type: string }
+        converged:
+          type: boolean
+          description: True only when every compared hash matches byte-identically.
+
+    VerificationResult:
+      type: object
+      properties:
+        all_passed:
+          type: boolean
+          description: SKIP results are not counted as failures.
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              status_text: { type: string, enum: [PASS, FAIL, SKIP] }
+              detail:
+                type: string
+                description: |
+                  For a SKIP, states exactly why the check could not be
+                  independently made -- never implies it passed.
+
+    Metrics:
+      type: object
+      description: |
+        Operational counters. `external_adapter_failures` reads zero in
+        builds with no external adapters wired in -- an honest zero, not
+        a healthy one.
+      properties:
+        evidence_ingestion_total: { type: integer }
+        evidence_verification_failures: { type: integer }
+        custody_chain_failures: { type: integer }
+        decision_count: { type: integer }
+        decision_latency_avg_millis: { type: number }
+        authorization_denials: { type: integer }
+        action_failures: { type: integer }
+        ledger_commit_failures: { type: integer }
+        replay_failures: { type: integer }
+        external_adapter_failures: { type: integer }
+
+    Readiness:
+      type: object
+      properties:
+        status: { type: string, enum: [ready, not_ready] }
+        checks:
+          type: object
+          properties:
+            registry_persistence: { type: boolean }
+            commercial_store:
+              type: object
+              properties:
+                healthy: { type: boolean }
+                detail: { type: string }
