@@ -336,3 +336,15 @@ func claimsFromContext(ctx context.Context) (Claims, bool) {
 	c, ok := ctx.Value(claimsCtxKey).(Claims)
 	return c, ok
 }
+
+// ClaimsFromContext exposes claimsFromContext to callers outside this
+// package -- API stabilization, not a new mutation surface: it reads
+// exactly what JWTMiddleware already attached to the request context,
+// the same value RBACMiddleware and AuditMiddleware already read
+// internally. Added so a route handler downstream of JWTMiddleware
+// (e.g. the Commercial API v1 routes' tenant-binding check) can read
+// the verified subject without this package growing a second,
+// parallel claims-propagation mechanism.
+func ClaimsFromContext(ctx context.Context) (Claims, bool) {
+	return claimsFromContext(ctx)
+}

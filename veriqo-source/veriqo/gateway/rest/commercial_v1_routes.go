@@ -12,50 +12,95 @@
 //
 // Identity/Authorization for these routes is the SAME JWT+RBAC
 // middleware NewServer already composes around every other route.
-// HONEST GAP: TenantID is currently a caller-supplied field (request
-// body or query parameter), not yet cryptographically bound to the
-// verified JWT identity -- see docs/VERIQO_PILOT_MODE_AND_DEPLOYMENT_READINESS.md,
-// "production identity/mTLS" (a MUST-CLOSE-BEFORE-PAID-PILOT item).
-// pkg/commercial/api.Store's own tenant-namespaced isolation (see its
-// own doc comment) is real and tested; binding the tenant claim to a
-// verified token is the remaining integration step, named here rather
-// than silently assumed.
+//
+// TENANT BINDING (Commercialization Sprint P0-B, closing the prior
+// round's own named gap "TenantID is currently a caller-supplied
+// field ... not yet cryptographically bound to the verified JWT
+// identity"): every tenant-scoped handler below resolves its effective
+// tenant through effectiveTenantID, never by trusting the request body
+// or query string directly. When this deployment has JWTMiddleware
+// configured (a verified subject is present in the request context),
+// the caller-supplied tenant_id MUST be one that subject's
+// pkg/commercial/tenancy.Membership grant covers -- refused with 403
+// otherwise, even for a perfectly valid JWT naming a different tenant.
+// When this deployment has no JWTMiddleware configured at all (no
+// authenticated identity exists to bind to), the caller-supplied
+// tenant_id is used exactly as the pre-P0-B behavior did -- binding is
+// meaningless without an identity in the first place, and this is the
+// mode every pre-P0-B test of these routes still runs in.
 package rest
 
 import (
 	"archive/zip"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 
 	commercialapi "veriqo/pkg/commercial/api"
 	"veriqo/pkg/commercial/evidencefabric"
 	"veriqo/pkg/commercial/packageverify"
+	"veriqo/pkg/commercial/tenancy"
 	"veriqo/pkg/insurance/action"
 	"veriqo/pkg/insurance/causation"
 	"veriqo/pkg/insurance/cre"
 	"veriqo/pkg/insurance/decision"
+	"veriqo/pkg/platform/security"
 )
+
+var (
+	errTenantIDRequiredForAuthenticatedCaller = errors.New("tenant_id is required for an authenticated caller")
+	errTenantNotAuthorizedForSubject          = errors.New("the authenticated subject is not authorized to act as this tenant")
+)
+
+// effectiveTenantID is the one place these routes decide which tenant
+// a request may act as -- see this file's own doc comment for the
+// full rationale.
+func effectiveTenantID(r *http.Request, membership *tenancy.Membership, requestedTenantID string) (string, error) {
+	claims, ok := security.ClaimsFromContext(r.Context())
+	if !ok {
+		return requestedTenantID, nil
+	}
+	if requestedTenantID == "" {
+		return "", errTenantIDRequiredForAuthenticatedCaller
+	}
+	if membership == nil || !membership.IsAuthorized(claims.Subject, requestedTenantID) {
+		return "", errTenantNotAuthorizedForSubject
+	}
+	return requestedTenantID, nil
+}
+
+func writeTenantBindingError(w http.ResponseWriter, err error) {
+	status := http.StatusForbidden
+	if errors.Is(err, errTenantIDRequiredForAuthenticatedCaller) {
+		status = http.StatusBadRequest
+	}
+	writeAPIError(w, status, err)
+}
 
 // commercialV1Routes returns every hand-written v1 route this file
 // adds. A nil store (every caller of NewServer before this route
 // family existed) makes every one of these routes 404, same as
-// insuranceRoutes' and lifecycleRoutes' own nil-safety.
-func commercialV1Routes(store *commercialapi.Store) map[string]http.HandlerFunc {
+// insuranceRoutes' and lifecycleRoutes' own nil-safety. membership may
+// be nil (see effectiveTenantID: an authenticated caller then always
+// refuses, since there is nothing to authorize against -- a safe,
+// fail-closed default, never a silent fall-back to trusting the
+// client).
+func commercialV1Routes(store *commercialapi.Store, membership *tenancy.Membership) map[string]http.HandlerFunc {
 	if store == nil {
 		return nil
 	}
 	return map[string]http.HandlerFunc{
-		"POST /v1/evidence":             handleV1SubmitEvidence(store),
-		"GET /v1/evidence/{id}":         handleV1GetEvidence(store),
-		"POST /v1/evidence/{id}/verify": handleV1VerifyEvidence(store),
-		"GET /v1/evidence/{id}/custody": handleV1GetCustody(store),
-		"POST /v1/cases":                handleV1CreateCase(store),
-		"GET /v1/cases/{id}":            handleV1GetCase(store),
-		"POST /v1/cases/{id}/decide":    handleV1DecideCase(store),
-		"POST /v1/cases/{id}/actions":   handleV1ActOnCase(store),
-		"GET /v1/cases/{id}/dossier":    handleV1GetDossier(store),
-		"GET /v1/cases/{id}/replay":     handleV1Replay(store),
+		"POST /v1/evidence":             handleV1SubmitEvidence(store, membership),
+		"GET /v1/evidence/{id}":         handleV1GetEvidence(store, membership),
+		"POST /v1/evidence/{id}/verify": handleV1VerifyEvidence(store, membership),
+		"GET /v1/evidence/{id}/custody": handleV1GetCustody(store, membership),
+		"POST /v1/cases":                handleV1CreateCase(store, membership),
+		"GET /v1/cases/{id}":            handleV1GetCase(store, membership),
+		"POST /v1/cases/{id}/decide":    handleV1DecideCase(store, membership),
+		"POST /v1/cases/{id}/actions":   handleV1ActOnCase(store, membership),
+		"GET /v1/cases/{id}/dossier":    handleV1GetDossier(store, membership),
+		"GET /v1/cases/{id}/replay":     handleV1Replay(store, membership),
 		"POST /v1/packages/verify":      handleV1VerifyPackage(),
 		"GET /v1/metrics":               handleV1Metrics(store),
 	}
@@ -118,15 +163,20 @@ type reqSubmitEvidence struct {
 	Tick       uint64            `json:"tick"`
 }
 
-func handleV1SubmitEvidence(store *commercialapi.Store) http.HandlerFunc {
+func handleV1SubmitEvidence(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req reqSubmitEvidence
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
 			return
 		}
+		tenantID, err := effectiveTenantID(r, membership, req.TenantID)
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		rec, err := store.SubmitEvidence(commercialapi.EvidenceInput{
-			TenantID: req.TenantID, CaseID: req.CaseID, EvidenceID: req.EvidenceID, SHA256: req.SHA256,
+			TenantID: tenantID, CaseID: req.CaseID, EvidenceID: req.EvidenceID, SHA256: req.SHA256,
 			URI: req.URI, Filename: req.Filename, MediaType: req.MediaType, ByteSize: req.ByteSize,
 			Collector: req.Collector, Source: req.Source, Domain: req.Domain.toDomain(), Tick: req.Tick,
 		})
@@ -138,9 +188,13 @@ func handleV1SubmitEvidence(store *commercialapi.Store) http.HandlerFunc {
 	}
 }
 
-func handleV1GetEvidence(store *commercialapi.Store) http.HandlerFunc {
+func handleV1GetEvidence(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.URL.Query().Get("tenant_id")
+		tenantID, err := effectiveTenantID(r, membership, r.URL.Query().Get("tenant_id"))
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		rec, err := store.GetEvidence(tenantID, r.PathValue("id"))
 		if err != nil {
 			writeAPIError(w, statusForStoreError(err), err)
@@ -150,13 +204,18 @@ func handleV1GetEvidence(store *commercialapi.Store) http.HandlerFunc {
 	}
 }
 
-func handleV1VerifyEvidence(store *commercialapi.Store) http.HandlerFunc {
+func handleV1VerifyEvidence(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			TenantID string `json:"tenant_id"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&req)
-		verified, err := store.VerifyEvidence(req.TenantID, r.PathValue("id"))
+		tenantID, err := effectiveTenantID(r, membership, req.TenantID)
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
+		verified, err := store.VerifyEvidence(tenantID, r.PathValue("id"))
 		if err != nil {
 			writeAPIError(w, statusForStoreError(err), err)
 			return
@@ -165,9 +224,13 @@ func handleV1VerifyEvidence(store *commercialapi.Store) http.HandlerFunc {
 	}
 }
 
-func handleV1GetCustody(store *commercialapi.Store) http.HandlerFunc {
+func handleV1GetCustody(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.URL.Query().Get("tenant_id")
+		tenantID, err := effectiveTenantID(r, membership, r.URL.Query().Get("tenant_id"))
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		chain, err := store.GetCustody(tenantID, r.PathValue("id"))
 		if err != nil {
 			writeAPIError(w, statusForStoreError(err), err)
@@ -177,7 +240,7 @@ func handleV1GetCustody(store *commercialapi.Store) http.HandlerFunc {
 	}
 }
 
-func handleV1CreateCase(store *commercialapi.Store) http.HandlerFunc {
+func handleV1CreateCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			TenantID string `json:"tenant_id"`
@@ -188,7 +251,12 @@ func handleV1CreateCase(store *commercialapi.Store) http.HandlerFunc {
 			writeAPIError(w, http.StatusBadRequest, err)
 			return
 		}
-		if err := store.CreateCase(req.TenantID, req.CaseID, req.Tick); err != nil {
+		tenantID, err := effectiveTenantID(r, membership, req.TenantID)
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
+		if err := store.CreateCase(tenantID, req.CaseID, req.Tick); err != nil {
 			writeAPIError(w, statusForStoreError(err), err)
 			return
 		}
@@ -196,9 +264,13 @@ func handleV1CreateCase(store *commercialapi.Store) http.HandlerFunc {
 	}
 }
 
-func handleV1GetCase(store *commercialapi.Store) http.HandlerFunc {
+func handleV1GetCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.URL.Query().Get("tenant_id")
+		tenantID, err := effectiveTenantID(r, membership, r.URL.Query().Get("tenant_id"))
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		view, err := store.GetCase(tenantID, r.PathValue("id"))
 		if err != nil {
 			writeAPIError(w, statusForStoreError(err), err)
@@ -248,16 +320,21 @@ type respDecision struct {
 	HypothesisID      string `json:"hypothesis_id"`
 }
 
-func handleV1DecideCase(store *commercialapi.Store) http.HandlerFunc {
+func handleV1DecideCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req reqDecideCase
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
 			return
 		}
+		tenantID, err := effectiveTenantID(r, membership, req.TenantID)
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		caseID := r.PathValue("id")
 		d, err := store.DecideCase(commercialapi.DecideInput{
-			TenantID: req.TenantID, CaseID: caseID,
+			TenantID: tenantID, CaseID: caseID,
 			Hypothesis: causation.Hypothesis{
 				ID: causation.HypothesisID(req.Hypothesis.ID), Description: req.Hypothesis.Description,
 			},
@@ -316,15 +393,20 @@ type respAction struct {
 	} `json:"receipt"`
 }
 
-func handleV1ActOnCase(store *commercialapi.Store) http.HandlerFunc {
+func handleV1ActOnCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req reqActOnCase
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
 			return
 		}
+		tenantID, err := effectiveTenantID(r, membership, req.TenantID)
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		aa, receipt, err := store.ActOnCase(commercialapi.ActionInput{
-			TenantID: req.TenantID, CaseID: r.PathValue("id"), Actor: req.Actor, PolicyRef: req.PolicyRef,
+			TenantID: tenantID, CaseID: r.PathValue("id"), Actor: req.Actor, PolicyRef: req.PolicyRef,
 			Scope: req.Scope, PermittedAction: action.Action(req.PermittedAction), Conditions: req.Conditions,
 			AuthorizedAt: req.AuthorizedAt, ExpiresAt: req.ExpiresAt, ExecutingActor: req.ExecutingActor,
 			ExecutionAt: req.ExecutionAt, LedgerActor: req.LedgerActor,
@@ -354,9 +436,13 @@ func handleV1ActOnCase(store *commercialapi.Store) http.HandlerFunc {
 // same content RenderMarkdown/the PDF renderer would present) by
 // default, or its "Machine" form (a .zip download) when
 // ?format=package is given.
-func handleV1GetDossier(store *commercialapi.Store) http.HandlerFunc {
+func handleV1GetDossier(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.URL.Query().Get("tenant_id")
+		tenantID, err := effectiveTenantID(r, membership, r.URL.Query().Get("tenant_id"))
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		caseID := r.PathValue("id")
 
 		if r.URL.Query().Get("format") == "package" {
@@ -388,9 +474,13 @@ func handleV1GetDossier(store *commercialapi.Store) http.HandlerFunc {
 	}
 }
 
-func handleV1Replay(store *commercialapi.Store) http.HandlerFunc {
+func handleV1Replay(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.URL.Query().Get("tenant_id")
+		tenantID, err := effectiveTenantID(r, membership, r.URL.Query().Get("tenant_id"))
+		if err != nil {
+			writeTenantBindingError(w, err)
+			return
+		}
 		result, err := store.Replay(tenantID, r.PathValue("id"))
 		if err != nil {
 			writeAPIError(w, statusForStoreError(err), err)

@@ -37,6 +37,7 @@ import (
 	"time"
 
 	commercialapi "veriqo/pkg/commercial/api"
+	"veriqo/pkg/commercial/tenancy"
 	"veriqo/pkg/lifecycle"
 	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/platform/security"
@@ -68,6 +69,18 @@ type ServerOptions struct {
 	// function before this route family existed) simply omits every
 	// /v1/... route, matching InsuranceLedger's own nil-safety pattern.
 	CommercialStore *commercialapi.Store
+
+	// CommercialTenantMembership is the P0-B tenant-binding registry
+	// (see commercial_v1_routes.go's own doc comment): when JWTSecret
+	// is also set, every /v1/... request's caller-supplied tenant_id
+	// must be one this Membership grants to that request's verified
+	// JWT subject. Leaving this nil while JWTSecret is set means every
+	// authenticated /v1/... request is refused (fails closed, never
+	// silently falls back to trusting the client) -- a deployment that
+	// wants authenticated multi-tenant access must supply a real
+	// Membership. Irrelevant when JWTSecret is unset (no authenticated
+	// identity exists to bind in the first place).
+	CommercialTenantMembership *tenancy.Membership
 }
 
 // NewServer builds an *http.Server exposing every generated route
@@ -91,7 +104,7 @@ func NewServer(addr string, reg *registry.Registry, orch *lifecycle.Orchestrator
 	for path, handler := range insuranceRoutes(opts.InsuranceLedger) {
 		mux.HandleFunc(path, handler)
 	}
-	for path, handler := range commercialV1Routes(opts.CommercialStore) {
+	for path, handler := range commercialV1Routes(opts.CommercialStore, opts.CommercialTenantMembership) {
 		mux.HandleFunc(path, handler)
 	}
 	mux.HandleFunc("/healthz", healthHandler(reg))
