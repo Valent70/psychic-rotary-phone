@@ -150,12 +150,41 @@ func (s *Store) replayCommand(cmd walCommand) error {
 }
 
 // Close releases this Store's WAL handle (a no-op for an in-memory-only
-// Store). Safe to call once after the Store is no longer needed.
+// Store). Safe to call once after the Store is no longer needed. After
+// Close, Healthy reports false -- see Healthy's own doc comment, which
+// this method's own P0-6 readiness-probe consumer (GET /v1/readyz)
+// relies on to stop reporting ready once shutdown has begun.
 func (s *Store) Close() error {
+	s.mu.Lock()
+	s.closed = true
+	s.mu.Unlock()
 	if s.wal == nil {
 		return nil
 	}
 	return s.wal.Close()
+}
+
+// Healthy answers Commercialization Sprint item P0-6/7 ("liveness/
+// readiness probes"): whether this Store is currently fit to serve
+// requests, and, on false, why. An in-memory-only Store (NewStore) is
+// always healthy until Close is called -- there is no durability
+// dependency to be unready for. A durable Store (NewDurableStore) is
+// healthy exactly while its WAL is open (i.e. Close has not been
+// called) -- this is a liveness-of-the-handle check, not a disk-space
+// or fsync-latency probe (neither is information this Store's own
+// wal.Log exposes today, named here rather than silently assumed).
+func (s *Store) Healthy() (bool, string) {
+	s.mu.Lock()
+	closed := s.closed
+	durable := s.wal != nil
+	s.mu.Unlock()
+	if closed {
+		return false, "store is closed"
+	}
+	if !durable {
+		return true, "in-memory store (no durability dependency)"
+	}
+	return true, "durable store, WAL open"
 }
 
 // Backup copies this Store's entire WAL directory -- every segment

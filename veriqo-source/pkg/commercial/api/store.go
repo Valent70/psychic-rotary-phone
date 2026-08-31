@@ -179,6 +179,10 @@ type Store struct {
 	// the segment files to copy.
 	wal    *wal.Log
 	walDir string
+	// closed is set once Close has been called on a durable Store -- see
+	// durable.go's Close and Healthy. Always false for an in-memory-only
+	// Store, which has nothing to close.
+	closed bool
 
 	// preservation is the real, already-built pkg/governance/data
 	// retention/legal-hold engine (see preservation.go) -- reused, not

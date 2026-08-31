@@ -259,6 +259,33 @@ func TestCloseOnInMemoryStoreIsANoOp(t *testing.T) {
 	}
 }
 
+// TestHealthyReflectsStoreLifecycle proves Store.Healthy (the readiness
+// probe's own dependency check -- see veriqo/gateway/rest's readyzHandler)
+// tells the truth across every stage of a Store's lifecycle: an
+// in-memory Store is always healthy, a durable Store is healthy while
+// open, and unhealthy once Close has been called.
+func TestHealthyReflectsStoreLifecycle(t *testing.T) {
+	mem := NewStore()
+	if healthy, detail := mem.Healthy(); !healthy || detail == "" {
+		t.Fatalf("expected an in-memory Store to be healthy with a non-empty detail, got healthy=%v detail=%q", healthy, detail)
+	}
+
+	walDir := filepath.Join(t.TempDir(), "wal")
+	s, _, err := NewDurableStore(walDir)
+	if err != nil {
+		t.Fatalf("NewDurableStore: %v", err)
+	}
+	if healthy, detail := s.Healthy(); !healthy || detail == "" {
+		t.Fatalf("expected an open durable Store to be healthy with a non-empty detail, got healthy=%v detail=%q", healthy, detail)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if healthy, detail := s.Healthy(); healthy || detail == "" {
+		t.Fatalf("expected a closed durable Store to be unhealthy with a non-empty detail, got healthy=%v detail=%q", healthy, detail)
+	}
+}
+
 // TestNewDurableStoreRefusesAForeignPayload proves replay does not
 // silently ignore a record it cannot make sense of -- protecting
 // against a WAL directory that was not actually written by this

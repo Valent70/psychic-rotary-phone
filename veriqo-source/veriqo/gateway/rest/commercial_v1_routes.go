@@ -53,6 +53,25 @@ var (
 	errTenantNotAuthorizedForSubject          = errors.New("the authenticated subject is not authorized to act as this tenant")
 )
 
+// Commercialization Sprint P0-6 security hardening: none of these
+// routes previously bounded request body size before decoding, an
+// unbounded-body-size DoS vector (a caller can send an arbitrarily
+// large body and force this process to buffer all of it). maxJSONBody
+// covers every JSON metadata route; maxPackageUpload is larger,
+// sized for the raw .zip bytes handleV1VerifyPackage accepts.
+const (
+	maxJSONBodyBytes      = 1 << 20  // 1 MiB -- generous for any JSON metadata payload these routes accept
+	maxPackageUploadBytes = 64 << 20 // 64 MiB -- generous for a Machine Package .zip
+)
+
+// limitBody wraps r.Body in http.MaxBytesReader so a decode that reads
+// past limit fails cleanly (json.Decode returns an error whose message
+// names the limit) instead of this process buffering an unbounded
+// request body in memory.
+func limitBody(w http.ResponseWriter, r *http.Request, limit int64) {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
+}
+
 // effectiveTenantID is the one place these routes decide which tenant
 // a request may act as -- see this file's own doc comment for the
 // full rationale.
@@ -165,6 +184,7 @@ type reqSubmitEvidence struct {
 
 func handleV1SubmitEvidence(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r, maxJSONBodyBytes)
 		var req reqSubmitEvidence
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
@@ -206,6 +226,7 @@ func handleV1GetEvidence(store *commercialapi.Store, membership *tenancy.Members
 
 func handleV1VerifyEvidence(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r, maxJSONBodyBytes)
 		var req struct {
 			TenantID string `json:"tenant_id"`
 		}
@@ -242,6 +263,7 @@ func handleV1GetCustody(store *commercialapi.Store, membership *tenancy.Membersh
 
 func handleV1CreateCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r, maxJSONBodyBytes)
 		var req struct {
 			TenantID string `json:"tenant_id"`
 			CaseID   string `json:"case_id"`
@@ -322,6 +344,7 @@ type respDecision struct {
 
 func handleV1DecideCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r, maxJSONBodyBytes)
 		var req reqDecideCase
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
@@ -395,6 +418,7 @@ type respAction struct {
 
 func handleV1ActOnCase(store *commercialapi.Store, membership *tenancy.Membership) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r, maxJSONBodyBytes)
 		var req reqActOnCase
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeAPIError(w, http.StatusBadRequest, err)
@@ -515,6 +539,7 @@ func handleV1Metrics(store *commercialapi.Store) http.HandlerFunc {
 // the verifier of record.
 func handleV1VerifyPackage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limitBody(w, r, maxPackageUploadBytes)
 		tmp, err := os.CreateTemp("", "veriqo-verify-upload-*.zip")
 		if err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)

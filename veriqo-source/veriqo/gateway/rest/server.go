@@ -85,7 +85,12 @@ type ServerOptions struct {
 
 // NewServer builds an *http.Server exposing every generated route
 // under addr, plus a health check at GET /healthz that reports whether
-// this Registry has persistence enabled. opts layers Audit -> JWT ->
+// this Registry has persistence enabled, and, per Commercialization
+// Sprint P0-6/7, a genuine liveness/readiness probe pair: GET /livez
+// (always 200 while the process is up -- see livezHandler) and GET
+// /readyz (200 only while every configured dependency, including the
+// Commercial Store when one is wired in, reports itself healthy -- see
+// readyzHandler). opts layers Audit -> JWT ->
 // RBAC -> APIKey around the routes, in that order, skipping any layer
 // left at its zero value. orch, when non-nil, additionally serves
 // POST /lifecycle/run_unified over the real pkg/lifecycle.Orchestrator
@@ -108,8 +113,10 @@ func NewServer(addr string, reg *registry.Registry, orch *lifecycle.Orchestrator
 		mux.HandleFunc(path, handler)
 	}
 	mux.HandleFunc("/healthz", healthHandler(reg))
+	mux.HandleFunc("/livez", livezHandler())
+	mux.HandleFunc("/readyz", readyzHandler(reg, opts.CommercialStore))
 
-	exempt := map[string]bool{"/healthz": true}
+	exempt := map[string]bool{"/healthz": true, "/livez": true, "/readyz": true}
 
 	var handler http.Handler = mux
 	handler = security.APIKeyMiddleware(handler, opts.APIKeys, exempt)
@@ -133,6 +140,55 @@ func healthHandler(reg *registry.Registry) http.HandlerFunc {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"status":      "ok",
 			"persistence": reg.HasPersistence(),
+		})
+	}
+}
+
+// livezHandler answers Commercialization Sprint P0-6/7 ("liveness/
+// readiness probes"): GET /livez proves only that this process's HTTP
+// server is up and serving -- it checks nothing else, deliberately, so
+// an orchestrator (Kubernetes or otherwise) never restarts a healthy
+// process just because one dependency is temporarily unready. Compare
+// readyzHandler, which is the one that actually checks dependencies.
+func livezHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]any{"status": "alive"})
+	}
+}
+
+// readyzHandler answers the other half of P0-6/7: GET /readyz reports
+// whether this process is currently fit to receive traffic, checking
+// every dependency this gateway actually has an opinion about. reg's
+// own persistence flag mirrors what /healthz has always reported;
+// commercialStore, when non-nil, additionally reports its own
+// Store.Healthy() (see pkg/commercial/api/durable.go) -- a closed
+// durable Store (mid-shutdown, or a failed reopen) makes this endpoint
+// report 503, not 200, so a load balancer stops routing to a process
+// that cannot durably serve the Commercial API. A nil commercialStore
+// (no Commercial API configured for this deployment) is not a
+// readiness failure -- there is nothing to be unready about.
+func readyzHandler(reg *registry.Registry, commercialStore *commercialapi.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		checks := map[string]any{
+			"registry_persistence": reg.HasPersistence(),
+		}
+		ready := true
+		if commercialStore != nil {
+			healthy, detail := commercialStore.Healthy()
+			checks["commercial_store"] = map[string]any{"healthy": healthy, "detail": detail}
+			ready = ready && healthy
+		}
+		status := http.StatusOK
+		if !ready {
+			status = http.StatusServiceUnavailable
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status": map[bool]string{true: "ready", false: "not_ready"}[ready],
+			"checks": checks,
 		})
 	}
 }
