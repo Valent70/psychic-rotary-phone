@@ -90,6 +90,14 @@ var knownStates = func() map[State]bool {
 // IsKnownState reports whether s is one of the fourteen modelled states.
 func IsKnownState(s State) bool { return knownStates[s] }
 
+// States returns the modelled states in lifecycle order.
+//
+// It is exported so pkg/casefabric can assert that every insurance state
+// maps onto a canonical case phase. Without that assertion, a state
+// added here would silently drift off the fabric; with it, the omission
+// is a test failure in the package that cares.
+func States() []State { return append([]State(nil), orderedStates...) }
+
 // anyKnownRole is the authority check for transitions this package does
 // not gate behind a specific domain authority (reserve/payment) —
 // still refuses a completely unknown role, never a bare no-op check.

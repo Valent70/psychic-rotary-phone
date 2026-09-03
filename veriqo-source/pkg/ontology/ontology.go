@@ -122,6 +122,50 @@ const (
 	ObjectTimeline          ObjectType = "Timeline"
 )
 
+// The six object types the constitutional core makes first-class.
+//
+// Each of these was previously a value carried inside some other
+// object -- a proposition lived in a claim's text, a contradiction in a
+// finding's prose, a qualification as a string on a record. That is
+// exactly how an object stops being addressable: you cannot link to it,
+// version it, or ask what else depends on it.
+//
+// They are added here rather than registered from their own packages so
+// the canonical vocabulary stays in one place. pkg/proof, pkg/casefabric
+// and pkg/qualification create instances; none of them declares a
+// competing type.
+const (
+	// ObjectProposition is a falsifiable statement about the world. It
+	// is distinct from Claim: a claim is a party's assertion within a
+	// case, a proposition is the thing that is or is not so.
+	ObjectProposition ObjectType = "Proposition"
+	// ObjectProofObject is the sealed, cryptographically bound record
+	// behind a significant conclusion (pkg/proof).
+	ObjectProofObject ObjectType = "ProofObject"
+	// ObjectQualification is an epistemic verdict on a claim, with its
+	// policy version and material dissent. Addressable because a
+	// qualification can be superseded, and the supersession matters.
+	ObjectQualification ObjectType = "Qualification"
+	// ObjectContradiction is a specific conflict within or against an
+	// evidence set. First-class because contradictions are carried, not
+	// resolved by averaging, and a carried thing needs an identity.
+	ObjectContradiction ObjectType = "Contradiction"
+	// ObjectProofObligation is what would have to be shown for a claim
+	// to hold (pkg/qualification/reverseproof).
+	ObjectProofObligation ObjectType = "ProofObligation"
+	// ObjectNextBestEvidence is a ranked, rights-filtered candidate for
+	// acquisition. Addressable because "what we chose not to pursue, and
+	// why" is part of the record.
+	ObjectNextBestEvidence ObjectType = "NextBestEvidence"
+	// ObjectAttestation is a temporal attestation over a datum: either a
+	// position in VERIQO's tamper-evident chain or an independent
+	// authority's token (pkg/platform/timestamp). First-class because
+	// the two are cited differently and must never be conflated -- an
+	// RFC 3161 token is referred to by its authority and serial, and a
+	// thing referred to needs an identity.
+	ObjectAttestation ObjectType = "Attestation"
+)
+
 var (
 	mu               sync.RWMutex
 	knownObjectTypes = func() map[ObjectType]bool {
@@ -135,6 +179,9 @@ var (
 			ObjectResponsibility, ObjectLoss, ObjectQuantum, ObjectCounterclaim,
 			ObjectFinding, ObjectHypothesis, ObjectResolution, ObjectResolutionPackage,
 			ObjectTimeline,
+			ObjectProposition, ObjectProofObject, ObjectQualification,
+			ObjectContradiction, ObjectProofObligation, ObjectNextBestEvidence,
+			ObjectAttestation,
 		} {
 			m[t] = true
 		}
