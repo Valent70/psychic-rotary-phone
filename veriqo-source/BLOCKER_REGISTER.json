@@ -1,9 +1,9 @@
 {
   "schema": "veriqo.blocker_register/v2",
-  "generated_from": "READINESS_MANIFEST.json + Round 8 re-verification",
-  "assessment_date": "2026-08-27",
+  "generated_from": "READINESS_MANIFEST.json + Round 8 re-verification + Sisa Backlogs round (two omitted external dependencies added)",
+  "assessment_date": "2026-09-03",
   "rule": "A blocker only ever leaves this register when real, external, signed evidence closes it through pkg/governance/qualification. No blocker's qualification_status may be edited by hand to make this register look better than the manifest it is generated from.",
-  "living_register_note": "Per the Round 7 work order's \u00a7XIX: this register is a source-of-truth, not a one-time report. Every field it carries is either mechanically derived from READINESS_MANIFEST.json (engineering_status, qualification_status, qualification_level, blocking_production) or a stable, hand-authored requirement description that changes only when the blocker's own real-world requirements change -- never to inflate a status.",
+  "living_register_note": "Per the Round 7 work order's \u00a7XIX: this register is a source-of-truth, not a one-time report. Every field it carries is either mechanically derived from READINESS_MANIFEST.json (engineering_status, qualification_status, qualification_level, blocking_production) or a stable, hand-authored requirement description that changes only when the blocker's own real-world requirements change -- never to inflate a status. 2026-09-03: EXTERNAL_TSA and INDEPENDENT_ASSURANCE were added. Both were named as missing in the Sisa Backlogs and neither was in this register, which meant the register understated what VERIQO depends on outsiders for. No existing blocker's status was changed: the register grew from 8 to 10, and every one of the original 8 stands exactly where it stood.",
   "blockers": [
     {
       "blocker_id": "PENTEST",
@@ -179,6 +179,50 @@
       "last_verified": "2026-08-27",
       "qualification_status": "READY_FOR_EXTERNAL_QUALIFICATION",
       "qualification_level": "READY_FOR_EXTERNAL_QUALIFICATION",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "EXTERNAL_TSA",
+      "description": "An RFC 3161 trusted timestamp relationship with a Time-Stamping Authority independent of VERIQO and of every party to a matter. VERIQO's self-hosted facility is a tamper-evident temporal chain: it proves ordering and non-alteration within the chain and proves nothing about wall-clock time.",
+      "code_requirement": "pkg/platform/timestamp: the distinction is implemented and enforced. Kind.ProvesExistenceBefore() returns true only for IndependentAttestation; Attestation.Kind is derived by Assess and is not settable; a TSA operated by any party to the matter is refused and the downgrade is disclosed.",
+      "infrastructure_requirement": "A commercial TSA account and network reachability to its RFC 3161 endpoint. Neither exists; this sandbox has no TSA relationship.",
+      "security_requirement": "The TSA's signing certificate chain must validate to a trusted root, and the token must be stored verbatim so a third party can verify it without trusting VERIQO's parsing.",
+      "operational_requirement": "Token acquisition at evidence finalization, retention of the tokens for the evidential lifetime, and a re-timestamping policy before the TSA's certificate expires.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "A real RFC 3161 token, issued by a named authority independent of VERIQO and of the parties, covering a real evidence digest.",
+      "internal_closure": "",
+      "acceptance_criteria": "A real token from a named independent TSA verifies against its certificate chain and raises a real evidence version's attestation to INDEPENDENT_ATTESTATION through timestamp.Assess, with no code change required to accept it.",
+      "owner": "Repository owner: procure a TSA relationship (e.g. an accredited commercial timestamping service).",
+      "artifact": "pkg/platform/timestamp, docs/adr/0003-tamper-evident-chain-is-not-a-trusted-timestamp.md",
+      "test": "go test ./pkg/platform/timestamp/",
+      "next_action": "Procure a TSA account and wire its endpoint into evidence finalization. The typed landing place already exists; nothing in the code needs to change to accept a real token.",
+      "evidence_location": "pkg/platform/timestamp/timestamp_test.go (TestOnlyIndependentAttestationProvesExistenceBefore, TestSelfOperatedTSAIsNotIndependent)",
+      "last_verified": "2026-09-03",
+      "qualification_status": "BLOCKED_EXTERNAL",
+      "qualification_level": "VERIFIED_INTERNAL",
+      "blocking_production": true
+    },
+    {
+      "blocker_id": "INDEPENDENT_ASSURANCE",
+      "description": "An independent assessor's examination of VERIQO's evidence-handling controls and qualification procedure. This is the third level of proof: PROOF_OBJECT_CREATED != PROOF_QUALIFIED != PROOF_EXTERNALLY_ATTESTED. VERIQO can reach the second level alone and can never reach the third.",
+      "code_requirement": "pkg/proof: the three levels are implemented. RaiseToExternallyAttested requires a sealed, qualified object, an attestation pinning its hash, and a named attestor who is not VERIQO or any party to the matter. No VERIQO code path calls it.",
+      "infrastructure_requirement": "None. This blocker is not technical: it needs an assessor, not a deployment.",
+      "security_requirement": "The attestor's identity and reference must be recorded, and the attestation must pin the exact proof object hash examined.",
+      "operational_requirement": "An engagement with an assessor competent in evidence handling, and a re-assessment cycle when the qualification procedure changes.",
+      "engineering_status": "PASS",
+      "external_dependency": true,
+      "external_evidence_required": "A signed statement from a named, competent assessor that VERIQO's qualification procedure was correctly applied to a specific proof object.",
+      "internal_closure": "",
+      "acceptance_criteria": "A named assessor's signed statement raises a real proof object to PROOF_EXTERNALLY_ATTESTED through proof.RaiseToExternallyAttested, and the constitutional proof audit records its first QUALIFIED article.",
+      "owner": "Repository owner: engage an independent assessor with evidence-handling competence.",
+      "artifact": "pkg/proof/attestation.go, pkg/assurance (the constitutional proof audit: 0 of 30 articles QUALIFIED)",
+      "test": "go test ./pkg/proof/ -run Attest; go test ./pkg/assurance/",
+      "next_action": "Engage an assessor. Until one has examined a control, no article in the constitutional proof audit can reach QUALIFIED, and no proof object can be described as proved.",
+      "evidence_location": "pkg/proof/attestation_test.go (TestOnlyExternalAttestationIsProof, TestVeriqoCannotAttestToItself, TestNoVeriqoCodePathReachesLevelThree)",
+      "last_verified": "2026-09-03",
+      "qualification_status": "BLOCKED_EXTERNAL",
+      "qualification_level": "VERIFIED_INTERNAL",
       "blocking_production": true
     }
   ]

@@ -239,6 +239,23 @@ type Trace struct {
 	// ReplayRef names the replay path.
 	ReplayRef string
 
+	// RuntimeEvidence: an actual execution of this control left an
+	// identifiable record — an audit event, a ledger entry, a replay
+	// package — that somebody can go and look at.
+	//
+	// This is the link "article -> code -> test" was missing. A test
+	// proves the control behaves correctly when exercised deliberately.
+	// It says nothing about whether the control ran in the system as
+	// assembled, or left anything behind when it did. Enterprise
+	// assurance is the difference between "we wrote a test for it" and
+	// "here is the event it emitted".
+	RuntimeEvidence bool
+	// RuntimeEvidenceRef identifies the record: an audit event id, a
+	// ledger index, a replay package reference. It must be something a
+	// reader can resolve, not a description of the kind of thing that
+	// would exist.
+	RuntimeEvidenceRef string
+
 	// Qualification: the control has been assessed, not merely run.
 	Qualification bool
 	// QualificationRef names the assessment.
@@ -277,7 +294,9 @@ func (t Trace) Validate() error {
 	}{
 		{"code", t.Code, t.CodeRef}, {"called", t.Called, t.CalledRef},
 		{"test", t.Test, t.TestRef}, {"evidence", t.Evidence, t.EvidenceRef},
-		{"replay", t.Replay, t.ReplayRef}, {"qualification", t.Qualification, t.QualificationRef},
+		{"replay", t.Replay, t.ReplayRef},
+		{"runtime evidence", t.RuntimeEvidence, t.RuntimeEvidenceRef},
+		{"qualification", t.Qualification, t.QualificationRef},
 		{"external proof", t.ExternalProof, t.ExternalProofRef},
 	} {
 		if l.on && strings.TrimSpace(l.ref) == "" {
@@ -289,8 +308,14 @@ func (t Trace) Validate() error {
 	if !t.Code && (t.Called || t.Test || t.Evidence || t.Replay) {
 		return fmt.Errorf("%w: article %d claims downstream links with no code", ErrImpossibleChain, t.Article)
 	}
-	if !t.Called && (t.Evidence || t.Replay) {
+	if !t.Called && (t.Evidence || t.Replay || t.RuntimeEvidence) {
 		return fmt.Errorf("%w: article %d claims production evidence for a control nothing calls", ErrImpossibleChain, t.Article)
+	}
+	// Runtime evidence without a test is not impossible, but runtime
+	// evidence without CODE is: a record cannot be emitted by an
+	// implementation that does not exist.
+	if !t.Code && t.RuntimeEvidence {
+		return fmt.Errorf("%w: article %d claims a runtime record with no implementation", ErrImpossibleChain, t.Article)
 	}
 	return nil
 }
@@ -321,6 +346,11 @@ func Assess(t Trace) (Verdict, error) {
 	case !t.Evidence || !t.Replay:
 		// Tests exist, but nothing on a production path leaves a record
 		// an outsider could check.
+		return AssuranceGap, nil
+	case !t.RuntimeEvidence:
+		// The control is designed to leave a record and has been tested,
+		// but no actual run has produced one that can be pointed at.
+		// This is the gap the "article -> code -> test" chain hid.
 		return AssuranceGap, nil
 	case !t.Qualification:
 		return AssuranceGap, nil
@@ -356,6 +386,8 @@ func Explain(t Trace) string {
 			return prefix + "Tests pass but a production run leaves no durable record."
 		case !t.Replay:
 			return prefix + "A record exists but it cannot be reproduced without trusting the runtime."
+		case !t.RuntimeEvidence:
+			return prefix + "The control is tested and designed to leave a record, but no executed run has produced one that can be pointed at."
 		default:
 			return prefix + "The control is exercised and recorded but has never been assessed."
 		}

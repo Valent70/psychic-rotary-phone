@@ -1,0 +1,93 @@
+{
+  "schema": "veriqo.runtime_evidence/v1",
+  "generated_by": "cmd/veriqo-runtime-evidence",
+  "note": "Audit events emitted by an actual execution of the canonical evidence-to-decision chain. pkg/assurance's traceability matrix cites these ids; TestEveryRuntimeEvidenceRefResolves fails if a row cites a record this run did not emit.",
+  "determinism": "Logical ticks, fixed identifiers, no wall-clock time and no randomness. Two runs produce identical event ids.",
+  "boundary": "The evidence in this run is a fixture. It demonstrates that the chain executes and records; it does not demonstrate behaviour on real commercial data, which is the LIVE_DATA blocker and remains BLOCKED_EXTERNAL.",
+  "case_id": "RUNTIME-EVIDENCE-CASE-1",
+  "proof_hash": "9d6f4073c9b9ca793930d041eccc4d81c886a9b396cf4b514a7b4af5ea7a105b",
+  "decision_hash": "b3c6a1cd688db5ce9e0db71b01134249d1506447a99f5c809975c64e985de31e",
+  "ledger_root_hash": "279923df8724d5f34273589b41fa88ea7153022fb9ba883051d1bf4b3c901843",
+  "records": [
+    {
+      "index": 1,
+      "event_id": "AUDIT-001-case.opened",
+      "actor": "analyst-1",
+      "action": "case.opened",
+      "hash": "58fb3facbfb91d4e2eb4d607a148a6d61daf79978b82dfc2e45fdc80b7e187b5",
+      "prev_hash": ""
+    },
+    {
+      "index": 2,
+      "event_id": "AUDIT-002-case.scoped",
+      "actor": "analyst-1",
+      "action": "case.scoped",
+      "hash": "2608afffff32b26c45d431439db91d1cff138bc097a906b18bdc91155a50f489",
+      "prev_hash": "58fb3facbfb91d4e2eb4d607a148a6d61daf79978b82dfc2e45fdc80b7e187b5"
+    },
+    {
+      "index": 3,
+      "event_id": "AUDIT-003-case.evidence_pinned",
+      "actor": "analyst-1",
+      "action": "case.evidence_pinned",
+      "hash": "1cdf3028ae5069f6edd299eee36bc257b529afa4fd7fef024925cec5ed251293",
+      "prev_hash": "2608afffff32b26c45d431439db91d1cff138bc097a906b18bdc91155a50f489"
+    },
+    {
+      "index": 4,
+      "event_id": "AUDIT-004-case.hypothesis_recorded",
+      "actor": "analyst-1",
+      "action": "case.hypothesis_recorded",
+      "hash": "805b2287257b718cb46d0566e3a29efba28e6b1554140c6abd54cc1f4170ef9b",
+      "prev_hash": "1cdf3028ae5069f6edd299eee36bc257b529afa4fd7fef024925cec5ed251293"
+    },
+    {
+      "index": 5,
+      "event_id": "AUDIT-005-case.claim_registered",
+      "actor": "analyst-1",
+      "action": "case.claim_registered",
+      "hash": "19134ac11e7c548c53986493f0fd36c957eb9bd30dd194cd973d127ceaf6114c",
+      "prev_hash": "805b2287257b718cb46d0566e3a29efba28e6b1554140c6abd54cc1f4170ef9b"
+    },
+    {
+      "index": 6,
+      "event_id": "AUDIT-006-case.hypothesis_tested",
+      "actor": "analyst-1",
+      "action": "case.hypothesis_tested",
+      "hash": "bce0c6689c423b07cfca4f172af44a9ca3dfb1a198ca5848e2bddb62397d3ba4",
+      "prev_hash": "19134ac11e7c548c53986493f0fd36c957eb9bd30dd194cd973d127ceaf6114c"
+    },
+    {
+      "index": 7,
+      "event_id": "AUDIT-007-case.qualification_begun",
+      "actor": "analyst-1",
+      "action": "case.qualification_begun",
+      "hash": "f98154287cbbe2e0f06d30a82f61e657e0586ffdcc272d47e3d6f42930d60e22",
+      "prev_hash": "bce0c6689c423b07cfca4f172af44a9ca3dfb1a198ca5848e2bddb62397d3ba4"
+    },
+    {
+      "index": 8,
+      "event_id": "AUDIT-008-case.proof_attached",
+      "actor": "analyst-1",
+      "action": "case.proof_attached",
+      "hash": "2288bbb7a95533dbfc62524aeb7e3d8315a6c80d3cc68f7d73081695b197e439",
+      "prev_hash": "f98154287cbbe2e0f06d30a82f61e657e0586ffdcc272d47e3d6f42930d60e22"
+    },
+    {
+      "index": 9,
+      "event_id": "AUDIT-009-case.resolved",
+      "actor": "partner-1",
+      "action": "case.resolved",
+      "hash": "af064c5e7f1f913dd403c5950ba870ad09c90e6378c19ea340eb746ed0d33a73",
+      "prev_hash": "2288bbb7a95533dbfc62524aeb7e3d8315a6c80d3cc68f7d73081695b197e439"
+    },
+    {
+      "index": 10,
+      "event_id": "AUDIT-010-proof.sealed",
+      "actor": "analyst-1",
+      "action": "proof.sealed",
+      "hash": "279923df8724d5f34273589b41fa88ea7153022fb9ba883051d1bf4b3c901843",
+      "prev_hash": "af064c5e7f1f913dd403c5950ba870ad09c90e6378c19ea340eb746ed0d33a73"
+    }
+  ]
+}

@@ -37,6 +37,21 @@ const noExternalAssessor = "an independent assessor with evidence-handling compe
 // end to end, so there is no production-path record to point at.
 const noProductionPath = "no production deployment exists, so no production-path record of this control exists"
 
+// runtimeEvidenceNote explains what a RuntimeEvidenceRef in this matrix
+// is, and what it is not.
+//
+// The cited ids come from evidence/RUNTIME_EVIDENCE.json, which
+// cmd/veriqo-runtime-evidence produces by actually executing the
+// canonical evidence-to-decision chain. They are real records emitted by
+// a real run, and TestEveryRuntimeEvidenceRefResolves fails if a row
+// cites one the run did not emit.
+//
+// They are not production records. The run's evidence is a fixture: it
+// demonstrates the control executes and leaves a trace, not that it
+// behaves correctly on real commercial data. That distinction is the
+// LIVE_DATA blocker, and it stays BLOCKED_EXTERNAL.
+const runtimeEvidenceNote = "emitted by cmd/veriqo-runtime-evidence; see evidence/RUNTIME_EVIDENCE.json"
+
 var matrix = []Trace{
 	{Article: 1, Control: "Finding requires a sealed proof object with a pinned evidence set",
 		Code: true, CodeRef: "veriqo/pkg/proof.NewFinding",
@@ -44,6 +59,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "TestSufficientObjectFoundsAFinding, TestUnpinnedEvidenceIsRefused",
 		Evidence: true, EvidenceRef: "casefabric timeline entry kind=proof_attached",
 		Replay: true, ReplayRef: "proof.VerifyHash re-derives the object from its components",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-008-case.proof_attached, AUDIT-010-proof.sealed (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_RED_FLAG_RESPONSE_REPORT.md (AuthorizedFinding gate assessment)",
 		ExternalDependency: noExternalAssessor},
 
@@ -74,6 +90,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "pkg/evidence/manifest tests",
 		Evidence: true, EvidenceRef: "custody chain head on the evidence version",
 		Replay: true, ReplayRef: "content hash re-derivable from stored raw",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-003-case.evidence_pinned (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_TRUST_AUTHORITY_MODEL_RESPONSE.md INV-001..INV-010",
 		ExternalDependency: noExternalAssessor},
 
@@ -83,6 +100,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "manifest immutability and forged-state tests",
 		Evidence: true, EvidenceRef: "custody event on finalization",
 		Replay: true, ReplayRef: "veriqo/pkg/replay ManifestAdapter",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-003-case.evidence_pinned (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_FINAL_AUTHORITY_HARDENING_RESPONSE.md (finalization freeze audit)",
 		ExternalDependency: noExternalAssessor},
 
@@ -146,6 +164,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "TestDecisionMayNotAdjudicate, TestOutcomeMayNotAdjudicate",
 		Evidence: true, EvidenceRef: "a refused adjudication is an error, not a logged warning",
 		Replay: true, ReplayRef: "the state has no PROVEN or LIABLE value to replay into",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-009-case.resolved (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_ROUND10_L99_LEVEL3_ASSESSMENT_REPORT.md (adjudication boundary)",
 		ExternalDependency: noExternalAssessor},
 
@@ -189,6 +208,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "manifest version and supersession tests",
 		Evidence: true, EvidenceRef: "version lineage in the custody chain",
 		Replay: true, ReplayRef: "veriqo/pkg/lineage",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-003-case.evidence_pinned (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_AUTHORITY_ROUND_2_CLOSURE_RESPONSE.md (MarkSuperseded lineage audit)",
 		ExternalDependency: noExternalAssessor},
 
@@ -198,6 +218,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "test/adversarial constitutional suite",
 		Evidence: true, EvidenceRef: "the audit ledger is the canonical record",
 		Replay: true, ReplayRef: "veriqo/pkg/insurance/auditlink",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-001-case.opened through AUDIT-010-proof.sealed (the whole run is in the one ledger) (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_AUTHORITY_ROUND_2_CLOSURE_RESPONSE.md (auditlink canonical authority)",
 		ExternalDependency: noExternalAssessor},
 

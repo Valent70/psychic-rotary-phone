@@ -17,6 +17,7 @@ func full() Trace {
 		Test: true, TestRef: "TestX",
 		Evidence: true, EvidenceRef: "event family x",
 		Replay: true, ReplayRef: "pkg/replay",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-001-case.opened",
 		Qualification: true, QualificationRef: "docs/assessment.md",
 		ExternalProof: true, ExternalProofRef: "assessor-ltd ref 99",
 	}
@@ -148,22 +149,30 @@ func TestVerdictRules(t *testing.T) {
 		{"code but nothing calls it", func(tr *Trace) {
 			tr.Called, tr.CalledRef = false, ""
 			tr.Test, tr.Evidence, tr.Replay, tr.Qualification, tr.ExternalProof = false, false, false, false, false
+			tr.RuntimeEvidence, tr.RuntimeEvidenceRef = false, ""
 		}, IntegrationGap},
 		{"called but untested", func(tr *Trace) {
 			tr.Test, tr.TestRef = false, ""
 			tr.Evidence, tr.Replay, tr.Qualification, tr.ExternalProof = false, false, false, false
+			tr.RuntimeEvidence, tr.RuntimeEvidenceRef = false, ""
 		}, AssuranceGap},
 		{"tested but no production evidence", func(tr *Trace) {
 			tr.Evidence, tr.EvidenceRef = false, ""
 			tr.Replay, tr.Qualification, tr.ExternalProof = false, false, false
+			tr.RuntimeEvidence, tr.RuntimeEvidenceRef = false, ""
 		}, AssuranceGap},
 		{"recorded but not replayable", func(tr *Trace) {
 			tr.Replay, tr.ReplayRef = false, ""
+			tr.RuntimeEvidence, tr.RuntimeEvidenceRef = false, ""
 			tr.Qualification, tr.ExternalProof = false, false
 		}, AssuranceGap},
 		{"replayable but never assessed", func(tr *Trace) {
 			tr.Qualification, tr.QualificationRef = false, ""
 			tr.ExternalProof, tr.ExternalProofRef = false, ""
+		}, AssuranceGap},
+		{"no record from any executed run", func(tr *Trace) {
+			tr.RuntimeEvidence, tr.RuntimeEvidenceRef = false, ""
+			tr.Qualification, tr.ExternalProof = false, false
 		}, AssuranceGap},
 		{"assessed but nobody outside looked", func(tr *Trace) {
 			tr.ExternalProof, tr.ExternalProofRef = false, ""
@@ -217,6 +226,7 @@ func TestAssertedLinkNeedsAReference(t *testing.T) {
 		{"test", func(tr *Trace) { tr.TestRef = "" }},
 		{"evidence", func(tr *Trace) { tr.EvidenceRef = "" }},
 		{"replay", func(tr *Trace) { tr.ReplayRef = "" }},
+		{"runtime evidence", func(tr *Trace) { tr.RuntimeEvidenceRef = "" }},
 		{"qualification", func(tr *Trace) { tr.QualificationRef = "" }},
 		{"external proof", func(tr *Trace) { tr.ExternalProofRef = "" }},
 	} {
