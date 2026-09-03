@@ -95,7 +95,7 @@ func TestCanonicalCaseReachesTheOneAuditStore(t *testing.T) {
 	c := buildCase(t)
 	store := audit.NewAuditStore()
 
-	records, chain, err := casefabric.Mirror(store, c, "policy-v1")
+	records, chain, err := casefabric.Mirror(store, c, "policy-v1", nil)
 	if err != nil {
 		t.Fatalf("Mirror: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestAnUnverifiableTimelineIsNotMirrored(t *testing.T) {
 	// A case whose timeline verifies mirrors fine; the negative case is
 	// covered by casefabric's own tamper tests. Here we assert the
 	// refusal path exists and the store is untouched when it fires.
-	if _, _, err := casefabric.Mirror(nil, c, "policy-v1"); err == nil {
+	if _, _, err := casefabric.Mirror(nil, c, "policy-v1", nil); err == nil {
 		t.Fatal("mirroring to no store must be refused")
 	}
 	if len(store.Snapshot()) != 0 {

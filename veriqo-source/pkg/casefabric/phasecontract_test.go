@@ -161,7 +161,7 @@ func TestContractExitConditionsMatchTheCode(t *testing.T) {
 	// UNDER_QUALIFICATION exits on every material claim carrying a
 	// sealed proof object. The engine enforces exactly that.
 	c := readyForProof(t)
-	if _, err := c.Resolve("evidence_package_delivered", "", "a", 9); err == nil {
+	if _, err := c.Resolve(ResolutionGate{}, "evidence_package_delivered", "", "a", 9); err == nil {
 		t.Fatal("the engine must enforce the stated exit condition for UNDER_QUALIFICATION")
 	}
 
@@ -170,7 +170,7 @@ func TestContractExitConditionsMatchTheCode(t *testing.T) {
 	mustNoErr(t, c2.AddEvidence([]EvidenceRef{{EvidenceID: "E-1", EvidenceVersionID: "v1", SHA256: "abc"}}, "a", 3))
 	mustNoErr(t, c2.AddHypothesis(Hypothesis{ID: "H-1", Description: "untested"}, "a", 4))
 	mustNoErr(t, c2.BeginQualification("a", 5))
-	if _, err := c2.Resolve("closed", "", "a", 6); err == nil {
+	if _, err := c2.Resolve(ResolutionGate{}, "closed", "", "a", 6); err == nil {
 		t.Fatal("the engine must enforce the stated exit condition for HYPOTHESES_FORMED")
 	}
 }

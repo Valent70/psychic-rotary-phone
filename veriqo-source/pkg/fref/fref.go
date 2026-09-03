@@ -370,8 +370,20 @@ func Close(fwd, rev *Execution, forwardEvidence, requiredEvidence []string) (Clo
 	if fwd.subject != rev.subject {
 		return Closure{}, fmt.Errorf("%w: forward is about %q, reverse about %q", ErrNoClosure, fwd.subject, rev.subject)
 	}
-	if err := fwd.RequireComplete(); err != nil {
-		return Closure{}, fmt.Errorf("forward: %w", err)
+	// The forward run must have settled its evidence set, not finished.
+	//
+	// This was RequireComplete until the sequencing audit, and that was
+	// the defect in miniature: demanding a completed forward run —
+	// through FINDING and DECISION — made closure impossible to compute
+	// until after the decision existed, which forced the reverse
+	// direction to be a retrospective audit.
+	//
+	// TRUST is the right bar. By then the forward run's evidence set is
+	// fixed, which is the only thing closure compares. Requiring more
+	// would not make the comparison better; it would only make it later.
+	if !fwd.Reached(StageTrust) {
+		return Closure{}, fmt.Errorf("forward: %w: closure compares the evidence a finding rests on, which is settled at %s",
+			ErrStageNotReached, StageTrust)
 	}
 	if !rev.Reached(StageRequiredEvidence) {
 		return Closure{}, fmt.Errorf("reverse: %w: %s", ErrStageNotReached, StageRequiredEvidence)

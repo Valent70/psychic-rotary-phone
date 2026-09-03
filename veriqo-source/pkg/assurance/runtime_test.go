@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"veriqo/pkg/fref"
 )
 
 // runtimeArtefact mirrors evidence/RUNTIME_EVIDENCE.json.
@@ -149,5 +151,63 @@ func TestRuntimeEvidenceCoversTheWholeChain(t *testing.T) {
 		if !actions[required] {
 			t.Fatalf("the executed run emitted no %q event: the chain was not run end to end", required)
 		}
+	}
+}
+
+// TestTheRuntimeLedgerObeysTheConstitutionalSequence is the check the
+// artefact was missing when a reviewer found case.resolved recorded
+// before proof.sealed.
+//
+// It reads the shipped artefact rather than generating a fresh one, so
+// a committed artefact that violates the sequence fails here rather
+// than at the next regeneration.
+func TestTheRuntimeLedgerObeysTheConstitutionalSequence(t *testing.T) {
+	a := loadRuntimeEvidence(t)
+	var actions []string
+	for _, r := range a.Records {
+		actions = append(actions, r.Action)
+	}
+	if v := fref.VerifyEventOrder(actions); len(v) > 0 {
+		t.Fatalf("the shipped runtime ledger is out of constitutional order: %s", v[0])
+	}
+	if g := fref.VerifyEventGates(actions); len(g) > 0 {
+		t.Fatalf("the shipped runtime ledger skipped a constitutional gate: %s", g[0])
+	}
+}
+
+// TestTheRuntimeLedgerRecordsTheReverseClosureBeforeQualification is
+// the specific ordering the sequencing audit restored, asserted against
+// the artefact rather than the code.
+func TestTheRuntimeLedgerClosesReverseBeforeQualification(t *testing.T) {
+	a := loadRuntimeEvidence(t)
+	posOf := func(action string) int {
+		for i, r := range a.Records {
+			if r.Action == action {
+				return i
+			}
+		}
+		return -1
+	}
+	closure := posOf("qualification.reverse_closed")
+	qual := posOf("case.qualification_begun")
+	seal := posOf("proof.sealed")
+	resolved := posOf("case.resolved")
+
+	for name, p := range map[string]int{
+		"qualification.reverse_closed": closure, "case.qualification_begun": qual,
+		"proof.sealed": seal, "case.resolved": resolved,
+	} {
+		if p < 0 {
+			t.Fatalf("the ledger records no %s event", name)
+		}
+	}
+	if !(closure < qual) {
+		t.Fatalf("the reverse closure must precede qualification, got %d and %d", closure, qual)
+	}
+	if !(seal < resolved) {
+		t.Fatalf("the proof must be sealed before the case resolves, got %d and %d", seal, resolved)
+	}
+	if !(qual < seal) {
+		t.Fatalf("qualification must precede the seal, got %d and %d", qual, seal)
 	}
 }

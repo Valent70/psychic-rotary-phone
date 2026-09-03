@@ -3,6 +3,7 @@ package casefabric
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"veriqo/pkg/contract/event"
 	"veriqo/pkg/platform/audit"
@@ -32,12 +33,20 @@ const FabricAggregateType = "CanonicalCase"
 // because an unmapped kind must be a build-time omission somebody
 // notices, not a silently-passed-through label.
 var eventTypeFor = map[string]string{
-	"case_opened":         "case.opened",
-	"scope_set":           "case.scoped",
-	"evidence_added":      "case.evidence_pinned",
-	"hypothesis_added":    "case.hypothesis_recorded",
-	"hypothesis_tested":   "case.hypothesis_tested",
-	"claim_registered":    "case.claim_registered",
+	"case_opened":       "case.opened",
+	"scope_set":         "case.scoped",
+	"evidence_added":    "case.evidence_pinned",
+	"hypothesis_added":  "case.hypothesis_recorded",
+	"hypothesis_tested": "case.hypothesis_tested",
+	"claim_registered":  "case.claim_registered",
+	// These three sit in existing canonical families rather than
+	// inventing new ones: a reverse closure is a qualification act, a
+	// finding is something a claim acquires, and authorizing a decision
+	// is a case-level governance act. The taxonomy is closed, and it
+	// refused the invented families when this was first written.
+	"reverse_closed":      "qualification.reverse_closed",
+	"finding_founded":     "claim.finding_founded",
+	"decision_authorized": "case.decision_authorized",
 	"qualification_begun": "case.qualification_begun",
 	"proof_attached":      "case.proof_attached",
 	"case_resolved":       "case.resolved",
@@ -57,12 +66,21 @@ func EventTypeFor(kind string) (string, bool) {
 // Mirror writes a case's timeline into the canonical audit store and
 // returns the canonical event chain it produced.
 //
+// proofs, keyed by claim id, are emitted at the point the timeline
+// records each proof being attached — not appended afterwards. That
+// ordering is the whole reason this parameter exists: an earlier version
+// of this package wrote the case timeline and then the proof records,
+// which put proof.sealed AFTER case.resolved in the ledger and made the
+// reverse direction look like a retrospective audit. fref.VerifyEventOrder
+// now refuses such a stream, and passing the proofs here is how a caller
+// produces a lawful one. nil is accepted and emits no proof records.
+//
 // Both outputs matter. The audit records are what the existing ledger,
 // its Merkle root and its independent verifier already understand; the
 // event chain is the canonical envelope form with its own hash linkage.
 // They are two views of one history, not two histories: every envelope
 // is derived from the timeline entry that produced its audit record.
-func Mirror(store *audit.AuditStore, c *Case, policyVersion string) ([]audit.AuditRecord, *event.Chain, error) {
+func Mirror(store *audit.AuditStore, c *Case, policyVersion string, proofs map[string]proof.Object) ([]audit.AuditRecord, *event.Chain, error) {
 	if store == nil {
 		return nil, nil, fmt.Errorf("casefabric: no audit store")
 	}
@@ -112,8 +130,34 @@ func Mirror(store *audit.AuditStore, c *Case, policyVersion string) ([]audit.Aud
 			return nil, nil, fmt.Errorf("casefabric: audit append: %w", err)
 		}
 		records = append(records, rec)
+
+		// A proof record belongs where the proof entered the case.
+		if e.Kind == "proof_attached" && len(proofs) > 0 {
+			if o, ok := proofs[claimIDFromEntry(e)]; ok {
+				pr, err := MirrorProof(store, e.Actor, o)
+				if err != nil {
+					return nil, nil, err
+				}
+				records = append(records, pr)
+			}
+		}
 	}
 	return records, chain, nil
+}
+
+// claimIDFromEntry recovers the claim id a proof_attached entry names.
+//
+// The entry's description is written by appendLocked as
+// "claim <id>: <stance> / <sufficiency>", so the id is the second field.
+// Parsing it here keeps the timeline entry the single record of what
+// happened rather than duplicating the claim id into a second field
+// nothing else reads.
+func claimIDFromEntry(e TimelineEntry) string {
+	fields := strings.Fields(e.Description)
+	if len(fields) < 2 || fields[0] != "claim" {
+		return ""
+	}
+	return strings.TrimSuffix(fields[1], ":")
 }
 
 // MirrorProof writes a sealed proof object's identity into the canonical

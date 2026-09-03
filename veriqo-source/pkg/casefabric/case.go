@@ -227,6 +227,13 @@ func (c *Case) AddEvidence(refs []EvidenceRef, by string, tick uint64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Law 7: no post-resolution epistemic mutation. A resolved case's
+	// evidential picture is fixed; changing it afterwards would alter
+	// the basis of a decision already taken. Reopening is the lawful
+	// route, and it clears the outcome first.
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "adding evidence")
+	}
 	if c.phase == PhaseOpened {
 		return fmt.Errorf("%w: evidence cannot be added before the case is scoped", ErrNotScoped)
 	}
@@ -252,6 +259,13 @@ func (c *Case) AddHypothesis(h Hypothesis, by string, tick uint64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Law 7: no post-resolution epistemic mutation. A resolved case's
+	// evidential picture is fixed; changing it afterwards would alter
+	// the basis of a decision already taken. Reopening is the lawful
+	// route, and it clears the outcome first.
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "adding a hypothesis")
+	}
 	if strings.TrimSpace(h.ID) == "" || strings.TrimSpace(h.Description) == "" {
 		return fmt.Errorf("casefabric: a hypothesis requires an id and a description")
 	}
@@ -275,6 +289,9 @@ func (c *Case) AddHypothesis(h Hypothesis, by string, tick uint64) error {
 func (c *Case) TestHypothesis(id, outcome, by string, tick uint64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "testing a hypothesis")
+	}
 	for i := range c.hypotheses {
 		if c.hypotheses[i].ID == id {
 			c.hypotheses[i].Tested = true
@@ -291,6 +308,13 @@ func (c *Case) RegisterClaim(cl Claim, by string, tick uint64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Law 7: no post-resolution epistemic mutation. A resolved case's
+	// evidential picture is fixed; changing it afterwards would alter
+	// the basis of a decision already taken. Reopening is the lawful
+	// route, and it clears the outcome first.
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "registering a claim")
+	}
 	if strings.TrimSpace(cl.ID) == "" || strings.TrimSpace(cl.Proposition.Statement) == "" {
 		return fmt.Errorf("casefabric: a claim requires an id and a falsifiable proposition")
 	}
@@ -343,6 +367,9 @@ func (c *Case) AttachProof(claimID string, o proof.Object, by string, tick uint6
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "attaching a proof object")
+	}
 	cl, ok := c.claims[claimID]
 	if !ok {
 		return fmt.Errorf("%w: %q", ErrUnknownClaim, claimID)
@@ -358,6 +385,85 @@ func (c *Case) AttachProof(claimID string, o proof.Object, by string, tick uint6
 	cl.Sufficiency = o.Sufficiency
 	c.appendLocked(tick, by, "proof_attached",
 		fmt.Sprintf("claim %s: %s / %s", claimID, o.Stance, o.Sufficiency))
+	return nil
+}
+
+// requireAttachedProof checks the hash belongs to a claim on this case.
+func (c *Case) requireAttachedProof(proofHash string) error {
+	if strings.TrimSpace(proofHash) == "" {
+		return fmt.Errorf("%w: the decision carries no proof lineage", ErrDecisionNotOnThisCase)
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, id := range c.claimOrder {
+		if c.claims[id].ProofHash == proofHash {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: no claim on this case carries proof %s", ErrDecisionNotOnThisCase, proofHash)
+}
+
+// RecordReverseClosure records that the reverse direction closed over
+// this case's subject.
+//
+// It is a case event, not a bookkeeping detail: the closure is what
+// makes the reverse direction a gate rather than an audit, and a gate
+// that leaves no trace on the record cannot be checked afterwards.
+func (c *Case) RecordReverseClosure(subject string, holds bool, by string, tick uint64) error {
+	if strings.TrimSpace(subject) == "" {
+		return fmt.Errorf("%w: the closure names no subject", ErrReverseNotClosed)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "recording a reverse closure")
+	}
+	verdict := "closure holds"
+	if !holds {
+		verdict = "closure does NOT hold"
+	}
+	c.appendLocked(tick, by, "reverse_closed", subject+": "+verdict)
+	return nil
+}
+
+// RecordFinding records that a finding was founded on an attached proof
+// object.
+//
+// The case does not create the finding — pkg/proof is the sole finding
+// authority — it records that one exists, so the ledger carries the
+// step in its lawful position.
+func (c *Case) RecordFinding(findingHash, proofHash, by string, tick uint64) error {
+	if strings.TrimSpace(findingHash) == "" {
+		return fmt.Errorf("casefabric: a finding record requires the finding's hash")
+	}
+	if err := c.requireAttachedProof(proofHash); err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "recording a finding")
+	}
+	c.appendLocked(tick, by, "finding_founded", "finding "+findingHash+" founded on proof "+proofHash)
+	return nil
+}
+
+// RecordAuthorizedDecision records that an authority adopted a finding.
+func (c *Case) RecordAuthorizedDecision(d proof.Decision, by string, tick uint64) error {
+	if d.IsZero() {
+		return ErrNoAuthorizedDecision
+	}
+	dh, _, _, proofHash := d.Lineage()
+	if err := c.requireAttachedProof(proofHash); err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.phase == PhaseResolved {
+		return fmt.Errorf("%w: %s", ErrPostResolutionMutation, "recording a decision")
+	}
+	c.appendLocked(tick, by, "decision_authorized",
+		"decision "+dh+" authorized by "+d.Authorized().AuthorizerID()+": "+d.Action())
 	return nil
 }
 
@@ -390,19 +496,89 @@ func (c *Case) UntestedHypotheses() []string {
 	return out
 }
 
+// ResolutionGate is what a case must present in order to resolve.
+//
+// It exists because "every material claim is proven" was not a strong
+// enough entry condition. A reviewer reading the runtime artefact — not
+// the report — found that resolution was being reached before the
+// reverse direction had closed, which made reverse proof a
+// retrospective audit rather than a constitutional gate. That inverts
+// what the reverse direction is for: it answers "what evidence would
+// actually be needed to justify this finding?", and a finding already
+// final when the question is asked has been rubber-stamped, not gated.
+//
+// So resolution now consumes a finalized chain rather than asserting
+// one. Every field is evidence that a prior step really happened, and
+// none of them is a boolean the caller can simply set to true and be
+// believed — Decision carries a lineage this package re-checks against
+// the case's own attached proof.
+type ResolutionGate struct {
+	// Decision is the authorized decision the resolution rests on. It
+	// carries its own lineage: decision -> authorized finding -> finding
+	// -> proof object, each hash-bound to the last.
+	Decision proof.Decision
+	// ReverseClosureHolds is fref.Closure.Holds for this case's subject.
+	// A closure that does not hold means the finding rests on evidence
+	// no proof obligation required, or an obligation went unmet.
+	ReverseClosureHolds bool
+	// ClosureSubject is the proposition the closure was computed over,
+	// recorded so a closure for a different claim cannot be presented.
+	ClosureSubject string
+	// ClosureExplanation is fref.Closure.Explain(), carried so a refused
+	// resolution can say precisely what failed rather than "closure did
+	// not hold".
+	ClosureExplanation string
+}
+
+// Validate refuses a gate that is structurally incomplete.
+func (g ResolutionGate) Validate() error {
+	if g.Decision.IsZero() {
+		return ErrNoAuthorizedDecision
+	}
+	if strings.TrimSpace(g.ClosureSubject) == "" {
+		return fmt.Errorf("%w: the closure names no subject", ErrReverseNotClosed)
+	}
+	if !g.ReverseClosureHolds {
+		detail := g.ClosureExplanation
+		if detail == "" {
+			detail = "no explanation was carried"
+		}
+		return fmt.Errorf("%w: %s", ErrReverseNotClosed, detail)
+	}
+	return nil
+}
+
 // Resolve closes qualification with an outcome.
 //
 // It refuses while any material claim is unproven or any hypothesis
-// untested, and it refuses an outcome that adjudicates. The established
-// and unestablished claim lists are computed here rather than accepted
-// from the caller, so a resolution cannot quietly omit what it failed
-// to establish.
-func (c *Case) Resolve(disposition, summary, by string, tick uint64) (Outcome, error) {
+// untested, it refuses an outcome that adjudicates, and — since the
+// sequencing audit — it refuses without a ResolutionGate proving that
+// the reverse direction closed, the proof object was sealed, a finding
+// was founded on it and an authority adopted that finding.
+//
+// The established and unestablished claim lists are computed here
+// rather than accepted from the caller, so a resolution cannot quietly
+// omit what it failed to establish.
+func (c *Case) Resolve(gate ResolutionGate, disposition, summary, by string, tick uint64) (Outcome, error) {
+	// The case's own epistemic state first: these say what the case
+	// failed to establish, which is the more useful answer when both
+	// this and the sequencing gate are unsatisfied.
 	if unproven := c.UnprovenMaterialClaims(); len(unproven) > 0 {
 		return Outcome{}, fmt.Errorf("%w: %s", ErrClaimUnproven, strings.Join(unproven, ", "))
 	}
 	if untested := c.UntestedHypotheses(); len(untested) > 0 {
 		return Outcome{}, fmt.Errorf("casefabric: cannot resolve with untested hypotheses: %s", strings.Join(untested, ", "))
+	}
+	// Then the sequencing gate.
+	if err := gate.Validate(); err != nil {
+		return Outcome{}, err
+	}
+	// The decision must rest on a proof object this case actually
+	// attached. A valid decision about some other matter is still not a
+	// basis for resolving this one.
+	_, _, _, proofHash := gate.Decision.Lineage()
+	if err := c.requireAttachedProof(proofHash); err != nil {
+		return Outcome{}, err
 	}
 
 	c.mu.Lock()

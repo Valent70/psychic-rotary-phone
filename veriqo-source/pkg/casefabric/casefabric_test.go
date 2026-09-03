@@ -216,7 +216,7 @@ func TestFullLifecycleToResolution(t *testing.T) {
 	mustNoErr(t, c.BeginQualification("analyst-1", 7))
 	mustNoErr(t, c.AttachProof("CL-1", sealed(t, "P-1", "CASE-1"), "analyst-1", 8))
 
-	o, err := c.Resolve("evidence_package_delivered", "pre-loading contamination established on the sampled parcel", "analyst-1", 9)
+	o, err := c.Resolve(gateFor(t, c, sealed(t, "P-1", "CASE-1")), "evidence_package_delivered", "pre-loading contamination established on the sampled parcel", "analyst-1", 9)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestResolutionBlockedByAnUnprovenMaterialClaim(t *testing.T) {
 		Proposition: proof.Proposition{ID: "P-1", Statement: "contaminated before loading"}}, "a", 5))
 	mustNoErr(t, c.BeginQualification("a", 6))
 
-	if _, err := c.Resolve("delivered", "", "a", 7); !errors.Is(err, ErrClaimUnproven) {
+	if _, err := c.Resolve(ResolutionGate{}, "delivered", "", "a", 7); !errors.Is(err, ErrClaimUnproven) {
 		t.Fatalf("expected ErrClaimUnproven, got %v", err)
 	}
 	if got := c.UnprovenMaterialClaims(); len(got) != 1 || got[0] != "CL-1" {
@@ -249,9 +249,41 @@ func TestResolutionBlockedByAnUnprovenMaterialClaim(t *testing.T) {
 	}
 }
 
-// TestAnImmaterialClaimDoesNotBlockResolution proves the material flag
-// does real work.
-func TestImmaterialClaimDoesNotBlockResolution(t *testing.T) {
+// TestImmaterialClaimIsReportedButDoesNotBlockResolution proves the
+// material flag does real work: a proven material claim resolves the
+// case, and an unproven immaterial one is still reported.
+func TestImmaterialClaimIsReportedButDoesNotBlockResolution(t *testing.T) {
+	c := openScoped(t)
+	o := sealed(t, "P-1", "CASE-1")
+	mustNoErr(t, c.AddEvidence(o.EvidenceSet, "a", 3))
+	mustNoErr(t, c.AddHypothesis(Hypothesis{ID: "H-1", Description: "alt", Tested: true}, "a", 4))
+	mustNoErr(t, c.RegisterClaim(Claim{ID: "CL-1", Material: true, Proposition: o.Proposition}, "a", 5))
+	mustNoErr(t, c.RegisterClaim(Claim{ID: "CL-2", Material: false,
+		Proposition: proof.Proposition{ID: "P-2", Statement: "the surveyor arrived late"}}, "a", 5))
+	mustNoErr(t, c.BeginQualification("a", 6))
+	mustNoErr(t, c.AttachProof("CL-1", o, "a", 7))
+
+	out, err := c.Resolve(gateFor(t, c, o), "evidence_package_delivered", "", "a", 9)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if len(out.EstablishedClaimIDs) != 1 || out.EstablishedClaimIDs[0] != "CL-1" {
+		t.Fatalf("the material claim should be established, got %+v", out.EstablishedClaimIDs)
+	}
+	// The unproven immaterial claim is still reported, with equal
+	// prominence.
+	if len(out.UnestablishedClaimIDs) != 1 || out.UnestablishedClaimIDs[0] != "CL-2" {
+		t.Fatalf("an unproven immaterial claim must still be reported, got %+v", out.UnestablishedClaimIDs)
+	}
+}
+
+// TestACaseThatEstablishesNothingIsClosedNotResolved is the semantic
+// the resolution gate draws out.
+//
+// Resolve founds an outcome on an established, adopted conclusion. A
+// case that established nothing has no such conclusion to adopt, so it
+// terminates through Close — which is what Close is for.
+func TestACaseThatEstablishesNothingIsClosedNotResolved(t *testing.T) {
 	c := openScoped(t)
 	mustNoErr(t, c.AddEvidence([]EvidenceRef{{EvidenceID: "E-1", EvidenceVersionID: "v1", SHA256: "abc"}}, "a", 3))
 	mustNoErr(t, c.AddHypothesis(Hypothesis{ID: "H-1", Description: "alt", Tested: true}, "a", 4))
@@ -259,13 +291,14 @@ func TestImmaterialClaimDoesNotBlockResolution(t *testing.T) {
 		Proposition: proof.Proposition{ID: "P-2", Statement: "the surveyor arrived late"}}, "a", 5))
 	mustNoErr(t, c.BeginQualification("a", 6))
 
-	o, err := c.Resolve("no_further_action", "", "a", 7)
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
+	if _, err := c.Resolve(ResolutionGate{}, "no_further_action", "", "a", 7); !errors.Is(err, ErrNoAuthorizedDecision) {
+		t.Fatalf("a case with nothing established must not resolve, got %v", err)
 	}
-	// The unproven claim is still reported, with equal prominence.
-	if len(o.UnestablishedClaimIDs) != 1 {
-		t.Fatalf("an unproven immaterial claim must still be reported, got %+v", o)
+	if err := c.Close("nothing established; no further action", "a", 8); err != nil {
+		t.Fatalf("such a case must still be closable: %v", err)
+	}
+	if c.Phase() != PhaseClosed {
+		t.Fatalf("expected CLOSED, got %s", c.Phase())
 	}
 }
 
@@ -274,7 +307,7 @@ func TestUntestedHypothesisBlocksResolution(t *testing.T) {
 	mustNoErr(t, c.AddEvidence([]EvidenceRef{{EvidenceID: "E-1", EvidenceVersionID: "v1", SHA256: "abc"}}, "a", 3))
 	mustNoErr(t, c.AddHypothesis(Hypothesis{ID: "H-1", Description: "untested rival"}, "a", 4))
 	mustNoErr(t, c.BeginQualification("a", 5))
-	if _, err := c.Resolve("delivered", "", "a", 6); err == nil {
+	if _, err := c.Resolve(ResolutionGate{}, "delivered", "", "a", 6); err == nil {
 		t.Fatal("a case with an untested rival hypothesis must not resolve")
 	}
 	if got := c.UntestedHypotheses(); len(got) != 1 {
@@ -332,7 +365,7 @@ func TestInsufficientProofDoesNotProveAClaim(t *testing.T) {
 	if claims[0].Proven() {
 		t.Fatal("an insufficient proof object must not prove a claim")
 	}
-	if _, err := c.Resolve("delivered", "", "a", 9); !errors.Is(err, ErrClaimUnproven) {
+	if _, err := c.Resolve(ResolutionGate{}, "delivered", "", "a", 9); !errors.Is(err, ErrClaimUnproven) {
 		t.Fatalf("expected ErrClaimUnproven, got %v", err)
 	}
 }
@@ -361,7 +394,7 @@ func TestOutcomeMayNotAdjudicate(t *testing.T) {
 func TestResolvingWithAnAdjudicatoryDispositionIsRefused(t *testing.T) {
 	c := readyForProof(t)
 	mustNoErr(t, c.AttachProof("CL-1", sealed(t, "P-1", "CASE-1"), "a", 8))
-	if _, err := c.Resolve("verdict", "", "a", 9); !errors.Is(err, ErrAdjudication) {
+	if _, err := c.Resolve(gateFor(t, c, sealed(t, "P-1", "CASE-1")), "verdict", "", "a", 9); !errors.Is(err, ErrAdjudication) {
 		t.Fatalf("expected ErrAdjudication, got %v", err)
 	}
 }
@@ -442,7 +475,7 @@ func TestAccessorsReturnCopies(t *testing.T) {
 func TestReopeningClearsTheOutcomeButKeepsTheRecord(t *testing.T) {
 	c := readyForProof(t)
 	mustNoErr(t, c.AttachProof("CL-1", sealed(t, "P-1", "CASE-1"), "a", 8))
-	if _, err := c.Resolve("evidence_package_delivered", "", "a", 9); err != nil {
+	if _, err := c.Resolve(gateFor(t, c, sealed(t, "P-1", "CASE-1")), "evidence_package_delivered", "", "a", 9); err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
 	mustNoErr(t, c.Close("delivered", "a", 10))
@@ -507,7 +540,7 @@ func TestDuplicateClaimIsRefused(t *testing.T) {
 func TestOutcomeLimitationsAreDeduplicatedAndSorted(t *testing.T) {
 	c := readyForProof(t)
 	mustNoErr(t, c.AttachProof("CL-1", sealed(t, "P-1", "CASE-1"), "a", 8))
-	if _, err := c.Resolve("evidence_package_delivered", "", "a", 9); err != nil {
+	if _, err := c.Resolve(gateFor(t, c, sealed(t, "P-1", "CASE-1")), "evidence_package_delivered", "", "a", 9); err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
 	mustNoErr(t, c.AddOutcomeLimitations([]string{"b limit", "a limit", "b limit", "  "}))
@@ -534,5 +567,154 @@ func mustNoErr(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// gateFor builds a real ResolutionGate for a case that has a sealed
+// proof attached: reverse closure recorded, finding founded, decision
+// authorized.
+//
+// It is a test helper that does the real thing rather than a stub,
+// because the point of the gate is that it cannot be faked — a stub
+// here would be testing the stub.
+func gateFor(t *testing.T, c *Case, o proof.Object) ResolutionGate {
+	t.Helper()
+	f, err := proof.NewFinding(o, 20)
+	if err != nil {
+		t.Fatalf("NewFinding: %v", err)
+	}
+	a, err := proof.Authorize(f, o, "partner-1", "partner", "policy-v1", "adopted", 30)
+	if err != nil {
+		t.Fatalf("Authorize: %v", err)
+	}
+	d, err := proof.Decide(a, "refer_to_tribunal", "package complete", nil, 40)
+	if err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	return ResolutionGate{
+		Decision: d, ReverseClosureHolds: true,
+		ClosureSubject:     o.Proposition.ID,
+		ClosureExplanation: "closure holds for the test fixture",
+	}
+}
+
+// --- The sequencing gates ---------------------------------------------
+
+// TestResolutionRequiresAReverseClosure is the reviewer's finding held
+// as a permanent rule at the case boundary.
+func TestResolutionRequiresAReverseClosure(t *testing.T) {
+	c := readyForProof(t)
+	o := sealed(t, "P-1", "CASE-1")
+	mustNoErr(t, c.AttachProof("CL-1", o, "a", 8))
+
+	gate := gateFor(t, c, o)
+	gate.ReverseClosureHolds = false
+	gate.ClosureExplanation = "the finding rests on evidence no obligation required"
+
+	_, err := c.Resolve(gate, "evidence_package_delivered", "", "a", 9)
+	if !errors.Is(err, ErrReverseNotClosed) {
+		t.Fatalf("expected ErrReverseNotClosed, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "no obligation required") {
+		t.Fatalf("the refusal must carry the closure's own explanation, got %q", err)
+	}
+}
+
+// TestResolutionRequiresAnAuthorizedDecision: a case may not resolve on
+// a finding nobody adopted.
+func TestResolutionRequiresAnAuthorizedDecision(t *testing.T) {
+	c := readyForProof(t)
+	o := sealed(t, "P-1", "CASE-1")
+	mustNoErr(t, c.AttachProof("CL-1", o, "a", 8))
+
+	gate := gateFor(t, c, o)
+	gate.Decision = proof.Decision{}
+	if _, err := c.Resolve(gate, "evidence_package_delivered", "", "a", 9); !errors.Is(err, ErrNoAuthorizedDecision) {
+		t.Fatalf("expected ErrNoAuthorizedDecision, got %v", err)
+	}
+}
+
+// TestResolutionRefusesADecisionAboutAnotherCase: a valid decision about
+// some other matter is still not a basis for resolving this one.
+func TestResolutionRefusesADecisionAboutAnotherCase(t *testing.T) {
+	c := readyForProof(t)
+	o := sealed(t, "P-1", "CASE-1")
+	mustNoErr(t, c.AttachProof("CL-1", o, "a", 8))
+
+	// A decision founded on a different proof object.
+	other := sealed(t, "P-OTHER", "CASE-1")
+	gate := gateFor(t, c, other)
+	if _, err := c.Resolve(gate, "evidence_package_delivered", "", "a", 9); !errors.Is(err, ErrDecisionNotOnThisCase) {
+		t.Fatalf("expected ErrDecisionNotOnThisCase, got %v", err)
+	}
+}
+
+// TestNoPostResolutionEpistemicMutation is the seventh sequencing law.
+//
+// A resolved case's evidential picture is fixed. Changing it afterwards
+// would alter the basis of a decision already taken, and reopening —
+// which clears the outcome first — is the lawful route.
+func TestNoPostResolutionEpistemicMutation(t *testing.T) {
+	c := readyForProof(t)
+	o := sealed(t, "P-1", "CASE-1")
+	mustNoErr(t, c.AttachProof("CL-1", o, "a", 8))
+	if _, err := c.Resolve(gateFor(t, c, o), "evidence_package_delivered", "", "a", 9); err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	mutations := []struct {
+		name string
+		call func() error
+	}{
+		{"add evidence", func() error {
+			return c.AddEvidence([]EvidenceRef{{EvidenceID: "E-9", EvidenceVersionID: "v9", SHA256: "z"}}, "a", 10)
+		}},
+		{"add hypothesis", func() error {
+			return c.AddHypothesis(Hypothesis{ID: "H-9", Description: "late"}, "a", 10)
+		}},
+		{"register claim", func() error {
+			return c.RegisterClaim(Claim{ID: "CL-9",
+				Proposition: proof.Proposition{ID: "P-9", Statement: "a late claim"}}, "a", 10)
+		}},
+		{"attach proof", func() error { return c.AttachProof("CL-1", o, "a", 10) }},
+		{"test hypothesis", func() error { return c.TestHypothesis("H-1", "revised", "a", 10) }},
+		{"record a closure", func() error { return c.RecordReverseClosure("P-1", true, "a", 10) }},
+	}
+	for _, m := range mutations {
+		t.Run(m.name, func(t *testing.T) {
+			if err := m.call(); !errors.Is(err, ErrPostResolutionMutation) {
+				t.Fatalf("%s after resolution must be refused, got %v", m.name, err)
+			}
+		})
+	}
+
+	// Reopening is the lawful route, and it works.
+	mustNoErr(t, c.Close("delivered", "a", 11))
+	mustNoErr(t, c.Reopen("new laboratory evidence", "a", 12))
+	if err := c.AddEvidence([]EvidenceRef{{EvidenceID: "E-9", EvidenceVersionID: "v9", SHA256: "z"}}, "a", 13); err != nil {
+		t.Fatalf("a reopened case must accept new evidence: %v", err)
+	}
+}
+
+// TestRecordFindingRefusesAnUnattachedProof stops the case recording a
+// finding founded on something it never attached.
+func TestRecordFindingRefusesAnUnattachedProof(t *testing.T) {
+	c := readyForProof(t)
+	if err := c.RecordFinding("finding-hash", "some-other-proof", "a", 8); !errors.Is(err, ErrDecisionNotOnThisCase) {
+		t.Fatalf("expected ErrDecisionNotOnThisCase, got %v", err)
+	}
+}
+
+// TestTheGateCannotBeFakedWithABareStruct: every field of a satisfied
+// gate is a value only a real authority can produce.
+func TestTheGateCannotBeFakedWithABareStruct(t *testing.T) {
+	c := readyForProof(t)
+	o := sealed(t, "P-1", "CASE-1")
+	mustNoErr(t, c.AttachProof("CL-1", o, "a", 8))
+
+	// A hand-written gate carries a zero Decision, which has no lineage.
+	faked := ResolutionGate{ReverseClosureHolds: true, ClosureSubject: "P-1"}
+	if _, err := c.Resolve(faked, "evidence_package_delivered", "", "a", 9); err == nil {
+		t.Fatal("a hand-written gate must not resolve a case")
 	}
 }

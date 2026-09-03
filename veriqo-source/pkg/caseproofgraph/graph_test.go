@@ -179,7 +179,7 @@ func TestTheGraphReferencesEvidenceAndNeverCopiesIt(t *testing.T) {
 // TestAnInsufficientProofFoundsNoFindingNode: absence, not an empty node.
 func TestAnInsufficientProofFoundsNoFindingNode(t *testing.T) {
 	c, proofs := caseAndProofs(t, false)
-	g, err := Build(c, proofs, 50)
+	g, err := Build(c, proofs, findingsFor(t, proofs), 50)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestAnInsufficientProofFoundsNoFindingNode(t *testing.T) {
 // traced back is a decision nobody can check.
 func TestDecisionCarriesItsWholeLineage(t *testing.T) {
 	c, proofs := caseAndProofs(t, true)
-	g, err := Build(c, proofs, 50)
+	g, err := Build(c, proofs, findingsFor(t, proofs), 50)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -360,7 +360,7 @@ func mustGraph(t *testing.T) *Graph {
 func buildFull(t *testing.T) *Graph {
 	t.Helper()
 	c, proofs := caseAndProofs(t, true)
-	g, err := Build(c, proofs, 50)
+	g, err := Build(c, proofs, findingsFor(t, proofs), 50)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -399,7 +399,8 @@ func caseAndProofs(t *testing.T, sufficient bool) (*casefabric.Case, map[string]
 		}
 	}
 	if sufficient {
-		if _, err := c.Resolve("evidence_package_delivered", "established", "partner-1", 8); err != nil {
+		gate := gateFrom(t, o)
+		if _, err := c.Resolve(gate, "evidence_package_delivered", "established", "partner-1", 8); err != nil {
 			t.Fatalf("Resolve: %v", err)
 		}
 	}
@@ -453,4 +454,114 @@ func sealProof(t *testing.T, sufficient bool) proof.Object {
 		t.Fatalf("Seal: %v", err)
 	}
 	return sealed
+}
+
+// findingsFor derives the findings for a set of proof objects, in the
+// caller's own code — which is the point: the graph does not do this.
+func findingsFor(t *testing.T, proofs map[string]proof.Object) map[string]proof.Finding {
+	t.Helper()
+	out := map[string]proof.Finding{}
+	for id, o := range proofs {
+		if o.Sufficiency != proof.Sufficient || o.Stance != proof.Support {
+			continue
+		}
+		f, err := proof.NewFinding(o, 20)
+		if err != nil {
+			t.Fatalf("NewFinding: %v", err)
+		}
+		out[id] = f
+	}
+	return out
+}
+
+// gateFrom builds a real ResolutionGate from a sealed proof object.
+func gateFrom(t *testing.T, o proof.Object) casefabric.ResolutionGate {
+	t.Helper()
+	f, err := proof.NewFinding(o, 20)
+	if err != nil {
+		t.Fatalf("NewFinding: %v", err)
+	}
+	a, err := proof.Authorize(f, o, "partner-1", "partner", "policy-v1", "adopted", 30)
+	if err != nil {
+		t.Fatalf("Authorize: %v", err)
+	}
+	d, err := proof.Decide(a, "refer_to_tribunal", "package complete", nil, 40)
+	if err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	return casefabric.ResolutionGate{
+		Decision: d, ReverseClosureHolds: true,
+		ClosureSubject: o.Proposition.ID, ClosureExplanation: "closure holds for the test fixture",
+	}
+}
+
+// TestCaseProofGraphCannotCreateIndependentFindingAuthority is the
+// reviewer's question answered as a test.
+//
+// The graph materializes a finding the caller supplies. Given a
+// sufficient proof object and NO finding, it must produce no finding
+// node — because producing one would mean it had constructed a finding,
+// and pkg/proof is the only place a finding may come into existence.
+func TestCaseProofGraphCannotCreateIndependentFindingAuthority(t *testing.T) {
+	c, proofs := caseAndProofs(t, true)
+	o := proofs["CL-1"]
+	if o.Sufficiency != proof.Sufficient || o.Stance != proof.Support {
+		t.Fatal("the fixture must be a sufficient, supporting proof object")
+	}
+
+	// No findings supplied, despite the object being sufficient.
+	g, err := Build(c, proofs, nil, 50)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if n := len(g.NodesOfKind(NodeFinding)); n != 0 {
+		t.Fatalf("the graph produced %d finding node(s) from no supplied finding: it is acting as a finding authority", n)
+	}
+
+	// With a finding supplied, it materializes exactly that one.
+	withFinding, err := Build(c, proofs, findingsFor(t, proofs), 50)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	nodes := withFinding.NodesOfKind(NodeFinding)
+	if len(nodes) != 1 {
+		t.Fatalf("expected exactly the supplied finding, got %d", len(nodes))
+	}
+	expected, _ := proof.NewFinding(o, 20)
+	if nodes[0].ContentHash != expected.Hash() {
+		t.Fatal("the materialized node must be the supplied finding, not one the graph made")
+	}
+}
+
+// TestAFindingFromAnotherProofObjectIsRefused stops the graph
+// materializing a finding that does not belong to the object it is
+// attached to. Without this check, "materialize only" would still let a
+// caller attach any finding to any proof.
+func TestAFindingFromAnotherProofObjectIsRefused(t *testing.T) {
+	c, proofs := caseAndProofs(t, true)
+
+	// A genuinely different proof object: same fixture, different
+	// proposition, so it seals to a different canonical hash.
+	other := sealProof(t, true)
+	other.Proposition.ID = "P-OTHER"
+	other.Proposition.Statement = "an entirely different proposition"
+	other, err := proof.Seal(other)
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	if other.CanonicalHash == proofs["CL-1"].CanonicalHash {
+		t.Fatal("the two fixtures must differ for this test to mean anything")
+	}
+	otherFinding, err := proof.NewFinding(other, 20)
+	if err != nil {
+		t.Fatalf("NewFinding: %v", err)
+	}
+
+	_, err = Build(c, proofs, map[string]proof.Finding{"CL-1": otherFinding}, 50)
+	if err == nil {
+		t.Fatal("a finding belonging to another proof object must be refused")
+	}
+	if !strings.Contains(err.Error(), "belongs to proof") {
+		t.Fatalf("the refusal must say which object the finding belongs to, got %q", err)
+	}
 }

@@ -59,7 +59,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "TestSufficientObjectFoundsAFinding, TestUnpinnedEvidenceIsRefused",
 		Evidence: true, EvidenceRef: "casefabric timeline entry kind=proof_attached",
 		Replay: true, ReplayRef: "proof.VerifyHash re-derives the object from its components",
-		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-008-case.proof_attached, AUDIT-010-proof.sealed (see evidence/RUNTIME_EVIDENCE.json)",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-009-case.proof_attached, AUDIT-010-proof.sealed (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_RED_FLAG_RESPONSE_REPORT.md (AuthorizedFinding gate assessment)",
 		ExternalDependency: noExternalAssessor},
 
@@ -164,7 +164,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "TestDecisionMayNotAdjudicate, TestOutcomeMayNotAdjudicate",
 		Evidence: true, EvidenceRef: "a refused adjudication is an error, not a logged warning",
 		Replay: true, ReplayRef: "the state has no PROVEN or LIABLE value to replay into",
-		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-009-case.resolved (see evidence/RUNTIME_EVIDENCE.json)",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-013-case.resolved (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_ROUND10_L99_LEVEL3_ASSESSMENT_REPORT.md (adjudication boundary)",
 		ExternalDependency: noExternalAssessor},
 
@@ -178,7 +178,17 @@ var matrix = []Trace{
 		ExternalDependency: noExternalAssessor},
 
 	{Article: 18, Control: "Redacted content is absent from the derivative's bytes",
-		Code: false, ExternalDependency: "PDF, XLSX and PPTX redaction workers and the adversarial recovery lab that would prove byte-level absence are not built"},
+		Code: true, CodeRef: "veriqo/pkg/evidence/redaction.Verify (byte-level absence over twelve encodings)",
+		// Called is false, and that is the finding. The verifier exists
+		// and is tested; nothing on a live path invokes it, because no
+		// worker produces derivatives for it to check. The article moved
+		// from OPEN to INTEGRATION_GAP this round -- a more precise
+		// statement of the same gap, not a smaller one.
+		Called: false,
+		Test:   true, TestRef: "TestVisualOnlyRedactionIsCaught, TestEveryEncodingIsCaught, TestTheOriginalMustBePreserved",
+		ExternalDependency: "the PDF, XLSX and PPTX redaction workers that would produce derivatives do not exist, " +
+			"nor does the adversarial recovery lab that would attempt reconstruction from format-specific remnants " +
+			"(incremental updates, object streams, revision history)"},
 
 	{Article: 19, Control: "VERIQO enforces privilege; it does not determine it",
 		Code: true, CodeRef: "veriqo/pkg/disclosure/access.PrivilegeStatus",
@@ -218,7 +228,7 @@ var matrix = []Trace{
 		Test: true, TestRef: "test/adversarial constitutional suite",
 		Evidence: true, EvidenceRef: "the audit ledger is the canonical record",
 		Replay: true, ReplayRef: "veriqo/pkg/insurance/auditlink",
-		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-001-case.opened through AUDIT-010-proof.sealed (the whole run is in the one ledger) (see evidence/RUNTIME_EVIDENCE.json)",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-001-case.opened through AUDIT-013-case.resolved (the whole run is in the one ledger, in constitutional order) (see evidence/RUNTIME_EVIDENCE.json)",
 		Qualification: true, QualificationRef: "docs/VERIQO_AUTHORITY_ROUND_2_CLOSURE_RESPONSE.md (auditlink canonical authority)",
 		ExternalDependency: noExternalAssessor},
 

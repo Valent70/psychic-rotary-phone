@@ -121,6 +121,15 @@ var (
 	ErrProofWrongCase    = errors.New("casefabric: the proof object belongs to another case")
 	ErrProofWrongClaim   = errors.New("casefabric: the proof object proves another proposition")
 	ErrSuspendNeedsCause = errors.New("casefabric: suspension requires a stated cause")
+
+	// The sequencing gates. These exist because "every material claim is
+	// proven" turned out not to be a strong enough entry condition for
+	// resolution: it permitted a case to resolve before the reverse
+	// direction had closed.
+	ErrNoAuthorizedDecision   = errors.New("casefabric: resolution requires an authorized decision; a case may not resolve on a finding nobody adopted")
+	ErrReverseNotClosed       = errors.New("casefabric: resolution requires the reverse direction to have closed; reverse proof is a constitutional gate, not a retrospective audit")
+	ErrDecisionNotOnThisCase  = errors.New("casefabric: the authorized decision does not rest on a proof object attached to this case")
+	ErrPostResolutionMutation = errors.New("casefabric: a resolved case may not be epistemically mutated; reopen it instead")
 )
 
 // --- Domain projection ------------------------------------------------

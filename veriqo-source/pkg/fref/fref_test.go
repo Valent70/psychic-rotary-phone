@@ -321,11 +321,29 @@ func TestClosureRequiresTheSameSubject(t *testing.T) {
 	}
 }
 
-func TestClosureRequiresACompleteForwardRun(t *testing.T) {
-	fwd := runForward(t, "P-1", StageTrust)
+// TestClosureRequiresTheForwardEvidenceSetToBeSettled is the corrected
+// precondition.
+//
+// Closure needs the evidence the forward run relies on, and that is
+// settled at TRUST. It must NOT require a completed forward run: doing
+// so was what forced the reverse direction to run after the decision.
+func TestClosureRequiresTheForwardEvidenceSetToBeSettled(t *testing.T) {
+	// Reached only REASONING: the evidence set is not yet settled.
+	tooEarly := runForward(t, "P-1", StageReasoning)
 	rev := runReverse(t, "P-1", StageNextBestEvidence)
-	if _, err := Close(fwd, rev, nil, nil); !errors.Is(err, ErrIncomplete) {
-		t.Fatalf("expected ErrIncomplete, got %v", err)
+	if _, err := Close(tooEarly, rev, nil, nil); !errors.Is(err, ErrStageNotReached) {
+		t.Fatalf("expected ErrStageNotReached, got %v", err)
+	}
+
+	// Reached TRUST but not DECISION: closure is now computable, which
+	// is what makes the reverse direction a gate rather than an audit.
+	settled := runForward(t, "P-1", StageTrust)
+	c, err := Close(settled, rev, []string{"EV-1"}, []string{"EV-1"})
+	if err != nil {
+		t.Fatalf("closure must be computable before the decision exists: %v", err)
+	}
+	if !c.Holds {
+		t.Fatalf("closure should hold: %s", c.Explain())
 	}
 }
 

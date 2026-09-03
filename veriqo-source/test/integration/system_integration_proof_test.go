@@ -228,6 +228,37 @@ func runChain(t *testing.T, dc domainCase) {
 		t.Fatalf("domain %q accepted an unmapped state", dc.domain)
 	}
 
+	// --- FREF reverse, and closure — BEFORE qualification -------------
+	//
+	// This ordering is the sequencing audit's central correction. The
+	// reverse direction answers "what evidence would actually be needed
+	// to justify this?", and a finding already final when the question
+	// is asked has been rubber-stamped, not gated. Running it here makes
+	// it a constitutional gate; running it after resolution, as an
+	// earlier version of this test did, made it a retrospective audit.
+	rev, err := fref.NewExecution(fref.Reverse, dc.proposition)
+	if err != nil {
+		t.Fatalf("NewExecution: %v", err)
+	}
+	completeStages(t, rev, fref.Order(fref.Reverse)...)
+	if err := rev.RequireComplete(); err != nil {
+		t.Fatalf("the reverse run must reach NEXT_BEST_EVIDENCE: %v", err)
+	}
+	var evidenceIDs []string
+	for _, e := range o.EvidenceSet {
+		evidenceIDs = append(evidenceIDs, e.EvidenceVersionID)
+	}
+	closure, err := fref.Close(fwd, rev, evidenceIDs, evidenceIDs)
+	if err != nil {
+		t.Fatalf("fref.Close: %v", err)
+	}
+	if !closure.Holds {
+		t.Fatalf("domain %q: the two directions must close: %s", dc.domain, closure.Explain())
+	}
+	if err := c.RecordReverseClosure(dc.proposition, closure.Holds, "analyst-1", 9); err != nil {
+		t.Fatalf("RecordReverseClosure: %v", err)
+	}
+
 	if err := c.BeginQualification("analyst-1", 10); err != nil {
 		t.Fatalf("BeginQualification: %v", err)
 	}
@@ -239,6 +270,9 @@ func runChain(t *testing.T, dc domainCase) {
 	f, err := proof.NewFinding(o, 20)
 	if err != nil {
 		t.Fatalf("NewFinding: %v", err)
+	}
+	if err := c.RecordFinding(f.Hash(), o.CanonicalHash, "analyst-1", 20); err != nil {
+		t.Fatalf("RecordFinding: %v", err)
 	}
 	// NO BYPASS: the pipeline may not adopt its own conclusion.
 	if _, err := proof.Authorize(f, o, o.Provenance.GeneratedBy, "service", "policy-v1", "self", 30); err == nil {
@@ -257,6 +291,9 @@ func runChain(t *testing.T, dc domainCase) {
 	if err != nil {
 		t.Fatalf("Decide: %v", err)
 	}
+	if err := c.RecordAuthorizedDecision(d, "partner-1", 40); err != nil {
+		t.Fatalf("RecordAuthorizedDecision: %v", err)
+	}
 	completeStages(t, fwd, fref.StageFinding, fref.StageDecision)
 
 	if err := fwd.RequireComplete(); err != nil {
@@ -271,7 +308,12 @@ func runChain(t *testing.T, dc domainCase) {
 	if !containsString(sem.OutcomeVocabulary, dc.disposition) {
 		t.Fatalf("domain %q does not declare the outcome %q", dc.domain, dc.disposition)
 	}
-	outcome, err := c.Resolve(dc.disposition, "established on the qualified evidence", "partner-1", 41)
+	gate := casefabric.ResolutionGate{
+		Decision: d, ReverseClosureHolds: closure.Holds,
+		ClosureSubject:     dc.proposition,
+		ClosureExplanation: closure.Explain(),
+	}
+	outcome, err := c.Resolve(gate, dc.disposition, "established on the qualified evidence", "partner-1", 41)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -282,30 +324,9 @@ func runChain(t *testing.T, dc domainCase) {
 		t.Fatalf("expected one established claim, got %+v", outcome)
 	}
 
-	// --- FREF reverse, and closure ------------------------------------
-	rev, err := fref.NewExecution(fref.Reverse, dc.proposition)
-	if err != nil {
-		t.Fatalf("NewExecution: %v", err)
-	}
-	completeStages(t, rev, fref.Order(fref.Reverse)...)
-	if err := rev.RequireComplete(); err != nil {
-		t.Fatalf("the reverse run must reach NEXT_BEST_EVIDENCE: %v", err)
-	}
-
-	var evidenceIDs []string
-	for _, e := range o.EvidenceSet {
-		evidenceIDs = append(evidenceIDs, e.EvidenceVersionID)
-	}
-	closure, err := fref.Close(fwd, rev, evidenceIDs, evidenceIDs)
-	if err != nil {
-		t.Fatalf("fref.Close: %v", err)
-	}
-	if !closure.Holds {
-		t.Fatalf("domain %q: the two directions must close: %s", dc.domain, closure.Explain())
-	}
-
 	// --- The Case Proof Graph -----------------------------------------
-	g, err := caseproofgraph.Build(c, map[string]proof.Object{dc.caseID + "-CL": o}, 50)
+	g, err := caseproofgraph.Build(c, map[string]proof.Object{dc.caseID + "-CL": o},
+		map[string]proof.Finding{dc.caseID + "-CL": f}, 50)
 	if err != nil {
 		t.Fatalf("caseproofgraph.Build: %v", err)
 	}
@@ -334,15 +355,25 @@ func runChain(t *testing.T, dc domainCase) {
 	}
 
 	// --- LEDGER -------------------------------------------------------
-	records, chain, err := casefabric.Mirror(store, c, "policy-v1")
+	records, chain, err := casefabric.Mirror(store, c, "policy-v1", map[string]proof.Object{dc.caseID + "-CL": o})
 	if err != nil {
 		t.Fatalf("Mirror: %v", err)
 	}
-	if _, err := casefabric.MirrorProof(store, "analyst-1", o); err != nil {
-		t.Fatalf("MirrorProof: %v", err)
-	}
-	if len(store.Snapshot()) != len(records)+1 {
+	if len(store.Snapshot()) != len(records) {
 		t.Fatalf("expected everything in the one ledger, got %d records", len(store.Snapshot()))
+	}
+	// The emitted stream must obey the constitutional sequence and skip
+	// no gate. This is the check that would have caught the defect the
+	// sequencing audit found.
+	var actions []string
+	for _, r := range store.Snapshot() {
+		actions = append(actions, r.Action)
+	}
+	if v := fref.VerifyEventOrder(actions); len(v) > 0 {
+		t.Fatalf("domain %q emitted an out-of-order ledger: %s", dc.domain, v[0])
+	}
+	if g := fref.VerifyEventGates(actions); len(g) > 0 {
+		t.Fatalf("domain %q skipped a constitutional gate: %s", dc.domain, g[0])
 	}
 
 	// --- REPLAY: five independent re-verifications ---------------------

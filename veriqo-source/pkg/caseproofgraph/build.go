@@ -18,10 +18,21 @@ import (
 // the graph is copied from wherever it was decided, and a verdict this
 // package computed itself would be a second authority.
 //
-// The proof objects are supplied by the caller keyed on claim id,
-// because the case holds proof hashes rather than objects — the case
-// fabric deliberately does not own them.
-func Build(c *casefabric.Case, proofs map[string]proof.Object, tick uint64) (*Graph, error) {
+// The proof objects AND the findings are supplied by the caller, keyed
+// on claim id. The case holds proof hashes rather than objects, and this
+// package holds neither authority.
+//
+// A reviewer asked the sharp version of this question: is caseproofgraph
+// *creating* a finding, or *materializing* an already-authorized one?
+// When they asked, the honest answer was the first — addProof called
+// proof.NewFinding, which is the finding authority, with tick 0. That
+// made this package a second place a finding could come into existence,
+// against the rule that a decision has exactly one authority.
+//
+// It now materializes only. A finding the caller did not supply produces
+// no finding node, and the graph shows that by absence. See
+// TestCaseProofGraphCannotCreateIndependentFindingAuthority.
+func Build(c *casefabric.Case, proofs map[string]proof.Object, findings map[string]proof.Finding, tick uint64) (*Graph, error) {
 	id := c.Identity()
 	g, err := New(id.CaseID, id.TenantID)
 	if err != nil {
@@ -118,7 +129,8 @@ func Build(c *casefabric.Case, proofs map[string]proof.Object, tick uint64) (*Gr
 		if !ok {
 			continue
 		}
-		if err := addProof(g, claimID, cl.ID, o); err != nil {
+		f, hasFinding := findings[cl.ID]
+		if err := addProof(g, claimID, cl.ID, o, f, hasFinding); err != nil {
 			return nil, err
 		}
 	}
@@ -153,7 +165,7 @@ func Build(c *casefabric.Case, proofs map[string]proof.Object, tick uint64) (*Gr
 }
 
 // addProof attaches one proof object and its nine sub-nodes.
-func addProof(g *Graph, claimNodeID, claimID string, o proof.Object) error {
+func addProof(g *Graph, claimNodeID, claimID string, o proof.Object, f proof.Finding, hasFinding bool) error {
 	proofID := "proof:" + o.CanonicalHash
 	if err := g.AddNode(Node{
 		ID: proofID, Kind: NodeProofObject, Label: o.Proposition.Statement,
@@ -266,13 +278,18 @@ func addProof(g *Graph, claimNodeID, claimID string, o proof.Object) error {
 		}
 	}
 
-	// A finding node exists only where the object founds one. An
-	// insufficient object has no finding, and the graph shows that by
-	// absence rather than by an empty node.
-	if o.Sufficiency == proof.Sufficient && o.Stance == proof.Support {
-		f, err := proof.NewFinding(o, 0)
-		if err != nil {
-			return err
+	// A finding node exists only where the CALLER supplied a finding
+	// that belongs to this proof object.
+	//
+	// This package does not construct one. proof.NewFinding is the
+	// finding authority, and calling it here would make the graph a
+	// second one — a finding could then come into existence during
+	// rendering, which is exactly the duplicate-authority failure the
+	// architecture forbids. A missing finding shows as absence.
+	if hasFinding && !f.IsZero() {
+		if f.ProofHash() != o.CanonicalHash {
+			return fmt.Errorf("caseproofgraph: the supplied finding for claim %q belongs to proof %s, not %s",
+				claimID, f.ProofHash(), o.CanonicalHash)
 		}
 		fid := "finding:" + f.Hash()
 		if err := g.AddNode(Node{

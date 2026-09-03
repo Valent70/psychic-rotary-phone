@@ -26,6 +26,7 @@ import (
 
 	"veriqo/pkg/casefabric"
 	"veriqo/pkg/contract/event"
+	"veriqo/pkg/fref"
 	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/proof"
 	"veriqo/pkg/qualification/independence"
@@ -86,18 +87,41 @@ func run() (artefact, error) {
 		return artefact{}, fmt.Errorf("seal: %w", err)
 	}
 
-	c, err := buildCase(o)
+	// REVERSE_PROOF runs before the case reaches qualification, so the
+	// closure gates the verdict rather than auditing it afterwards.
+	fwd, rev, closure, err := runBothDirections(o)
+	if err != nil {
+		return artefact{}, fmt.Errorf("directions: %w", err)
+	}
+	if !closure.Holds {
+		return artefact{}, fmt.Errorf("reverse closure does not hold: %s", closure.Explain())
+	}
+	_, _ = fwd, rev
+
+	c, err := buildCase(o, o.Proposition.ID, closure.Holds)
 	if err != nil {
 		return artefact{}, fmt.Errorf("case: %w", err)
 	}
 
-	// The chain: finding, authorization, decision. Each stage refuses
-	// its predecessor's absence, so reaching the decision at all is
-	// itself part of what this artefact records.
+	// The chain, in constitutional order. Every step is recorded on the
+	// case timeline at the point it happens, so the ledger this produces
+	// is lawful by construction rather than by a later sort.
+	//
+	// The order matters and was got wrong once: an earlier version of
+	// this command emitted case.resolved before proof.sealed, which made
+	// the reverse direction look like a retrospective audit. See
+	// fref.CanonicalSequence.
+
+	// FINDING.
 	f, err := proof.NewFinding(o, 20)
 	if err != nil {
 		return artefact{}, fmt.Errorf("finding: %w", err)
 	}
+	if err := c.RecordFinding(f.Hash(), o.CanonicalHash, "analyst-1", 20); err != nil {
+		return artefact{}, fmt.Errorf("record finding: %w", err)
+	}
+
+	// AUTHORIZED_DECISION.
 	auth, err := proof.Authorize(f, o, "partner-1", "partner", "policy-v1", "adopted on review", 30)
 	if err != nil {
 		return artefact{}, fmt.Errorf("authorize: %w", err)
@@ -107,8 +131,17 @@ func run() (artefact, error) {
 	if err != nil {
 		return artefact{}, fmt.Errorf("decide: %w", err)
 	}
+	if err := c.RecordAuthorizedDecision(d, "partner-1", 40); err != nil {
+		return artefact{}, fmt.Errorf("record decision: %w", err)
+	}
 
-	if _, err := c.Resolve("evidence_package_delivered",
+	// CASE_RESOLUTION, which now consumes the finalized chain rather
+	// than asserting it.
+	gate := casefabric.ResolutionGate{
+		Decision: d, ReverseClosureHolds: closure.Holds,
+		ClosureSubject: o.Proposition.ID, ClosureExplanation: closure.Explain(),
+	}
+	if _, err := c.Resolve(gate, "evidence_package_delivered",
 		"pre-loading contamination established on the sampled parcel", "partner-1", 41); err != nil {
 		return artefact{}, fmt.Errorf("resolve: %w", err)
 	}
@@ -116,21 +149,32 @@ func run() (artefact, error) {
 		return artefact{}, fmt.Errorf("limitations: %w", err)
 	}
 
-	// Everything lands in the one ledger.
-	recs, chain, err := casefabric.Mirror(store, c, "policy-v1")
+	// LEDGER: the whole timeline in one lawful stream, with the proof
+	// record emitted where the proof entered the case.
+	recs, chain, err := casefabric.Mirror(store, c, "policy-v1",
+		map[string]proof.Object{claimID: o})
 	if err != nil {
 		return artefact{}, fmt.Errorf("mirror: %w", err)
 	}
-	proofRec, err := casefabric.MirrorProof(store, "analyst-1", o)
-	if err != nil {
-		return artefact{}, fmt.Errorf("mirror proof: %w", err)
-	}
-	recs = append(recs, proofRec)
 
 	// Re-verify before writing anything down. An artefact generated from
-	// a ledger that does not verify would be worse than none.
+	// a ledger that does not verify would be worse than none, and one
+	// whose events are out of constitutional order is what produced the
+	// defect this command was rewritten to prevent.
 	if err := (audit.Auditor{}).VerifyChain(store.Snapshot()); err != nil {
 		return artefact{}, fmt.Errorf("ledger verification: %w", err)
+	}
+	var actions []string
+	for _, r := range store.Snapshot() {
+		actions = append(actions, r.Action)
+	}
+	if v := fref.VerifyEventOrder(actions); len(v) > 0 {
+		return artefact{}, fmt.Errorf("the emitted ledger violates the constitutional sequence: %s", v[0])
+	}
+	// Order is not enough: a ledger can be perfectly ordered and still
+	// have skipped a gate entirely.
+	if g := fref.VerifyEventGates(actions); len(g) > 0 {
+		return artefact{}, fmt.Errorf("the emitted ledger skipped a constitutional gate: %s", g[0])
 	}
 	if err := event.VerifyChain(chain.Events()); err != nil {
 		return artefact{}, fmt.Errorf("event chain verification: %w", err)
@@ -172,6 +216,41 @@ func run() (artefact, error) {
 // unambiguously within a run.
 func eventID(r audit.AuditRecord) string {
 	return fmt.Sprintf("AUDIT-%03d-%s", r.Index, r.Action)
+}
+
+// runBothDirections runs the forward and reverse executions and closes
+// them over the same evidence.
+//
+// Both directions run to completion before anything is founded on the
+// proof object. That is the constitutional order: the reverse direction
+// is a gate, and a gate that runs after the decision is a rubber stamp.
+func runBothDirections(o proof.Object) (*fref.Execution, *fref.Execution, fref.Closure, error) {
+	fwd, err := fref.NewExecution(fref.Forward, o.Proposition.ID)
+	if err != nil {
+		return nil, nil, fref.Closure{}, err
+	}
+	for i, s := range fref.Order(fref.Forward) {
+		b, _ := fref.BindingFor(s)
+		if err := fwd.Complete(s, b.Package, uint64(i+1), "h-"+string(s), ""); err != nil {
+			return nil, nil, fref.Closure{}, err
+		}
+	}
+	rev, err := fref.NewExecution(fref.Reverse, o.Proposition.ID)
+	if err != nil {
+		return nil, nil, fref.Closure{}, err
+	}
+	for i, s := range fref.Order(fref.Reverse) {
+		b, _ := fref.BindingFor(s)
+		if err := rev.Complete(s, b.Package, uint64(i+1), "h-"+string(s), ""); err != nil {
+			return nil, nil, fref.Closure{}, err
+		}
+	}
+	var ids []string
+	for _, e := range o.EvidenceSet {
+		ids = append(ids, e.EvidenceVersionID)
+	}
+	closure, err := fref.Close(fwd, rev, ids, ids)
+	return fwd, rev, closure, err
 }
 
 func sealProof() (proof.Object, error) {
@@ -260,7 +339,7 @@ func sealProof() (proof.Object, error) {
 	})
 }
 
-func buildCase(o proof.Object) (*casefabric.Case, error) {
+func buildCase(o proof.Object, closureSubject string, closureHolds bool) (*casefabric.Case, error) {
 	c, err := casefabric.Open(casefabric.Identity{
 		CaseID: caseID, TenantID: "tenant-a", Domain: casefabric.DomainInsurance,
 		ExternalRefs: map[string]string{"claim_no": "CLM-RUNTIME-1"},
@@ -286,8 +365,14 @@ func buildCase(o proof.Object) (*casefabric.Case, error) {
 		func() error {
 			return c.TestHypothesis("H-1", "excluded by the pre-load sample", "analyst-1", 6)
 		},
-		func() error { return c.BeginQualification("analyst-1", 7) },
-		func() error { return c.AttachProof(claimID, o, "analyst-1", 8) },
+		// REVERSE_PROOF, before qualification. The reverse direction
+		// fixes what would have to be shown BEFORE the verdict is
+		// reached, which is the ordering the sequencing audit restored.
+		func() error {
+			return c.RecordReverseClosure(closureSubject, closureHolds, "analyst-1", 7)
+		},
+		func() error { return c.BeginQualification("analyst-1", 8) },
+		func() error { return c.AttachProof(claimID, o, "analyst-1", 9) },
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {

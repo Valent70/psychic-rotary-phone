@@ -347,13 +347,31 @@ func TestArticlesWithNoRuntimeEnforcementAreOpen(t *testing.T) {
 			open[r.Article] = true
 		}
 	}
-	for _, n := range []int{9, 15, 18} {
+	for _, n := range []int{9, 15} {
 		if !open[n] {
 			t.Fatalf("article %d has no runtime enforcement and must be OPEN", n)
 		}
 	}
-	if len(open) != 3 {
-		t.Fatalf("expected exactly three OPEN articles, got %d: %v", len(open), open)
+	if len(open) != 2 {
+		t.Fatalf("expected exactly two OPEN articles, got %d: %v", len(open), open)
+	}
+
+	// Article 18 moved OPEN -> INTEGRATION_GAP this round: the byte-level
+	// verifier now exists and is tested, but nothing on a live path calls
+	// it because no worker produces derivatives. That is a more precise
+	// statement of the same gap, not a smaller one, and the article is
+	// still not closed.
+	var art18 Verdict
+	for _, r := range rows {
+		if r.Article == 18 {
+			art18 = r.Verdict
+		}
+	}
+	if art18 != IntegrationGap {
+		t.Fatalf("article 18 must be INTEGRATION_GAP: a verifier exists, nothing calls it. Got %s", art18)
+	}
+	if art18.Closed() {
+		t.Fatal("article 18 is not closed")
 	}
 }
 

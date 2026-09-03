@@ -172,7 +172,7 @@ func TestCaseCannotResolveOverAnUnprovenMaterialClaim(t *testing.T) {
 		Proposition: proof.Proposition{ID: "P-1", Statement: "contaminated before loading"}}, "a", 5))
 	mustNil(t, c.BeginQualification("a", 6))
 
-	if _, err := c.Resolve("evidence_package_delivered", "", "a", 7); err == nil {
+	if _, err := c.Resolve(casefabric.ResolutionGate{}, "evidence_package_delivered", "", "a", 7); err == nil {
 		t.Fatal("a case must not resolve over an unproven material claim")
 	}
 }
@@ -185,7 +185,7 @@ func TestUntestedRivalCannotBeSkipped(t *testing.T) {
 		{EvidenceID: "E-1", EvidenceVersionID: "v1", SHA256: "abc"}}, "a", 3))
 	mustNil(t, c.AddHypothesis(casefabric.Hypothesis{ID: "H-1", Description: "inconvenient rival"}, "a", 4))
 	mustNil(t, c.BeginQualification("a", 5))
-	if _, err := c.Resolve("closed", "", "a", 6); err == nil {
+	if _, err := c.Resolve(casefabric.ResolutionGate{}, "closed", "", "a", 6); err == nil {
 		t.Fatal("a case must not resolve with an untested rival hypothesis")
 	}
 	if got := c.UntestedHypotheses(); len(got) != 1 {
@@ -199,7 +199,7 @@ func TestUntestedRivalCannotBeSkipped(t *testing.T) {
 func TestEditedTimelineIsCaughtBeforeItReachesTheLedger(t *testing.T) {
 	c := scopedCase(t)
 	store := audit.NewAuditStore()
-	if _, _, err := casefabric.Mirror(store, c, "policy-v1"); err != nil {
+	if _, _, err := casefabric.Mirror(store, c, "policy-v1", nil); err != nil {
 		t.Fatalf("an honest case should mirror: %v", err)
 	}
 	before := len(store.Snapshot())

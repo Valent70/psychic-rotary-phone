@@ -206,7 +206,12 @@ func TestFiveFabricsAreOneSystem(t *testing.T) {
 	}
 
 	// --- CRF: resolve -----------------------------------------------
-	outcome, err := c.Resolve("evidence_package_delivered",
+	gate := casefabric.ResolutionGate{
+		Decision: d, ReverseClosureHolds: true,
+		ClosureSubject:     o.Proposition.ID,
+		ClosureExplanation: "closure holds over the same evidence set",
+	}
+	outcome, err := c.Resolve(gate, "evidence_package_delivered",
 		"pre-loading contamination established on the sampled parcel", "analyst-1", 41)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
@@ -245,7 +250,7 @@ func TestFiveFabricsAreOneSystem(t *testing.T) {
 	}
 
 	// --- TECP: everything lands in the one ledger -------------------
-	records, chain, err := casefabric.Mirror(store, c, "policy-v1")
+	records, chain, err := casefabric.Mirror(store, c, "policy-v1", nil)
 	if err != nil {
 		t.Fatalf("casefabric.Mirror: %v", err)
 	}
