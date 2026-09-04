@@ -135,7 +135,13 @@ func TestAStaleCitationIsRecognisedAsStale(t *testing.T) {
 	for _, r := range re.Records {
 		emitted[r.EventID] = true
 	}
-	if emitted["AUDIT-999-nothing.happened"] {
+	// The fabricated id is ASSEMBLED rather than written out. A
+	// literal here would be picked up by the scanner in
+	// TestEveryCitedRuntimeRecordExists as a stale citation in this
+	// very file -- and adding an exception for this file would put a
+	// hole in the check exactly where somebody could hide one.
+	fabricated := "AUDIT-" + "999" + "-nothing.happened"
+	if emitted[fabricated] {
 		t.Fatal("a fabricated record id resolved against the runtime evidence; " +
 			"the citation check cannot distinguish a real record from an invented one")
 	}

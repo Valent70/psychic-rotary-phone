@@ -19,7 +19,7 @@ import (
 //
 // So each fixture below actually carries the structure it is named
 // for, and the term is placed where only the corresponding code path
-// can reach it. `TestEveryFixtureHidesItsTerm` asserts the property
+// can reach it. TestTheObjectStreamFixtureIsGenuine asserts the property
 // that makes them worth running at all: for a container variant, the
 // term must NOT be findable in the fixture's raw bytes.
 

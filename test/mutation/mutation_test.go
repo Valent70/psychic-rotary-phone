@@ -167,7 +167,7 @@ func TestMutationRefusedBecomesFailed(t *testing.T) {
 // superseded runtime ledger quoted as fact. The invariant now has to
 // survive being attacked rather than merely being documented.
 func TestMutationHistoricalBecomesCurrent(t *testing.T) {
-	hist := temporal.Reference{Subject: "AUDIT-009-case.resolved", State: temporal.Historical}
+	hist := temporal.Reference{Subject: "AUDIT-009-case.proof_attached", State: temporal.Historical}
 
 	// The mutation: promote without a reason.
 	if _, err := hist.Transition(temporal.Current, ""); !errors.Is(err, temporal.ErrPromotion) {
