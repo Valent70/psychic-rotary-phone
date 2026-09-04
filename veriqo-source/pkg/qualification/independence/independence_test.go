@@ -239,3 +239,84 @@ func TestFifteenDimensionsAreDefined(t *testing.T) {
 		t.Fatalf("the specification names fifteen dimensions, got %d", len(Dimensions()))
 	}
 }
+
+// TestUnknownIsNotCountedTowardsCorroboration closes an Article 28 gap
+// found while proving the cross-domain semantic properties.
+//
+// EffectiveSourceCount answers "how many clusters is this", and it
+// answers conservatively: an unassessed pair does not merge. That is
+// correct for clustering and wrong for corroboration, because two
+// sources that were never assessed count as two -- which is UNKNOWN
+// being read as INDEPENDENT at exactly the point where it matters.
+func TestUnknownIsNotCountedTowardsCorroboration(t *testing.T) {
+	assessed := Source{ID: "ais-provider", Attributes: fullyAssessed("ais")}
+	unassessed := Source{ID: "an-unassessed-feed"}
+
+	// The cluster count says two, and it is not wrong about clusters.
+	clusters, err := EffectiveSourceCount([]Source{assessed, unassessed})
+	if err != nil {
+		t.Fatalf("EffectiveSourceCount: %v", err)
+	}
+	if clusters != 2 {
+		t.Fatalf("cluster count = %d, want 2", clusters)
+	}
+
+	// The corroboration count must not.
+	count, unknown, err := EffectiveIndependentCount([]Source{assessed, unassessed})
+	if err != nil {
+		t.Fatalf("EffectiveIndependentCount: %v", err)
+	}
+	if count >= 2 {
+		t.Fatalf("an unassessed source counted towards corroboration (count=%d): "+
+			"UNKNOWN was promoted to INDEPENDENT", count)
+	}
+	if len(unknown) == 0 {
+		t.Fatal("the unassessed pair was not reported: a caller cannot go and assess what it is not told about")
+	}
+}
+
+// TestFullyAssessedSourcesStillCorroborate. The strict count must not
+// be so strict that nothing ever corroborates.
+func TestFullyAssessedSourcesStillCorroborate(t *testing.T) {
+	count, unknown, err := EffectiveIndependentCount([]Source{
+		{ID: "a", Attributes: fullyAssessed("a")},
+		{ID: "b", Attributes: fullyAssessed("b")},
+		{ID: "c", Attributes: fullyAssessed("c")},
+	})
+	if err != nil {
+		t.Fatalf("EffectiveIndependentCount: %v", err)
+	}
+	if len(unknown) != 0 {
+		t.Fatalf("fully assessed sources reported unknown pairs: %v", unknown)
+	}
+	if count != 3 {
+		t.Fatalf("count = %d, want 3", count)
+	}
+}
+
+// TestDependentSourcesCountOnce under the strict count too.
+func TestDependentSourcesCountOnce(t *testing.T) {
+	aAttrs, bAttrs := fullyAssessed("a"), fullyAssessed("b")
+	// Same root: a positively established dependency.
+	bAttrs[RootOrigin] = aAttrs[RootOrigin]
+	a := Source{ID: "a", Attributes: aAttrs}
+	b := Source{ID: "b", Attributes: bAttrs}
+	count, _, err := EffectiveIndependentCount([]Source{a, b})
+	if err != nil {
+		t.Fatalf("EffectiveIndependentCount: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("two same-root sources count as %d, want 1", count)
+	}
+}
+
+// TestASingleSourceIsNotDisqualifiedByAnAssessmentThatNeverHappened.
+func TestASingleSourceIsNotDisqualifiedByAnAssessmentThatNeverHappened(t *testing.T) {
+	count, unknown, err := EffectiveIndependentCount([]Source{{ID: "only-one"}})
+	if err != nil {
+		t.Fatalf("EffectiveIndependentCount: %v", err)
+	}
+	if count != 1 || len(unknown) != 0 {
+		t.Fatalf("count=%d unknown=%v; a lone source corroborates nothing but is not disqualified", count, unknown)
+	}
+}

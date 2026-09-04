@@ -396,14 +396,27 @@ func TestTheCrossDomainCaseCarriesItsContradictionForward(t *testing.T) {
 
 // partyMediatedSource builds a source whose acquisition ran through an
 // interested party, which is what an insurer-appointed adjuster is.
+// partyMediatedSource builds a FULLY ASSESSED source whose acquisition
+// ran through an interested party.
+//
+// Every disqualifying dimension is populated, so the source is
+// assessable rather than UNKNOWN. An earlier version listed five
+// dimensions and left three unassessed, which meant this source could
+// never corroborate anything under Article 28 -- a gap the cluster
+// count hid, because clustering counts an unassessed pair as two.
+//
+// Party mediation is NOT an independence verdict. An insurer-appointed
+// adjuster can be perfectly independent of an AIS provider. It is a
+// limitation, and the case carries it as one rather than silently
+// discounting the source.
 func partyMediatedSource(id, controller string) independence.Source {
-	return independence.Source{ID: id, Attributes: map[independence.Dimension]string{
-		independence.RootOrigin:            id,
-		independence.OrganizationalControl: controller,
-		independence.ProviderPipeline:      controller + "-pipeline",
-		independence.Collector:             id,
-		independence.AcquisitionPath:       "party-mediated",
-	}}
+	attrs := map[independence.Dimension]string{}
+	for _, d := range independence.DisqualifyingDimensions() {
+		attrs[d] = id + "-" + string(d)
+	}
+	attrs[independence.OrganizationalControl] = controller
+	attrs[independence.AcquisitionPath] = "party-mediated"
+	return independence.Source{ID: id, Attributes: attrs}
 }
 
 func chainEntryFor(t *testing.T, digest string) *timestamp.ChainAttestation {

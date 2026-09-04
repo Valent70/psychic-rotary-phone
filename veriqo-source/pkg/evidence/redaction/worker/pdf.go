@@ -101,6 +101,23 @@ func (p pdfRedactor) Redact(original []byte, terms []string, marker string) ([]b
 		m.Unaccounted = append(m.Unaccounted, fmt.Sprintf(
 			"the document uses the stream filter %s, which this worker does not decode", string(f)))
 	}
+	// Structural completeness, checked BEFORE any rewriting.
+	//
+	// A document whose trailer or cross-reference table cannot be found
+	// is one this worker cannot rebuild, and discovering that after
+	// having already rewritten its objects would leave the caller with
+	// an unclassified failure where a designed refusal belongs. The
+	// distinction matters: "I declined" and "I broke" are different
+	// facts about a redaction pipeline, and a corpus run that could not
+	// tell them apart would report a defect as a safe outcome.
+	if !bytes.Contains(original, []byte("trailer")) {
+		m.Unaccounted = append(m.Unaccounted,
+			"the document has no trailer, so its cross-reference table cannot be rebuilt after redaction")
+	}
+	if !bytes.Contains(original, []byte("startxref")) {
+		m.Unaccounted = append(m.Unaccounted,
+			"the document has no startxref, so this worker cannot locate its cross-reference table")
+	}
 	if len(m.Unaccounted) > 0 {
 		sort.Strings(m.Unaccounted)
 		return nil, m, nil // Pipeline.Run turns a non-empty Unaccounted into ErrRefused.

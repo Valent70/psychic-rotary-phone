@@ -73,7 +73,7 @@ var matrix = []Trace{
 	{Article: 3, Control: "Transitive source clustering: same-root data counts once",
 		Code: true, CodeRef: "veriqo/pkg/qualification/independence.Cluster",
 		Called: true, CalledRef: "independence.EffectiveSourceCount, proof.Object.Trust",
-		Test: true, TestRef: "TestSharedUpstreamSourceIsOneSource (test/adversarial)",
+		Test: true, TestRef: "TestSharedUpstreamSourceCannotBecomeCorroborationByAnyRoute, TestUnknownIsNotCountedTowardsCorroboration (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 4, Control: "Rights are evaluated before contact, not after",
@@ -107,7 +107,7 @@ var matrix = []Trace{
 	{Article: 7, Control: "Historical cases resolve against their historical policy version",
 		Code: true, CodeRef: "veriqo/pkg/governance/precedence",
 		Called: true, CalledRef: "veriqo/pkg/authz policy resolution",
-		Test: true, TestRef: "TestPolicyRetroactivityIsRefused (test/adversarial)",
+		Test: true, TestRef: "TestPolicyRetroactivityIsRefusedAndVisible (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 8, Control: "AI cannot create, alter, qualify or sign evidence",
@@ -134,7 +134,7 @@ var matrix = []Trace{
 	{Article: 11, Control: "Dissent is carried through qualification, never deleted",
 		Code: true, CodeRef: "veriqo/pkg/qualification/state.New",
 		Called: true, CalledRef: "proof.Object.Qualification",
-		Test: true, TestRef: "TestDissentCannotBeSuppressedAtEitherLayer (test/adversarial)",
+		Test: true, TestRef: "TestCriticalDissentCannotBeSuppressed, TestArticle11DissentSuppression (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 12, Control: "The same policy applies to every party absent an authorized exception",
@@ -146,13 +146,13 @@ var matrix = []Trace{
 	{Article: 13, Control: "Party influence on acquisition is recorded",
 		Code: true, CodeRef: "veriqo/pkg/qualification/nextbest.Candidate.PartyMediated",
 		Called: true, CalledRef: "nextbest.filter",
-		Test: true, TestRef: "TestPartyCredentialsDoNotConferIndependence (test/adversarial)",
+		Test: true, TestRef: "TestPartyMediatedEvidenceCannotSatisfyIndependence (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 14, Control: "Conflicts are declared rather than concealed",
 		Code: true, CodeRef: "veriqo/pkg/governance/hitl",
 		Called: true, CalledRef: "reviewer assignment",
-		Test: true, TestRef: "TestUndeclaredConflictAndArticle15Honesty (test/adversarial)",
+		Test: true, TestRef: "TestUndeclaredConflictIsCaughtAndCommercialNeutralityIsNotFaked (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 15, Control: "No differential benefit from a dispute outcome",
@@ -197,7 +197,8 @@ var matrix = []Trace{
 		// VERIQO has tried to recover the redacted content.
 		Called: true, CalledRef: "worker.Pipeline.Run, invoked by cmd/veriqo-runtime-evidence",
 		Test: true, TestRef: "TestCompressionWouldHaveHiddenTheTerm, TestEachWorkerProducesAVerifiedDerivative, " +
-			"TestAnEncryptedPDFIsRefusedNotWarned, TestABinaryAttachmentCarryingTheTermIsRefused",
+			"TestAnEncryptedPDFIsRefusedNotWarned, TestABinaryAttachmentCarryingTheTermIsRefused, " +
+			"TestTheCorpusRunMatchesItsDeclaredDesign, TestNoVariantLeaks, TestL3IsNotClaimed",
 		Evidence: true, EvidenceRef: "worker.Release carries the redaction chain, the transformation manifest and a disclosure event",
 		Replay: true, ReplayRef: "the derivative is deterministic: two runs over the same original produce identical bytes",
 		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-014-redaction.derivative_released",
@@ -227,7 +228,7 @@ var matrix = []Trace{
 	{Article: 20, Control: "View, export, AI processing and training are separate grants",
 		Code: true, CodeRef: "veriqo/pkg/disclosure/access.Rights",
 		Called: true, CalledRef: "access.Evaluate",
-		Test: true, TestRef: "TestPrivilegeLeakageByEveryAIRight (test/adversarial)",
+		Test: true, TestRef: "TestPrivilegedMaterialCannotReachAModelByAnyAIRight, TestThreeAIRightsAreSeparateGrants (test/adversarial)",
 		Evidence: true, EvidenceRef: "every disclosure decision emits an event",
 		Replay: true, ReplayRef: "decisions record the grant and policy version",
 		Qualification: false, ExternalDependency: noExternalAssessor},
@@ -275,7 +276,7 @@ var matrix = []Trace{
 	{Article: 26, Control: "Policy change is never quietly applied to history",
 		Code: true, CodeRef: "veriqo/pkg/governance/precedence",
 		Called: true, CalledRef: "policy resolution",
-		Test: true, TestRef: "TestPolicyRetroactivityIsRefused (test/adversarial)",
+		Test: true, TestRef: "TestPolicyRetroactivityIsRefusedAndVisible (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 27, Control: "Material AI contribution is recorded and human-reviewed",
@@ -289,13 +290,13 @@ var matrix = []Trace{
 	{Article: 28, Control: "UNKNOWN independence is never treated as INDEPENDENT",
 		Code: true, CodeRef: "veriqo/pkg/qualification/independence.Verdict",
 		Called: true, CalledRef: "independence.Assess, proof sufficiency",
-		Test: true, TestRef: "independence verdict tests, TestSharedUpstreamSourceIsOneSource",
+		Test: true, TestRef: "independence verdict tests, TestSharedUpstreamSourceCannotBecomeCorroborationByAnyRoute, TestUnknownIsNotCountedTowardsCorroboration",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 29, Control: "OBSERVED_ABSENT only after the observability gate",
 		Code: true, CodeRef: "veriqo/pkg/qualification/observability.AssertObservedAbsent",
 		Called: true, CalledRef: "reverseproof.Requirement.AbsenceState",
-		Test: true, TestRef: "observability gate tests, TestSourceOutageIsNotAFinding (test/adversarial)",
+		Test: true, TestRef: "observability gate tests, TestSourceOutageCannotBecomeAFindingAboutTheWorld (test/adversarial)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 30, Control: "Integrity, provenance, qualification, neutrality and legal determination stay distinct",

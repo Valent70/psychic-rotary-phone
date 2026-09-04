@@ -280,15 +280,91 @@ func Cluster(sources []Source) ([][]string, error) {
 	return out, nil
 }
 
-// EffectiveSourceCount reports how many genuinely distinct sources a
-// set represents -- the number a corroboration requirement should be
-// measured against, not len(sources).
+// EffectiveSourceCount reports how many genuinely distinct CLUSTERS a
+// set of sources forms.
+//
+// It answers "how many of these are the same source", and it answers it
+// conservatively: only a positively-established dependency merges a
+// cluster, so an unassessed pair stays apart.
+//
+// # What this number is not
+//
+// It is NOT a corroboration count. Two sources whose independence was
+// never assessed form two clusters and therefore count as two here,
+// and a caller that reads that as "two independent sources agree" has
+// treated UNKNOWN as INDEPENDENT -- which Article 28 forbids.
+//
+// The distinction is easy to lose because the two numbers are equal
+// whenever everything has been assessed, which is the case in every
+// fixture. Use EffectiveIndependentCount when the question is
+// corroboration.
 func EffectiveSourceCount(sources []Source) (int, error) {
 	c, err := Cluster(sources)
 	if err != nil {
 		return 0, err
 	}
 	return len(c), nil
+}
+
+// EffectiveIndependentCount reports how many sources may be counted
+// towards corroboration, and names every pair that could not be
+// assessed.
+//
+// A source counts only if EVERY pairing it takes part in was assessed
+// and found Independent. One unassessed pairing disqualifies both
+// sources from the count, because corroboration between a source and
+// something that might be itself is not corroboration.
+//
+// This is the Article 28 rule -- UNKNOWN is never INDEPENDENT -- applied
+// to the number callers actually use. EffectiveSourceCount answers a
+// different question and answering it conservatively is not the same as
+// answering this one.
+//
+// The returned pairs are the honest finding: they name what has not
+// been looked at, so a caller can go and assess them rather than
+// silently losing sources.
+func EffectiveIndependentCount(sources []Source) (int, []string, error) {
+	n := len(sources)
+	if n == 0 {
+		return 0, nil, nil
+	}
+	if n == 1 {
+		// A single source corroborates nothing, but it is not
+		// disqualified by an assessment that never had to happen.
+		return 1, nil, nil
+	}
+	disqualified := make([]bool, n)
+	var unknown []string
+	for i := 0; i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			res, err := Assess(sources[i], sources[j])
+			if err != nil {
+				return 0, nil, err
+			}
+			switch res.Verdict {
+			case Independent:
+				// Nothing to do: this pairing supports both.
+			case Dependent:
+				// Handled by clustering; for corroboration the pair
+				// is one source, so the later one does not add.
+				disqualified[j] = true
+			default:
+				// Unknown. Neither source may be counted, and the
+				// pair is reported.
+				disqualified[i], disqualified[j] = true, true
+				unknown = append(unknown, fmt.Sprintf("%s/%s: %s",
+					sources[i].ID, sources[j].ID, res.Reason))
+			}
+		}
+	}
+	count := 0
+	for i := range disqualified {
+		if !disqualified[i] {
+			count++
+		}
+	}
+	sort.Strings(unknown)
+	return count, unknown, nil
 }
 
 func sortDims(d []Dimension) {

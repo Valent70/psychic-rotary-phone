@@ -463,12 +463,24 @@ func completeStages(t *testing.T, e *fref.Execution, stages ...fref.Stage) {
 	}
 }
 
+// unrelatedSource builds a source with EVERY disqualifying dimension
+// assessed and distinct.
+//
+// The attribute set is derived from independence.DisqualifyingDimensions
+// rather than listed by hand. An earlier version listed five, which left
+// three dimensions unassessed -- so the fixture's sources were UNKNOWN
+// rather than INDEPENDENT, and only the cluster count made them look
+// like two. Deriving the list means a dimension added to the article
+// makes the fixture incomplete loudly instead of quietly.
 func unrelatedSource(id string) independence.Source {
-	return independence.Source{ID: id, Attributes: map[independence.Dimension]string{
-		independence.RootOrigin: id, independence.OrganizationalControl: id + "-holdings",
-		independence.ProviderPipeline: id + "-pipeline", independence.Collector: id,
-		independence.AcquisitionPath: "direct",
-	}}
+	attrs := map[independence.Dimension]string{}
+	for _, d := range independence.DisqualifyingDimensions() {
+		attrs[d] = id + "-" + string(d)
+	}
+	// The acquisition path is the one dimension where a shared value is
+	// normal rather than suspicious: two feeds can both be direct.
+	attrs[independence.AcquisitionPath] = "direct"
+	return independence.Source{ID: id, Attributes: attrs}
 }
 
 func domainReverseProof(t *testing.T, dc domainCase) (reverseproof.RequirementSet, reverseproof.Gap) {
