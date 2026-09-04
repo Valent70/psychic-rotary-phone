@@ -122,6 +122,18 @@ assembled, or left anything behind when it did.
 So `cmd/veriqo-runtime-evidence` **executes the canonical chain** and records
 what it emitted. Ten real audit events:
 
+> **SUPERSEDED — read this before the block below.** The ten-event stream
+> recorded by this round is *not* the current runtime artefact, and the order
+> it shows is unlawful: `case.resolved` precedes `proof.sealed`, and reverse
+> closure does not appear at all. The Constitutional Sequencing round found
+> that defect and fixed it; `evidence/RUNTIME_EVIDENCE.json` now holds
+> thirteen records with reverse closure at 007 and resolution last at 013.
+> See `docs/VERIQO_CONSTITUTIONAL_SEQUENCING_AUDIT.md`. The block is left
+> unedited because this is a dated closure report and rewriting it would
+> misrepresent what this round actually produced.
+
+<!-- RUNTIME-LEDGER: historical -->
+
 ```
 AUDIT-001-case.opened            AUDIT-006-case.hypothesis_tested
 AUDIT-002-case.scoped            AUDIT-007-case.qualification_begun

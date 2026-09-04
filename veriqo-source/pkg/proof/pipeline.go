@@ -40,6 +40,14 @@ var (
 	ErrZeroAuthorized     = errors.New("proof: a zero authorized finding cannot become a decision")
 	ErrNoDecisionAction   = errors.New("proof: a decision requires an action")
 	ErrAdjudication       = errors.New("proof: VERIQO does not adjudicate: a decision may not name a prevailing party")
+
+	// The finding identity invariants. A finding that fails any of
+	// these is not a weaker finding; it is not a finding.
+	ErrFindingWithoutCase        = errors.New("proof: a finding must name exactly one case")
+	ErrFindingWithoutProposition = errors.New("proof: a finding must name exactly one proposition")
+	ErrFindingWithoutProof       = errors.New("proof: a finding must name exactly one proof object")
+	ErrFindingAuthorityPath      = errors.New("proof: a finding carries an authority path other than the one constructor that may produce it")
+	ErrFindingTampered           = errors.New("proof: a finding's contents no longer agree with its hash")
 )
 
 // --- Finding ---------------------------------------------------------
@@ -59,8 +67,20 @@ type Finding struct {
 	qualification string
 	limitations   []string
 	atTick        uint64
+	authorityPath string
 	hash          string
 }
+
+// FindingAuthorityPath is the only path by which a finding can come
+// into existence: a proof object sealed by proof.Seal, found sufficient
+// by the sufficiency rule, and derived by proof.NewFinding.
+//
+// It is recorded on the finding and covered by the finding's hash so
+// that the answer to "who was allowed to say this?" travels with the
+// object rather than living in a document about the object. A finding
+// whose authority path is anything else does not exist, because
+// NewFinding is the only constructor and it writes this constant.
+const FindingAuthorityPath = "proof.Seal -> proof.deriveSufficiency -> proof.NewFinding"
 
 // NewFinding derives a finding from a sealed, sufficient proof object.
 //
@@ -77,6 +97,16 @@ func NewFinding(o Object, atTick uint64) (Finding, error) {
 	if o.Sufficiency != Sufficient {
 		return Finding{}, fmt.Errorf("%w: sufficiency is %s", ErrInsufficient, o.Sufficiency)
 	}
+	// Exactly one case and exactly one proposition. A finding that
+	// names no case is not attributable to anything: it could be
+	// attached to any case later, which is the same as belonging to
+	// none. A finding that names no proposition states nothing.
+	if strings.TrimSpace(o.Scope.CaseID) == "" {
+		return Finding{}, ErrFindingWithoutCase
+	}
+	if strings.TrimSpace(o.Proposition.ID) == "" {
+		return Finding{}, ErrFindingWithoutProposition
+	}
 
 	f := Finding{
 		proofHash:     o.CanonicalHash,
@@ -87,18 +117,68 @@ func NewFinding(o Object, atTick uint64) (Finding, error) {
 		qualification: string(o.Qualification.State),
 		limitations:   sortedCopy(o.Limitations),
 		atTick:        atTick,
+		authorityPath: FindingAuthorityPath,
 	}
+	h, err := findingHash(f)
+	if err != nil {
+		return Finding{}, err
+	}
+	f.hash = h
+	return f, nil
+}
+
+// findingHash computes a finding's canonical hash over every field that
+// carries meaning, the authority path included. Keeping this in one
+// function is what lets VerifyIntegrity re-derive the same value: two
+// hash expressions that must agree are a duplicate authority on what a
+// finding is.
+func findingHash(f Finding) (string, error) {
 	h, err := jcs.Hash(map[string]any{
 		"proof_hash": f.proofHash, "proposition_id": f.propositionID,
 		"statement": f.statement, "case_id": f.caseID,
 		"stance": f.stance.String(), "qualification": f.qualification,
 		"limitations": toAny(f.limitations), "tick": f.atTick,
+		"authority_path": f.authorityPath,
 	})
 	if err != nil {
-		return Finding{}, fmt.Errorf("proof: finding hash: %w", err)
+		return "", fmt.Errorf("proof: finding hash: %w", err)
 	}
-	f.hash = h
-	return f, nil
+	return h, nil
+}
+
+// VerifyIntegrity re-derives the finding's hash from its own contents
+// and reports whether it still agrees.
+//
+// Within a single process the unexported fields already make a finding
+// unforgeable. This exists for findings that have crossed a boundary --
+// deserialized from a snapshot, replayed from a ledger, reconstructed by
+// a future package -- where the type system's guarantee did not travel
+// with the bytes.
+func (f Finding) VerifyIntegrity() error {
+	if f.IsZero() {
+		return ErrZeroFinding
+	}
+	if f.authorityPath != FindingAuthorityPath {
+		return fmt.Errorf("%w: authority path is %q, not %q",
+			ErrFindingAuthorityPath, f.authorityPath, FindingAuthorityPath)
+	}
+	if strings.TrimSpace(f.caseID) == "" {
+		return ErrFindingWithoutCase
+	}
+	if strings.TrimSpace(f.propositionID) == "" {
+		return ErrFindingWithoutProposition
+	}
+	if strings.TrimSpace(f.proofHash) == "" {
+		return ErrFindingWithoutProof
+	}
+	want, err := findingHash(f)
+	if err != nil {
+		return err
+	}
+	if want != f.hash {
+		return fmt.Errorf("%w: recorded %s, recomputed %s", ErrFindingTampered, f.hash, want)
+	}
+	return nil
 }
 
 func (f Finding) IsZero() bool          { return f.hash == "" }
@@ -110,6 +190,11 @@ func (f Finding) Stance() Stance        { return f.stance }
 func (f Finding) Qualification() string { return f.qualification }
 func (f Finding) Hash() string          { return f.hash }
 func (f Finding) AtTick() uint64        { return f.atTick }
+
+// AuthorityPath returns the chain that was permitted to produce this
+// finding. It answers "who was allowed to say this?", which is a
+// different question from where the underlying evidence came from.
+func (f Finding) AuthorityPath() string { return f.authorityPath }
 
 // Limitations returns a copy. A finding's stated limits travel with it
 // and cannot be edited off by a caller holding the value.

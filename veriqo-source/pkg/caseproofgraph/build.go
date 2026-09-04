@@ -130,7 +130,7 @@ func Build(c *casefabric.Case, proofs map[string]proof.Object, findings map[stri
 			continue
 		}
 		f, hasFinding := findings[cl.ID]
-		if err := addProof(g, claimID, cl.ID, o, f, hasFinding); err != nil {
+		if err := addProof(g, c.Identity().CaseID, claimID, cl.ID, o, f, hasFinding); err != nil {
 			return nil, err
 		}
 	}
@@ -165,7 +165,7 @@ func Build(c *casefabric.Case, proofs map[string]proof.Object, findings map[stri
 }
 
 // addProof attaches one proof object and its nine sub-nodes.
-func addProof(g *Graph, claimNodeID, claimID string, o proof.Object, f proof.Finding, hasFinding bool) error {
+func addProof(g *Graph, caseID, claimNodeID, claimID string, o proof.Object, f proof.Finding, hasFinding bool) error {
 	proofID := "proof:" + o.CanonicalHash
 	if err := g.AddNode(Node{
 		ID: proofID, Kind: NodeProofObject, Label: o.Proposition.Statement,
@@ -287,16 +287,32 @@ func addProof(g *Graph, claimNodeID, claimID string, o proof.Object, f proof.Fin
 	// rendering, which is exactly the duplicate-authority failure the
 	// architecture forbids. A missing finding shows as absence.
 	if hasFinding && !f.IsZero() {
+		// The finding must be intact before it is rendered. A finding
+		// that crossed a process boundary and lost agreement with its
+		// own hash would otherwise be drawn as fact, and a picture of a
+		// tampered finding is worse than no picture.
+		if err := f.VerifyIntegrity(); err != nil {
+			return fmt.Errorf("caseproofgraph: the supplied finding for claim %q is not intact: %w", claimID, err)
+		}
 		if f.ProofHash() != o.CanonicalHash {
 			return fmt.Errorf("caseproofgraph: the supplied finding for claim %q belongs to proof %s, not %s",
 				claimID, f.ProofHash(), o.CanonicalHash)
 		}
+		// One case. A finding belonging to another case cannot be
+		// rendered into this one, however well it matches the proof.
+		if f.CaseID() != caseID {
+			return fmt.Errorf("caseproofgraph: the supplied finding for claim %q belongs to case %q, not %q",
+				claimID, f.CaseID(), caseID)
+		}
 		fid := "finding:" + f.Hash()
 		if err := g.AddNode(Node{
 			ID: fid, Kind: NodeFinding, Label: f.Statement(), ContentHash: f.Hash(),
+			// Every attribute is read off the finding. The graph
+			// records the authority path rather than being it.
 			Attributes: map[string]string{
 				"stance": f.Stance().String(), "qualification": f.Qualification(),
-				"limitations": strconv.Itoa(len(f.Limitations())),
+				"limitations":    strconv.Itoa(len(f.Limitations())),
+				"authority_path": f.AuthorityPath(),
 			},
 			Classification: Classification{
 				Procedural: access.P2ProcessVisible, Content: access.C2Redacted,

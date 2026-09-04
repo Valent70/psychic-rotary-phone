@@ -35,13 +35,19 @@ done about them.
 
 ### 1.1 What the artefact actually said
 
-The previous runtime artefact emitted:
+The **superseded** runtime artefact emitted the stream below. It is
+reproduced here only to record what the defect looked like; it is **not**
+what `evidence/RUNTIME_EVIDENCE.json` contains today. The current stream is
+in §1.5, and `TestNoDocumentMisquotesTheRuntimeLedger` fails if any document
+in this repository quotes a superseded ledger without saying so.
+
+<!-- RUNTIME-LEDGER: historical -->
 
 ```
-AUDIT-007  qualification_begun
-AUDIT-008  proof_attached
-AUDIT-009  case.resolved
-AUDIT-010  proof.sealed
+AUDIT-007  qualification_begun      <- SUPERSEDED. Not the current artefact.
+AUDIT-008  proof_attached           <- SUPERSEDED.
+AUDIT-009  case.resolved            <- SUPERSEDED. Resolution is now 013.
+AUDIT-010  proof.sealed             <- SUPERSEDED.
 ```
 
 A case resolved, and then its proof was sealed. The Case Fabric phase

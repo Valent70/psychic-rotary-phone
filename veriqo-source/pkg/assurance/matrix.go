@@ -178,17 +178,44 @@ var matrix = []Trace{
 		ExternalDependency: noExternalAssessor},
 
 	{Article: 18, Control: "Redacted content is absent from the derivative's bytes",
-		Code: true, CodeRef: "veriqo/pkg/evidence/redaction.Verify (byte-level absence over twelve encodings)",
-		// Called is false, and that is the finding. The verifier exists
-		// and is tested; nothing on a live path invokes it, because no
-		// worker produces derivatives for it to check. The article moved
-		// from OPEN to INTEGRATION_GAP this round -- a more precise
-		// statement of the same gap, not a smaller one.
-		Called: false,
-		Test:   true, TestRef: "TestVisualOnlyRedactionIsCaught, TestEveryEncodingIsCaught, TestTheOriginalMustBePreserved",
-		ExternalDependency: "the PDF, XLSX and PPTX redaction workers that would produce derivatives do not exist, " +
-			"nor does the adversarial recovery lab that would attempt reconstruction from format-specific remnants " +
-			"(incremental updates, object streams, revision history)"},
+		Code: true, CodeRef: "veriqo/pkg/evidence/redaction.Verify (byte-level absence over twelve encodings), " +
+			"driven by veriqo/pkg/evidence/redaction/worker (PDF, XLSX and PPTX workers)",
+		// Called is now true, and this is what changed it: the workers
+		// exist, they produce a real derivative from a real container,
+		// and the pipeline verifies it before releasing anything.
+		//
+		// The check runs over the DECOMPRESSED content of the
+		// container, not its bytes. That distinction is the whole
+		// integration: PDF, XLSX and PPTX all deflate their content, so
+		// a verifier pointed at the container would report absence for
+		// a document where nothing had been removed -- a check that
+		// cannot fail, which is worse than no check because it produces
+		// a record saying it passed.
+		//
+		// The article moves INTEGRATION_GAP -> ASSURANCE_GAP. What is
+		// still missing is named in ExternalDependency: nobody outside
+		// VERIQO has tried to recover the redacted content.
+		Called: true, CalledRef: "worker.Pipeline.Run, invoked by cmd/veriqo-runtime-evidence",
+		Test: true, TestRef: "TestCompressionWouldHaveHiddenTheTerm, TestEachWorkerProducesAVerifiedDerivative, " +
+			"TestAnEncryptedPDFIsRefusedNotWarned, TestABinaryAttachmentCarryingTheTermIsRefused",
+		Evidence: true, EvidenceRef: "worker.Release carries the redaction chain, the transformation manifest and a disclosure event",
+		Replay: true, ReplayRef: "the derivative is deterministic: two runs over the same original produce identical bytes",
+		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-014-redaction.derivative_released",
+		// Qualification stays false, deliberately. "Assessed, not
+		// merely run" would require somebody to have concluded the
+		// control is complete, and it is not: the workers REFUSE the
+		// structures where redacted content most plausibly survives
+		// (incremental updates, object streams, encrypted documents)
+		// rather than handling them. Refusing is the safe behaviour and
+		// it is the right behaviour, but a control that declines a large
+		// part of its own problem space has not been assessed as
+		// adequate, and marking it so to reach a nicer verdict is exactly
+		// the move this matrix exists to prevent.
+		Qualification: false,
+		ExternalDependency: "no adversarial recovery lab outside VERIQO has attempted reconstruction from " +
+			"format-specific remnants, and the workers refuse rather than process the structures where such " +
+			"remnants live (incremental updates, object streams, encrypted documents, undecoded stream filters); " +
+			"refusing is safe but is not the same as having proven those structures can be redacted"},
 
 	{Article: 19, Control: "VERIQO enforces privilege; it does not determine it",
 		Code: true, CodeRef: "veriqo/pkg/disclosure/access.PrivilegeStatus",

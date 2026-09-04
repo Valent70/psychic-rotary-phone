@@ -6,8 +6,8 @@
   "boundary": "The evidence in this run is a fixture. It demonstrates that the chain executes and records; it does not demonstrate behaviour on real commercial data, which is the LIVE_DATA blocker and remains BLOCKED_EXTERNAL.",
   "case_id": "RUNTIME-EVIDENCE-CASE-1",
   "proof_hash": "9d6f4073c9b9ca793930d041eccc4d81c886a9b396cf4b514a7b4af5ea7a105b",
-  "decision_hash": "b3c6a1cd688db5ce9e0db71b01134249d1506447a99f5c809975c64e985de31e",
-  "ledger_root_hash": "7d36920dbb8cf46e26b24d734b7c2fdd9eede5efe86a7861f6e8dbdedf3650ff",
+  "decision_hash": "6b2a5fc792c9f66adfce0f086aaed6edf17b69f161436e3d0b6c6f0a2a875f4d",
+  "ledger_root_hash": "eee055fbb952f8f3adf748d77cc6c4cda53d35046719c87babb77b1dc6d86dbe",
   "records": [
     {
       "index": 1,
@@ -94,7 +94,7 @@
       "event_id": "AUDIT-011-claim.finding_founded",
       "actor": "analyst-1",
       "action": "claim.finding_founded",
-      "hash": "edc5702e70585211bdbadd595456ce8638dfe8fc429a34d5df99b6295cb61352",
+      "hash": "be67192acdcb52af052927a6b369d5b4d3037e92cacfacb18bad11c76cc94967",
       "prev_hash": "4320560d485d3afe1861a3ee0bbaa6436ed8c3711634522b9fb40854df489263"
     },
     {
@@ -102,16 +102,24 @@
       "event_id": "AUDIT-012-case.decision_authorized",
       "actor": "partner-1",
       "action": "case.decision_authorized",
-      "hash": "76ab4cc7c8ba7994a3856ea786d48401fecd8e68f497eb76c003766adaccd031",
-      "prev_hash": "edc5702e70585211bdbadd595456ce8638dfe8fc429a34d5df99b6295cb61352"
+      "hash": "2d6f54adc4b0e2ccaa71233091ec4fd27e7e635f1d007e482c34e0dca63b035b",
+      "prev_hash": "be67192acdcb52af052927a6b369d5b4d3037e92cacfacb18bad11c76cc94967"
     },
     {
       "index": 13,
       "event_id": "AUDIT-013-case.resolved",
       "actor": "partner-1",
       "action": "case.resolved",
-      "hash": "7d36920dbb8cf46e26b24d734b7c2fdd9eede5efe86a7861f6e8dbdedf3650ff",
-      "prev_hash": "76ab4cc7c8ba7994a3856ea786d48401fecd8e68f497eb76c003766adaccd031"
+      "hash": "f1e1f38425cfcbadba1de6725b7b5e2243dd733636620df40e96eed7752da701",
+      "prev_hash": "2d6f54adc4b0e2ccaa71233091ec4fd27e7e635f1d007e482c34e0dca63b035b"
+    },
+    {
+      "index": 14,
+      "event_id": "AUDIT-014-redaction.derivative_released",
+      "actor": "compliance-1",
+      "action": "redaction.derivative_released",
+      "hash": "eee055fbb952f8f3adf748d77cc6c4cda53d35046719c87babb77b1dc6d86dbe",
+      "prev_hash": "f1e1f38425cfcbadba1de6725b7b5e2243dd733636620df40e96eed7752da701"
     }
   ]
 }

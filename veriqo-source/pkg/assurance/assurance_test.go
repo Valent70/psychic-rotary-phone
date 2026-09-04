@@ -357,18 +357,20 @@ func TestArticlesWithNoRuntimeEnforcementAreOpen(t *testing.T) {
 	}
 
 	// Article 18 moved OPEN -> INTEGRATION_GAP this round: the byte-level
-	// verifier now exists and is tested, but nothing on a live path calls
-	// it because no worker produces derivatives. That is a more precise
-	// statement of the same gap, not a smaller one, and the article is
-	// still not closed.
+	// verifier now has workers in front of it and runs on a live path,
+	// leaving AUDIT-014 behind, so the article moved INTEGRATION_GAP ->
+	// ASSURANCE_GAP. It did NOT move further: the workers refuse the PDF
+	// structures where redacted content most plausibly survives, and no
+	// party outside VERIQO has attempted recovery.
 	var art18 Verdict
 	for _, r := range rows {
 		if r.Article == 18 {
 			art18 = r.Verdict
 		}
 	}
-	if art18 != IntegrationGap {
-		t.Fatalf("article 18 must be INTEGRATION_GAP: a verifier exists, nothing calls it. Got %s", art18)
+	if art18 != AssuranceGap {
+		t.Fatalf("article 18 must be ASSURANCE_GAP: workers now call the verifier on a live path, "+
+			"but the control declines the structures where remnants live. Got %s", art18)
 	}
 	if art18.Closed() {
 		t.Fatal("article 18 is not closed")

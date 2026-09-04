@@ -20,12 +20,19 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
+	"time"
 
+	"veriqo/pkg/canonical/jcs"
 	"veriqo/pkg/casefabric"
 	"veriqo/pkg/contract/event"
+	"veriqo/pkg/evidence/redaction"
+	"veriqo/pkg/evidence/redaction/worker"
 	"veriqo/pkg/fref"
 	"veriqo/pkg/platform/audit"
 	"veriqo/pkg/proof"
@@ -156,6 +163,22 @@ func run() (artefact, error) {
 	if err != nil {
 		return artefact{}, fmt.Errorf("mirror: %w", err)
 	}
+
+	// ARTICLE 18, on a live path.
+	//
+	// The redaction verifier existed and nothing called it, which is
+	// what INTEGRATION_GAP meant. Here a real derivative is produced by
+	// a real worker from a real container, verified byte-level over its
+	// decompressed content, and its disclosure appended to this same
+	// ledger. The event lands after the resolution because disclosing a
+	// redacted derivative is not an epistemic act: it changes nothing
+	// the case concluded, and the post-resolution mutation ban is about
+	// evidence and claims, not about who may later be shown what.
+	redactionRec, err := releaseRedactedDerivative(store)
+	if err != nil {
+		return artefact{}, fmt.Errorf("redaction release: %w", err)
+	}
+	recs = append(recs, redactionRec)
 
 	// Re-verify before writing anything down. An artefact generated from
 	// a ledger that does not verify would be worse than none, and one
@@ -380,4 +403,88 @@ func buildCase(o proof.Object, closureSubject string, closureHolds bool) (*casef
 		}
 	}
 	return c, nil
+}
+
+// releaseRedactedDerivative runs the Article 18 pipeline over a real
+// container and appends the disclosure event to the ledger.
+//
+// The fixture is built here rather than read from disk so that this
+// command stays hermetic and deterministic, and so that a reader can
+// see the forbidden term go in. The container is genuinely compressed:
+// the term does not appear anywhere in its bytes, which is why the
+// pipeline verifies the decompressed view instead.
+func releaseRedactedDerivative(store *audit.AuditStore) (audit.AuditRecord, error) {
+	const forbidden = "Acme Holdings Ltd"
+	original := runtimeWorkbook(forbidden)
+	if bytes.Contains(original, []byte(forbidden)) {
+		return audit.AuditRecord{}, fmt.Errorf(
+			"the fixture stores the term uncompressed, so verifying it would prove nothing")
+	}
+
+	rel, err := worker.NewPipeline().Run(worker.Request{
+		Kind:                worker.KindXLSX,
+		Original:            original,
+		OriginalVersionID:   "EV-RUNTIME-1",
+		DerivativeVersionID: "EV-RUNTIME-1-R1",
+		PinnedOriginalHash:  redaction.Hash(original),
+		ForbiddenTerms:      []string{forbidden},
+	})
+	if err != nil {
+		return audit.AuditRecord{}, err
+	}
+
+	e := rel.LedgerEvent()
+	payload, err := jcs.Canonicalize(map[string]any{
+		"original_version_id":   e.OriginalVersionID,
+		"derivative_version_id": e.DerivativeVersionID,
+		"original_hash":         e.OriginalHash,
+		"derivative_hash":       e.DerivativeHash,
+		"terms_removed":         e.TermsRemoved,
+		"encodings_checked":     e.EncodingsChecked,
+		"worker":                e.Worker,
+	})
+	if err != nil {
+		return audit.AuditRecord{}, fmt.Errorf("canonicalizing the disclosure event: %w", err)
+	}
+	return store.Append("compliance-1", e.Action, string(payload))
+}
+
+// runtimeWorkbook builds a minimal but real OOXML workbook whose cell
+// text lives in the shared string table, deflated.
+func runtimeWorkbook(text string) []byte {
+	parts := map[string]string{
+		"[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+			`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+			`<Default Extension="xml" ContentType="application/xml"/></Types>`,
+		"xl/sharedStrings.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+			`<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="2" uniqueCount="2">` +
+			`<si><t>` + text + `</t></si><si><t>Parcel A, sampled pre-loading</t></si></sst>`,
+		"xl/worksheets/sheet1.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+			`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>` +
+			`<row r="1"><c r="A1" t="s"><v>0</v></c></row>` +
+			`<row r="2"><c r="A2" t="s"><v>1</v></c></row></sheetData></worksheet>`,
+	}
+	names := make([]string, 0, len(parts))
+	for n := range parts {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, n := range names {
+		hdr := &zip.FileHeader{Name: n, Method: zip.Deflate}
+		hdr.Modified = time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC)
+		w, err := zw.CreateHeader(hdr)
+		if err != nil {
+			return nil
+		}
+		if _, err := w.Write([]byte(parts[n])); err != nil {
+			return nil
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return nil
+	}
+	return buf.Bytes()
 }
