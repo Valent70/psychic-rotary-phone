@@ -69,10 +69,18 @@ func layerOf(pkg string) (layer, bool) {
 		// would be describing a repository we do not have.
 		return layerFoundation, true
 	case rel == "pkg/constitution", rel == "pkg/ontology", rel == "pkg/contract/event",
-		rel == "pkg/platform/audit", rel == "pkg/platform/timestamp":
+		rel == "pkg/platform/audit", rel == "pkg/platform/timestamp",
+		rel == "pkg/provenance/temporal":
+		// temporal provenance is vocabulary, not a check: it says what
+		// state a reference is in, and the packages that act on that
+		// state sit above it.
 		return layerContract, true
 	case strings.HasPrefix(rel, "pkg/qualification/"), rel == "pkg/disclosure/access",
-		rel == "pkg/ai/gateway", rel == "pkg/authz":
+		rel == "pkg/ai/gateway", rel == "pkg/authz", rel == "pkg/evidence/quality":
+		// evidence quality is a control: it decides what a body of
+		// evidence permits, and the qualification ledger consumes that
+		// decision. Classifying it here is what makes that import an
+		// equal-layer edge rather than an ungoverned one.
 		return layerControl, true
 	case rel == "pkg/proof", rel == "pkg/casefabric", rel == "pkg/fref":
 		return layerFabric, true

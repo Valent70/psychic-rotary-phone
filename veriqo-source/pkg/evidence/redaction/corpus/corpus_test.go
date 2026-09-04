@@ -145,8 +145,8 @@ func TestTheCoverageRatioIsReportedAsCoverageNotAsAPassRate(t *testing.T) {
 	}
 }
 
-// TestTheWeightedGapIsReported. The refused variants that are common in
-// real documents are the finding, and burying them in a per-variant
+// TestTheWeightedGapIsReported. The refused variants that are common
+// in real documents are the finding, and burying them in a per-variant
 // grid would hide the thing the review asked about.
 func TestTheWeightedGapIsReported(t *testing.T) {
 	_, cov, err := Run()
@@ -154,24 +154,97 @@ func TestTheWeightedGapIsReported(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 	if len(cov.WeightedGap) == 0 {
-		t.Fatal("no refused variant is marked COMMON or UBIQUITOUS. Either the workers now " +
-			"handle object streams and encryption, or the weights have been quietly softened")
+		t.Fatal("no refused variant is marked COMMON or UBIQUITOUS. Encryption and incremental " +
+			"updates are both refused and both common, so an empty gap means the weights have " +
+			"been quietly softened rather than the coverage genuinely completed")
 	}
-	h := cov.Headline()
-	if !strings.Contains(h, "COMMON or UBIQUITOUS") {
+	if !strings.Contains(cov.Headline(), "COMMON or UBIQUITOUS") {
 		t.Fatal("the headline does not surface the weighted gap")
 	}
-	// Object streams are the single largest real-world gap and must be
-	// named explicitly rather than left to a reader to infer.
+	// Encryption is the remaining COMMON refusal and must stay named:
+	// it is the one a reader is most likely to meet and least likely
+	// to expect, since an encrypted PDF looks readable in a viewer.
 	found := false
 	for _, g := range cov.WeightedGap {
-		if strings.HasPrefix(g, "PDF-OBJECT-STREAM") {
+		if strings.HasPrefix(g, "PDF-ENCRYPTED") {
 			found = true
 		}
 	}
 	if !found {
-		t.Fatal("PDF object streams are not reported in the weighted gap; they are the dominant " +
-			"shape of PDF 1.5+ output and the largest coverage limit")
+		t.Fatal("encrypted PDFs are not reported in the weighted gap")
+	}
+}
+
+// TestTheUbiquitousPDF15StructuresAreNoLongerRefused is the regression
+// guard in the opposite direction.
+//
+// Object streams and cross-reference streams were the two UBIQUITOUS
+// refusals, and closing them is what moved coverage from 65% to 70%
+// structurally and much further by prevalence. If either ever returns
+// to REFUSED, the coverage claim in every report becomes false and this
+// test says so rather than letting the ratio drift.
+func TestTheUbiquitousPDF15StructuresAreNoLongerRefused(t *testing.T) {
+	outcomes, _, err := Run()
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := map[string]bool{"PDF-OBJECT-STREAM": false, "PDF-XREF-STREAM": false}
+	for _, o := range outcomes {
+		if _, ok := want[o.Variant.ID]; !ok {
+			continue
+		}
+		if o.Actual != Accepted {
+			t.Errorf("%s is %s: %s", o.Variant.ID, o.Actual, o.Detail)
+		}
+		want[o.Variant.ID] = true
+	}
+	for id, seen := range want {
+		if !seen {
+			t.Errorf("%s is no longer in the taxonomy: the coverage claim cannot be checked", id)
+		}
+	}
+}
+
+// TestTheObjectStreamFixtureIsGenuine is the guard against the trap the
+// review named: a test that goes green because the test is weak.
+//
+// The first version of this fixture injected the string "/Type /ObjStm"
+// into a catalog dictionary. That was adequate while the worker refused
+// on a regex match, and worthless once the worker started unpacking:
+// a document that merely MENTIONS an object stream exercises none of
+// the unpacking code. This asserts the fixture is a real container.
+func TestTheObjectStreamFixtureIsGenuine(t *testing.T) {
+	doc, err := buildObjectStreamPDF("Acme Holdings Ltd", true)
+	if err != nil {
+		t.Fatalf("buildObjectStreamPDF: %v", err)
+	}
+	if !bytes.Contains(doc, []byte("/Type /ObjStm")) {
+		t.Fatal("the fixture declares no object stream")
+	}
+	if !bytes.Contains(doc, []byte("/Type /XRef")) {
+		t.Fatal("the fixture declares no cross-reference stream")
+	}
+	if bytes.Contains(doc, []byte("trailer")) {
+		t.Fatal("the fixture has a classic trailer, so it does not exercise trailer reconstruction")
+	}
+	// The term must be invisible in the raw bytes AND invisible in the
+	// inspectable view until the container is unpacked -- the objects
+	// inside an ObjStm are deflated, so a worker that did not unpack
+	// would report absence for content it never saw.
+	if bytes.Contains(doc, []byte("Acme Holdings Ltd")) {
+		t.Fatal("the fixture stores the term uncompressed: unpacking would not be needed to find it")
+	}
+	// After unpacking, the term must be present. This is the assertion
+	// that makes the ACCEPTED result meaningful.
+	normalized, norm, err := worker.NormalizeForTest(doc)
+	if err != nil {
+		t.Fatalf("normalize: %v", err)
+	}
+	if !norm {
+		t.Fatal("the normalizer did not recognise the fixture as a 1.5+ document")
+	}
+	if !bytes.Contains(normalized, []byte("Acme Holdings Ltd")) {
+		t.Fatal("the term is not present after unpacking: the container held nothing the worker would redact")
 	}
 }
 
@@ -235,6 +308,72 @@ func TestAllThreeFormatsAreExercised(t *testing.T) {
 	for _, k := range worker.Kinds() {
 		if got[k] == 0 {
 			t.Errorf("no corpus variant exercises %s", k)
+		}
+	}
+}
+
+// TestWeightedCoverageIsReportedAsAnEstimate. The weighted number is
+// more useful than the structural one and more dangerous, because it
+// looks like a measurement. Every path that produces it must say it is
+// not.
+func TestWeightedCoverageIsReportedAsAnEstimate(t *testing.T) {
+	_, cov, err := Run()
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	h := cov.Headline()
+	if !strings.Contains(h, "ESTIMATE") {
+		t.Fatal("the weighted figure is not labelled an estimate")
+	}
+	if !strings.Contains(h, PrevalenceBasis) {
+		t.Fatal("the headline does not carry the basis for the prevalence weights")
+	}
+	if !strings.Contains(PrevalenceBasis, "never run this pipeline over a real document population") {
+		t.Fatal("the basis does not state that no measured prevalence exists")
+	}
+}
+
+// TestWeightedCoverageDiffersFromStructuralCoverage proves the metric
+// is doing work. If the two numbers were identical the weighting would
+// be decorative, and a reader would be right to ignore it.
+func TestWeightedCoverageDiffersFromStructuralCoverage(t *testing.T) {
+	_, cov, err := Run()
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if cov.WeightedTotal == 0 {
+		t.Fatal("no variant carries a prevalence weight")
+	}
+	structural := cov.AcceptRatio()
+	weighted := cov.WeightedCoverage()
+	if structural == weighted {
+		t.Fatalf("structural and weighted coverage are both %.4f: the weighting distinguishes nothing",
+			structural)
+	}
+	// The weighted figure must be the HIGHER one here, and for a
+	// reason worth stating: the two structures VERIQO now handles are
+	// the two most common ones. If that ever inverts, coverage has
+	// concentrated in rare structures and the report should say so
+	// rather than quoting the structural number.
+	if weighted < structural {
+		t.Fatalf("weighted coverage %.2f is below structural %.2f: the workers now cover rare "+
+			"structures better than common ones, which the headline must not obscure",
+			weighted, structural)
+	}
+}
+
+// TestEveryWeightHasAPrevalence guards against a weight added to the
+// taxonomy without a number, which would silently drop that variant out
+// of the weighted denominator.
+func TestEveryWeightHasAPrevalence(t *testing.T) {
+	for _, w := range []Weight{Ubiquitous, Common, Occasional, Rare} {
+		if w.Prevalence() <= 0 {
+			t.Errorf("%s has no prevalence weight", w)
+		}
+	}
+	for _, v := range Variants {
+		if v.RealWorldWeight.Prevalence() <= 0 {
+			t.Errorf("%s carries the unweighted value %q", v.ID, v.RealWorldWeight)
 		}
 	}
 }

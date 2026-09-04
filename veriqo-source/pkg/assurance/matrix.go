@@ -63,11 +63,23 @@ var matrix = []Trace{
 		Qualification: true, QualificationRef: "docs/VERIQO_RED_FLAG_RESPONSE_REPORT.md (AuthorizedFinding gate assessment)",
 		ExternalDependency: noExternalAssessor},
 
+	// Article 2 is the separation the whole ladder rests on: knowing
+	// where something came from is not the same as knowing it is good
+	// enough. veriqo/pkg/evidence/quality is what makes that separation
+	// operational -- nine attributes assessed independently, with no
+	// score, so a strong provenance story cannot stand in for an
+	// absent independence one. veriqo/pkg/provenance/temporal adds the
+	// second half: a reference that was valid once is not therefore
+	// valid now.
 	{Article: 2, Control: "Acquisition records provenance without conferring qualification",
-		Code: true, CodeRef: "veriqo/pkg/evidence/provenance",
-		Called: true, CalledRef: "veriqo/pkg/dataplatform/ingest",
-		Test: true, TestRef: "pkg/evidence/provenance tests",
-		Evidence: true, EvidenceRef: "audit event family evidence.acquired",
+		Code: true, CodeRef: "veriqo/pkg/evidence/provenance, veriqo/pkg/evidence/quality (nine attributes, no score), " +
+			"veriqo/pkg/provenance/temporal (six states and six validities)",
+		Called: true, CalledRef: "veriqo/pkg/dataplatform/ingest; quality.Assessment.Decide is consumed by " +
+			"qualification/ledger.Entry.Validate, which refuses a PASS over evidence assessed INSUFFICIENT",
+		Test: true, TestRef: "TestAllNineAttributesAreMaterialised, TestStrongIntegrityDoesNotOffsetAbsentIndependence, " +
+			"TestNotAssessedIsNotSufficient, TestAPassCannotRestOnEvidenceAssessedInsufficient, " +
+			"TestTheAssessmentsLimitsMustTravelIntoTheEntry, TestValidAtTimeIsNotUsableNow",
+		Evidence: true, EvidenceRef: "audit event family evidence.acquired; the assessment is covered by the ledger entry hash",
 		Replay: false, ExternalDependency: noProductionPath},
 
 	{Article: 3, Control: "Transitive source clustering: same-root data counts once",
@@ -107,7 +119,9 @@ var matrix = []Trace{
 	{Article: 7, Control: "Historical cases resolve against their historical policy version",
 		Code: true, CodeRef: "veriqo/pkg/governance/precedence",
 		Called: true, CalledRef: "veriqo/pkg/authz policy resolution",
-		Test: true, TestRef: "TestPolicyRetroactivityIsRefusedAndVisible (test/adversarial)",
+		Test: true, TestRef: "TestPolicyRetroactivityIsRefusedAndVisible (test/adversarial), " +
+			"TestOldEvidenceRemainsUsableForItsPeriod, TestTheFivePairsTheReviewNamed " +
+			"(veriqo/pkg/provenance/temporal: VALID_AT_TIME is usable for its period and not now)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 8, Control: "AI cannot create, alter, qualify or sign evidence",
@@ -179,7 +193,9 @@ var matrix = []Trace{
 
 	{Article: 18, Control: "Redacted content is absent from the derivative's bytes",
 		Code: true, CodeRef: "veriqo/pkg/evidence/redaction.Verify (byte-level absence over twelve encodings), " +
-			"driven by veriqo/pkg/evidence/redaction/worker (PDF, XLSX and PPTX workers)",
+			"driven by veriqo/pkg/evidence/redaction/worker (PDF, XLSX and PPTX workers, with " +
+			"PDF 1.5+ object-stream and cross-reference-stream normalization), measured by " +
+			"veriqo/pkg/evidence/redaction/corpus over 23 structural variants",
 		// Called is now true, and this is what changed it: the workers
 		// exist, they produce a real derivative from a real container,
 		// and the pipeline verifies it before releasing anything.
@@ -198,25 +214,52 @@ var matrix = []Trace{
 		Called: true, CalledRef: "worker.Pipeline.Run, invoked by cmd/veriqo-runtime-evidence",
 		Test: true, TestRef: "TestCompressionWouldHaveHiddenTheTerm, TestEachWorkerProducesAVerifiedDerivative, " +
 			"TestAnEncryptedPDFIsRefusedNotWarned, TestABinaryAttachmentCarryingTheTermIsRefused, " +
-			"TestTheCorpusRunMatchesItsDeclaredDesign, TestNoVariantLeaks, TestL3IsNotClaimed",
+			"TestTheCorpusRunMatchesItsDeclaredDesign, TestNoVariantLeaks, TestL3IsNotClaimed, " +
+			"TestTheUbiquitousPDF15StructuresAreNoLongerRefused, TestTheObjectStreamFixtureIsGenuine, " +
+			"TestWeightedCoverageIsReportedAsAnEstimate, TestTheWeightedGapIsReported",
 		Evidence: true, EvidenceRef: "worker.Release carries the redaction chain, the transformation manifest and a disclosure event",
 		Replay: true, ReplayRef: "the derivative is deterministic: two runs over the same original produce identical bytes",
 		RuntimeEvidence: true, RuntimeEvidenceRef: "AUDIT-014-redaction.derivative_released",
-		// Qualification stays false, deliberately. "Assessed, not
-		// merely run" would require somebody to have concluded the
-		// control is complete, and it is not: the workers REFUSE the
-		// structures where redacted content most plausibly survives
-		// (incremental updates, object streams, encrypted documents)
-		// rather than handling them. Refusing is the safe behaviour and
-		// it is the right behaviour, but a control that declines a large
-		// part of its own problem space has not been assessed as
-		// adequate, and marking it so to reach a nicer verdict is exactly
-		// the move this matrix exists to prevent.
+		// Qualification stays false, deliberately, and the reason has
+		// changed since the last round -- which is worth stating,
+		// because a verdict that stays the same for a different reason
+		// is a verdict nobody re-examined.
+		//
+		// The old reason was that the workers REFUSED the structures
+		// where redacted content most plausibly survives. Two of those
+		// are now handled rather than refused: PDF 1.5+ object streams
+		// and cross-reference streams, which are not exotic -- they are
+		// what every PDF produced since 2003 uses, so refusing them
+		// meant refusing most real documents. The worker now normalizes
+		// them: it lifts the objects out of the container to the top
+		// level and rebuilds a classic cross-reference table, then
+		// redacts. That is also the safer order, because an unopened
+		// object stream holds content nobody inspected.
+		//
+		// Structural coverage is 15 -> 17 of 23 variants. Weighted by
+		// an estimate of how often each structure occurs in documents a
+		// commercial user would actually send, coverage is about 88%
+		// (corpus.WeightedCoverage; the prevalence figures are VERIQO's
+		// stated estimates, not measurements, and are labelled as such).
+		//
+		// What remains refused is named in ExternalDependency and is
+		// still a real gap: six variants, three of which (encrypted
+		// documents, incremental updates, PPTX embedded images) are
+		// COMMON in real documents, so a real population would land
+		// there in bulk. And
+		// coverage of any kind is not qualification: no party outside
+		// VERIQO has attempted to recover redacted content from a
+		// derivative, so the irreversibility claim is UNSETTLED in the
+		// self-doubt register (CLAIM-REDACTION-IRREVERSIBLE), not
+		// established.
 		Qualification: false,
 		ExternalDependency: "no adversarial recovery lab outside VERIQO has attempted reconstruction from " +
-			"format-specific remnants, and the workers refuse rather than process the structures where such " +
-			"remnants live (incremental updates, object streams, encrypted documents, undecoded stream filters); " +
-			"refusing is safe but is not the same as having proven those structures can be redacted"},
+			"format-specific remnants; and six of the 23 corpus variants are still refused rather than " +
+			"processed (encrypted documents, incremental updates, LZW-filtered streams, structurally " +
+			"malformed documents, PPTX embedded images, XLSX embedded binary objects), " +
+			"which is safe but is not the same as having proven those structures can be redacted. " +
+			"Real-world coverage is a VERIQO estimate over a VERIQO-built corpus: it becomes a measurement " +
+			"only when the pipeline is run over documents VERIQO did not create (VERIQO_CORPUS_DIR)"},
 
 	{Article: 19, Control: "VERIQO enforces privilege; it does not determine it",
 		Code: true, CodeRef: "veriqo/pkg/disclosure/access.PrivilegeStatus",
@@ -276,7 +319,9 @@ var matrix = []Trace{
 	{Article: 26, Control: "Policy change is never quietly applied to history",
 		Code: true, CodeRef: "veriqo/pkg/governance/precedence",
 		Called: true, CalledRef: "policy resolution",
-		Test: true, TestRef: "TestPolicyRetroactivityIsRefusedAndVisible (test/adversarial)",
+		Test: true, TestRef: "TestPolicyRetroactivityIsRefusedAndVisible (test/adversarial), " +
+			"TestOldEvidenceRemainsUsableForItsPeriod, TestTheFivePairsTheReviewNamed " +
+			"(veriqo/pkg/provenance/temporal: VALID_AT_TIME is usable for its period and not now)",
 		Evidence: false, ExternalDependency: noProductionPath},
 
 	{Article: 27, Control: "Material AI contribution is recorded and human-reviewed",
@@ -302,7 +347,8 @@ var matrix = []Trace{
 	{Article: 30, Control: "Integrity, provenance, qualification, neutrality and legal determination stay distinct",
 		Code: true, CodeRef: "veriqo/pkg/platform/timestamp (integrity vs attestation), pkg/proof (qualification vs decision)",
 		Called: true, CalledRef: "timestamp.Assess, proof.Seal",
-		Test: true, TestRef: "TestOnlyIndependentAttestationProvesExistenceBefore, TestDescribeNeverOverstates",
+		Test: true, TestRef: "TestOnlyIndependentAttestationProvesExistenceBefore, TestDescribeNeverOverstates, " +
+			"TestVeriqoCannotBeItsOwnExternalValidator, TestAnIncompleteAssessmentCannotUnderwriteAnExternalLevel",
 		Evidence: true, EvidenceRef: "attestation kind is derived, never asserted",
 		Replay: true, ReplayRef: "timestamp.VerifyChain",
 		Qualification: false, ExternalDependency: noExternalAssessor},

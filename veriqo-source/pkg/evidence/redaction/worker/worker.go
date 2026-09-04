@@ -103,6 +103,14 @@ type TransformManifest struct {
 	Unaccounted []string
 	// RedactionMarker is what replaced the removed content.
 	RedactionMarker string
+	// Normalization records a structural transformation applied before
+	// redaction -- currently the PDF 1.5+ unpacking of object streams.
+	//
+	// It is separate from PartsModified because it changes the
+	// document's SHAPE rather than its content, and a reader comparing
+	// the derivative against the original needs to know that before
+	// concluding something was lost.
+	Normalization []string
 }
 
 // Release is a derivative that passed verification, together with the

@@ -91,12 +91,13 @@ func (p pdfRedactor) Redact(original []byte, terms []string, marker string) ([]b
 			"the document has %d %%%%EOF markers, so it carries incremental updates: "+
 				"a term removed from the latest revision remains recoverable from an earlier one", n))
 	}
-	if pdfObjStm.Match(original) {
-		m.Unaccounted = append(m.Unaccounted, "the document uses object streams (/ObjStm); this worker does not unpack them")
-	}
-	if pdfXRefStream.Match(original) {
-		m.Unaccounted = append(m.Unaccounted, "the document uses a cross-reference stream (/XRef) rather than a table")
-	}
+	// Object streams and cross-reference streams are NO LONGER refused.
+	//
+	// They were, and refusing them was safe and insufficient: both are
+	// ubiquitous in PDF 1.5+ output, so declining them meant declining
+	// most modern PDFs. They are now normalized -- objects lifted out
+	// of their containers to top level -- before any redaction runs.
+	// See objstm.go for what that changes about the derivative.
 	if f := pdfUnsafeFilter.Find(original); f != nil {
 		m.Unaccounted = append(m.Unaccounted, fmt.Sprintf(
 			"the document uses the stream filter %s, which this worker does not decode", string(f)))
@@ -110,9 +111,18 @@ func (p pdfRedactor) Redact(original []byte, terms []string, marker string) ([]b
 	// distinction matters: "I declined" and "I broke" are different
 	// facts about a redaction pipeline, and a corpus run that could not
 	// tell them apart would report a defect as a safe outcome.
-	if !bytes.Contains(original, []byte("trailer")) {
+	// A 1.5+ document legitimately has no "trailer" keyword: /Root and
+	// /Info live in the cross-reference stream's dictionary instead,
+	// and normalizePDF reconstructs a trailer from them. So the
+	// requirement is "a trailer OR something a trailer can be rebuilt
+	// from", not "a trailer".
+	//
+	// Checking for the keyword alone would have refused every modern
+	// PDF for a reason that is false of them.
+	if !bytes.Contains(original, []byte("trailer")) && !pdfXRefStream.Match(original) {
 		m.Unaccounted = append(m.Unaccounted,
-			"the document has no trailer, so its cross-reference table cannot be rebuilt after redaction")
+			"the document has neither a trailer nor a cross-reference stream, "+
+				"so no trailer dictionary can be reconstructed after redaction")
 	}
 	if !bytes.Contains(original, []byte("startxref")) {
 		m.Unaccounted = append(m.Unaccounted,
@@ -123,6 +133,26 @@ func (p pdfRedactor) Redact(original []byte, terms []string, marker string) ([]b
 		return nil, m, nil // Pipeline.Run turns a non-empty Unaccounted into ErrRefused.
 	}
 
+	// Normalize a 1.5+ document before redacting.
+	//
+	// This runs AFTER the structural refusals above, so an encrypted or
+	// incrementally-updated document is still declined without being
+	// partially processed first.
+	working, norm, err := normalizePDF(original)
+	if err != nil {
+		// A container that will not open is an object nobody examined.
+		// That is a refusal, not a failure: the worker understood the
+		// structure and could not account for its contents.
+		m.Unaccounted = append(m.Unaccounted, err.Error())
+		return nil, m, nil
+	}
+	if norm.applied {
+		m.Normalization = norm.describe()
+		m.PartsInspected = append(m.PartsInspected,
+			fmt.Sprintf("%d object stream(s), %d lifted object(s)", norm.objectStreams, norm.lifted))
+	}
+
+	original = working
 	out := original
 	objects := pdfObject.FindAllSubmatchIndex(original, -1)
 	// Rewriting shifts offsets, so objects are processed from the end
@@ -249,9 +279,13 @@ func rebuildXref(doc []byte) ([]byte, error) {
 	if trailerAt < 0 {
 		return nil, fmt.Errorf("redaction/worker: the document has no trailer")
 	}
+	// A normalized 1.5+ document has a reconstructed trailer with no
+	// preceding cross-reference table -- there was never a table, only
+	// a stream, and the stream has been dropped. In that case the body
+	// simply ends where the trailer begins.
 	cut := bytes.LastIndex(doc[:trailerAt], []byte("xref"))
 	if cut < 0 {
-		return nil, fmt.Errorf("redaction/worker: the document has no cross-reference table to rebuild")
+		cut = trailerAt
 	}
 	trailerEnd := bytes.Index(doc[trailerAt:], []byte("startxref"))
 	if trailerEnd < 0 {

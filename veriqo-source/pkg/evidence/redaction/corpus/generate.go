@@ -126,9 +126,9 @@ func Build(v Variant, term string) ([]byte, error) {
 		}
 		return append(b, []byte("\n7 0 obj\n<< >>\nendobj\ntrailer\n<< /Size 8 >>\nstartxref\n0\n%%EOF\n")...), nil
 	case "PDF-OBJECT-STREAM":
-		return pdfMutated(term, "/Type /Catalog", "/Type /ObjStm /N 1 /First 8 /Type /Catalog")
+		return buildObjectStreamPDF(term, false)
 	case "PDF-XREF-STREAM":
-		return pdfMutated(term, "/Type /Catalog", "/Type /XRef /W [1 2 1] /Type /Catalog")
+		return buildObjectStreamPDF(term, true)
 	case "PDF-LZW":
 		return pdfMutated(term, "/Filter /FlateDecode", "/Filter /LZWDecode")
 	case "PDF-ATTACHMENT":

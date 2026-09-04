@@ -121,6 +121,48 @@ const (
 	Rare       Weight = "RARE"       // present in specialised populations
 )
 
+// Prevalence is the numeric weight used to compute real-world weighted
+// coverage.
+//
+// # These numbers are ESTIMATES and are labelled as such everywhere
+//
+// The review asked for prevalence-weighted coverage because a
+// structural count misleads:
+//
+//	100% coverage of rare structures bisa jauh lebih buruk daripada
+//	80% coverage of common structures.
+//
+// That is right, and the weights it needs are exactly the thing VERIQO
+// cannot measure without a real corpus. So they are declared here as
+// stated estimates, carried into every report as estimates, and the
+// weighted figure is never presented as a measurement.
+//
+// The honest use of this number is comparative: it tells you that
+// closing object streams matters far more than closing LZW, which is a
+// conclusion the structural count actively obscures. It does not tell
+// you what fraction of a customer's documents VERIQO can redact.
+func (w Weight) Prevalence() float64 {
+	switch w {
+	case Ubiquitous:
+		return 0.65
+	case Common:
+		return 0.20
+	case Occasional:
+		return 0.10
+	case Rare:
+		return 0.02
+	}
+	return 0
+}
+
+// PrevalenceBasis states where the numbers come from, so a reader is
+// never left inferring that they were measured.
+const PrevalenceBasis = "The prevalence weights are STATED ESTIMATES, not measurements. " +
+	"VERIQO has never run this pipeline over a real document population, so no measured " +
+	"prevalence exists. They are published so that the weighted figure can be recomputed " +
+	"against better numbers when a corpus provides them, and so that a reader can disagree " +
+	"with the estimate rather than with a hidden assumption."
+
 // Variants is the taxonomy. Every entry is generated as a real
 // container by the builders in generate.go.
 var Variants = []Variant{
@@ -180,11 +222,15 @@ var Variants = []Variant{
 		Expected: Refused, RealWorldWeight: Common,
 		Why: "earlier revisions remain in the file: a term redacted in the latest is recoverable from a previous one"},
 	{ID: "PDF-OBJECT-STREAM", Kind: worker.KindPDF, Feature: "objects compressed inside an object stream",
-		Expected: Refused, RealWorldWeight: Ubiquitous,
-		Why: "the dominant shape of PDF 1.5+ output; this is the single largest coverage gap and it is not hidden"},
+		Expected: Accepted, RealWorldWeight: Ubiquitous,
+		Why: "the dominant shape of PDF 1.5+ output. The worker unpacks the container, lifts its " +
+			"objects to top level and redacts them, then emits a classic cross-reference table. " +
+			"This was REFUSED until the coverage round: safe, and not enough"},
 	{ID: "PDF-XREF-STREAM", Kind: worker.KindPDF, Feature: "a cross-reference stream rather than a table",
-		Expected: Refused, RealWorldWeight: Ubiquitous,
-		Why: "travels with object streams in PDF 1.5+; same gap"},
+		Expected: Accepted, RealWorldWeight: Ubiquitous,
+		Why: "travels with object streams in PDF 1.5+. The stream's dictionary carries /Root, which " +
+			"is preserved into the reconstructed trailer; the binary entry table itself is discarded " +
+			"because the rebuilt document indexes its objects with a table instead"},
 	{ID: "PDF-LZW", Kind: worker.KindPDF, Feature: "an LZWDecode stream filter",
 		Expected: Refused, RealWorldWeight: Rare, TermUnreadable: true,
 		Why: "a filter the worker does not decode, so the term is invisible even to the inspector"},
@@ -231,6 +277,23 @@ type Coverage struct {
 	// asked about: the share of the real population VERIQO cannot
 	// process.
 	WeightedGap []string
+	// WeightedSupported and WeightedTotal are the prevalence-weighted
+	// sums behind WeightedCoverage.
+	WeightedSupported float64
+	WeightedTotal     float64
+}
+
+// WeightedCoverage is real-world weighted coverage: the share of
+// prevalence-weighted structural mass the workers can redact.
+//
+// It answers the question the structural ratio cannot -- "does the
+// coverage we have cover the documents people actually send?" -- and it
+// is an ESTIMATE, because the weights are. See PrevalenceBasis.
+func (c Coverage) WeightedCoverage() float64 {
+	if c.WeightedTotal == 0 {
+		return 0
+	}
+	return c.WeightedSupported / c.WeightedTotal
 }
 
 // AcceptRatio is the fraction of variants the workers could actually
@@ -248,9 +311,13 @@ func (c Coverage) Headline() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d structural variants: %d accepted, %d refused by design, %d failed. ",
 		c.Total, c.Accepted, c.Refused, c.Failed)
-	fmt.Fprintf(&b, "Coverage ratio %.0f%% -- this is the share of variants the workers can redact, ",
+	fmt.Fprintf(&b, "Structural coverage %.0f%% -- the share of VARIANTS the workers can redact, ",
 		c.AcceptRatio()*100)
-	b.WriteString("NOT a pass rate. Every refusal is safe and none of them is capability.")
+	b.WriteString("NOT a pass rate. Every refusal is safe and none of them is capability.\n")
+	fmt.Fprintf(&b, "Real-world weighted coverage %.0f%% (ESTIMATE) -- the same result weighted by how "+
+		"common each structure is. This is the more meaningful number: 100%% coverage of rare "+
+		"structures would be worse than 80%% of common ones.",
+		c.WeightedCoverage()*100)
 	if len(c.WeightedGap) > 0 {
 		fmt.Fprintf(&b, "\n%d refused variant(s) are COMMON or UBIQUITOUS in real documents: %s. ",
 			len(c.WeightedGap), strings.Join(c.WeightedGap, ", "))
@@ -260,6 +327,8 @@ func (c Coverage) Headline() string {
 		fmt.Fprintf(&b, "\nLEAK: %s. A forbidden term survived into a released derivative.",
 			strings.Join(c.Leaked, ", "))
 	}
+	b.WriteString("\n")
+	b.WriteString(PrevalenceBasis)
 	return b.String()
 }
 

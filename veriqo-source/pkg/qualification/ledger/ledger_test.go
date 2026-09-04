@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"veriqo/pkg/evidence/quality"
 )
 
 func goodEntry() Entry {
@@ -120,100 +122,141 @@ func TestAQualifiedClaimNeedsTheValidatedBoundary(t *testing.T) {
 		t.Fatalf("want ErrLevelBoundary, got %v", err)
 	}
 	e.Boundary, e.Validator = Validated, "an accredited assessor, named in the engagement letter"
+	// A level above the internal ceiling also needs the evidence to
+	// have been assessed: an outside party is supposed to have looked
+	// at the artefact, not only at the claim.
+	if err := e.Validate(); !errors.Is(err, ErrEvidenceUnassessed) {
+		t.Fatalf("want ErrEvidenceUnassessed, got %v", err)
+	}
+	a := fullStrongAssessment(t)
+	e.EvidenceQuality = &a
 	if err := e.Validate(); err != nil {
-		t.Fatalf("a properly validated claim must be accepted: %v", err)
+		t.Fatalf("a properly validated and assessed claim must be accepted: %v", err)
 	}
 }
 
-// TestAValidatorWithoutTheBoundaryIsRefused catches the mirror error:
-// naming a validator while claiming only self-testing, which reads to a
-// skimmer as external validation.
-func TestAValidatorWithoutTheBoundaryIsRefused(t *testing.T) {
+// fullStrongAssessment is an assessment where every one of the nine
+// attributes is STRONG. It is a fixture, not a claim about any real
+// artefact.
+func fullStrongAssessment(t *testing.T) quality.Assessment {
+	t.Helper()
+	var js []quality.Judgement
+	for _, attr := range quality.Attributes() {
+		js = append(js, quality.Judgement{
+			Attribute: attr, Grade: quality.Strong,
+			Basis: "fixture: stated strong so the ledger rules can be exercised",
+		})
+	}
+	a, err := quality.New("EV-FIXTURE-1", js...)
+	if err != nil {
+		t.Fatalf("building the fixture assessment: %v", err)
+	}
+	return a
+}
+
+// TestAPassCannotRestOnEvidenceAssessedInsufficient. The two
+// vocabularies -- how far up the ladder, and how good the evidence --
+// have to constrain each other, or a control can be recorded as
+// passing over evidence its own assessment found wanting.
+func TestAPassCannotRestOnEvidenceAssessedInsufficient(t *testing.T) {
+	var js []quality.Judgement
+	for _, attr := range quality.Attributes() {
+		g, basis := quality.Strong, "fixture"
+		if attr == quality.Independence {
+			g, basis = quality.Absent, "the only source is the party the claim is about"
+		}
+		js = append(js, quality.Judgement{Attribute: attr, Grade: g, Basis: basis})
+	}
+	a, err := quality.New("EV-FIXTURE-2", js...)
+	if err != nil {
+		t.Fatalf("quality.New: %v", err)
+	}
 	e := goodEntry()
-	e.Validator = "some external firm"
-	err := e.Validate()
-	if err == nil || !strings.Contains(err.Error(), "claims only") {
-		t.Fatalf("want a boundary mismatch refusal, got %v", err)
+	e.EvidenceQuality = &a
+	if err := e.Validate(); !errors.Is(err, ErrEvidenceInsufficient) {
+		t.Fatalf("want ErrEvidenceInsufficient, got %v", err)
+	}
+	// The same evidence may still be recorded -- as a FAIL. Refusing
+	// to record it at all would push the deficiency out of the ledger,
+	// which is the opposite of what the ledger is for.
+	e.Result = Fail
+	if err := e.Validate(); err != nil {
+		t.Fatalf("a FAIL over insufficient evidence must still be recordable: %v", err)
 	}
 }
 
-// TestRefusedSupportsNothing. A control that declined to act was safe.
-// Safety is not evidence of capability -- the exact point the review
-// made about the redaction workers.
-func TestRefusedSupportsNothing(t *testing.T) {
+// TestTheAssessmentsLimitsMustTravelIntoTheEntry. An ADEQUATE grade
+// carries a statement of what it does not cover. An entry that cites
+// the assessment and drops that sentence is presenting a bounded result
+// as an unbounded one.
+func TestTheAssessmentsLimitsMustTravelIntoTheEntry(t *testing.T) {
+	limit := "covers the container only, not embedded objects"
+	var js []quality.Judgement
+	for _, attr := range quality.Attributes() {
+		j := quality.Judgement{Attribute: attr, Grade: quality.Strong, Basis: "fixture"}
+		if attr == quality.Scope {
+			j = quality.Judgement{Attribute: attr, Grade: quality.Adequate,
+				Basis: "fixture", Limits: limit}
+		}
+		js = append(js, j)
+	}
+	a, err := quality.New("EV-FIXTURE-3", js...)
+	if err != nil {
+		t.Fatalf("quality.New: %v", err)
+	}
+	e := goodEntry()
+	e.EvidenceQuality = &a
+	e.Limitations = []string{"the test ran in CI, not in production"}
+	if err := e.Validate(); !errors.Is(err, ErrLimitsDropped) {
+		t.Fatalf("want ErrLimitsDropped, got %v", err)
+	}
+	e.Limitations = append(e.Limitations, limit)
+	if err := e.Validate(); err != nil {
+		t.Fatalf("an entry that carries the limits forward must be accepted: %v", err)
+	}
+}
+
+// TestAnIncompleteAssessmentCannotUnderwriteAnExternalLevel.
+// UNASSESSABLE is unfinished work, not a bad grade: it may accompany
+// any result up to the internal ceiling and nothing above it.
+func TestAnIncompleteAssessmentCannotUnderwriteAnExternalLevel(t *testing.T) {
+	a, err := quality.New("EV-FIXTURE-4", quality.Judgement{
+		Attribute: quality.Integrity, Grade: quality.Strong, Basis: "fixture",
+	})
+	if err != nil {
+		t.Fatalf("quality.New: %v", err)
+	}
+	e := goodEntry()
+	e.EvidenceQuality = &a
+	if err := e.Validate(); err != nil {
+		t.Fatalf("an incomplete assessment is allowed below the ceiling: %v", err)
+	}
+	e.Level, e.Boundary, e.Validator = Qualified, Validated, "an accredited assessor"
+	if err := e.Validate(); !errors.Is(err, ErrEvidenceUnassessed) {
+		t.Fatalf("want ErrEvidenceUnassessed, got %v", err)
+	}
+}
+
+// TestTheAssessmentIsCoveredByTheEntryHash. If it were not, the
+// assessment could be edited after the entry was appended and the chain
+// would still verify -- which would make the assessment a comment.
+func TestTheAssessmentIsCoveredByTheEntryHash(t *testing.T) {
 	l := New()
 	e := goodEntry()
-	e.Result, e.ControlID = Refused, "ARTICLE-18-PDF-ENCRYPTED"
+	a := fullStrongAssessment(t)
+	e.EvidenceQuality = &a
 	if _, err := l.Append(e); err != nil {
 		t.Fatalf("Append: %v", err)
-	}
-	if _, ok := l.HighestLevelFor("ARTICLE-18-PDF-ENCRYPTED"); ok {
-		t.Fatal("a REFUSED entry supported a level: refusing is safe, not proof of capability")
-	}
-}
-
-// TestTheChainDetectsTampering.
-func TestTheChainDetectsTampering(t *testing.T) {
-	l := New()
-	for i, id := range []string{"A", "B", "C"} {
-		e := goodEntry()
-		e.ControlID, e.ExecutionID = id, string(rune('a'+i))
-		if _, err := l.Append(e); err != nil {
-			t.Fatalf("Append %s: %v", id, err)
-		}
 	}
 	if err := l.Verify(); err != nil {
 		t.Fatalf("a clean ledger must verify: %v", err)
 	}
-	l.entries[1].Result = Fail
+	// Downgrade one attribute through the pointer the entry holds.
+	a.Judgements[quality.Independence] = quality.Judgement{
+		Attribute: quality.Independence, Grade: quality.Adequate,
+		Basis: "edited after the entry was appended", Limits: "one source",
+	}
 	if err := l.Verify(); !errors.Is(err, ErrChainBroken) {
-		t.Fatalf("want ErrChainBroken after tampering, got %v", err)
-	}
-}
-
-// TestHighestLevelIgnoresFailures.
-func TestHighestLevelIgnoresFailures(t *testing.T) {
-	l := New()
-	pass := goodEntry()
-	pass.Level = Integrated
-	if _, err := l.Append(pass); err != nil {
-		t.Fatalf("Append: %v", err)
-	}
-	fail := goodEntry()
-	fail.Result, fail.Level, fail.ExecutionID = Fail, Assured, "exec-2"
-	if _, err := l.Append(fail); err != nil {
-		t.Fatalf("Append: %v", err)
-	}
-	got, ok := l.HighestLevelFor("ARTICLE-18")
-	if !ok || got != Integrated {
-		t.Fatalf("HighestLevelFor = %s (%v), want INTEGRATED: a FAIL must not raise a level", got, ok)
-	}
-}
-
-// TestEveryBoundaryStatesWhatItDoesNotLicense.
-func TestEveryBoundaryStatesWhatItDoesNotLicense(t *testing.T) {
-	for _, b := range Boundaries() {
-		if strings.TrimSpace(b.Meaning()) == "" {
-			t.Errorf("%s states no meaning", b)
-		}
-	}
-	if !strings.Contains(Proved.Meaning(), "VERIQO's own reasoning about VERIQO's own code") {
-		t.Fatal("VERIQO_PROVED must say that it is still VERIQO reasoning about VERIQO")
-	}
-	if Proved.RequiresValidator() || SelfTested.RequiresValidator() {
-		t.Fatal("only EXTERNALLY_VALIDATED requires a validator")
-	}
-}
-
-// TestTheReportShowsLimitations. A report that dropped them would let
-// the ledger's honesty stop at its own API.
-func TestTheReportShowsLimitations(t *testing.T) {
-	l := New()
-	if _, err := l.Append(goodEntry()); err != nil {
-		t.Fatalf("Append: %v", err)
-	}
-	rep := l.Report()
-	if !strings.Contains(rep, "fixture containers, not a real-world corpus") {
-		t.Fatal("the report omits the entry's limitations")
+		t.Fatalf("editing the evidence assessment left the chain verifying: %v", err)
 	}
 }

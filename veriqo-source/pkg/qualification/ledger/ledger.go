@@ -38,6 +38,8 @@ import (
 	"strings"
 
 	"veriqo/pkg/canonical/jcs"
+
+	"veriqo/pkg/evidence/quality"
 )
 
 // Level is the assurance ladder. The review's model, in order:
@@ -172,6 +174,10 @@ var (
 	ErrSelfValidator = errors.New("ledger: VERIQO cannot be its own external validator")
 	ErrLevelBoundary = errors.New("ledger: the claimed level requires an outside party")
 	ErrChainBroken   = errors.New("ledger: the entry chain does not verify")
+
+	ErrEvidenceInsufficient = errors.New("ledger: a PASS cannot rest on evidence the assessment found wanting")
+	ErrEvidenceUnassessed   = errors.New("ledger: a level that needs an outside party needs its evidence assessed first")
+	ErrLimitsDropped        = errors.New("ledger: the evidence assessment stated limits the entry does not carry")
 )
 
 // Entry is one qualification result, with everything needed to argue
@@ -210,6 +216,25 @@ type Entry struct {
 	// real qualification has a boundary and one that names none has
 	// not looked for it.
 	Limitations []string
+	// EvidenceQuality is the nine-attribute assessment of the artefact
+	// named in Evidence, when one has been made.
+	//
+	// It is a pointer because "no assessment" and "an assessment that
+	// found nothing" are different states, and a value type cannot tell
+	// them apart. The rules below are what make it more than a
+	// decoration: an assessment that came out INSUFFICIENT cannot
+	// underwrite a PASS, an assessment that came out
+	// SUPPORTS_WITH_LIMITS must have its limits repeated in the entry's
+	// own Limitations, and a level that requires an outside party
+	// requires an assessment to exist at all.
+	//
+	// The last rule is the one that connects the two halves of the
+	// system: VERIQO can reach ASSURED on its own, and the step above
+	// it is where somebody else looks at the evidence. Letting that
+	// step be taken over evidence nobody assessed would make the
+	// boundary a label.
+	EvidenceQuality *quality.Assessment
+
 	// Note is free text; nothing reads it.
 	Note string
 
@@ -275,6 +300,79 @@ func (e Entry) Validate() error {
 		return fmt.Errorf("%w: control %s claims %s at boundary %s",
 			ErrLevelBoundary, e.ControlID, e.Level, e.Boundary)
 	}
+	return e.validateEvidenceQuality()
+}
+
+// validateEvidenceQuality is the join between the qualification ladder
+// and the nine-attribute evidence assessment.
+//
+// Without it the two would be parallel vocabularies: one saying how
+// far up the ladder a control has climbed, the other saying how good
+// the evidence is, and nothing requiring the second to constrain the
+// first. That is how a system ends up recording QUALIFIED against an
+// artefact whose independence was never assessed.
+func (e Entry) validateEvidenceQuality() error {
+	if e.EvidenceQuality == nil {
+		// An assessment is optional up to the internal ceiling: the
+		// entry still has to point at an artefact and state its
+		// limitations. Above the ceiling it is not optional, because
+		// that is the step where somebody outside is supposed to have
+		// looked at the evidence rather than at the claim.
+		if e.Level.RequiresOutsideParty() {
+			return fmt.Errorf("%w: control %s claims %s with no evidence quality assessment",
+				ErrEvidenceUnassessed, e.ControlID, e.Level)
+		}
+		return nil
+	}
+	decision, reason, err := e.EvidenceQuality.Decide()
+	if err != nil {
+		return fmt.Errorf("ledger: control %s carries an invalid evidence assessment: %w", e.ControlID, err)
+	}
+	switch decision {
+	case quality.Insufficient:
+		if e.Result == Pass {
+			return fmt.Errorf("%w: control %s is a PASS over evidence assessed INSUFFICIENT (%s)",
+				ErrEvidenceInsufficient, e.ControlID, reason)
+		}
+	case quality.Unassessable:
+		// Unassessable is not a bad grade; it is unfinished work. It
+		// may accompany any result up to the internal ceiling, and
+		// nothing above it.
+		if e.Level.RequiresOutsideParty() {
+			return fmt.Errorf("%w: control %s claims %s over an incomplete assessment (%s)",
+				ErrEvidenceUnassessed, e.ControlID, e.Level, reason)
+		}
+	case quality.SupportsWithLimits:
+		// The limits the assessment found must appear in the entry's
+		// own Limitations. An assessment that says "ADEQUATE, and here
+		// is what it does not cover" is worth nothing if the entry
+		// that cites it does not carry that sentence forward.
+		if err := e.carriesLimits(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// carriesLimits checks that every limit the assessment stated appears
+// in the entry's Limitations.
+func (e Entry) carriesLimits() error {
+	joined := strings.ToLower(strings.Join(e.Limitations, " | "))
+	var dropped []string
+	for _, attr := range quality.Attributes() {
+		j := e.EvidenceQuality.Judgements[attr]
+		lim := strings.TrimSpace(j.Limits)
+		if j.Grade != quality.Adequate || lim == "" {
+			continue
+		}
+		if !strings.Contains(joined, strings.ToLower(lim)) {
+			dropped = append(dropped, fmt.Sprintf("%s: %s", attr, lim))
+		}
+	}
+	if len(dropped) > 0 {
+		return fmt.Errorf("%w: control %s drops %s",
+			ErrLimitsDropped, e.ControlID, strings.Join(dropped, "; "))
+	}
 	return nil
 }
 
@@ -301,8 +399,26 @@ func (e Entry) canonicalView() map[string]any {
 		"tool": e.Tool, "tool_version": e.ToolVersion, "result": string(e.Result),
 		"evidence": e.Evidence, "level": e.Level.String(), "boundary": string(e.Boundary),
 		"validator": e.Validator, "limitations": toAny(sortedCopy(e.Limitations)),
-		"prev_hash": e.prevHash,
+		"evidence_quality": e.qualityView(),
+		"prev_hash":        e.prevHash,
 	}
+}
+
+// qualityView renders the assessment for hashing. An entry whose
+// evidence assessment was edited after the fact must not keep its
+// hash: the assessment is part of what the entry claims.
+func (e Entry) qualityView() any {
+	if e.EvidenceQuality == nil {
+		return nil
+	}
+	out := map[string]any{"evidence_version_id": e.EvidenceQuality.EvidenceVersionID}
+	for _, attr := range quality.Attributes() {
+		j := e.EvidenceQuality.Judgements[attr]
+		out[string(attr)] = map[string]any{
+			"grade": string(j.Grade), "basis": j.Basis, "limits": j.Limits,
+		}
+	}
+	return out
 }
 
 // Ledger is an append-only, hash-linked sequence of qualification

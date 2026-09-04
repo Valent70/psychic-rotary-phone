@@ -74,6 +74,16 @@ func Run() ([]Outcome, Coverage, error) {
 		}
 
 		o.Matches = o.Actual == v.Expected
+		// Prevalence-weighted accumulation. A variant contributes its
+		// estimated prevalence to the total, and to the supported sum
+		// only if the worker actually redacted it. A REFUSED variant
+		// contributes to the denominator and not the numerator, which
+		// is precisely the asymmetry a structural count loses.
+		w := v.RealWorldWeight.Prevalence()
+		cov.WeightedTotal += w
+		if o.Actual == Accepted {
+			cov.WeightedSupported += w
+		}
 		switch o.Actual {
 		case Accepted:
 			cov.Accepted++
