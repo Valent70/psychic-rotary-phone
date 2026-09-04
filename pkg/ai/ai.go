@@ -192,10 +192,11 @@ func (p Producer) Validate() error {
 
 // Promotion is one recorded rise in level.
 type Promotion struct {
-	From, To Level       `json:"from,to"`
-	By       contract.ID `json:"by"`
-	At       time.Time   `json:"at"`
-	Reason   string      `json:"reason"`
+	From   Level       `json:"from"`
+	To     Level       `json:"to"`
+	By     contract.ID `json:"by"`
+	At     time.Time   `json:"at"`
+	Reason string      `json:"reason"`
 	// Automated marks a promotion performed without a human, which is
 	// permitted only under a named policy for a declared risk class.
 	Automated  bool   `json:"automated,omitempty"`

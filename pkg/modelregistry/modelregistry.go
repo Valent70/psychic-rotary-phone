@@ -144,7 +144,8 @@ func (e Evaluation) Validate() error {
 
 // Transition is a recorded stage change.
 type Transition struct {
-	From, To     Stage       `json:"from,to"`
+	From         Stage       `json:"from"`
+	To           Stage       `json:"to"`
 	At           time.Time   `json:"at"`
 	ApprovedBy   contract.ID `json:"approved_by"`
 	Reason       string      `json:"reason"`

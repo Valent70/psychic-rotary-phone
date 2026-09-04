@@ -194,10 +194,11 @@ func (p Price) Validate() error {
 
 // FX is a currency conversion basis.
 type FX struct {
-	From, To string    `json:"from,to"`
-	Rate     float64   `json:"rate"`
-	AsOf     time.Time `json:"as_of"`
-	Source   string    `json:"source"`
+	From   string    `json:"from"`
+	To     string    `json:"to"`
+	Rate   float64   `json:"rate"`
+	AsOf   time.Time `json:"as_of"`
+	Source string    `json:"source"`
 }
 
 func (f FX) Validate() error {
