@@ -1,0 +1,125 @@
+{
+  "schema": "veriqo.runtime_evidence/v1",
+  "generated_by": "cmd/veriqo-runtime-evidence",
+  "note": "Audit events emitted by an actual execution of the canonical evidence-to-decision chain. pkg/assurance's traceability matrix cites these ids; TestEveryRuntimeEvidenceRefResolves fails if a row cites a record this run did not emit.",
+  "determinism": "Logical ticks, fixed identifiers, no wall-clock time and no randomness. Two runs produce identical event ids.",
+  "boundary": "The evidence in this run is a fixture. It demonstrates that the chain executes and records; it does not demonstrate behaviour on real commercial data, which is the LIVE_DATA blocker and remains BLOCKED_EXTERNAL.",
+  "case_id": "RUNTIME-EVIDENCE-CASE-1",
+  "proof_hash": "9d6f4073c9b9ca793930d041eccc4d81c886a9b396cf4b514a7b4af5ea7a105b",
+  "decision_hash": "6b2a5fc792c9f66adfce0f086aaed6edf17b69f161436e3d0b6c6f0a2a875f4d",
+  "ledger_root_hash": "eee055fbb952f8f3adf748d77cc6c4cda53d35046719c87babb77b1dc6d86dbe",
+  "records": [
+    {
+      "index": 1,
+      "event_id": "AUDIT-001-case.opened",
+      "actor": "analyst-1",
+      "action": "case.opened",
+      "hash": "58fb3facbfb91d4e2eb4d607a148a6d61daf79978b82dfc2e45fdc80b7e187b5",
+      "prev_hash": ""
+    },
+    {
+      "index": 2,
+      "event_id": "AUDIT-002-case.scoped",
+      "actor": "analyst-1",
+      "action": "case.scoped",
+      "hash": "2608afffff32b26c45d431439db91d1cff138bc097a906b18bdc91155a50f489",
+      "prev_hash": "58fb3facbfb91d4e2eb4d607a148a6d61daf79978b82dfc2e45fdc80b7e187b5"
+    },
+    {
+      "index": 3,
+      "event_id": "AUDIT-003-case.evidence_pinned",
+      "actor": "analyst-1",
+      "action": "case.evidence_pinned",
+      "hash": "1cdf3028ae5069f6edd299eee36bc257b529afa4fd7fef024925cec5ed251293",
+      "prev_hash": "2608afffff32b26c45d431439db91d1cff138bc097a906b18bdc91155a50f489"
+    },
+    {
+      "index": 4,
+      "event_id": "AUDIT-004-case.hypothesis_recorded",
+      "actor": "analyst-1",
+      "action": "case.hypothesis_recorded",
+      "hash": "805b2287257b718cb46d0566e3a29efba28e6b1554140c6abd54cc1f4170ef9b",
+      "prev_hash": "1cdf3028ae5069f6edd299eee36bc257b529afa4fd7fef024925cec5ed251293"
+    },
+    {
+      "index": 5,
+      "event_id": "AUDIT-005-case.claim_registered",
+      "actor": "analyst-1",
+      "action": "case.claim_registered",
+      "hash": "19134ac11e7c548c53986493f0fd36c957eb9bd30dd194cd973d127ceaf6114c",
+      "prev_hash": "805b2287257b718cb46d0566e3a29efba28e6b1554140c6abd54cc1f4170ef9b"
+    },
+    {
+      "index": 6,
+      "event_id": "AUDIT-006-case.hypothesis_tested",
+      "actor": "analyst-1",
+      "action": "case.hypothesis_tested",
+      "hash": "bce0c6689c423b07cfca4f172af44a9ca3dfb1a198ca5848e2bddb62397d3ba4",
+      "prev_hash": "19134ac11e7c548c53986493f0fd36c957eb9bd30dd194cd973d127ceaf6114c"
+    },
+    {
+      "index": 7,
+      "event_id": "AUDIT-007-qualification.reverse_closed",
+      "actor": "analyst-1",
+      "action": "qualification.reverse_closed",
+      "hash": "2df80205b8f48e0f847f763a43dd13246be579a09123ce2dcebca846045c00fe",
+      "prev_hash": "bce0c6689c423b07cfca4f172af44a9ca3dfb1a198ca5848e2bddb62397d3ba4"
+    },
+    {
+      "index": 8,
+      "event_id": "AUDIT-008-case.qualification_begun",
+      "actor": "analyst-1",
+      "action": "case.qualification_begun",
+      "hash": "103e440712c73a926fbc409a29325a584ab5a713bd83a44aaf1d981eafaca5dc",
+      "prev_hash": "2df80205b8f48e0f847f763a43dd13246be579a09123ce2dcebca846045c00fe"
+    },
+    {
+      "index": 9,
+      "event_id": "AUDIT-009-case.proof_attached",
+      "actor": "analyst-1",
+      "action": "case.proof_attached",
+      "hash": "fc641bcb350a5c41cc01979dc2fc026abdadd182cee3a921ef1e55cd9893171d",
+      "prev_hash": "103e440712c73a926fbc409a29325a584ab5a713bd83a44aaf1d981eafaca5dc"
+    },
+    {
+      "index": 10,
+      "event_id": "AUDIT-010-proof.sealed",
+      "actor": "analyst-1",
+      "action": "proof.sealed",
+      "hash": "4320560d485d3afe1861a3ee0bbaa6436ed8c3711634522b9fb40854df489263",
+      "prev_hash": "fc641bcb350a5c41cc01979dc2fc026abdadd182cee3a921ef1e55cd9893171d"
+    },
+    {
+      "index": 11,
+      "event_id": "AUDIT-011-claim.finding_founded",
+      "actor": "analyst-1",
+      "action": "claim.finding_founded",
+      "hash": "be67192acdcb52af052927a6b369d5b4d3037e92cacfacb18bad11c76cc94967",
+      "prev_hash": "4320560d485d3afe1861a3ee0bbaa6436ed8c3711634522b9fb40854df489263"
+    },
+    {
+      "index": 12,
+      "event_id": "AUDIT-012-case.decision_authorized",
+      "actor": "partner-1",
+      "action": "case.decision_authorized",
+      "hash": "2d6f54adc4b0e2ccaa71233091ec4fd27e7e635f1d007e482c34e0dca63b035b",
+      "prev_hash": "be67192acdcb52af052927a6b369d5b4d3037e92cacfacb18bad11c76cc94967"
+    },
+    {
+      "index": 13,
+      "event_id": "AUDIT-013-case.resolved",
+      "actor": "partner-1",
+      "action": "case.resolved",
+      "hash": "f1e1f38425cfcbadba1de6725b7b5e2243dd733636620df40e96eed7752da701",
+      "prev_hash": "2d6f54adc4b0e2ccaa71233091ec4fd27e7e635f1d007e482c34e0dca63b035b"
+    },
+    {
+      "index": 14,
+      "event_id": "AUDIT-014-redaction.derivative_released",
+      "actor": "compliance-1",
+      "action": "redaction.derivative_released",
+      "hash": "eee055fbb952f8f3adf748d77cc6c4cda53d35046719c87babb77b1dc6d86dbe",
+      "prev_hash": "f1e1f38425cfcbadba1de6725b7b5e2243dd733636620df40e96eed7752da701"
+    }
+  ]
+}
