@@ -1,4 +1,2 @@
-/dist/
-*.test
+/*.test
 /coverage.out
-dist/
