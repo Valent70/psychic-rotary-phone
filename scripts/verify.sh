@@ -65,7 +65,12 @@ run "every report is byte-identical" bash -c '
     [ "$a" = "$b" ]'
 
 echo
-echo "honesty checks (these fail if the system starts overstating itself)"
+# These are graded H1 to H4 in pkg/assurance/honesty. Most of them are
+# H1: claim-language screening, defeated by paraphrase. Calling them
+# "honesty verification" would be an overclaim about an overclaim
+# detector, which is the most self-undermining thing this script could
+# do -- so they are called what they are.
+echo "overclaim checks -- see 'veriqoctl honesty' for what each one can and cannot catch"
 run "the scorecard refuses its own release" bash -c '
     go run ./cmd/veriqoctl scorecard | grep -q "RELEASE NOT PERMITTED"'
 run "no gate is satisfied"           bash -c '
@@ -107,6 +112,20 @@ run "the capsule claims exactly INTERNALLY_ASSURED" bash -c '
 run "the verifier states what it cannot establish" bash -c '
     go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
         grep -q "key authenticity cannot be established"'
+run "capsule verification is not platform qualification" bash -c '
+    go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
+        grep -q "says nothing about evidence that was never put in the bundle"'
+
+echo
+echo "the checks on the checks"
+run "no honesty check is described above its level" bash -c '
+    go run ./cmd/veriqoctl honesty >/dev/null'
+run "the check suite does not reach H5" bash -c '
+    go run ./cmd/veriqoctl honesty | grep -q "Not performed at all: INDEPENDENT_EXTERNAL_REVIEW"'
+run "the three metric registers are not combined" bash -c '
+    out=$(go run ./cmd/veriqoctl metrics) || exit 1
+    printf "%s" "$out" | grep -q "no total below" &&
+    printf "%s" "$out" | grep -q "The assurance register is EMPTY"'
 
 # --- What this script did NOT run ---------------------------------------
 #
@@ -129,6 +148,7 @@ skip "external document corpus" "VERIQO_CORPUS_DIR is empty (gate G9)"
 skip "independent canonicaliser"  "veriqo-verify used VERIQO's own JCS; a defect in it is invisible (ED-011)"
 skip "external anchor check"      "no anchor exists, deliberately (ED-003)"
 skip "independent red team"       "requires a team that did not write the defence (gates G15-G18)"
+skip "H5 external review of claims" "no party outside VERIQO has read any claim in this repository"
 
 echo
 echo "NOT RUN in this environment:"

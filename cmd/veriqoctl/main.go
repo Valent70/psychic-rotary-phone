@@ -23,6 +23,8 @@ import (
 	"veriqo/pkg/api"
 	"veriqo/pkg/assurance/capsule"
 	"veriqo/pkg/assurance/failureclass"
+	"veriqo/pkg/assurance/honesty"
+	"veriqo/pkg/assurance/metrics"
 	"veriqo/pkg/assurance/register"
 	"veriqo/pkg/assurance/selfdoubt"
 	"veriqo/pkg/contract"
@@ -38,6 +40,8 @@ import (
 
 const usage = `veriqoctl -- report what VERIQO is
 
+  metrics      three registers that are deliberately never combined
+  honesty      what each overclaim check can and cannot catch (H1-H5)
   assurance    the master assurance graph: gate -> control -> claim ->
                evidence -> validator -> level -> release decision
   readiness    five dimensions and, deliberately, no aggregate score
@@ -83,6 +87,8 @@ func main() {
 
 	reports := map[string]func() (string, error){
 		"assurance": assuranceReport,
+		"metrics":   metricsReport,
+		"honesty":   honestyReport,
 		"readiness": readinessReport,
 		"debt":      debtReport,
 		"gates":     gatesReport,
@@ -94,7 +100,7 @@ func main() {
 		"claims":    claimsReport,
 		"api":       apiReport,
 	}
-	order := []string{"readiness", "assurance", "debt", "scorecard", "gates", "corpus",
+	order := []string{"readiness", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
 		"ontology", "templates", "failures", "claims", "api"}
 
 	var run []string
@@ -134,6 +140,16 @@ func assuranceReport() (string, error) {
 		return "", err
 	}
 	return g.Report(register.AssessedAt()), nil
+}
+
+func metricsReport() (string, error) { return metrics.VeriqoPanel() }
+
+func honestyReport() (string, error) {
+	s, err := honesty.Veriqo()
+	if err != nil {
+		return "", err
+	}
+	return s.Report(), nil
 }
 
 func readinessReport() (string, error) {

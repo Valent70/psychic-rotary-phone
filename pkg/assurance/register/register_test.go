@@ -283,3 +283,52 @@ func TestTheReportShowsTheWholeChain(t *testing.T) {
 		}
 	}
 }
+
+// TestAnOrphanIsATypedFindingWithAConsequence.
+//
+// A control nothing claims anything about does not appear in any
+// report of what is unproven, because nothing was ever claimed. It is
+// invisible in exactly the way that matters, so it must be a finding
+// the system produces rather than a row somebody notices missing.
+func TestAnOrphanIsATypedFindingWithAConsequence(t *testing.T) {
+	cs := Claims()
+	var kept []Claim
+	for _, c := range cs {
+		if c.ID != "AC-ANCHOR-DELIBERATELY-ABSENT" {
+			kept = append(kept, c)
+		}
+	}
+	g, err := New(Controls(), kept, Debts(), GateRefs())
+	if err != nil {
+		t.Fatal(err)
+	}
+	orphans := g.Orphans()
+	if len(orphans) != 1 {
+		t.Fatalf("%d orphans", len(orphans))
+	}
+	o := orphans[0]
+	if o.Control != "CTL-ANCHOR" {
+		t.Fatalf("orphan = %s", o.Control)
+	}
+	// The finding must name the gates resting on nothing, so it can be
+	// prioritised rather than merely listed.
+	if len(o.Gates) == 0 {
+		t.Fatal("the orphan does not name the gates resting on it")
+	}
+	if len(o.Packages) == 0 {
+		t.Fatal("the orphan does not say where to look")
+	}
+	if !strings.Contains(o.Consequence, "assumption rather than by a claim") {
+		t.Fatalf("the orphan states no consequence: %q", o.Consequence)
+	}
+	if !strings.Contains(o.String(), "ASSURANCE_ORPHAN") {
+		t.Fatalf("the rendering does not name the finding type: %s", o)
+	}
+	rep := g.Report(at())
+	if !strings.Contains(rep, "ASSURANCE ORPHAN") {
+		t.Fatalf("the graph report does not surface orphans:\n%s", rep)
+	}
+	if !strings.Contains(rep, "because nothing was ever claimed") {
+		t.Fatalf("the report does not explain why an orphan is invisible:\n%s", rep)
+	}
+}

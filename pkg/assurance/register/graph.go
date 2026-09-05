@@ -369,17 +369,78 @@ func (g *Graph) Gates() []GateRef {
 	return out
 }
 
-// UnclaimedControls are controls nothing asserts anything about. They
-// are the quiet gap: work that exists, is presumed fine, and has no
-// stated property anybody could test.
+// Orphan is a control nothing asserts anything about.
+//
+// # Why it is a typed finding rather than a missing row
+//
+// A control with no assurance claim is the quiet gap: work that
+// exists, is presumed fine, and has no stated property anybody could
+// test. It does not appear in any report of what is unproven, because
+// nothing was ever claimed about it -- so it is invisible in exactly
+// the way that matters. An audit that only walks the claims will never
+// reach it.
+//
+// Naming it makes it a finding the system produces about itself, with
+// a consequence attached: every orphan should acquire either a claim
+// or an evidence debt, and until it does, the gate it sits under
+// cannot honestly be described as supported.
+type Orphan struct {
+	Control string `json:"control"`
+	Name    string `json:"name"`
+	// Gates are the production gates that rest on this control and are
+	// therefore resting on nothing.
+	Gates []string `json:"gates,omitempty"`
+	// Packages says where to look, so the finding is actionable.
+	Packages []string `json:"packages,omitempty"`
+	// Consequence states what the orphan costs, so it can be
+	// prioritised against a claim that merely falls short.
+	Consequence string `json:"consequence"`
+}
+
+func (o Orphan) String() string {
+	g := "no gate"
+	if len(o.Gates) > 0 {
+		g = strings.Join(o.Gates, ", ")
+	}
+	return fmt.Sprintf("ASSURANCE_ORPHAN %s (%s): nothing is claimed about it, and %s "+
+		"rest(s) on it. %s", o.Control, strings.Join(o.Packages, ", "), g, o.Consequence)
+}
+
+// Orphans returns every control about which nothing is claimed.
+//
+// A good assurance system generates uncomfortable findings. If this
+// ever returns nothing on a growing codebase, the likelier explanation
+// is that controls stopped being registered than that every one
+// acquired a claim.
+func (g *Graph) Orphans() []Orphan {
+	var out []Orphan
+	for id, c := range g.controls {
+		if len(g.ClaimsFor(id)) > 0 {
+			continue
+		}
+		o := Orphan{Control: id, Name: c.Name, Packages: c.Packages,
+			Consequence: "any gate resting on it is supported by an assumption rather " +
+				"than by a claim; it needs either an assurance claim or an evidence debt"}
+		for _, gt := range g.gates {
+			for _, ctl := range gt.Controls {
+				if ctl == id {
+					o.Gates = append(o.Gates, gt.ID)
+				}
+			}
+		}
+		sort.Strings(o.Gates)
+		out = append(out, o)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Control < out[j].Control })
+	return out
+}
+
+// UnclaimedControls returns the orphans' control ids.
 func (g *Graph) UnclaimedControls() []string {
 	var out []string
-	for id := range g.controls {
-		if len(g.ClaimsFor(id)) == 0 {
-			out = append(out, id)
-		}
+	for _, o := range g.Orphans() {
+		out = append(out, o.Control)
 	}
-	sort.Strings(out)
 	return out
 }
 
@@ -433,9 +494,13 @@ func (g *Graph) Report(at time.Time) string {
 		fmt.Fprintf(&b, "  %d mandatory gate(s) rest entirely on VERIQO's own evidence: %s\n",
 			len(d.SelfProducedGates), strings.Join(d.SelfProducedGates, ", "))
 	}
-	if u := g.UnclaimedControls(); len(u) > 0 {
-		fmt.Fprintf(&b, "  %d control(s) have no assurance claim at all: %s\n",
-			len(u), strings.Join(u, ", "))
+	if orphans := g.Orphans(); len(orphans) > 0 {
+		fmt.Fprintf(&b, "\n  %d ASSURANCE ORPHAN(S). A control nothing claims anything "+
+			"about does not\n  appear in any report of what is unproven, because nothing "+
+			"was ever claimed:\n", len(orphans))
+		for _, o := range orphans {
+			fmt.Fprintf(&b, "    - %s\n", o)
+		}
 	}
 	return b.String()
 }

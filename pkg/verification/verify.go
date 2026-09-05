@@ -96,7 +96,16 @@ func stepCanonicalize(b *Bundle, c Canonicalizer) Step {
 		}
 		var v any
 		if err := json.Unmarshal(content, &v); err != nil {
-			continue
+			// A file named .json that does not parse is a finding, not
+			// a file to skip. Skipping it -- which this step did until
+			// the verifier-of-verifier caught it -- means a corrupted
+			// document passes verification by being unreadable, which
+			// is the worst possible direction for the error to run.
+			s.Outcome = Fail
+			s.Detail = fmt.Sprintf("%s is named as JSON and does not parse: %v. A document "+
+				"that cannot be read cannot be verified, and must not pass by being "+
+				"unreadable", path, err)
+			return s
 		}
 		once, err := c.Canonicalize(v)
 		if err != nil {
