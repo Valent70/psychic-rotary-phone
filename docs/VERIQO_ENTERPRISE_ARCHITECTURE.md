@@ -3,9 +3,14 @@
 ## Evidence-Qualified Intelligence OS — Enterprise Architecture and Assurance Report
 
 **Repository:** `veriqo` (Go 1.24.7) · **Branch:** `claude/veriqo-enterprise-architecture-7j56b9`  
-**Report date:** 5 September 2026 · **Round 5** (supersedes Rounds 1–4)
+**Report date:** 5 September 2026 · **Round 6** (supersedes Rounds 1–5)
 
 **Status: SPECIFICATIONALLY IMPLEMENTED. NOT PRODUCTION QUALIFIED.**
+
+**Round 6 posture: the assurance kernel is CLOSED.** Layers 0–3 of the assurance
+ladder are complete and further self-verification is refused by
+`pkg/assurance/boundary`. What remains is not more engineering; it is five
+battlefields and thirteen gates that require a party who is not VERIQO.
 
 That wording is deliberate and replaces "engineering complete", which an investor can
 read as a conclusion and stop. Twenty gates block release; thirteen need a party that
@@ -13,7 +18,289 @@ is not VERIQO. Nothing in the assurance register is above `INTERNALLY_ASSURED`.
 
 ---
 
-## 0. What changed in Round 5
+## 0. What changed in Round 6 — the round that stops
+
+Round 6 is not another round of hardening. The audit that opened it made one
+finding that overrides the rest, and acting on it meant doing less, not more.
+
+### The finding: assurance recursion
+
+Every layer of assurance in this repository was added for a reason that was good
+at the time. The invariant chokepoint caught a real class of defect. The
+assurance mutation suite attacked the assurance graph and found something. The
+verifier-of-the-verifier found a bug.
+
+Each step was justified by the step before it. That is exactly the shape of a
+runaway:
+
+```
+system
+  -> assurance of the system
+    -> assurance of the assurance
+      -> verifier of the assurance
+        -> test of the verifier
+          -> test of the test
+            -> ...
+```
+
+There is no natural stopping point, because at every rung the next rung can be
+justified by the same argument that justified the current one. A system that
+follows it becomes **a machine for continuously verifying its own verification
+machinery**, and value creation stops — not with a failure, but with a green
+board and nothing shipped.
+
+The audit's judgement was that Round 5 must be the last round of recursive
+assurance architecture. That judgement is correct, and Round 6 implements it.
+
+### 1. The boundary — `pkg/assurance/boundary`
+
+```
+0  SYSTEM
+1  ASSURANCE
+2  ASSURANCE_OF_ASSURANCE
+3  VERIFIER_OF_ASSURANCE            <- VERIQO's ceiling; all four CLOSED
+─────────────────────────────────────  THE BOUNDARY
+4  INDEPENDENT_VERIFICATION         <- a different party
+5  EXTERNAL_ASSESSMENT              <- a party with standing
+```
+
+`Propose()` classifies any piece of work. Above the boundary it is **REFUSED**,
+and the refusal names the party who must do it instead. At a closed kernel layer
+it is **REDUNDANT** — not forbidden, which matters: the boundary is not a
+prohibition on engineering — unless it is a direct dependency of an external
+gate, in which case it is allowed, because the constraint is what the work
+*unblocks*, not which layer it sits on.
+
+**A good rationale buys nothing.** Every rung on a runaway ladder has a good
+rationale; that is what makes it a runaway. So the rationale is recorded and
+deliberately not weighed, and a test proves four separate good arguments — "a
+customer asked", "it would take two days", "the last three layers each found a
+defect", "it is a dependency of G4" — all fail to get past the line.
+
+The uncomfortable part, stated in the package's own documentation rather than
+hidden: **this package is itself layer 3.** The argument for adding it is the
+same argument that justifies every other rung. The only difference is that it
+terminates the ladder instead of extending it. If a future round cites it as
+precedent for a layer 4, it has failed.
+
+### 2. The Qualification-Driven Engineering Freeze — `pkg/freeze`
+
+Not a freeze on development. A freeze on **discretionary scope**: work enters
+only as a direct dependency of a *named* external gate or a customer pilot.
+Correctness fixes are always permitted, because a freeze that forbids fixing a
+bug will be ignored, and a rule that is ignored constrains nothing.
+
+Judgement is not the constraint, because judgement is what produced the runaway —
+each decision looked like the responsible one. So the rule is external to the
+judgement: name the gate, or do not enter.
+
+Round 6's own work is the first thing weighed by it. **Eight items permitted, two
+refused:**
+
+| Refused | Why |
+|---|---|
+| a verifier for `veriqo-verify` | layer 4 — the exact runaway. A verifier VERIQO writes to check the verifier VERIQO wrote shares every assumption of what it checks |
+| a generalised temporal-reasoning engine | the most interesting engineering left in the system, and no external gate is waiting on it |
+
+A freeze register containing only approvals is a record of a freeze that was not
+applied. Two tests enforce this: one fails if Round 6 refused itself nothing, and
+one fails if nothing in the refused list is described as *worth doing* — refusing
+only bad ideas is not a constraint.
+
+### 3. The headline that VERIQO cannot move — `pkg/dashboard`
+
+The headline was **"37 passed, 0 failed"**. True, cheap to raise, and an answer to
+a question nobody outside engineering asked. Worse, it moves: a team managing to
+that board adds tests, while the figures that matter stay exactly where they are.
+
+It is now banned by name, with its reason, alongside six other figures that rise
+when VERIQO works harder and cannot fall when VERIQO becomes less trustworthy.
+The nine measures that replace it:
+
+| Measure | Reads | Scope |
+|---|---|---|
+| Critical controls externally validated | **0 / 20** | the mandatory production gates |
+| Real-world corpus coverage | **NOT MEASURED** | no partner has defined the population |
+| Independent assessments completed | **0 / 5** | pentest, crypto, redaction lab, counsel, model eval |
+| Production operational evidence | **0 / 30 days** | longest run to date: seconds, one process, one host |
+| Replay determinism | 1 / 1 *(internal)* | one synthetic case, in-process |
+| Unauthorised authority attempts blocked | **NOT MEASURED** | no deployment, so no denominator |
+| Cross-tenant isolation violations | 0 / 7 *(internal)* | VERIQO's own attacks, which is a statement about the attacks |
+| Evidence provenance completeness | 1 / 1 *(internal)* | the synthetic case, where VERIQO built the custody records |
+| Disproof routes available | 1 / 1 *(internal)* | findings VERIQO also designed the route for |
+
+**`NOT MEASURED` renders differently from zero**, and a test enforces it. Zero is
+a measurement — we looked and found none. `NOT MEASURED` is the absence of one —
+there is no denominator, because the thing that would supply it does not exist.
+Rendering them alike would be the reporting layer committing the exact error the
+epistemic firewall exists to prevent.
+
+A test requires that **nothing on the board is movable by VERIQO alone.**
+
+### 4. When the world is ugly — `pkg/intel/maritime`
+
+Round 5 was strong on synthetic correctness. The real question is different:
+*can VERIQO stay epistemically honest when the data is a mess?*
+
+A 40-knot jump between two AIS reports is consistent with **five** mechanisms:
+GNSS spoofing, GNSS interference, a failing receiver, a relay that stamped its
+own arrival time onto the position, and a message that simply arrived late and
+out of order. Every one of them is common. GNSS interference in particular is now
+routine in several sea areas — reporting through 2025 described large and rising
+numbers of vessels affected near specific coastlines, though *I have not
+independently verified those counts and would treat the specific figures as
+needing a primary source.*
+
+The point does not depend on the figures. A system that prints `SPOOFING` will be
+confidently wrong in public, on a data partner's own data, in front of the people
+who know that sea area best.
+
+`Explain()` returns every consistent cause with the modality that would
+discriminate it — and **no discriminator lives inside AIS.** A single feed cannot
+separate a spoofed position from a jammed one, because in both cases the receiver
+reports a position it believes. Separating them needs satellite imagery,
+terrestrial RF, a port record, a receiver log or a feed audit.
+
+Three structural refusals:
+
+- `Triage` has no `MostLikely`, no `Verdict` and no `Score`, and a test asserts
+  those methods **do not exist** — so a caller in a hurry cannot find one.
+- Mundane causes sort first. A list led by `SPOOFING` teaches the analyst what to
+  look for.
+- `GENUINE_MOVEMENT` is always on the list. A detector whose explanations omit
+  "the thing happened" has assumed its conclusion before looking.
+
+### 5. Corroboration that is really repetition — `pkg/qualification/independence`
+
+Fifty sources report the same fact; forty-nine are copies of the fiftieth. The
+corroboration count says fifty and the finding is founded. This is the classic
+route by which a false report acquires apparent verification.
+
+The existing graph handles copies that *declare* their origin. That is the easy
+half. This handles the normal case, which declares nothing — using the
+truth-discovery principle that **sources sharing unusual errors are unlikely to
+be independent.** Two analysts can independently reach the right answer; they do
+not independently make the same transposition.
+
+Agreement with the majority is explicitly **not** an indicator. That is what
+independent sources do, and treating it as dependence would collapse every honest
+corroboration.
+
+One choice worth recording, because the obvious option was wrong. The text
+measure is **containment** — shared tokens over the *shorter* account — not
+Jaccard. Jaccard penalises length difference, and the commonest real copy is a
+wire story reprinted with a paragraph added. On the flagship case that reprint
+scores **0.84 on Jaccard and 1.00 on containment**; a Jaccard threshold low enough
+to catch it would also catch unrelated accounts of the same event. A
+minimum-length guard then stops containment firing on short generic sentences,
+where a "copy" finding would be a finding about the English language.
+
+**There is no function that reports two sources as independent, and a test
+asserts there is none.** Finding no shared error establishes that no shared error
+was found. An undeclared common upstream looks exactly like independence.
+Demotion only — `UNKNOWN ≠ NEGATIVE`, applied to the dimension where the
+temptation to promote is strongest.
+
+### 6. The Decision Passport as the product — `pkg/passport/commercial`
+
+Nobody purchases an epistemic firewall, an assurance graph, engine separation or
+a mutation suite. What a customer purchases is the answer to one question:
+
+> *"Show me why you reached this conclusion, what evidence supports it, how
+> independent those sources are, what you rejected, and exactly what would prove
+> it wrong."*
+
+That is the Decision Passport. Everything else in this repository is machinery
+for making it truthful.
+
+Fourteen sections, in the order the audit specified — and the order is an
+argument:
+
+- **observations before hypotheses**, because a reader given the conclusion first
+  reads the evidence as support for it;
+- **contradictions before hypotheses**, not in an appendix — a passport that
+  buries its conflicts is a sales document;
+- **disproof before replay**, because how to attack this matters more than how to
+  re-run it;
+- **external status last**, so `NOT_EXTERNALLY_QUALIFIED` is what the reader
+  leaves with.
+
+`Validate()` refuses: a percentage as a confidence state (the number a reader
+multiplies by an exposure and puts in a reserve calculation); VERIQO or any
+automated principal as the decision authority; a single hypothesis; an empty
+`UNKNOWN` column; an absent disproof route; absent limitations; and an
+observation citing a source not in the provenance table — an assertion placed in
+the observations section being the most effective place in the document to hide
+one.
+
+### 7. One case, worked end to end — `pkg/intel/maritime/flagship`
+
+```
+vessel -> cargo -> voyage -> port event -> AIS -> weather -> document
+      -> contradiction -> source independence -> hypotheses
+      -> decision -> passport -> disproof route
+```
+
+A cargo-quantity dispute: a six-hour AIS reporting gap in the Singapore Strait,
+a 6.3 m draught increase across it, and a bill of lading stating the full
+contracted quantity was loaded the previous day at the nominated port.
+
+It is **synthetic in every particular**, and the notice saying so sits above the
+case header rather than in a footnote.
+
+It is built to come out **ambiguous**, deliberately. A worked example that
+resolves cleanly demonstrates the machinery on the one input shape that never
+occurs, and teaches the reader that VERIQO produces answers. The demonstration
+worth having is one where the evidence is genuinely insufficient, the system says
+so, and it is *still useful* — because it names the six things that would settle
+it and what each would cost.
+
+The case carries the classic ship-to-ship transfer signature precisely because
+that is what a system is most likely to over-call. Its conclusion is
+`INSUFFICIENT_TO_DECIDE`, its five reporting accounts reduce to three
+observations under copy detection, and its decision authority is a named human
+being.
+
+### 8. The five battlefields — `pkg/readiness`
+
+Each states its **PASS and its FAIL condition in advance.** A pass condition
+alone is a target: without a matching fail condition, a disappointing result gets
+reinterpreted afterwards as a partial success.
+
+| # | Battlefield | Blocked by | Passes when |
+|---|---|---|---|
+| 1 | Real maritime data | `B-AIS` | every anomaly raised carries a triage naming what would settle it |
+| 2 | Real documents | `B-CORPUS` | zero leakage over several hundred documents with real variation |
+| 3 | Independent attack | `B-PENTEST`, `B-REDTEAM` | no critical finding, **and low overlap** with VERIQO's own suite |
+| 4 | Real dispute case, read blind | — | readers reach their own conclusion and find the same decisive uncertainty |
+| 5 | Operational endurance | `B-INFRA`, `B-SOAK` | 30 days with failure injection and zero replay divergence |
+
+Battlefield 3's second condition is the subtle one: high overlap with the
+internal suite would mean the engagement reproduced VERIQO's own assumptions
+rather than testing where VERIQO cannot see.
+
+Battlefield 4 is the one that **cannot be discharged by receiving a document**,
+and its pass condition is deliberately *not* agreement with VERIQO. A blind
+reader who agrees for reasons the passport does not contain has been **persuaded
+rather than informed** — which is the failure the passport format exists to
+prevent.
+
+### What Round 6 did not change
+
+The status. Twenty gates block release; thirteen need a party that is not VERIQO.
+Nothing is above `INTERNALLY_ASSURED`. Eleven evidence debts, every one requiring
+an outside party. No party outside VERIQO has read any claim in this repository.
+
+`scripts/verify.sh` reports **50 passed, up from 37** — and that figure is now
+explicitly banned from the headline board. The board that matters reads four
+zeroes, two `NOT MEASURED`, and three figures marked internal-scope-only.
+
+That is the honest state of a system that has finished building itself and has
+not yet been outside.
+
+---
+
+## 0a. What changed in Round 5
 
 The Round 5 audit made six findings. None was a missing feature; all six were places
 where the honest machinery still permitted a dishonest reading.
@@ -218,7 +505,7 @@ harder to misread; it did not make it qualified, and no amount of Go will.
 
 ---
 
-## 0a. What changed in Round 4
+## 0b. What changed in Round 4
 
 The Round 3 audit was titled *Epistemic Firewall*, and it named the deepest
 principle in the system so far — plus five ways the honest machinery could still
@@ -437,7 +724,7 @@ production ready. It says so itself, in code, on every run.*
 
 ---
 
-## 0b. What changed in Round 3
+## 0c. What changed in Round 3
 
 The Round 2 audit found something more uncomfortable than a missing feature: **the
 system's own honesty machinery could produce false assurance.** Six findings, all
@@ -623,7 +910,7 @@ where to look, and its consequence.
 
 ---
 
-## 0c. What changed in Round 2
+## 0d. What changed in Round 2
 
 Round 1 built the qualification kernel and reported honestly on it. The audit that
 followed made a sharper point, and it was correct:
@@ -1168,7 +1455,7 @@ examined, attacked, validated or corroborated any part of this system.*
 ## 15. Verification
 
 ```
-./scripts/verify.sh    # 37 passed, 0 failed, 16 explicitly NOT run
+./scripts/verify.sh    # 50 passed, 0 failed, 16 explicitly NOT run
 ```
 
 The honesty checks fail the build if the system starts overstating itself:
@@ -1190,6 +1477,16 @@ The honesty checks fail the build if the system starts overstating itself:
 - **a decision that cannot be re-run or disproved is refused** by `Seal()`
 - **the epistemic ladder separates seeing from concluding**
 - **the procurement graph names a critical path**
+- **the assurance ladder has a stated boundary**, and a fifth layer of
+  self-verification is refused
+- **the freeze refused something Round 6 wanted**
+- **the test count is not the headline**, and `NOT MEASURED` is not rendered as zero
+- **nothing on the headline is movable by VERIQO alone**
+- **an AIS gap is never called spoofing**, and no discriminator for it lives inside AIS
+- **fifty copies of one story are one observation**
+- **the flagship passport refuses to conclude**, says it is synthetic first, and
+  cuts five accounts to three observations
+- **every battlefield states a fail condition**
 
 Sixteen things it explicitly does **not** run, each tied to a gate or a debt — including
 `independent canonicaliser` (ED-011), `external anchor check` (ED-003), and `independent

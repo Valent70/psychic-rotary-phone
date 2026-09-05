@@ -25,7 +25,8 @@ D="$WORK/$NAME"
 mkdir -p "$D/reports" "$OUT"
 
 echo "==> generating the reports"
-for r in readiness procurement engines firewall ladder metrics honesty assurance debt \
+for r in headline boundary freeze battlefields passport triage copies \
+         readiness procurement engines firewall ladder metrics honesty assurance debt \
          gates scorecard corpus ontology templates failures claims api all; do
     go run ./cmd/veriqoctl "$r" > "$D/reports/$r.txt" 2>&1
 done
@@ -60,6 +61,10 @@ git archive --format=tar --prefix=source/ HEAD | tar -x -C "$D"
     echo "VERIQO -- Evidence-Qualified Intelligence OS"
     echo "Enterprise deliverable, $(date -u +'%d %B %Y')"
     echo
+    echo "  reports/passport.txt                  READ THIS FIRST -- one case, worked"
+    echo "                                        end to end. It is synthetic and says so."
+    echo "  reports/headline.txt                  the nine measures that lead. Eight of"
+    echo "                                        them are zero or unmeasured."
     echo "  VERIQO_Enterprise_Architecture.pdf    the report, typeset"
     echo "  VERIQO_ENTERPRISE_ARCHITECTURE.md     the same report in source form"
     echo "  capsule/                              the auditor capsule -- check it yourself"
