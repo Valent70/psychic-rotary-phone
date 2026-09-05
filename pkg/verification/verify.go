@@ -379,7 +379,7 @@ func stepLedgerLineage(b *Bundle) Step {
 			s.Detail = fmt.Sprintf("record %d's event does not parse", rec.Height)
 			return s
 		}
-		got, err := recordDigest(rec.Height, rec.PrevHash, ev)
+		got, err := RecordDigest(rec.Height, rec.PrevHash, ev)
 		if err != nil {
 			s.Outcome = Fail
 			s.Detail = fmt.Sprintf("record %d could not be rehashed: %v", rec.Height, err)
@@ -401,10 +401,15 @@ func stepLedgerLineage(b *Bundle) Step {
 	return s
 }
 
-// recordDigest reproduces the ledger's own digest computation. It is
+// RecordDigest reproduces the ledger's own digest computation. It is
 // written out here, rather than imported, so that a verifier reading
 // this file can see exactly what is covered.
-func recordDigest(height uint64, prev string, event any) (string, error) {
+//
+// It is exported so that a bundle BUILDER computes the digest through
+// the same code path a verifier will use. If the two ever diverged,
+// every bundle would fail verification for a reason that had nothing
+// to do with its contents.
+func RecordDigest(height uint64, prev string, event any) (string, error) {
 	canon, err := DefaultCanonicalizer().Canonicalize(map[string]any{
 		"height":    float64(height),
 		"prev_hash": prev,

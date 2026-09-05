@@ -32,15 +32,96 @@ func built(t *testing.T) (*verification.Bundle, string) {
 func TestTheCapsuleIsAVerifiableBundle(t *testing.T) {
 	b, _ := built(t)
 	r := verification.Verify(b, verification.Options{At: mustTime(t), Revocations: []string{}})
-	// The capsule carries no passport, ledger or artefacts, so several
-	// steps are UNVERIFIABLE -- which the verifier reports rather than
-	// failing, and which makes the derived state PARTIALLY_VERIFIED.
-	if len(r.Failures()) != 0 {
+	if !r.Verified() {
 		t.Fatalf("the capsule fails its own verifier:\n%s", r.Render())
 	}
-	if len(r.Unverifiable()) == 0 {
-		t.Fatal("a capsule with no ledger or passport reported nothing unverifiable")
+	// The worked case exists so that no step reports UNVERIFIABLE. A
+	// capsule an assessor can read but not CHECK puts them back where
+	// they started: believing a document.
+	if u := r.Unverifiable(); len(u) != 0 {
+		t.Fatalf("the capsule leaves %d step(s) uncheckable, so an assessor cannot run "+
+			"the chain against it: %v", len(u), u)
 	}
+	if r.DerivedQualification != "INTERNALLY_ASSURED" {
+		t.Fatalf("derived %s", r.DerivedQualification)
+	}
+}
+
+// TestTheWorkedCaseSaysThreeTimesThatItIsSynthetic.
+//
+// A verifiable case in a capsule is the single most misreadable thing
+// in it: an assessor who checks it and sees everything pass can carry
+// away the impression that VERIQO has been shown to work on data. It
+// has been shown to work on data VERIQO wrote for the purpose.
+func TestTheWorkedCaseSaysThreeTimesThatItIsSynthetic(t *testing.T) {
+	b, _ := built(t)
+	found := 0
+	for _, path := range []string{"case/README.txt", "passport.json", "CONTENTS.json",
+		"case/artefacts/e1v1.txt"} {
+		raw, ok := b.File(path)
+		if !ok {
+			t.Fatalf("missing %s", path)
+		}
+		if strings.Contains(strings.ToUpper(string(raw)), "SYNTHETIC") {
+			found++
+		}
+	}
+	if found < 3 {
+		t.Fatalf("only %d of the case's artefacts say it is synthetic", found)
+	}
+	raw, _ := b.File("case/README.txt")
+	for _, want := range []string{
+		"establishes about VERIQO's behaviour on REAL data: nothing",
+		"ED-007",
+		"protects nothing",
+	} {
+		if !strings.Contains(string(raw), want) {
+			t.Fatalf("the case README omits %q", want)
+		}
+	}
+}
+
+// TestTheRecordedReplayStepIsNotClaimedAsReExecuted.
+func TestTheRecordedReplayStepIsNotClaimedAsReExecuted(t *testing.T) {
+	b, _ := built(t)
+	raw, ok := b.File("replay/steps.json")
+	if !ok {
+		t.Fatal("no replay record")
+	}
+	var steps []struct {
+		Name string `json:"name"`
+		Kind string `json:"kind"`
+	}
+	if err := json.Unmarshal(raw, &steps); err != nil {
+		t.Fatal(err)
+	}
+	var det, rec int
+	for _, s := range steps {
+		switch s.Kind {
+		case "DETERMINISTIC":
+			det++
+		case "RECORDED":
+			rec++
+		default:
+			t.Fatalf("%s has kind %q", s.Name, s.Kind)
+		}
+	}
+	if det == 0 || rec == 0 {
+		t.Fatalf("the replay record has %d deterministic and %d recorded steps; a capsule "+
+			"with only deterministic steps misrepresents what replay establishes in a "+
+			"real case", det, rec)
+	}
+	r := verification.Verify(mustBundle(t), verification.Options{At: mustTime(t),
+		Revocations: []string{}})
+	if !strings.Contains(r.Render(), "RECORDED rather than re-executed") {
+		t.Fatalf("the verifier does not caveat the recorded step:\n%s", r.Render())
+	}
+}
+
+func mustBundle(t *testing.T) *verification.Bundle {
+	t.Helper()
+	b, _ := built(t)
+	return b
 }
 
 // TestTheCapsuleClaimsExactlyInternallyAssured.

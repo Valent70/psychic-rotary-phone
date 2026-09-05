@@ -335,6 +335,11 @@ func BuildCapsule(opts Options) (*verification.Builder, error) {
 		return nil, err
 	}
 
+	// --- a case the verifier can actually check -----------------------
+	if err := addWorkedCase(b); err != nil {
+		return nil, err
+	}
+
 	return b, nil
 }
 

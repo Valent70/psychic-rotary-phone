@@ -10,6 +10,13 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
+# The capsule is built into a temporary directory and removed on exit,
+# so a verification run leaves nothing behind for a later run to verify
+# by accident.
+TMPDIR_CAPSULE=$(mktemp -d)
+export TMPDIR_CAPSULE
+trap 'rm -rf "$TMPDIR_CAPSULE" "$TMPDIR_CAPSULE.b" "$TMPDIR_CAPSULE.rev"' EXIT
+
 pass=0
 fail=0
 skipped=()
@@ -67,6 +74,39 @@ run "coverage carries the word ESTIMATE" bash -c '
     go run ./cmd/veriqoctl corpus | grep -q "ESTIMATE"'
 run "the self-doubt register states who attacked" bash -c '
     go run ./cmd/veriqoctl claims | grep -q "weakest form of survival"'
+run "nothing is above INTERNALLY_ASSURED" bash -c '
+    ! go run ./cmd/veriqoctl assurance | grep -qE "EXTERNALLY_(TESTED|VALIDATED)$|OPERATIONALLY_PROVEN$|PRODUCTION_QUALIFIED$"'
+run "every mandatory gate rests on VERIQO alone" bash -c '
+    go run ./cmd/veriqoctl assurance | grep -q "20 mandatory gate(s) rest entirely on VERIQO"'
+run "readiness offers no aggregate figure" bash -c '
+    ! go run ./cmd/veriqoctl readiness | grep -q "%"'
+run "the two external dimensions are NOT_STARTED" bash -c '
+    n=$(go run ./cmd/veriqoctl readiness | grep -cE "^  (PRODUCTION_INFRA|EXTERNAL_VALIDATION) +NOT_STARTED")
+    [ "$n" -eq 2 ]'
+run "every evidence debt has an owner and a risk" bash -c '
+    out=$(go run ./cmd/veriqoctl debt) || exit 1
+    o=$(printf "%s" "$out" | grep -c "owner:")
+    r=$(printf "%s" "$out" | grep -c "risk:")
+    [ "$o" -ge 11 ] && [ "$o" -eq "$r" ]'
+
+echo
+echo "the auditor capsule, checked by the independent verifier"
+run "the capsule builds" bash -c '
+    rm -rf "$TMPDIR_CAPSULE" && go run ./cmd/veriqoctl capsule "$TMPDIR_CAPSULE" >/dev/null'
+run "the capsule is byte-identical between builds" bash -c '
+    rm -rf "$TMPDIR_CAPSULE.b" && go run ./cmd/veriqoctl capsule "$TMPDIR_CAPSULE.b" >/dev/null
+    diff -r "$TMPDIR_CAPSULE" "$TMPDIR_CAPSULE.b" >/dev/null'
+run "veriqo-verify passes every step on the capsule" bash -c '
+    echo "[]" > "$TMPDIR_CAPSULE.rev"
+    out=$(go run ./cmd/veriqo-verify -revocations "$TMPDIR_CAPSULE.rev" "$TMPDIR_CAPSULE" 2>&1) || {
+        printf "%s\n" "$out"; exit 1; }
+    ! printf "%s" "$out" | grep -q "UNVERIFIABLE"'
+run "the capsule claims exactly INTERNALLY_ASSURED" bash -c '
+    go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
+        grep -q "derived qualification: INTERNALLY_ASSURED"'
+run "the verifier states what it cannot establish" bash -c '
+    go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
+        grep -q "key authenticity cannot be established"'
 
 # --- What this script did NOT run ---------------------------------------
 #
@@ -86,6 +126,9 @@ skip "multi-region failover"  "single-region environment (gate G3)"
 skip "disaster recovery timing" "no backup target configured (gate G11)"
 skip "independent penetration test" "requires a firm that is not VERIQO (gate G4)"
 skip "external document corpus" "VERIQO_CORPUS_DIR is empty (gate G9)"
+skip "independent canonicaliser"  "veriqo-verify used VERIQO's own JCS; a defect in it is invisible (ED-011)"
+skip "external anchor check"      "no anchor exists, deliberately (ED-003)"
+skip "independent red team"       "requires a team that did not write the defence (gates G15-G18)"
 
 echo
 echo "NOT RUN in this environment:"

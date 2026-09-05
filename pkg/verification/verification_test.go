@@ -58,7 +58,7 @@ func genuine(t *testing.T, mutate func(*Builder)) fixture {
 	var recs []map[string]any
 	prev := "veriqo-ledger-genesis-v1"
 	for i, ev := range events {
-		h, err := recordDigest(uint64(i), prev, ev)
+		h, err := RecordDigest(uint64(i), prev, ev)
 		if err != nil {
 			t.Fatal(err)
 		}

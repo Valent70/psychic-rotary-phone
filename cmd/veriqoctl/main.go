@@ -21,7 +21,9 @@ import (
 	"strings"
 
 	"veriqo/pkg/api"
+	"veriqo/pkg/assurance/capsule"
 	"veriqo/pkg/assurance/failureclass"
+	"veriqo/pkg/assurance/register"
 	"veriqo/pkg/assurance/selfdoubt"
 	"veriqo/pkg/contract"
 	"veriqo/pkg/domain"
@@ -29,12 +31,17 @@ import (
 	"veriqo/pkg/gates"
 	"veriqo/pkg/ontology"
 	"veriqo/pkg/policy"
+	"veriqo/pkg/readiness"
 	"veriqo/pkg/resilience"
 	"veriqo/pkg/scorecard"
 )
 
 const usage = `veriqoctl -- report what VERIQO is
 
+  assurance    the master assurance graph: gate -> control -> claim ->
+               evidence -> validator -> level -> release decision
+  readiness    five dimensions and, deliberately, no aggregate score
+  debt         the evidence VERIQO does not have, and what it blocks
   gates        the twenty permanent production gates and their state
   scorecard    the nine-dimension enterprise qualification scorecard
   corpus       Article 18 structural and weighted coverage
@@ -45,8 +52,16 @@ const usage = `veriqoctl -- report what VERIQO is
   api          the API surface and the guarantees each endpoint declares
   all          every report, in order
 
+  capsule DIR  write the auditor capsule to DIR, for somebody who should
+               not have to take VERIQO's word for any of this. Check it
+               with: veriqo-verify DIR
+
 Every figure carries what it rests on. Nothing here is a summary that
 cannot be disagreed with.
+
+This tool reports what VERIQO believes about itself. It is not a
+verifier: for that, use veriqo-verify, which recomputes rather than
+reads and does not trust the system it is checking.
 `
 
 func main() {
@@ -58,7 +73,18 @@ func main() {
 		cmd = flag.Arg(0)
 	}
 
+	if cmd == "capsule" {
+		if err := writeCapsule(flag.Args()); err != nil {
+			fmt.Fprintf(os.Stderr, "veriqoctl: capsule: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	reports := map[string]func() (string, error){
+		"assurance": assuranceReport,
+		"readiness": readinessReport,
+		"debt":      debtReport,
 		"gates":     gatesReport,
 		"scorecard": scorecardReport,
 		"corpus":    corpusReport,
@@ -68,8 +94,8 @@ func main() {
 		"claims":    claimsReport,
 		"api":       apiReport,
 	}
-	order := []string{"scorecard", "gates", "corpus", "ontology", "templates",
-		"failures", "claims", "api"}
+	order := []string{"readiness", "assurance", "debt", "scorecard", "gates", "corpus",
+		"ontology", "templates", "failures", "claims", "api"}
 
 	var run []string
 	if cmd == "all" {
@@ -101,6 +127,80 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+func assuranceReport() (string, error) {
+	g, err := register.VeriqoGraph()
+	if err != nil {
+		return "", err
+	}
+	return g.Report(register.AssessedAt()), nil
+}
+
+func readinessReport() (string, error) {
+	p, err := readiness.Veriqo()
+	if err != nil {
+		return "", err
+	}
+	return p.Report(), nil
+}
+
+func debtReport() (string, error) {
+	g, err := register.VeriqoGraph()
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("EVIDENCE DEBT\n")
+	b.WriteString("  what is NOT established, why, who owns it, and what it blocks.\n")
+	b.WriteString("  A gap stated this way can be priced. 'OPEN' cannot.\n\n")
+	open, external := 0, 0
+	for _, d := range g.Debts() {
+		b.WriteString("  " + strings.ReplaceAll(strings.TrimRight(d.Describe(), "\n"),
+			"\n", "\n  ") + "\n")
+		if d.Open() {
+			open++
+			if !d.SelfPayable() {
+				external++
+			}
+		}
+	}
+	fmt.Fprintf(&b, "%d open debt(s); %d require a party that is not VERIQO.\n", open, external)
+	return b.String(), nil
+}
+
+// writeCapsule builds the auditor capsule.
+//
+// It is not a report, so it does not go through the reports map: it
+// writes files, and a tool that printed to stdout and wrote to disk
+// under the same verb would eventually do one when the caller meant
+// the other.
+func writeCapsule(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: veriqoctl capsule DIR")
+	}
+	dir := args[1]
+	b, err := capsule.BuildCapsule(capsule.Options{Commit: commit()})
+	if err != nil {
+		return err
+	}
+	m, err := b.Write(dir)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("wrote the auditor capsule to %s\n", dir)
+	fmt.Printf("  %d file(s), claiming exactly %s\n", len(m.Files), m.ClaimedQualification)
+	fmt.Printf("\nCheck it without trusting this tool:\n\n    veriqo-verify %s\n\n", dir)
+	fmt.Print("The verifier recomputes every digest, rehashes the ledger from genesis,\n" +
+		"and DERIVES the qualification state rather than reading it. Where its\n" +
+		"answer differs from the claim above, believe the verifier.\n")
+	return nil
+}
+
+// commit reports the build's commit, when the environment supplies one.
+// It is read from the environment rather than by shelling out to git,
+// so that a capsule built in a container without a checkout says
+// "unknown" instead of failing.
+func commit() string { return os.Getenv("VERIQO_COMMIT") }
 
 func gatesReport() (string, error) {
 	r, err := gates.VeriqoRegister()
