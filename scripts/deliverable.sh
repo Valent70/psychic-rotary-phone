@@ -25,9 +25,17 @@ D="$WORK/$NAME"
 mkdir -p "$D/reports" "$OUT"
 
 echo "==> generating the reports"
-for r in gates scorecard corpus ontology templates failures claims api all; do
+for r in readiness assurance debt gates scorecard corpus ontology templates \
+         failures claims api all; do
     go run ./cmd/veriqoctl "$r" > "$D/reports/$r.txt" 2>&1
 done
+
+echo "==> building the auditor capsule and checking it with the independent verifier"
+VERIQO_COMMIT=$(git rev-parse --short HEAD) go run ./cmd/veriqoctl capsule "$D/capsule" \
+    > "$D/reports/capsule-build.txt" 2>&1
+echo "[]" > "$WORK/no-revocations.json"
+go run ./cmd/veriqo-verify -revocations "$WORK/no-revocations.json" "$D/capsule" \
+    > "$D/reports/independent-verification.txt" 2>&1 || true
 ./scripts/verify.sh > "$D/reports/verify.txt" 2>&1
 go test ./...   > "$D/reports/go-test.txt" 2>&1
 go vet ./...    > "$D/reports/go-vet.txt"  2>&1
@@ -54,6 +62,7 @@ git archive --format=tar --prefix=source/ HEAD | tar -x -C "$D"
     echo
     echo "  VERIQO_Enterprise_Architecture.pdf    the report, typeset"
     echo "  VERIQO_ENTERPRISE_ARCHITECTURE.md     the same report in source form"
+    echo "  capsule/                              the auditor capsule -- check it yourself"
     echo "  reports/                              generated, not written by hand"
     echo "  source/                               the repository at $(git rev-parse --short HEAD)"
     echo
@@ -63,6 +72,15 @@ git archive --format=tar --prefix=source/ HEAD | tar -x -C "$D"
     echo "  go test ./..."
     echo "  ./scripts/verify.sh"
     echo "  go run ./cmd/veriqoctl all"
+    echo
+    echo "Check the capsule without trusting any of the above:"
+    echo
+    echo "  cd source && go run ./cmd/veriqo-verify ../capsule"
+    echo
+    echo "The verifier recomputes every digest, rehashes the ledger from genesis,"
+    echo "and DERIVES the qualification state rather than reading it. The worked"
+    echo "case inside the capsule is SYNTHETIC and says so: it establishes that the"
+    echo "machinery works and establishes nothing about real data."
     echo
     echo "STATUS: NOT PRODUCTION READY. Twenty gates block release and thirteen"
     echo "of them require a party that is not VERIQO. Nothing on the scorecard is"
