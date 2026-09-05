@@ -25,8 +25,8 @@ D="$WORK/$NAME"
 mkdir -p "$D/reports" "$OUT"
 
 echo "==> generating the reports"
-for r in readiness assurance debt gates scorecard corpus ontology templates \
-         failures claims api all; do
+for r in readiness metrics honesty assurance debt gates scorecard corpus ontology \
+         templates failures claims api all; do
     go run ./cmd/veriqoctl "$r" > "$D/reports/$r.txt" 2>&1
 done
 
