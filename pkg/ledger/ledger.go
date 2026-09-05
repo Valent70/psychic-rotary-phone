@@ -352,6 +352,25 @@ const maxRecordBytes = 4 << 20
 
 // scan reads every complete record. It returns the offset at which a
 // partial tail begins, or -1 when the log ends cleanly.
+//
+// # Why a checksum failure is not automatically a torn tail
+//
+// A crash during append leaves a SHORT write: the header or the
+// payload runs out before the frame is complete, or the filesystem
+// extends the file and zero-fills what was never written. Both are
+// recoverable, and both are confined to the END of the log.
+//
+// A COMPLETE frame whose checksum disagrees with its payload is a
+// different event. The length, the checksum and the bytes were all
+// written together, so a full frame that no longer checksums has been
+// modified since it was written. Treating that as a tail would let an
+// attacker delete a record and everything after it -- an edit to
+// record 2 of 4 would silently discard records 2, 3 and 4 and reopen
+// at height 2, which is exactly the outcome the chain exists to make
+// impossible.
+//
+// So damage is accepted as a tail only when what follows it is
+// absent or zero-filled. Anything else is reported as a break.
 func scan(path string) ([]Record, int64, error) {
 	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -381,17 +400,21 @@ func scan(path string) ([]Record, int64, error) {
 		n := binary.BigEndian.Uint32(hdr[0:4])
 		sum := binary.BigEndian.Uint32(hdr[4:8])
 		if n == 0 || n > maxRecordBytes {
-			return out, offset, nil // corrupt length: treat as the tail
+			// A length nobody could have written. Only a zero-filled
+			// or absent remainder makes this a crash artefact.
+			return tail(out, path, offset, r,
+				fmt.Sprintf("record at offset %d declares a length of %d bytes", offset, n))
 		}
 		payload := make([]byte, n)
 		if _, err := io.ReadFull(r, payload); err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-				return out, offset, nil // torn payload
+				return out, offset, nil // torn payload: the frame ends at EOF
 			}
 			return nil, -1, fmt.Errorf("ledger: reading %s: %w", path, err)
 		}
 		if crc32.ChecksumIEEE(payload) != sum {
-			return out, offset, nil // damaged payload: the tail starts here
+			return tail(out, path, offset, r,
+				fmt.Sprintf("record at offset %d does not match its checksum", offset))
 		}
 		var rec Record
 		if err := json.Unmarshal(payload, &rec); err != nil {
@@ -400,6 +423,29 @@ func scan(path string) ([]Record, int64, error) {
 		out = append(out, rec)
 		offset += int64(8 + n)
 	}
+}
+
+// tail decides whether damage at offset is a recoverable crash artefact
+// or a break in the chain.
+//
+// The test is what follows: a torn write is the last thing in the
+// file, so everything from the damage onwards must be absent or
+// zero-filled. Real bytes after damaged bytes mean the damage is in
+// the middle of a log that continued past it, and the only honest
+// answer is to refuse to open.
+func tail(out []Record, path string, offset int64, r *bufio.Reader, what string) ([]Record, int64, error) {
+	rest, err := io.ReadAll(r)
+	if err != nil {
+		return nil, -1, fmt.Errorf("ledger: reading %s: %w", path, err)
+	}
+	for _, b := range rest {
+		if b != 0 {
+			return nil, -1, fmt.Errorf("%w: %s, and %d further byte(s) follow it; a torn "+
+				"write is the last thing in a log, so this is a modification, not a crash",
+				ErrChainBroken, what, len(rest))
+		}
+	}
+	return out, offset, nil
 }
 
 // Append writes an event and returns the record.

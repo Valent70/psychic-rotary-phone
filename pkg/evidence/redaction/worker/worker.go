@@ -76,6 +76,29 @@ func (k Kind) Valid() bool {
 // "we ran out of memory" is not a refusal a caller can act on.
 const maxPartBytes = 64 << 20
 
+// readBounded reads at most maxPartBytes and REFUSES anything larger.
+//
+// The distinction from io.LimitReader is the whole point. A limited
+// read succeeds and returns the first 64 MiB, so a part that inflates
+// to 256 MiB is redacted, released, and marked verified -- with 192
+// MiB of the original silently absent from the derivative and any
+// term inside that remainder never searched for. Truncating a
+// document and calling it clean is the worst outcome this package
+// has; the ceiling must produce a refusal, not a shorter file.
+func readBounded(r io.Reader, structure, what string) ([]byte, error) {
+	b, err := io.ReadAll(io.LimitReader(r, maxPartBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > maxPartBytes {
+		return nil, refuse(structure, fmt.Sprintf(
+			"%s exceeds the %d-byte ceiling on a single decompressed part; it is refused "+
+				"rather than truncated, because a truncated derivative reported as clean "+
+				"asserts the absence of terms in bytes nobody read", what, maxPartBytes))
+	}
+	return b, nil
+}
+
 // Redaction replaces a term with the same number of bytes, so that
 // offsets inside uncompressed streams stay valid and the derivative's
 // layout is not silently reflowed.
@@ -424,14 +447,17 @@ func inflate(b []byte) ([]byte, error) {
 		// so a failure of both is reported rather than skipped.
 		fr := flate.NewReader(bytes.NewReader(b))
 		defer fr.Close()
-		out, ferr := io.ReadAll(io.LimitReader(fr, maxPartBytes))
+		out, ferr := readBounded(fr, "PDF-STREAM-OVERSIZE", "a decompressed content stream")
 		if ferr != nil {
+			if IsRefusal(ferr) {
+				return nil, ferr
+			}
 			return nil, err
 		}
 		return out, nil
 	}
 	defer zr.Close()
-	return io.ReadAll(io.LimitReader(zr, maxPartBytes))
+	return readBounded(zr, "PDF-STREAM-OVERSIZE", "a decompressed content stream")
 }
 
 func deflate(b []byte) ([]byte, error) {
@@ -465,6 +491,14 @@ func redactOOXML(kind Kind, doc []byte, terms []string, m *TransformManifest) ([
 	// worker cannot inspect. Processing the readable parts and
 	// releasing the rest would assert cleanliness of bytes nobody read.
 	for _, f := range zr.File {
+		// The declared size is attacker-controlled, so it is a fast
+		// path and not the guard: readBounded still enforces the
+		// ceiling on a header that lies downward.
+		if f.UncompressedSize64 > maxPartBytes {
+			return nil, refuse(string(kind)+"-OVERSIZE-PART", fmt.Sprintf(
+				"part %q declares %d decompressed bytes, above the %d-byte ceiling",
+				f.Name, f.UncompressedSize64, maxPartBytes))
+		}
 		if binaryPart.MatchString(f.Name) {
 			return nil, refuse(string(kind)+"-EMBEDDED-BINARY",
 				fmt.Sprintf("part %q is an embedded binary object; its content cannot be read "+
@@ -482,9 +516,13 @@ func redactOOXML(kind Kind, doc []byte, terms []string, m *TransformManifest) ([
 			return nil, refuse(string(kind)+"-MALFORMED",
 				fmt.Sprintf("part %q could not be opened: %v", f.Name, err))
 		}
-		content, err := io.ReadAll(io.LimitReader(rc, maxPartBytes))
+		content, err := readBounded(rc, string(kind)+"-OVERSIZE-PART",
+			fmt.Sprintf("part %q", f.Name))
 		rc.Close()
 		if err != nil {
+			if IsRefusal(err) {
+				return nil, err
+			}
 			return nil, refuse(string(kind)+"-MALFORMED",
 				fmt.Sprintf("part %q could not be read: %v", f.Name, err))
 		}
@@ -661,7 +699,7 @@ func inspectOOXML(doc []byte) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, err := io.ReadAll(io.LimitReader(rc, maxPartBytes))
+		b, err := readBounded(rc, "OOXML-OVERSIZE-PART", fmt.Sprintf("part %q", n))
 		rc.Close()
 		if err != nil {
 			return nil, err
