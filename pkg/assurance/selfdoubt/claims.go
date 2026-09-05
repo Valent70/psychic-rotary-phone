@@ -109,4 +109,57 @@ var Claims = []Claim{
 			"rejects it; a surviving mutant is a hole whether or not any test exercises it",
 		Outcome: Established, Level: ledger.Assured, DisproofRunner: "VERIQO engineering",
 	},
+	{
+		ID: "CLAIM-LEDGER-TAMPER-EVIDENT",
+		Assertion: "no edit to a recorded ledger event can go undetected, and no edit can " +
+			"remove records without detection either",
+		ProofPath: "every record's digest covers its height and its predecessor's hash, and " +
+			"reopening a chain recomputes every link",
+		DisproofPath: "edit one field of a record in the middle of a written log and reopen it; " +
+			"then truncate a log from the front and reopen it. " +
+			"test/adversarial.TestAnEditedLedgerRecordIsDetectedOnReopen and " +
+			"TestARemovedLedgerRecordIsDetected",
+		ClosedCounterexample: "the disproof path succeeded. A checksum failure ANYWHERE in the " +
+			"log was treated as a torn tail, so editing record 2 of 4 silently discarded " +
+			"records 2, 3 and 4 and reopened the chain at height 2 with no error -- " +
+			"tamper-and-truncate. The same path let a log truncated from the front open as " +
+			"an empty chain",
+		FixedBy: "pkg/ledger.tail: a torn write is by definition the last thing in a file, so " +
+			"damage is accepted as a tail only when what follows it is absent or zero-filled; " +
+			"anything else is ErrChainBroken and the ledger refuses to open",
+		Outcome: Established, Level: ledger.Assured, DisproofRunner: "VERIQO engineering",
+	},
+	{
+		ID: "CLAIM-NO-SILENT-TRUNCATION",
+		Assertion: "a redacted derivative is never a truncated copy of its original reported " +
+			"as verified",
+		ProofPath: "every decompressed read is bounded, and the derivative's inspectable view " +
+			"is re-derived and searched before release",
+		DisproofPath: "submit an OOXML container whose part inflates far past the per-part " +
+			"ceiling and check whether what comes back is a refusal or a shortened document " +
+			"marked Verified. test/adversarial.TestAZipBombIsRefusedRatherThanExhaustingMemory",
+		ClosedCounterexample: "the disproof path succeeded. Every decompressed read used " +
+			"io.LimitReader, which succeeds and returns a prefix, so a part inflating to " +
+			"256 MiB was truncated to 64 MiB, redacted, released and marked Verified -- with " +
+			"192 MiB absent from the derivative and never searched for terms",
+		FixedBy: "pkg/evidence/redaction/worker.readBounded refuses at the ceiling instead of " +
+			"truncating, with a declared-size pre-check in front of it",
+		Outcome: Established, Level: ledger.Assured, DisproofRunner: "VERIQO engineering",
+	},
+	{
+		ID: "CLAIM-INJECTION-STRUCTURALLY-REFUSED",
+		Assertion: "an instruction embedded in evidence cannot widen an agent's grants, change " +
+			"its purpose, or reach a tool it was not launched with",
+		ProofPath: "grants are sealed at Launch, AddGrant exists only to be refused, and every " +
+			"scoped argument must be constrained by the grant or the launch fails",
+		DisproofPath: "plant an instruction in a document and make every call it asks for: " +
+			"widen the grants, read another case, switch purpose, reach export and approve. " +
+			"test/adversarial/injection_test.go, ten tests",
+		// Deliberately NOT recording a closed counterexample: this
+		// disproof path has never produced one, which is exactly the
+		// weaker position. The attacker here is the same party that
+		// wrote the defence and knows where it looked.
+		Outcome: Unsettled, Level: ledger.Implemented,
+		DisproofRunner: "VERIQO engineering -- gate G17 requires a red team with AI-agent experience",
+	},
 }

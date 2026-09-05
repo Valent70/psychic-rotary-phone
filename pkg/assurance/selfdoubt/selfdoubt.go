@@ -85,7 +85,25 @@ type Claim struct {
 	// negative test: an attempt to produce a counterexample.
 	DisproofPath string
 	// Counterexample is what the disproof path found, if anything.
+	// It is OPEN: a claim carrying one is refuted and demoted.
 	Counterexample string
+	// ClosedCounterexample is a counterexample the disproof path DID
+	// produce and that has since been fixed, with FixedBy naming the
+	// fix.
+	//
+	// It exists because "we attacked this and found nothing" and "we
+	// attacked this, found a defect, and closed it" are different
+	// pieces of evidence, and the second is much stronger. A claim
+	// that has never yielded anything to attack may mean the control
+	// is sound or may mean the attack was weak; a claim whose attack
+	// once succeeded is a claim whose attack is known to be capable of
+	// succeeding. Collapsing the two -- by deleting the history once
+	// the fix lands -- throws away the only evidence that the disproof
+	// path is real.
+	ClosedCounterexample string
+	// FixedBy cites what closed the ClosedCounterexample: the change,
+	// and the test that now fails without it.
+	FixedBy string
 	// Outcome is the result of running both.
 	Outcome Outcome
 	// Level is the assurance level the claim is recorded at. A refuted
@@ -126,7 +144,29 @@ func (c Claim) Validate() error {
 	if c.Outcome == Refuted && strings.TrimSpace(c.Counterexample) == "" {
 		return fmt.Errorf("selfdoubt: %s is REFUTED but names no counterexample", c.ID)
 	}
+	// A closed counterexample with nothing cited as closing it is an
+	// assertion that a defect went away.
+	if strings.TrimSpace(c.ClosedCounterexample) != "" {
+		if strings.TrimSpace(c.FixedBy) == "" {
+			return fmt.Errorf("%w: %s records a closed counterexample and cites nothing "+
+				"that closed it", ErrNoDisproofPath, c.ID)
+		}
+		if strings.TrimSpace(c.Counterexample) != "" {
+			return fmt.Errorf("%w: %s carries an open and a closed counterexample at once",
+				ErrDemotedButHeld, c.ID)
+		}
+	}
 	return nil
+}
+
+// Yielded reports whether attacking this claim has ever produced a
+// defect -- open or closed. It is the question a reader should ask
+// before believing an ESTABLISHED verdict, because a disproof path
+// that has never found anything has not been shown to be capable of
+// finding anything.
+func (c Claim) Yielded() bool {
+	return strings.TrimSpace(c.Counterexample) != "" ||
+		strings.TrimSpace(c.ClosedCounterexample) != ""
 }
 
 // Established reports whether the claim survived attack. An Unsettled
@@ -161,6 +201,10 @@ func (c Claim) Describe() string {
 	fmt.Fprintf(&b, "    disproof: %s\n", c.DisproofPath)
 	if c.Counterexample != "" {
 		fmt.Fprintf(&b, "    COUNTEREXAMPLE: %s\n", c.Counterexample)
+	}
+	if c.ClosedCounterexample != "" {
+		fmt.Fprintf(&b, "    counterexample found and closed: %s\n", c.ClosedCounterexample)
+		fmt.Fprintf(&b, "    closed by: %s\n", c.FixedBy)
 	}
 	if c.SelfAttacked() {
 		b.WriteString("    attacked by: VERIQO only -- the claim has not been attacked from outside\n")

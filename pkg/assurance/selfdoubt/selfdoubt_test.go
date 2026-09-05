@@ -145,3 +145,57 @@ func TestTheReportShowsBothPathsForEveryClaim(t *testing.T) {
 		t.Fatal("the report omits a proof path")
 	}
 }
+
+// TestAClosedCounterexampleMustCiteItsFix. Recording that a defect
+// "was found and is fixed now" without naming the fix is an assertion
+// that a problem went away.
+func TestAClosedCounterexampleMustCiteItsFix(t *testing.T) {
+	c := Claim{
+		ID: "X", Assertion: "a", ProofPath: "p", DisproofPath: "d",
+		ClosedCounterexample: "the attack worked once",
+		Outcome:              Established, Level: ledger.Assured,
+	}
+	if err := c.Validate(); err == nil {
+		t.Fatal("a closed counterexample validated with nothing closing it")
+	}
+	c.FixedBy = "the change, and the test that now fails without it"
+	if err := c.Validate(); err != nil {
+		t.Fatalf("a cited fix was refused: %v", err)
+	}
+	// An open and a closed counterexample at once is incoherent: the
+	// claim cannot be both refuted and repaired.
+	c.Counterexample = "still broken"
+	if err := c.Validate(); err == nil {
+		t.Fatal("an open and a closed counterexample coexisted")
+	}
+}
+
+// TestYieldedDistinguishesARealAttackFromAQuietOne. The register's
+// value depends on the disproof paths being capable of finding
+// something. A path that has never found anything is not evidence
+// that there is nothing to find.
+func TestYieldedDistinguishesARealAttackFromAQuietOne(t *testing.T) {
+	var yielded, quiet int
+	for _, c := range Claims {
+		if c.Yielded() {
+			yielded++
+			continue
+		}
+		quiet++
+	}
+	if yielded == 0 {
+		t.Fatal("not one disproof path in the register has ever produced a " +
+			"counterexample; either the system is perfect or the attacks are not real, " +
+			"and the second is far more likely")
+	}
+	if quiet == 0 {
+		t.Fatal("every claim in the register has yielded; the fixture is degenerate")
+	}
+	// Every claim that yielded and is still ESTABLISHED must cite what
+	// closed it, or the register is asserting a repair it cannot show.
+	for _, c := range Claims {
+		if c.Outcome == Established && c.ClosedCounterexample != "" && c.FixedBy == "" {
+			t.Fatalf("%s claims a repair it does not cite", c.ID)
+		}
+	}
+}

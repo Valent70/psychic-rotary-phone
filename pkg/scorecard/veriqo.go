@@ -46,6 +46,9 @@ func Veriqo() (*Scorecard, error) {
 				"the redaction corpus is entirely VERIQO-built; the 88% weighted figure is " +
 					"an ESTIMATE (G9)",
 				"no adversarial recovery attempt has been made against a redacted derivative",
+				"an internal adversarial test found the worker silently TRUNCATING an " +
+					"oversized part and releasing it as verified; it now refuses, but the " +
+					"defect was found by the people who wrote the code (G9, G15)",
 			}},
 
 		Assessment{Dimension: EntityIntegrity, Rating: Yellow,
@@ -72,14 +75,17 @@ func Veriqo() (*Scorecard, error) {
 		Assessment{Dimension: Security, Rating: Red,
 			Basis: "the controls are implemented -- cryptographic tenant anchoring, a derived " +
 				"key hierarchy, a deny-overrides policy core no rule can override, and a " +
-				"tool firewall whose grants cannot be widened -- and the key root is a " +
-				"software TEST DOUBLE and no outside party has attacked any of it (G1, G4, " +
-				"G7, G15, G16, G17)"},
+				"tool firewall whose grants cannot be widened -- and an internal adversarial " +
+				"suite attacks each of them, finding and closing two defects in the process; " +
+				"the key root is still a software TEST DOUBLE and no outside party has " +
+				"attacked any of it (G1, G4, G7, G15, G16, G17)"},
 
 		Assessment{Dimension: OperationalReliability, Rating: Red,
-			Basis: "the ledger is durable and survives a torn write, and there is no " +
-				"multi-region deployment, no timed disaster recovery, no multi-host run and " +
-				"no soak beyond minutes (G3, G5, G6, G11, G12)"},
+			Basis: "the ledger is durable, survives a torn write, and refuses to open a log " +
+				"whose records were edited or removed -- a distinction an internal " +
+				"adversarial test found it was NOT making, and which is now closed -- and " +
+				"there is no multi-region deployment, no timed disaster recovery, no " +
+				"multi-host run and no soak beyond minutes (G3, G5, G6, G11, G12)"},
 
 		Assessment{Dimension: DataRights, Rating: Yellow,
 			Basis: "the six licence questions are asked separately, a derivative takes the " +
