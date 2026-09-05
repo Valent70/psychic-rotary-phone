@@ -113,8 +113,9 @@ run "the verifier states what it cannot establish" bash -c '
     go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
         grep -q "key authenticity cannot be established"'
 run "capsule verification is not platform qualification" bash -c '
-    go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
-        grep -q "says nothing about evidence that was never put in the bundle"'
+    out=$(go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1)
+    printf "%s" "$out" | grep -q "It is NOT a qualification of VERIQO" &&
+    printf "%s" "$out" | grep -q "NOT EXTERNALLY QUALIFIED"'
 
 echo
 echo "the checks on the checks"

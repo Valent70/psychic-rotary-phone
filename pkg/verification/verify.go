@@ -623,6 +623,45 @@ func hasIndependentEvidence(b *Bundle) bool {
 	return false
 }
 
+// ScopeStatement is printed on every verification, pass or fail.
+//
+// # The confusion it prevents
+//
+// A verifier that reports "VERIFIED" over a bundle has said something
+// precise and narrow: the artefacts in this bundle are internally
+// consistent and their digests recompute. It is extremely easy, and
+// commercially tempting, to carry that away as "the platform is
+// independently verified".
+//
+// Those are different claims about different objects:
+//
+//	verification of a bundle   an arithmetic property of some files
+//	qualification of a system  a judgement about a system, by somebody
+//	                           who is not its author, after examining
+//	                           it
+//
+// The first can be performed by a program in milliseconds. The second
+// requires a party who does not exist yet in VERIQO's case. Running
+// the first a thousand times produces no progress toward the second,
+// which is exactly why the sentence is printed every time rather than
+// once in a preface: the reader who most needs it is the one who has
+// stopped reading prefaces.
+const ScopeStatement = `  WHAT THIS RESULT IS ABOUT
+    This is a verification of a BUNDLE: the artefacts in it are
+    internally consistent, their digests recompute, and its claimed
+    qualification does or does not match what its own evidence
+    supports.
+
+    It is NOT a qualification of VERIQO. Verification of a bundle and
+    qualification of a platform are different claims about different
+    objects, and no number of the first produces the second. A bundle
+    can verify perfectly and carry evidence that nobody outside the
+    system has ever examined -- which is the case here.
+
+      capsule chain:  verifiable, by anyone, in milliseconds
+      VERIQO:         NOT EXTERNALLY QUALIFIED
+`
+
 // Render writes the report the way a third party should read it.
 func (r Report) Render() string {
 	var b strings.Builder
@@ -644,6 +683,7 @@ func (r Report) Render() string {
 	if r.ClaimedQualification != r.DerivedQualification {
 		b.WriteString("  THESE DISAGREE. Believe the derived value.\n")
 	}
+	b.WriteString("\n" + ScopeStatement)
 
 	if r.Verified() {
 		if u := r.Unverifiable(); len(u) > 0 {

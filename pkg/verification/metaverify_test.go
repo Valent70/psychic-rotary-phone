@@ -294,3 +294,44 @@ func write(t *testing.T, path, content string) {
 
 var _ = sha256.Sum256
 var _ = hex.EncodeToString
+
+// TestEveryResultDistinguishesBundleVerificationFromPlatformQualification.
+//
+// The commercially tempting misreading: "VERIFIED" over a bundle
+// carried away as "the platform is independently verified". They are
+// different claims about different objects, and no number of the first
+// produces the second.
+func TestEveryResultDistinguishesBundleVerificationFromPlatformQualification(t *testing.T) {
+	// On a pass.
+	f := genuine(t, nil)
+	pass := verify(t, f, Options{Revocations: []string{},
+		TrustedKeys: map[string]ed25519.PublicKey{"veriqo-key-1": f.pub}})
+	if !pass.Verified() {
+		t.Fatalf("the genuine fixture stopped verifying:\n%s", pass.Render())
+	}
+
+	// And on a failure, where a reader is even more likely to skim.
+	g := genuine(t, nil)
+	write(t, filepath.Join(g.dir, "artefacts", "e1v1.txt"), "tampered")
+	fixManifest(t, g.dir)
+	b, err := Open(g.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fail := Verify(b, Options{At: vat})
+
+	for name, r := range map[string]Report{"pass": pass, "fail": fail} {
+		out := r.Render()
+		for _, want := range []string{
+			"WHAT THIS RESULT IS ABOUT",
+			"It is NOT a qualification of VERIQO",
+			"NOT EXTERNALLY QUALIFIED",
+			"no number of the first produces the second",
+		} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("the %s report omits %q; a reader can carry away a bundle "+
+					"verification as a platform qualification:\n%s", name, want, out)
+			}
+		}
+	}
+}
