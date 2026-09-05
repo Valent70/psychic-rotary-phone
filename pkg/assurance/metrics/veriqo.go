@@ -14,7 +14,7 @@ import "fmt"
 // Software returns what the builder has established alone.
 func Software() (*Set, error) {
 	return New(SoftwareVerification,
-		Measure{Register: SoftwareVerification, Name: "tests", Value: "827",
+		Measure{Register: SoftwareVerification, Name: "tests", Value: "870",
 			Basis: "counted from the module: every function named Test* in a _test.go file",
 			Caveat: "a test count is not a quality measure. The cheapest way to raise it " +
 				"is to assert what the code already does, and nothing here distinguishes " +

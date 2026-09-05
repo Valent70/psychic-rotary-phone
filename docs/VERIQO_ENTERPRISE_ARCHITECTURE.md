@@ -3,7 +3,7 @@
 ## Evidence-Qualified Intelligence OS — Enterprise Architecture and Assurance Report
 
 **Repository:** `veriqo` (Go 1.24.7) · **Branch:** `claude/veriqo-enterprise-architecture-7j56b9`  
-**Report date:** 5 September 2026 · **Round 2** (supersedes the Round 1 report of the same name)
+**Report date:** 5 September 2026 · **Round 3** (supersedes Rounds 1 and 2)
 
 **Status: SPECIFICATIONALLY IMPLEMENTED. NOT PRODUCTION QUALIFIED.**
 
@@ -13,7 +13,193 @@ is not VERIQO. Nothing in the assurance register is above `INTERNALLY_ASSURED`.
 
 ---
 
-## 0. What changed in Round 2
+## 0. What changed in Round 3
+
+The Round 2 audit found something more uncomfortable than a missing feature: **the
+system's own honesty machinery could produce false assurance.** Six findings, all
+now closed.
+
+| # | Finding | What it would have caused |
+|---|---|---|
+| 1 | **Test inflation** — 814 tests as a quality proxy | The cheapest way to raise quality becomes writing tests that assert what the code already does |
+| 2 | **The honesty checker is itself a keyword screen** | An overclaim detector that overclaims — with a green tick attached |
+| 3 | **Law 11 was a package property, not a system invariant** | Any other surface writing `"PRODUCTION_QUALIFIED"` bypasses it, and will not look like a bypass |
+| 4 | **Source *counting* instead of producer attribution** | Four outlets carrying one wire story counted as four sources |
+| 5 | **"The full chain verifies end to end"** | A bundle verification carried away as a platform qualification |
+| 6 | **A control with no claim was a missing row, not a finding** | Work presumed fine, invisible to every report of what is unproven |
+
+### 0.1 Test inflation, and three registers that cannot be combined
+
+> "814 tests" is impressive and it is a trap.
+
+One independent penetration test is worth more than two hundred additional unit
+tests. One real-world corpus is worth more than a hundred synthetic fixtures. Those
+are **not comparisons between bigger and smaller numbers** — they are comparisons
+between different *kinds* of evidence, and a dashboard showing both invites the
+arithmetic that destroys the distinction.
+
+```
+SOFTWARE VERIFICATION      ASSURANCE QUALIFICATION      PRODUCTION EVIDENCE
+tests, coverage, race,     external evidence,           uptime, incidents,
+vet, fuzz, mutation        independent validation,      recovery, rotation,
+                           real corpus, legal review    failover, access review
+
+the builder can move       only somebody else can       only running it can
+this alone                 move this                    move this
+```
+
+`pkg/assurance/metrics` has **no function that takes two registers** and no aggregate
+of any kind. VERIQO's own panel: eight measures in the first, each carrying what it
+does *not* show; the other two **EMPTY**. They are constructed with no measures rather
+than with zero values, because a row reading "independent assessments: 0" invites a
+reader to see a scale with a low value on it, when what exists is **no scale**.
+
+### 0.2 The honesty checker that overclaims
+
+```
+honesty checker  ->  FALSE PASS  ->  false assurance
+```
+
+If a check that detects overclaim is itself a keyword screen, the system manufactures
+exactly the confidence it exists to refuse — with *more* credibility than an unchecked
+claim, because it now carries a tick.
+
+| Level | Name | Asks | Defeated by |
+|---|---|---|---|
+| H1 | `CLAIM_LANGUAGE_SCREENING` | Does the text contain phrases we decided not to use? | Paraphrase |
+| H2 | `STRUCTURAL_CLAIM_ANALYSIS` | Does the artefact have the parts it needs? | Filling fields with nothing |
+| H3 | `SEMANTIC_CONTRADICTION_ANALYSIS` | Does it contradict itself? | Being consistent and wrong |
+| H4 | `EVIDENCE_TO_CLAIM_VALIDATION` | Does the evidence support the claim? | Evidence that is itself mistaken |
+| H5 | `INDEPENDENT_EXTERNAL_REVIEW` | Did somebody who is not the author read it? | A reviewer sharing the author's assumptions |
+
+`DescribeSafely` refuses the phrase "honesty verification" at any level below H5, at
+the point the description is written. Every level states what defeats it — **including
+H5**, because a reader told what defeats a check cannot mistake it for one nothing
+defeats.
+
+**VERIQO's own grading is uncomfortable, which is the point.** The passport conclusion
+screen is H1. The suite tops out at H4. **H5 is not performed at all.** `verify.sh`'s
+section was renamed from "honesty checks" to "overclaim checks" for the same reason.
+
+`Highest()` is deliberately not an average: forty H1 checks reach H1, and averaging
+would let quantity substitute for strength — the test-inflation failure in a different
+costume.
+
+### 0.3 Law 11 as a system-wide invariant
+
+> **No system surface may emit an assurance state higher than the state derived from
+> the evidence.**
+
+A package refusing self-certification constrains one code path. A system has many
+surfaces that can utter an assurance state — release authority, passport issuer, API,
+CLI, every report, the qualification ledger, the capsule, any export, automation, CI,
+and a UI nobody has written yet. If one of them can write `"PRODUCTION_QUALIFIED"`,
+Law 11 is bypassed — **and the bypass will not look like a bypass. It will look like a
+field being set**, in a package whose author had no idea Law 11 existed.
+
+So `pkg/assurance/invariant` is the one chokepoint, and an **architecture test parses
+every file outside the assurance layer and fails on a string literal naming a high
+state.** The scanner has its own test proving it would catch a synthetic bypass, and
+another proving the exemption list has not grown to cover the module.
+
+`Emit` never returns an error for an over-claim. A surface receiving an error would
+have to decide what to do, and some would log it and publish anyway. Instead the
+over-claim is *impossible*: the caller receives the derived state whatever it asked
+for, plus a record of what it asked for.
+
+**The capsule now proves this on itself.** It asks for `PRODUCTION_QUALIFIED`
+deliberately — asking for what we expect to get would leave the invariant untested at
+the one place it matters — and publishes what comes back:
+
+```
+claimed:  PRODUCTION_QUALIFIED
+derived:  INTERNALLY_ASSURED
+verdict:  QUALIFICATION_CLAIM_INVALID
+emitted:  INTERNALLY_ASSURED
+```
+
+**CLAIMED ≠ DERIVED** is frozen as a type. A claim below the evidence is *not*
+promoted either — a party may claim less than it could, and quietly upgrading them
+would make this package the thing it prevents.
+
+### 0.4 The Source Independence Graph
+
+Pairwise assessment answers "are these two independent". That is the right question
+and not the whole one, because independence is a property of the **producer
+structure**:
+
+```
+                    Reuters
+                       |
+                  wire service
+           ________/  |  \________
+          /           |           \
+     Outlet A    Outlet B    Outlet C    Outlet D
+
+observed sources      = 5
+independent producers = 1
+```
+
+The harder case is three anonymous posts. **Both tempting answers are wrong:** 3
+treats "we do not know" as "they differ"; 1 asserts they are the same, which is
+equally unfounded. So `UNASSESSABLE` is its own value — *not a low count, the absence
+of one* — and `SatisfiesCorroboration` returns false for it at every threshold.
+
+One unattributable source contaminates the whole answer: a structure with two known
+producers and one unknown does **not** satisfy a requirement for two, because the
+third could be either of them.
+
+### 0.5 Capsule verification ≠ platform qualification
+
+Round 2's report said "the full chain now verifies end to end". True of that chain,
+and one sentence away from a serious misreading. Every verification result now carries,
+**on pass and on failure alike**:
+
+```
+  capsule chain:  verifiable, by anyone, in milliseconds
+  VERIQO:         NOT EXTERNALLY QUALIFIED
+```
+
+It is printed every time rather than once in a preface, because the reader who most
+needs it is the one who has stopped reading prefaces.
+
+### 0.6 The Disproof Route
+
+A disproof *path* is a sentence describing a destination. A recipient in a dispute
+needs the **route**: numbered steps, each naming a party who can take it, what it
+produces, and what happens to the finding if it succeeds — ordered cheapest-first so
+somebody who runs out of budget has still done the most informative thing available.
+
+A blocked step **stays in the route**: a recipient is entitled to know the cheapest
+refutation is closed to them. A route with every step blocked says so loudly — an
+unchallengeable finding is a limitation, not a strength. And `IfAllFail` is required,
+because a route describing only refutation implies that surviving it *proves* the
+claim.
+
+### 0.7 The verifier-of-verifier, and what it found
+
+Every other test asks whether the verifier catches tampering. These ask whether it is
+**capable of catching anything**. For each step there must exist an input that makes
+that step FAIL — a step for which none exists is indistinguishable from one that
+always passes.
+
+It found a defect immediately: **the canonicalize step silently skipped any `.json`
+file that failed to parse.** A corrupted document passed verification *by being
+unreadable* — the worst possible direction for that error to run.
+
+### 0.8 Assurance Orphans
+
+A control nothing claims anything about never appears in a report of what is
+unproven, because nothing was ever claimed. It is invisible in exactly the way that
+matters. `ASSURANCE_ORPHAN` is now a typed finding carrying the gates resting on it,
+where to look, and its consequence.
+
+> A good assurance system should generate uncomfortable findings. If every audit
+> returns GREEN, the likeliest explanation is that the audit is bad.
+
+---
+
+## 0b. What changed in Round 2
 
 Round 1 built the qualification kernel and reported honestly on it. The audit that
 followed made a sharper point, and it was correct:
@@ -37,7 +223,9 @@ Plus: readiness as five dimensions instead of a percentage; the gate lifecycle a
 state machine; `ESTIMATE ≠ MEASURED ≠ VALIDATED ≠ PRODUCTION_PROVEN` as a type; the
 decision passport as six product kinds; and the repository hygiene the audit flagged.
 
-**59 packages · 147 files · ~47,700 lines · 814 tests · `go vet` clean · verify.sh 23/23.**
+**62 packages · 161 files · ~51,300 lines · 870 tests · `go vet` clean · verify.sh 27/27.**
+
+*And the number above is exactly the kind of figure §0.1 exists to warn you about.*
 
 ---
 
@@ -556,7 +744,7 @@ examined, attacked, validated or corroborated any part of this system.*
 ## 15. Verification
 
 ```
-./scripts/verify.sh    # 23 passed, 0 failed, 15 explicitly NOT run
+./scripts/verify.sh    # 27 passed, 0 failed, 16 explicitly NOT run
 ```
 
 The honesty checks fail the build if the system starts overstating itself:
@@ -571,14 +759,40 @@ The honesty checks fail the build if the system starts overstating itself:
 - every evidence debt has an owner *and* a risk
 - **`veriqo-verify` passes every step on a freshly built capsule** — and fails the build
   if any step is unverifiable
+- **capsule verification is not platform qualification** — the scope statement must appear
+- **no overclaim check is described above its level**, and the suite does not reach H5
+- **the three metric registers are not combined**, and the empty one is called out
 
-Fifteen things it explicitly does **not** run, each tied to a gate or a debt — including
+Sixteen things it explicitly does **not** run, each tied to a gate or a debt — including
 `independent canonicaliser` (ED-011), `external anchor check` (ED-003), and `independent
-red team` (G15–G18).
+red team` (G15–G18), and `H5 external review of claims` — no party outside VERIQO has
+read any claim in this repository.
 
 ---
 
-## 16. The honest summary
+## 16. The lifecycle, restated
+
+The old model was BUILD → TEST → CLOSE GAPS → RELEASE. It is wrong in a way that
+matters: it treats gaps as things the builder closes, and most of the remaining ones
+are not.
+
+```
+BUILD -> TEST -> COUNTEREXAMPLE -> FIX -> INTERNALLY ASSURE
+      -> PACKAGE EVIDENCE -> INDEPENDENTLY VERIFY
+      -> OPERATE -> MEASURE -> EXTERNALLY QUALIFY -> PRODUCTION PROVE
+      -> CONTINUOUSLY REQUALIFY
+```
+
+VERIQO has reached PACKAGE EVIDENCE. The next step needs somebody else.
+
+**And the rule underneath all of it: process success is not evidence of real-world
+success.** A green verify.sh means the code builds, the tests hold, and the system
+still refuses to overstate itself. It does not mean the system works on anything
+real, and this report is written so that no reader can conclude otherwise.
+
+---
+
+## 17. The honest summary
 
 > Architecture high, semantics high, implementation substantial. Production
 > infrastructure not started, external validation not started. The weakest dimension is

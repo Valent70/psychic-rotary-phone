@@ -26,11 +26,28 @@ cannot reach one by trying harder. That is Law 11, and it is enforced by the
 type system, not by policy.
 
 ```
+go run ./cmd/veriqoctl metrics      # three registers, deliberately never combined
+go run ./cmd/veriqoctl honesty      # what each overclaim check can and cannot catch
 go run ./cmd/veriqoctl assurance    # the master assurance graph
 go run ./cmd/veriqoctl gates        # what blocks release, and who could unblock it
 go run ./cmd/veriqoctl scorecard    # nine dimensions, no aggregate score
 ./scripts/verify.sh                 # what passes -- and what is deliberately NOT run
 ```
+
+### Three numbers this repository will not give you
+
+**No test count as a quality signal.** The moment one becomes a quality signal,
+the cheapest way to raise it is to assert what the code already does. The metrics
+report keeps software verification, assurance qualification and production evidence
+in three registers that no function combines — because one independent pentest is
+worth more than two hundred unit tests, and that is not a comparison between bigger
+and smaller numbers.
+
+**No readiness percentage.** Five dimensions, no aggregate.
+
+**No "honesty verified".** Overclaim checks are graded H1–H5. Most of VERIQO's are
+H1 — claim-language screening, defeated by paraphrase. Calling that honesty
+verification would be an overclaim about an overclaim detector.
 
 ---
 
@@ -90,6 +107,9 @@ pkg/findings passport    one mint authority; limitations inside the signature
 pkg/ai  pkg/agents       the qualification ladder and the tool firewall
 --------------------------------------------------------------------------
 pkg/assurance/state      Law 11 and the eleven-rung assurance ladder
+pkg/assurance/invariant  Law 11 as a system-wide chokepoint: CLAIMED != DERIVED
+pkg/assurance/metrics    three registers, and no function that sums them
+pkg/assurance/honesty    H1-H5: what each overclaim check can actually catch
 pkg/assurance/register   claims, evidence debt, master assurance graph
 pkg/assurance/epistemic  ESTIMATE != MEASURED != VALIDATED != PROVEN
 pkg/assurance/capsule    the auditor capsule
@@ -119,8 +139,17 @@ from its payload *before* the signature is checked. And the qualification state
 is **derived** and then compared with what the bundle claims — a bundle
 asserting more than it carries is contradicted, not believed.
 
-It also states, on every run, the three things it cannot establish: key
-authenticity, existence in time, and anything about evidence that was left out.
+It also states, on every run, the three things it cannot establish — key
+authenticity, existence in time, and anything about evidence left out — and one
+thing it is not:
+
+```
+capsule chain:  verifiable, by anyone, in milliseconds
+VERIQO:         NOT EXTERNALLY QUALIFIED
+```
+
+Verification of a bundle and qualification of a platform are different claims about
+different objects, and no number of the first produces the second.
 
 ## Licence and provenance of this work
 
