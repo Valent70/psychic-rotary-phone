@@ -46,7 +46,9 @@ const usage = `veriqoctl -- report what VERIQO is
   honesty      what each overclaim check can and cannot catch (H1-H5)
   assurance    the master assurance graph: gate -> control -> claim ->
                evidence -> validator -> level -> release decision
-  readiness    five dimensions and, deliberately, no aggregate score
+  readiness    nine dimensions, each status naming who is blocking it
+  procurement  the same blockers as a schedule: who sells it, what they
+               must hand back, what must be true first, and the critical path
   debt         the evidence VERIQO does not have, and what it blocks
   gates        the twenty permanent production gates and their state
   scorecard    the nine-dimension enterprise qualification scorecard
@@ -88,22 +90,23 @@ func main() {
 	}
 
 	reports := map[string]func() (string, error){
-		"assurance": assuranceReport,
-		"metrics":   metricsReport,
-		"firewall":  firewallReport,
-		"honesty":   honestyReport,
-		"readiness": readinessReport,
-		"debt":      debtReport,
-		"gates":     gatesReport,
-		"scorecard": scorecardReport,
-		"corpus":    corpusReport,
-		"ontology":  ontologyReport,
-		"templates": templatesReport,
-		"failures":  failuresReport,
-		"claims":    claimsReport,
-		"api":       apiReport,
+		"assurance":   assuranceReport,
+		"metrics":     metricsReport,
+		"firewall":    firewallReport,
+		"honesty":     honestyReport,
+		"readiness":   readinessReport,
+		"procurement": procurementReport,
+		"debt":        debtReport,
+		"gates":       gatesReport,
+		"scorecard":   scorecardReport,
+		"corpus":      corpusReport,
+		"ontology":    ontologyReport,
+		"templates":   templatesReport,
+		"failures":    failuresReport,
+		"claims":      claimsReport,
+		"api":         apiReport,
 	}
-	order := []string{"readiness", "firewall", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
+	order := []string{"readiness", "procurement", "firewall", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
 		"ontology", "templates", "failures", "claims", "api"}
 
 	var run []string
@@ -146,6 +149,14 @@ func assuranceReport() (string, error) {
 }
 
 func metricsReport() (string, error) { return metrics.VeriqoPanel() }
+
+func procurementReport() (string, error) {
+	p, err := readiness.VeriqoPlan()
+	if err != nil {
+		return "", err
+	}
+	return p.Report(), nil
+}
 
 // firewallReport shows the four inequalities against VERIQO's own
 // evidence position, so the principle is demonstrated rather than
