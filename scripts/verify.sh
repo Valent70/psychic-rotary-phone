@@ -117,6 +117,9 @@ run "the capsule claims exactly INTERNALLY_ASSURED" bash -c '
 run "the verifier states what it cannot establish" bash -c '
     go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1 |
         grep -q "key authenticity cannot be established"'
+run "the capsule invites attack rather than asserting safety" bash -c '
+    grep -q "not assembled to show that VERIQO is safe" "$TMPDIR_CAPSULE/CHALLENGE.txt" &&
+    grep -q "WHERE WE THINK IT IS WEAKEST" "$TMPDIR_CAPSULE/CHALLENGE.txt"'
 run "capsule verification is not platform qualification" bash -c '
     out=$(go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1)
     printf "%s" "$out" | grep -q "It is NOT a qualification of VERIQO" &&

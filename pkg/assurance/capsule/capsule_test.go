@@ -226,6 +226,7 @@ func TestEveryRegisterReachesTheCapsule(t *testing.T) {
 		"self-doubt/report.txt", "policy/rules.json", "policy/authority-matrix.json",
 		"api/endpoints.json", "redaction/variants.json", "redaction/coverage.txt",
 		"threat-model.json", "build.json", "dependencies.json", "README.txt", "VERIFY.txt",
+		"CHALLENGE.txt",
 	} {
 		if _, ok := b.File(path); !ok {
 			t.Fatalf("the capsule is missing %s", path)
@@ -344,5 +345,45 @@ func TestTheCapsuleClaimIsDerivedNotWritten(t *testing.T) {
 	// was asked for.
 	if got := b.Manifest().ClaimedQualification; got != r.Emitted {
 		t.Fatalf("the manifest claims %s and the invariant emitted %s", got, r.Emitted)
+	}
+}
+
+// TestTheCapsuleInvitesAttackRatherThanAssertingSafety.
+//
+// A capsule assembled to prove the system is safe and one assembled to
+// make it easy to prove the system wrong contain almost the same files
+// and are completely different documents. The first selects what
+// supports the conclusion; only the second tells an assessor where to
+// look.
+func TestTheCapsuleInvitesAttackRatherThanAssertingSafety(t *testing.T) {
+	b, _ := built(t)
+	raw, ok := b.File("CHALLENGE.txt")
+	if !ok {
+		t.Fatal("the capsule carries no challenge document")
+	}
+	c := string(raw)
+	for _, want := range []string{
+		"not assembled to show that VERIQO is safe",
+		"WHERE WE THINK IT IS WEAKEST",
+		"WHAT WOULD COUNT AS PROVING US WRONG",
+		"WHAT WOULD NOT BE A USEFUL FINDING",
+		"with a stated scope is evidence",
+	} {
+		if !strings.Contains(c, want) {
+			t.Fatalf("the challenge document omits %q", want)
+		}
+	}
+	// The weakest points must be named specifically enough to act on,
+	// each citing where to look or which debt owns it.
+	for _, want := range []string{"pkg/canonical/jcs", "ED-011", "ED-004", "ED-005",
+		"ED-010", "test/assurancemutation"} {
+		if !strings.Contains(c, want) {
+			t.Fatalf("the challenge document does not point at %q", want)
+		}
+	}
+	// It must not be a list of strengths wearing a challenge title.
+	if strings.Count(c, "ED-") < 4 {
+		t.Fatal("the challenge document cites fewer than four open debts; it is not " +
+			"actually pointing at the weak places")
 	}
 }

@@ -164,6 +164,9 @@ func BuildCapsule(opts Options) (*verification.Builder, error) {
 	if err := b.Add("README.txt", []byte(readme)); err != nil {
 		return nil, err
 	}
+	if err := b.Add("CHALLENGE.txt", []byte(challenge)); err != nil {
+		return nil, err
+	}
 	if err := b.Add("VERIFY.txt", []byte(verification.README)); err != nil {
 		return nil, err
 	}
@@ -171,6 +174,8 @@ func BuildCapsule(opts Options) (*verification.Builder, error) {
 	contents := Contents{
 		Subject: "VERIQO Evidence-Qualified Intelligence OS", BuiltAt: at.UTC(),
 		Includes: []string{
+			"CHALLENGE.txt: where we think this is weakest, ranked, and what would " +
+				"count as proving us wrong",
 			"the assurance register: every claim, its level, its evidence and its debts",
 			"the twenty production gates and the controls each rests on",
 			"the failure-class register with every cited test name",
@@ -510,6 +515,106 @@ func VeriqoThreatModel() ThreatModel {
 		},
 	}
 }
+
+// challenge is the capsule's purpose, stated as an invitation.
+//
+// # Why the framing matters
+//
+// A capsule assembled to PROVE THE SYSTEM IS SAFE and one assembled
+// to MAKE IT EASY TO PROVE THE SYSTEM WRONG contain almost the same
+// files and are completely different documents. The first selects
+// what supports the conclusion; the second selects what would
+// undermine it. Only the second is worth an assessor's time, because
+// only the second tells them where to look.
+//
+// So this file names the weakest points first, by name, with the
+// reasoning that makes them weak. An assessor who reads it and finds
+// nothing we have not already listed has learned something real about
+// the system. One who finds something we missed has done us a service
+// we cannot do for ourselves -- which is the entire reason the party
+// has to be external.
+const challenge = `HOW TO PROVE VERIQO WRONG
+
+This capsule is not assembled to show that VERIQO is safe. It is
+assembled to make it as easy as possible for you to show that it is
+not. Those two documents contain almost the same files and are
+completely different things, and only the second is worth your time.
+
+WHERE WE THINK IT IS WEAKEST
+
+These are ranked by our own estimate of where an attack is most likely
+to succeed. We may be wrong about the ranking; that is itself worth
+telling us.
+
+1. THE CANONICALISER.  Every digest, ledger record, passport and
+   replay comparison in the system passes through pkg/canonical/jcs.
+   Conformance was checked against RFC 8785's own examples by the
+   people who wrote the implementation. A divergence would be
+   invisible from inside: the system would be perfectly self-consistent
+   and silently unable to interoperate with anything else. Feed our
+   inputs to an independent implementation and compare. (ED-011)
+
+2. THE VERIFIER'S SHARED CODE.  veriqo-verify canonicalises with the
+   same implementation the system used, so a defect in it is invisible
+   to the verifier too -- both sides make the same mistake and agree.
+   The Canonicalizer seam exists for you to supply your own. If you
+   do not, our verifier's PASS is worth less than it looks.
+
+3. REDACTION IRRECOVERABILITY.  We claim a term is absent from twelve
+   encodings. We do NOT claim the content is unrecoverable, and nobody
+   has ever tried to recover it. Format-specific remnants -- incremental
+   updates, revision history, object streams, embedded thumbnails --
+   are the obvious place to start. (ED-004)
+
+4. THE INJECTION DEFENCE.  Ten adversarial tests attack the agent
+   firewall and none has produced a counterexample. That is precisely
+   the weaker position: the attacker was the party that wrote the
+   defence and knew where it looked. No model was in the loop in any
+   of those tests. (ED-005)
+
+5. THE ASSURANCE LAYER ITSELF.  test/assurancemutation attacks nine
+   fields -- evidence level, validator identity, validator
+   independence, timestamp, signature, claim state, qualification
+   state, release scope, control mapping. If you can find a tenth that
+   is load-bearing and unchecked, the invariant has a hole.
+
+6. THE SOURCE-CLASS LAWFULNESS MODEL.  It is engineering's reading of
+   the constraints, not counsel's, in any jurisdiction. A wrong
+   reading here is not a bug -- it is unlawful processing. (ED-010)
+
+WHAT WOULD COUNT AS PROVING US WRONG
+
+  - a bundle that veriqo-verify passes and should not
+  - a mutation of any assurance record that is accepted
+  - a redacted derivative from which content can be recovered
+  - an instruction inside a document that widens an agent grant
+  - two sources our independence graph calls independent and are not
+  - any surface that emits an assurance state above what the evidence
+    derives
+  - a claim in assurance/claims.json whose disproof path, walked,
+    produces a counterexample
+
+WHAT WE ALREADY KNOW AND HAVE NOT FIXED
+
+Read assurance/debts.json. Eleven items, every one requiring a party
+that is not VERIQO. Finding one of those again is not a finding; the
+value is in what is NOT on that list.
+
+WHAT WOULD NOT BE A USEFUL FINDING
+
+That the system is not production ready. It says so itself, in code,
+on every run, and refuses its own release for nine stated reasons.
+
+REPRODUCTION
+
+  veriqo-verify .                 recomputes everything in this capsule
+  cd source && go test ./...      the whole suite
+  cd source && ./scripts/verify.sh  and the sixteen things it does NOT run
+
+If you find nothing, please tell us what you looked at. A negative
+result with a stated scope is evidence. A negative result without one
+is silence, and we already have plenty of that.
+`
 
 const readme = `VERIQO AUDITOR CAPSULE
 
