@@ -43,6 +43,7 @@ import (
 
 	"veriqo/pkg/api"
 	"veriqo/pkg/assurance/failureclass"
+	"veriqo/pkg/assurance/invariant"
 	"veriqo/pkg/assurance/register"
 	"veriqo/pkg/assurance/selfdoubt"
 	"veriqo/pkg/assurance/state"
@@ -140,11 +141,23 @@ func BuildCapsule(opts Options) (*verification.Builder, error) {
 		commit = "unknown -- the capsule was built outside a git checkout"
 	}
 
-	// The claim is INTERNALLY_ASSURED and not a word more. An assessor
-	// who finds the capsule claims less than it can support will be
-	// pleasantly surprised; the reverse costs the engagement.
-	b, err := verification.NewBuilder("VERIQO", "INTERNALLY_ASSURED", at)
+	// The capsule's claim is DERIVED, not written.
+	//
+	// Hard-coding "INTERNALLY_ASSURED" would be correct today and
+	// would be a latent defect: the day somebody obtains external
+	// evidence, or the day somebody edits this string, the capsule
+	// would assert a level nothing checked. So the claim goes through
+	// the system-wide invariant, which returns the highest state the
+	// register's own evidence supports and cannot return more.
+	claimed, emission, err := deriveClaim(at)
 	if err != nil {
+		return nil, err
+	}
+	b, err := verification.NewBuilder("VERIQO", claimed.String(), at)
+	if err != nil {
+		return nil, err
+	}
+	if err := b.AddJSON("assurance/emission.json", emission); err != nil {
 		return nil, err
 	}
 
@@ -349,6 +362,37 @@ type PolicyRule struct {
 	Name  string `json:"name"`
 	// Condition is deliberately absent: see Note.
 	Note string `json:"note,omitempty"`
+}
+
+// deriveClaim computes what the capsule may claim, from the evidence
+// the assurance register actually holds.
+//
+// The Emission record goes into the capsule alongside the claim, so an
+// assessor can see not only what was claimed but what was ASKED FOR
+// and what the invariant did about it. A capsule that recorded only
+// the final answer would hide the most interesting case: a surface
+// that tried to claim more.
+func deriveClaim(at time.Time) (state.State, invariant.Result, error) {
+	g, err := register.VeriqoGraph()
+	if err != nil {
+		return state.Undefined, invariant.Result{}, err
+	}
+	var ev []state.Evidence
+	for _, c := range g.Claims() {
+		ev = append(ev, c.Evidence...)
+	}
+	// The capsule ASKS for the top of the ladder deliberately. Asking
+	// for what we expect to get would make the invariant untested at
+	// the one place it matters most; asking for the maximum means the
+	// answer is always the evidence's answer.
+	r, err := invariant.Emit(invariant.Emission{
+		Surface: invariant.AuditorCapsule, Subject: "VERIQO",
+		Claimed: state.ProductionQualified, At: at,
+	}, register.Implementer, ev)
+	if err != nil {
+		return state.Undefined, invariant.Result{}, err
+	}
+	return r.Emitted, r, nil
 }
 
 func policyRules() map[string]any {

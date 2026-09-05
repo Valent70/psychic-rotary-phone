@@ -24,6 +24,13 @@ var assessedAt = time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
 
 const implementer contract.ID = "veriqo-engineering"
 
+// Implementer is the party whose work every claim in this register
+// describes. It is exported so that anything deriving an assurance
+// state does so against the same party -- Law 11 is a comparison
+// against that party, and two packages comparing against different
+// ones would produce two different answers to the same question.
+const Implementer = implementer
+
 // internalEvidence is the shape every current evidence record takes,
 // because every one of them is VERIQO's own work.
 func internalEvidence(id, summary, scope string) state.Evidence {

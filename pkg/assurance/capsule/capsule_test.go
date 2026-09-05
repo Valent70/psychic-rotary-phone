@@ -301,3 +301,48 @@ func mustTime(t *testing.T) time.Time {
 	t.Helper()
 	return register.AssessedAt()
 }
+
+// TestTheCapsuleClaimIsDerivedNotWritten.
+//
+// Hard-coding the claim would be correct today and a latent defect:
+// the day somebody edits the string, or obtains external evidence, the
+// capsule would assert a level nothing checked.
+func TestTheCapsuleClaimIsDerivedNotWritten(t *testing.T) {
+	b, _ := built(t)
+	raw, ok := b.File("assurance/emission.json")
+	if !ok {
+		t.Fatal("the capsule does not record how its claim was derived")
+	}
+	var r struct {
+		Emission struct {
+			Surface string `json:"surface"`
+			Claimed string `json:"claimed"`
+		} `json:"emission"`
+		Derived string `json:"derived"`
+		Emitted string `json:"emitted"`
+		Verdict string `json:"verdict"`
+	}
+	if err := json.Unmarshal(raw, &r); err != nil {
+		t.Fatal(err)
+	}
+	// The capsule asks for the top of the ladder deliberately, so the
+	// invariant is exercised at the one place it matters most.
+	if r.Emission.Claimed != "PRODUCTION_QUALIFIED" {
+		t.Fatalf("the capsule asked for %s; asking for what we expect to get leaves the "+
+			"invariant untested here", r.Emission.Claimed)
+	}
+	if r.Verdict != "QUALIFICATION_CLAIM_INVALID" {
+		t.Fatalf("verdict = %s", r.Verdict)
+	}
+	if r.Emitted != "INTERNALLY_ASSURED" || r.Derived != "INTERNALLY_ASSURED" {
+		t.Fatalf("emitted %s, derived %s", r.Emitted, r.Derived)
+	}
+	if r.Emission.Surface != "AUDITOR_CAPSULE" {
+		t.Fatalf("surface = %s", r.Emission.Surface)
+	}
+	// And the manifest carries what the invariant returned, not what
+	// was asked for.
+	if got := b.Manifest().ClaimedQualification; got != r.Emitted {
+		t.Fatalf("the manifest claims %s and the invariant emitted %s", got, r.Emitted)
+	}
+}
