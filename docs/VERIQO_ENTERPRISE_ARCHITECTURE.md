@@ -3,7 +3,7 @@
 ## Evidence-Qualified Intelligence OS — Enterprise Architecture and Assurance Report
 
 **Repository:** `veriqo` (Go 1.24.7) · **Branch:** `claude/veriqo-enterprise-architecture-7j56b9`  
-**Report date:** 5 September 2026 · **Round 4** (supersedes Rounds 1–3)
+**Report date:** 5 September 2026 · **Round 5** (supersedes Rounds 1–4)
 
 **Status: SPECIFICATIONALLY IMPLEMENTED. NOT PRODUCTION QUALIFIED.**
 
@@ -13,7 +13,212 @@ is not VERIQO. Nothing in the assurance register is above `INTERNALLY_ASSURED`.
 
 ---
 
-## 0. What changed in Round 4
+## 0. What changed in Round 5
+
+The Round 5 audit made six findings. None was a missing feature; all six were places
+where the honest machinery still permitted a dishonest reading.
+
+| # | Finding | The failure it names |
+|---|---|---|
+| 1 | **The causal chain is not explicit** | `observation → interpretation → hypothesis → assertion → decision` collapsed into one word, "finding" |
+| 2 | **Blockers are not a schedule** | "needs an independent assessor" cannot be bought; a line item with a validator, a deliverable, a dependency, a lead time and a cost class can |
+| 3 | **Three registers, one missing** | Engineering and external qualification had boards; the epistemic dimension — the actual product — had none |
+| 4 | **Challengeability is documentary** | `CHALLENGE.txt` invited attack and gave the attacker nothing to run |
+| 5 | **Mutation testing reads as proof** | It is evidence of robustness under a mutation operator set; it is not proof that no defect exists |
+| 6 | **Four engines, drawn not enforced** | `OBSERVE / ARBITRATE / QUALIFY → DECIDE` was a diagram, and a diagram cannot be violated |
+
+### 1. The epistemic ladder — `pkg/epistemic/ladder`
+
+The chain is now five typed rungs, and each one may only rest on specific rungs
+below it:
+
+```
+OBSERVATION   rests on nothing. It is where evidence enters, and it
+              carries who recorded it and which evidence version.
+INFERENCE     rests on OBSERVATION or INFERENCE, and names its method.
+HYPOTHESIS    rests on anything up to HYPOTHESIS, and must name at
+              least one competing alternative and a discriminator.
+ASSERTION     rests only on HYPOTHESIS, and names who stands behind it.
+DECISION      rests only on ASSERTION — and VERIQO may never record one.
+```
+
+The rules that matter are the refusals:
+
+- **An INFERENCE may not rest on a HYPOTHESIS.** Doing so launders a guess into a
+  derivation, and every conclusion drawn from it inherits the confidence of the
+  derivation rather than of the guess.
+- **A HYPOTHESIS with no alternatives is an ASSERTION in disguise**, and is refused as
+  one. A hypothesis that competes with nothing was never tested.
+- **VERIQO may not record a DECISION** (`ladder.ErrNotOurs`). It assembles one.
+
+`JudgementDistance(id)` counts the rungs between a statement and the observations
+under it — the number of places confidence compounds. It is not a score and is not
+combined with anything.
+
+Every refusal explains what it prevents rather than restating the rule, because a
+reader who is told the rule argues with the rule.
+
+### 2. The procurement graph — `pkg/readiness`
+
+Round 4's readiness dimensions named *who* was blocking. That is still an answer
+nobody can act on. Round 5 turns the same blockers into fifteen line items, each
+carrying a validator type, the deliverable that party must hand back, what must be
+true before it can start, a lead time and a cost class:
+
+```
+CRITICAL PATH (4 step(s))
+  B-FREEZE -> B-INFRA -> B-SOAK -> B-RELEASE
+```
+
+`StartableNow()` lists what can be begun today; `ByValidator()` groups the work by who
+must be engaged, so one conversation covers several blockers. A test requires every
+blocker to name a validator qualification specific enough to write a purchase order
+against — "an accredited penetration testing firm with cryptographic review capability"
+passes; "a security expert" does not.
+
+This does not make VERIQO closer to production. It makes the remaining distance
+priceable, which is the difference between a gap and a plan.
+
+### 3. Three boards, and the one that was missing — `pkg/assurance/metrics`
+
+The registers are renamed and restructured:
+
+| Board | What it measures | Who can move it |
+|---|---|---|
+| `ENGINEERING_INTEGRITY` | does the code do what it says | VERIQO |
+| `EPISTEMIC_INTEGRITY` | does the system reason honestly | VERIQO |
+| `EXTERNAL_QUALIFICATION` | has anybody outside checked | **nobody inside VERIQO** |
+
+The middle board did not exist, which meant the property VERIQO actually sells —
+disciplined reasoning under uncertainty — was measured nowhere. It now carries eight
+measures: refusal coverage, contradiction retention, unparseable-not-absent handling,
+ladder conformance, alternative-hypothesis density, and so on.
+
+The third board is **empty**, and the panel says so in those words rather than
+rendering it as zero. Zero is a measurement; empty is an absence of one, and the
+difference is the whole system.
+
+The boards are never summed. `SelfProducible()` returns false for exactly one of
+them, and a test pins which.
+
+### 4. Executable challengeability — `pkg/assurance/capsule`
+
+`CHALLENGE.txt` invited attack. An auditor who accepted the invitation had to invent
+their own attacks, which meant most of them would not.
+
+The capsule now ships `challenge/kit.txt`, a protocol with five phases — RUN, VERIFY,
+ATTACK, COMPARE, REPORT — and three things stated **in advance**:
+
+- **six expected outputs** (X-01…X-06), so a run that differs is a finding rather than
+  a discussion;
+- **seven negative cases** (N-01…N-07) — a truncated bundle, an edited claimed
+  qualification, a re-signed passport — each with the exact refusal the system must
+  produce;
+- **seven known failure modes** (K-01…K-07) that are wrong and **not fixed**, published
+  so that finding one is not presented as a discovery.
+
+And the sentence that makes the kit honest: a negative result means *these attacks did
+not succeed under these conditions*. It does not mean the system is secure.
+
+### 5. The mutation suite says what it does not cover
+
+`test/assurancemutation` now states, as a test rather than a comment, that surviving
+its mutations is evidence of robustness under a specific operator set and is **not**
+proof that no defect exists. The operators it does not apply — different defaults,
+different migration state, different database state, different deployment
+configuration — are named.
+
+A suite that reported only its kills would be the artefact this system exists to
+refuse.
+
+### 6. The four engines, made refusable — `pkg/engine`
+
+The audit's own diagram:
+
+```
+                     VERIQO
+                        |
+       +----------------+----------------+
+       |                |                |
+    OBSERVE         ARBITRATE         QUALIFY
+       |                |                |
+       +----------------+----------------+
+                        |
+                     DECIDE
+                        |
+                DECISION PASSPORT
+                        |
+              +---------+---------+
+           REPLAY              CHALLENGE
+```
+
+It was right, and it was a drawing. `pkg/engine` makes each separation refusable, and
+each refusal names the failure it prevents:
+
+- **OBSERVE may not rank.** An observation engine that picks the right reading
+  destroys the losing reading before anybody sees it.
+- **ARBITRATE may not grade its sources.** Merged with QUALIFY, a strong argument from
+  a weak source outranks a weak argument from a strong one, and nothing says so.
+- **QUALIFY may not fetch.** An engine that may collect what it needs will collect what
+  confirms the grade it has already formed.
+- **DECIDE may not be closed by VERIQO.**
+
+ARBITRATE and QUALIFY are **siblings, not a sequence**. Ordering them either way lets
+one see the other's answer before forming its own, and both directions are a way of
+grading the conclusion you wanted. A test runs the passage in both orders and requires
+both to work.
+
+Two refusals are not in the diagram and should be:
+
+- **An engine may not be re-run in place.** A second ARBITRATE that silently replaced
+  the first would let an unwelcome result be re-run until it came out differently,
+  with no trace that it ever came out the other way.
+- **A stage that ran and produced nothing is not a stage that did not run.** The first
+  is a finding about the evidence; the second is a hole in the process. A type that
+  rendered them alike would present the hole as a finding.
+
+`Seal()` requires a replay manifest **and** a disproof route. The last row of the
+diagram is a condition on the passport existing, not a feature to be added later: a
+decision that cannot be re-run and cannot be shown wrong is a document with a
+signature on it.
+
+`pkg/engine` and `pkg/epistemic/ladder` state the same rule at two scales. The ladder
+refuses a DECISION rung recorded by VERIQO for one chain of reasoning; `pkg/engine`
+refuses a DECIDE stage closed by any principal whose *kind* is automated, for the
+system. Neither depends on the other, which is deliberate: the rule holds twice.
+
+### 7. Every package now carries its own tests
+
+A sweep found four packages with no direct test file — covered only incidentally,
+through callers, so a defect in them surfaced somewhere else or not at all.
+
+- **`pkg/entity`** — `Identifier.Matches` is the silent-merge site. MMSI is reassigned
+  on reflagging, so two vessels eight years apart carry one number, and a match that
+  ignores the validity interval fuses them permanently and unrecoverably. The tests pin
+  the temporal-overlap requirement and the half-open interval semantics.
+- **`pkg/evidence/redaction/worker`** — direct tests of the refusals rather than the
+  happy path, plus the property that verification searches the *inspectable view*
+  rather than the raw compressed bytes.
+- **`cmd/veriqoctl`** — the report table and the print order were locals inside
+  `main()`, so nothing could check that they agree. A name in one and not the other
+  made `veriqoctl all` call a nil function, and that had already happened once. They
+  are now package-level and held together by a test.
+- **`cmd/veriqo-verify`** — its two loaders are the whole of its out-of-band trust
+  input. An **empty key file is refused**, because loading it silently would fall back
+  to the bundle's own keys while the operator believes they checked authenticity. An
+  **empty revocation list is not refused**, because "I looked and nothing is revoked" is
+  a finding, not an absence. An **unparseable revocation list is refused** rather than
+  read as empty — that is `UNPARSEABLE ≠ ABSENT`, committed by the verifier itself.
+
+### What Round 5 did not change
+
+The status. Twenty gates still block release. Nothing is above `INTERNALLY_ASSURED`.
+No party outside VERIQO has read any claim in this repository. Round 5 made the system
+harder to misread; it did not make it qualified, and no amount of Go will.
+
+---
+
+## 0a. What changed in Round 4
 
 The Round 3 audit was titled *Epistemic Firewall*, and it named the deepest
 principle in the system so far — plus five ways the honest machinery could still
@@ -963,7 +1168,7 @@ examined, attacked, validated or corroborated any part of this system.*
 ## 15. Verification
 
 ```
-./scripts/verify.sh    # 31 passed, 0 failed, 16 explicitly NOT run
+./scripts/verify.sh    # 37 passed, 0 failed, 16 explicitly NOT run
 ```
 
 The honesty checks fail the build if the system starts overstating itself:
@@ -974,13 +1179,17 @@ The honesty checks fail the build if the system starts overstating itself:
 - **every mandatory gate rests on VERIQO alone**
 - coverage carries the word `ESTIMATE`
 - readiness offers no aggregate figure
-- both external readiness dimensions are `NOT_STARTED`
+- **every readiness status names its blocking party**, and nothing remaining is movable by the builder alone
 - every evidence debt has an owner *and* a risk
 - **`veriqo-verify` passes every step on a freshly built capsule** — and fails the build
   if any step is unverifiable
 - **capsule verification is not platform qualification** — the scope statement must appear
 - **no overclaim check is described above its level**, and the suite does not reach H5
-- **the three metric registers are not combined**, and the empty one is called out
+- **the three boards are not combined**, and the empty one is called out
+- **the four engines are separated** — DECIDE is closed by a human principal only
+- **a decision that cannot be re-run or disproved is refused** by `Seal()`
+- **the epistemic ladder separates seeing from concluding**
+- **the procurement graph names a critical path**
 
 Sixteen things it explicitly does **not** run, each tied to a gate or a debt — including
 `independent canonicaliser` (ED-011), `external anchor check` (ED-003), and `independent
