@@ -11,14 +11,14 @@ import (
 // package, so the absence of an aggregate is asserted rather than
 // assumed.
 func TestThereIsNoWayToCombineTheRegisters(t *testing.T) {
-	sv, _ := Software()
-	aq, _ := Assurance()
-	pe, _ := Production()
+	sv, _ := Engineering()
+	aq, _ := Epistemic()
+	pe, _ := External()
 
 	// A measure cannot cross registers.
 	m := sv.Measures()[0]
-	m.Register = AssuranceQualification
-	if _, err := New(SoftwareVerification, m); !errors.Is(err, ErrWrongRegister) {
+	m.Register = EpistemicIntegrity
+	if _, err := New(EngineeringIntegrity, m); !errors.Is(err, ErrWrongRegister) {
 		t.Fatalf("a measure from another register was accepted: %v", err)
 	}
 
@@ -33,21 +33,17 @@ func TestThereIsNoWayToCombineTheRegisters(t *testing.T) {
 	}
 }
 
-// TestTheTwoRegistersThatMatterMostAreEmptyAndSaySo.
-func TestTheTwoRegistersThatMatterMostAreEmptyAndSaySo(t *testing.T) {
-	aq, err := Assurance()
+// TestTheExternalBoardIsEmptyAndSaysSo.
+func TestTheExternalBoardIsEmptyAndSaysSo(t *testing.T) {
+	pe, err := External()
 	if err != nil {
 		t.Fatal(err)
 	}
-	pe, err := Production()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !aq.Empty() || !pe.Empty() {
+	if !pe.Empty() {
 		t.Fatal("a register that should be empty has entries; if that is now true, the " +
 			"entries must name who produced them and this test changed deliberately")
 	}
-	for _, s := range []*Set{aq, pe} {
+	for _, s := range []*Set{pe} {
 		if !strings.Contains(s.Report(), "EMPTY. Nothing in this register has been") {
 			t.Fatalf("%s does not state its emptiness plainly", s.Register())
 		}
@@ -57,20 +53,20 @@ func TestTheTwoRegistersThatMatterMostAreEmptyAndSaySo(t *testing.T) {
 	}
 }
 
-// TestAnEmptyAssuranceRegisterIsCalledOutInThePanel.
+// TestAnEmptyExternalBoardIsCalledOutInThePanel.
 //
 // A reader who takes a full software-verification section as
 // reassurance has made the exact error the separation prevents, and
 // the panel must say so rather than leaving them to notice.
-func TestAnEmptyAssuranceRegisterIsCalledOutInThePanel(t *testing.T) {
+func TestAnEmptyExternalBoardIsCalledOutInThePanel(t *testing.T) {
 	out, err := VeriqoPanel()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"The assurance register is EMPTY",
-		"No quantity of software",
-		"exact error this separation prevents",
+		"The EXTERNAL QUALIFICATION board is EMPTY",
+		"No quantity of",
+		"exact error this\nseparation prevents",
 		"no total below",
 	} {
 		if !strings.Contains(out, want) {
@@ -85,7 +81,7 @@ func TestAnEmptyAssuranceRegisterIsCalledOutInThePanel(t *testing.T) {
 // becomes a quality signal, the cheapest way to improve quality is to
 // write tests that assert what the code already does.
 func TestTheTestCountCarriesTheInflationWarning(t *testing.T) {
-	sv, err := Software()
+	sv, err := Engineering()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +102,7 @@ func TestTheTestCountCarriesTheInflationWarning(t *testing.T) {
 
 // TestEveryMeasureStatesWhatItDoesNotShow.
 func TestEveryMeasureStatesWhatItDoesNotShow(t *testing.T) {
-	sv, _ := Software()
+	sv, _ := Engineering()
 	for _, m := range sv.Measures() {
 		if err := m.Validate(); err != nil {
 			t.Fatalf("%s: %v", m.Name, err)
@@ -117,7 +113,7 @@ func TestEveryMeasureStatesWhatItDoesNotShow(t *testing.T) {
 	}
 	// A measure with no caveat is refused, so the property above
 	// cannot be satisfied by omission.
-	bad := Measure{Register: SoftwareVerification, Name: "x", Value: "1", Basis: "b"}
+	bad := Measure{Register: EngineeringIntegrity, Name: "x", Value: "1", Basis: "b"}
 	if err := bad.Validate(); !errors.Is(err, ErrNoMeasure) {
 		t.Fatalf("a measure with no caveat validated: %v", err)
 	}
@@ -128,7 +124,7 @@ func TestEveryMeasureStatesWhatItDoesNotShow(t *testing.T) {
 // Forcing "none", "not run" and "never attempted" into a float would
 // turn three honest answers into the same misleading one.
 func TestValuesAreTextSoThatNeverAttemptedIsNotZero(t *testing.T) {
-	sv, _ := Software()
+	sv, _ := Engineering()
 	var nonNumeric int
 	for _, m := range sv.Measures() {
 		if _, err := strconv.Atoi(m.Value); err != nil {
@@ -141,11 +137,13 @@ func TestValuesAreTextSoThatNeverAttemptedIsNotZero(t *testing.T) {
 	}
 }
 
-// TestOnlySoftwareVerificationIsSelfProducible. That asymmetry is why
-// the three must not be summed.
-func TestOnlySoftwareVerificationIsSelfProducible(t *testing.T) {
+// TestOnlyTheExternalBoardIsBeyondTheBuilder. That asymmetry is why
+// the three must not be summed: an aggregate would let the two the
+// builder can move hide the one it cannot, which is precisely the one
+// a customer is asking about.
+func TestOnlyTheExternalBoardIsBeyondTheBuilder(t *testing.T) {
 	for _, r := range Registers() {
-		want := r == SoftwareVerification
+		want := r != ExternalQualification
 		if r.SelfProducible() != want {
 			t.Fatalf("%s.SelfProducible() = %v", r, r.SelfProducible())
 		}
@@ -155,5 +153,58 @@ func TestOnlySoftwareVerificationIsSelfProducible(t *testing.T) {
 	}
 	if len(Registers()) != 3 {
 		t.Fatalf("%d registers", len(Registers()))
+	}
+}
+
+// TestTheEpistemicBoardExistsAndIsNotASubstituteForTheExternalOne.
+//
+// It is the board most systems do not have, and it is the one most
+// easily mistaken for the third: reasoning honestly about what you do
+// not know is not the same as somebody else confirming you were right.
+func TestTheEpistemicBoardExistsAndIsNotASubstituteForTheExternalOne(t *testing.T) {
+	ep, err := Epistemic()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ep.Empty() {
+		t.Fatal("the epistemic board is empty; it is the one VERIQO is actually about")
+	}
+	want := []string{"unknown handling", "source independence", "contradiction handling",
+		"evidence provenance", "hypothesis separation", "decision traceability",
+		"challengeability"}
+	have := map[string]bool{}
+	for _, m := range ep.Measures() {
+		have[m.Name] = true
+	}
+	for _, w := range want {
+		if !have[w] {
+			t.Fatalf("the epistemic board omits %q", w)
+		}
+	}
+	// Every entry must state what it does NOT establish, or the board
+	// becomes a list of strengths.
+	for _, m := range ep.Measures() {
+		if len(strings.Fields(m.Caveat)) < 6 {
+			t.Fatalf("%s has a caveat too short to limit it: %q", m.Name, m.Caveat)
+		}
+	}
+	// And the challengeability entry must admit nobody has accepted.
+	for _, m := range ep.Measures() {
+		if m.Name != "challengeability" {
+			continue
+		}
+		if !strings.Contains(m.Caveat, "nobody outside has run it") {
+			t.Fatalf("challengeability does not admit that no outsider has run it: %q",
+				m.Caveat)
+		}
+	}
+	// The panel must say the middle board is not the third.
+	out, err := VeriqoPanel()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "not the same as somebody else confirming you were right") {
+		t.Fatalf("the panel lets epistemic integrity stand in for external qualification:\n%s",
+			out)
 	}
 }

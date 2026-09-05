@@ -64,6 +64,16 @@ func (b *Builder) Add(path string, content []byte) error {
 	return nil
 }
 
+// Files returns a copy of what the builder holds, so a caller can
+// compute digests over the bundle's contents before it is written.
+func (b *Builder) Files() map[string][]byte {
+	out := make(map[string][]byte, len(b.files))
+	for k, v := range b.files {
+		out[k] = append([]byte(nil), v...)
+	}
+	return out
+}
+
 // AddJSON marshals a value into the bundle.
 func (b *Builder) AddJSON(path string, v any) error {
 	raw, err := json.MarshalIndent(v, "", "  ")

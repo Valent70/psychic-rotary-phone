@@ -30,6 +30,7 @@ import (
 	"veriqo/pkg/contract"
 	"veriqo/pkg/domain"
 	"veriqo/pkg/epistemic"
+	"veriqo/pkg/epistemic/ladder"
 	"veriqo/pkg/evidence/redaction/corpus"
 	"veriqo/pkg/gates"
 	"veriqo/pkg/ontology"
@@ -42,6 +43,7 @@ import (
 const usage = `veriqoctl -- report what VERIQO is
 
   firewall     the four epistemic inequalities and VERIQO's own states
+  ladder       what was seen, separated from what it was taken to mean
   metrics      three registers that are deliberately never combined
   honesty      what each overclaim check can and cannot catch (H1-H5)
   assurance    the master assurance graph: gate -> control -> claim ->
@@ -93,6 +95,7 @@ func main() {
 		"assurance":   assuranceReport,
 		"metrics":     metricsReport,
 		"firewall":    firewallReport,
+		"ladder":      ladderReport,
 		"honesty":     honestyReport,
 		"readiness":   readinessReport,
 		"procurement": procurementReport,
@@ -106,7 +109,7 @@ func main() {
 		"claims":      claimsReport,
 		"api":         apiReport,
 	}
-	order := []string{"readiness", "procurement", "firewall", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
+	order := []string{"readiness", "procurement", "firewall", "ladder", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
 		"ontology", "templates", "failures", "claims", "api"}
 
 	var run []string
@@ -149,6 +152,43 @@ func assuranceReport() (string, error) {
 }
 
 func metricsReport() (string, error) { return metrics.VeriqoPanel() }
+
+// ladderReport demonstrates the rungs on the audit's own three
+// sentences, because the distinction is easier to see than to state.
+func ladderReport() (string, error) {
+	at := register.AssessedAt()
+	c, err := ladder.NewChain(
+		ladder.Statement{ID: "st:obs-1", Kind: ladder.Observation,
+			Text:     "the vessel reported no position for six hours while at 1.00N 103.80E",
+			Recorder: "ais-network-a", EvidenceRefs: []string{"evidenceversion:ais-1"},
+			State: epistemic.Present, At: at},
+		ladder.Statement{ID: "st:obs-2", Kind: ladder.Observation,
+			Text:     "reported draught rose from 7.1 m to 13.4 m across that window",
+			Recorder: "ais-network-a", EvidenceRefs: []string{"evidenceversion:ais-2"},
+			State: epistemic.Present, At: at},
+		ladder.Statement{ID: "st:inf-1", Kind: ladder.Inference,
+			Text:    "the two reports are 3.1 NM apart",
+			RestsOn: []contract.ID{"st:obs-1", "st:obs-2"},
+			Method:  "haversine over the reported positions", At: at},
+		ladder.Statement{ID: "st:hyp-1", Kind: ladder.Hypothesis,
+			Text:    "the vessel loaded cargo during the reporting gap",
+			RestsOn: []contract.ID{"st:obs-1", "st:obs-2"},
+			Alternatives: []string{
+				"ballast was taken on and the earlier draught was stale",
+				"both draught values are data-entry artefacts",
+			},
+			Discriminator: "the terminal's berth and crane records for the window",
+			State:         epistemic.Present, At: at},
+		ladder.Statement{ID: "st:asr-1", Kind: ladder.Assertion,
+			Text:         "on the evidence available, cargo was loaded during the gap",
+			RestsOn:      []contract.ID{"st:hyp-1"},
+			StandsBehind: "human:analyst-1", At: at},
+	)
+	if err != nil {
+		return "", err
+	}
+	return c.Report(), nil
+}
 
 func procurementReport() (string, error) {
 	p, err := readiness.VeriqoPlan()

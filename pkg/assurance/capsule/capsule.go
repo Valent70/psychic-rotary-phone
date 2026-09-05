@@ -358,6 +358,19 @@ func BuildCapsule(opts Options) (*verification.Builder, error) {
 		return nil, err
 	}
 
+	// --- the runnable half of the challenge ---------------------------
+	//
+	// It goes in last so that InputDigests covers everything already
+	// added: an assessor can then tell whether they are running the
+	// files we described.
+	k := VeriqoChallengeKit()
+	if err := b.Add("challenge/kit.txt", []byte(k.Render())); err != nil {
+		return nil, err
+	}
+	if err := addChallengeKit(b, b.Files()); err != nil {
+		return nil, err
+	}
+
 	return b, nil
 }
 

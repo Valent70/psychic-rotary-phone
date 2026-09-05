@@ -22,22 +22,31 @@
 // type system enforces it: there is no function that takes two
 // registers, and no aggregate of any kind.
 //
-//	SOFTWARE VERIFICATION   tests, coverage, race, vet, fuzz, mutation
-//	                        -> what the builder can establish alone
+//	ENGINEERING INTEGRITY   tests, coverage, race, static analysis,
+//	                        mutation, determinism, replay
+//	                        -> does the code do what its authors meant
 //
-//	ASSURANCE QUALIFICATION external evidence, independent validation,
-//	                        real corpus, operational history, legal
-//	                        review
-//	                        -> what only somebody else can establish
+//	EPISTEMIC INTEGRITY     unknown handling, source independence,
+//	                        contradiction handling, evidence
+//	                        provenance, hypothesis separation,
+//	                        decision traceability, challengeability
+//	                        -> does the system reason honestly
 //
-//	PRODUCTION EVIDENCE     uptime, incidents, recovery, rotation,
-//	                        failover, access review
-//	                        -> what only running the thing establishes
+//	EXTERNAL QUALIFICATION  security, crypto, legal, data rights,
+//	                        production, infrastructure, independent
+//	                        assessment, real corpus, real customers,
+//	                        operational history
+//	                        -> has anybody outside confirmed any of it
 //
-// The registers do not compensate for one another in either direction.
-// A perfect software-verification register says nothing about the
-// other two, and an empty assurance register is not offset by any
-// amount of testing.
+// The middle board is the one most systems do not have, and it is the
+// one VERIQO is actually about. Without it, "we have 900 tests" stands
+// in for "we handle unknowns correctly", and those are unrelated
+// claims: a system can be impeccably engineered and epistemically
+// dishonest, and most are.
+//
+// The registers do not compensate for one another in any direction. A
+// perfect engineering board says nothing about the other two, and an
+// empty external board is not offset by any amount of testing.
 package metrics
 
 import (
@@ -58,13 +67,17 @@ var (
 type Register string
 
 const (
-	SoftwareVerification   Register = "SOFTWARE_VERIFICATION"
-	AssuranceQualification Register = "ASSURANCE_QUALIFICATION"
-	ProductionEvidence     Register = "PRODUCTION_EVIDENCE"
+	// EngineeringIntegrity: does the code do what its authors meant?
+	EngineeringIntegrity Register = "ENGINEERING_INTEGRITY"
+	// EpistemicIntegrity: does the system reason honestly? This is the
+	// board most systems do not have.
+	EpistemicIntegrity Register = "EPISTEMIC_INTEGRITY"
+	// ExternalQualification: has anybody outside confirmed any of it?
+	ExternalQualification Register = "EXTERNAL_QUALIFICATION"
 )
 
 func Registers() []Register {
-	return []Register{SoftwareVerification, AssuranceQualification, ProductionEvidence}
+	return []Register{EngineeringIntegrity, EpistemicIntegrity, ExternalQualification}
 }
 
 func (r Register) Valid() bool {
@@ -79,28 +92,29 @@ func (r Register) Valid() bool {
 // SelfProducible reports whether the builder can move this register
 // alone.
 //
-// Only the first. That asymmetry is why the three must not be summed:
-// two of them cannot be improved by working harder, and an aggregate
-// would let the one that can be, hide the two that cannot.
-func (r Register) SelfProducible() bool { return r == SoftwareVerification }
+// The first two: yes. The third: never. That asymmetry is why they
+// must not be summed -- an aggregate would let the two the builder can
+// move hide the one it cannot, which is precisely the one a customer
+// is asking about.
+func (r Register) SelfProducible() bool { return r != ExternalQualification }
 
 // WhatItEstablishes states, in a sentence, the limit of what this
 // register can show. It is printed with every report, because the
 // limit is the part a reader forgets.
 func (r Register) WhatItEstablishes() string {
 	switch r {
-	case SoftwareVerification:
+	case EngineeringIntegrity:
 		return "that the code does what its authors intended. It says nothing about " +
 			"whether the intention was right, and nothing about behaviour outside the " +
 			"cases its authors imagined"
-	case AssuranceQualification:
-		return "that somebody other than the builder examined a control and said what " +
-			"they found. It is the only register whose entries cannot be produced by " +
-			"working harder"
-	case ProductionEvidence:
-		return "that the system behaved a certain way while running, for a stated " +
-			"period, under stated load. It is the only register that can distinguish a " +
-			"design that works from one that has not yet been tried"
+	case EpistemicIntegrity:
+		return "that the system distinguishes what it knows from what it assumes, and " +
+			"refuses to close that gap on its own. It is the board a system can pass " +
+			"while being badly engineered, and fail while being impeccably engineered"
+	case ExternalQualification:
+		return "that somebody other than the builder examined this and said what they " +
+			"found, or that it ran in production and behaved a certain way. It is the " +
+			"only board whose entries cannot be produced by working harder"
 	}
 	return ""
 }
@@ -218,7 +232,7 @@ func Panel(sv, aq, pe *Set) (string, error) {
 			"complete picture", ErrCombine)
 	}
 	for want, got := range map[Register]*Set{
-		SoftwareVerification: sv, AssuranceQualification: aq, ProductionEvidence: pe,
+		EngineeringIntegrity: sv, EpistemicIntegrity: aq, ExternalQualification: pe,
 	} {
 		if got.register != want {
 			return "", fmt.Errorf("%w: the %s slot holds a %s register",
@@ -243,12 +257,13 @@ func Panel(sv, aq, pe *Set) (string, error) {
 		b.WriteString(s.Report())
 	}
 
-	if aq.Empty() {
+	if pe.Empty() {
 		b.WriteString("\n" + strings.Repeat("=", 66) + "\n")
-		b.WriteString("The assurance register is EMPTY. No quantity of software\n")
-		b.WriteString("verification compensates for that, because the two registers do\n")
-		b.WriteString("not measure the same thing. A reader who takes the first section\n")
-		b.WriteString("as reassurance has made the exact error this separation prevents.\n")
+		b.WriteString("The EXTERNAL QUALIFICATION board is EMPTY. No quantity of\n")
+		b.WriteString("engineering or epistemic work compensates for that, because the\n")
+		b.WriteString("boards do not measure the same thing. A reader who takes the first\n")
+		b.WriteString("two sections as reassurance has made the exact error this\n")
+		b.WriteString("separation prevents.\n")
 	}
 	return b.String(), nil
 }

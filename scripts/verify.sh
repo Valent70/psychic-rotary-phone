@@ -120,6 +120,17 @@ run "the verifier states what it cannot establish" bash -c '
 run "the capsule invites attack rather than asserting safety" bash -c '
     grep -q "not assembled to show that VERIQO is safe" "$TMPDIR_CAPSULE/CHALLENGE.txt" &&
     grep -q "WHERE WE THINK IT IS WEAKEST" "$TMPDIR_CAPSULE/CHALLENGE.txt"'
+run "the challenge is executable, not documentary" bash -c '
+    k="$TMPDIR_CAPSULE/challenge/kit.txt"
+    grep -q "EXPECTED OUTPUTS -- stated in advance" "$k" &&
+    grep -q "NEGATIVE CASES -- attacks that must be refused" "$k" &&
+    grep -q "KNOWN FAILURE MODES -- wrong, and not fixed" "$k"'
+run "the epistemic ladder separates seeing from concluding" bash -c '
+    go run ./cmd/veriqoctl ladder | grep -q "what was seen, what it was taken to mean"'
+run "the procurement graph names a critical path" bash -c '
+    go run ./cmd/veriqoctl procurement | grep -q "CRITICAL PATH"'
+run "the epistemic integrity board exists" bash -c '
+    go run ./cmd/veriqoctl metrics | grep -q "EPISTEMIC_INTEGRITY"'
 run "capsule verification is not platform qualification" bash -c '
     out=$(go run ./cmd/veriqo-verify "$TMPDIR_CAPSULE" 2>&1)
     printf "%s" "$out" | grep -q "It is NOT a qualification of VERIQO" &&
@@ -138,10 +149,10 @@ run "the levels are grouped, never counted as a fraction" bash -c '
     ! printf "%s" "$out" | grep -qE "[0-9]/[0-9]|[0-9] of [0-9]"'
 run "the epistemic firewall states its four inequalities" bash -c '
     go run ./cmd/veriqoctl firewall | grep -q "unreadable != verified"'
-run "the three metric registers are not combined" bash -c '
+run "the three boards are not combined" bash -c '
     out=$(go run ./cmd/veriqoctl metrics) || exit 1
     printf "%s" "$out" | grep -q "no total below" &&
-    printf "%s" "$out" | grep -q "The assurance register is EMPTY"'
+    printf "%s" "$out" | grep -q "The EXTERNAL QUALIFICATION board is EMPTY"'
 
 # --- What this script did NOT run ---------------------------------------
 #

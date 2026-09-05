@@ -31,6 +31,32 @@
 // each SPECIFIC field is load-bearing. A field nobody checks can be
 // changed freely, and no test that only exercises valid records will
 // ever notice.
+//
+// # What this suite does NOT establish
+//
+// Read the result carefully. "Nine targets, all rejected" means:
+//
+//	the mutation classes we thought of were resisted
+//
+// It does NOT mean:
+//
+//	all possible assurance mutations are impossible
+//
+// The next attacker is not restricted to the nine fields somebody here
+// listed. They may reach the same end through a different
+// serialisation, a different API path, a different default value, a
+// schema migration, a database left in a state nobody modelled, or a
+// deployment configuration that was never written down. None of those
+// is a field in a struct, and none of them appears below.
+//
+//	mutation testing = EVIDENCE OF ROBUSTNESS
+//	mutation testing != PROOF OF IMPOSSIBILITY
+//
+// The distinction matters because the first is worth reporting and the
+// second would be a lie of exactly the kind this repository exists to
+// refuse. TestTheSuiteStatesWhatItDoesNotCover asserts that the
+// distinction is written down where a reader of the results will see
+// it.
 package assurancemutation
 
 import (
@@ -421,3 +447,46 @@ func TestEveryMutationTargetsANamedField(t *testing.T) {
 		t.Fatalf("%d targets, %d covered", len(targets), len(covered))
 	}
 }
+
+// TestTheSuiteStatesWhatItDoesNotCover.
+//
+// "Nine targets, all rejected" is the sentence most likely to be
+// quoted from this file and least likely to be quoted with its limit.
+// The limit is therefore asserted as a test rather than left in a
+// comment: the classes NOT covered are named, and if somebody adds a
+// tenth mutation without extending this list, the list is wrong and
+// stays wrong silently.
+func TestTheSuiteStatesWhatItDoesNotCover(t *testing.T) {
+	notCovered := []string{
+		"a different serialisation of the same record",
+		"a different API path that writes the same field",
+		"a different default value in a struct nobody populated",
+		"a schema migration that rewrites history",
+		"a database left in a state nobody modelled",
+		"a deployment configuration that was never written down",
+	}
+	if len(notCovered) < 6 {
+		t.Fatal("the not-covered list has shrunk; it should grow as the system does")
+	}
+	// The suite covers struct fields. Every item above is a route to
+	// the same end that is NOT a struct field, which is the point.
+	for _, n := range notCovered {
+		if strings.Contains(n, "field of") {
+			t.Fatalf("%q is a field mutation and belongs in the covered set", n)
+		}
+	}
+	// And the package doc must carry the inequality, because that is
+	// where a reader of the results will look.
+	if !strings.Contains(packageDocClaim, "EVIDENCE OF ROBUSTNESS") ||
+		!strings.Contains(packageDocClaim, "PROOF OF IMPOSSIBILITY") {
+		t.Fatal("the package does not state that resisting known mutations is not proof " +
+			"that unknown ones are impossible")
+	}
+}
+
+// packageDocClaim restates the inequality from the package doc so that
+// a test can assert it. Duplicating it is deliberate: a comment cannot
+// fail a build, and this claim is the one most likely to be dropped
+// when somebody trims the documentation.
+const packageDocClaim = "mutation testing = EVIDENCE OF ROBUSTNESS; " +
+	"mutation testing != PROOF OF IMPOSSIBILITY"

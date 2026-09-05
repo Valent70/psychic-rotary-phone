@@ -387,3 +387,124 @@ func TestTheCapsuleInvitesAttackRatherThanAssertingSafety(t *testing.T) {
 			"actually pointing at the weak places")
 	}
 }
+
+// TestChallengeabilityIsExecutableRatherThanDocumentary.
+//
+// "We invite challenge" usually means an assessor receives a PDF, a
+// diagram and a summary of test results, none of which can be run.
+// Their only options are to believe the document or to ask for a
+// demonstration that the assessed party also runs -- which is where
+// they started.
+func TestChallengeabilityIsExecutableRatherThanDocumentary(t *testing.T) {
+	b, _ := built(t)
+	raw, ok := b.File("challenge/kit.json")
+	if !ok {
+		t.Fatal("the capsule carries no executable challenge kit")
+	}
+	var k ChallengeKit
+	if err := json.Unmarshal(raw, &k); err != nil {
+		t.Fatal(err)
+	}
+
+	// RUN -> VERIFY -> ATTACK -> COMPARE -> REPORT
+	if len(k.Protocol) != 5 {
+		t.Fatalf("the protocol has %d steps", len(k.Protocol))
+	}
+	joined := strings.Join(k.Protocol, " ")
+	for _, verb := range []string{"RUN", "VERIFY", "ATTACK", "COMPARE", "REPORT"} {
+		if !strings.Contains(joined, verb) {
+			t.Fatalf("the protocol omits %s", verb)
+		}
+	}
+
+	// Every expectation must be a runnable command with its result
+	// stated in advance: a package that lets the assessor discover
+	// what the program produces cannot be failed.
+	if len(k.Expectations) < 5 {
+		t.Fatalf("only %d expectations", len(k.Expectations))
+	}
+	for _, e := range k.Expectations {
+		if strings.TrimSpace(e.Command) == "" {
+			t.Fatalf("%s has no command", e.ID)
+		}
+		if strings.TrimSpace(e.Expect) == "" {
+			t.Fatalf("%s does not say what to expect, so it cannot fail", e.ID)
+		}
+		if strings.TrimSpace(e.IfThisFails) == "" {
+			t.Fatalf("%s does not say what an unexpected result would mean", e.ID)
+		}
+		if len(e.MustContain) == 0 && len(e.MustNotContain) == 0 {
+			t.Fatalf("%s states nothing checkable", e.ID)
+		}
+	}
+
+	// Negative cases are what make it a test rather than a
+	// demonstration.
+	if len(k.NegativeCases) < 6 {
+		t.Fatalf("only %d negative cases", len(k.NegativeCases))
+	}
+	for _, n := range k.NegativeCases {
+		if strings.TrimSpace(n.MustProduce) == "" {
+			t.Fatalf("%s does not name the refusal it must produce", n.ID)
+		}
+		if strings.Contains(strings.ToLower(n.MustProduce), "an error") &&
+			len(strings.Fields(n.MustProduce)) < 6 {
+			t.Fatalf("%s expects only 'an error', which is not specific enough to fail",
+				n.ID)
+		}
+		if strings.TrimSpace(n.IfItPasses) == "" {
+			t.Fatalf("%s does not write the finding for the assessor in advance", n.ID)
+		}
+	}
+
+	// Known failure modes: the part most organisations will not ship.
+	if len(k.KnownFailureModes) < 5 {
+		t.Fatalf("only %d known failure modes", len(k.KnownFailureModes))
+	}
+	for _, f := range k.KnownFailureModes {
+		if strings.TrimSpace(f.Consequence) == "" || strings.TrimSpace(f.WhyNotFixed) == "" {
+			t.Fatalf("%s does not state its consequence or why it is unfixed", f.ID)
+		}
+	}
+
+	// Input digests must cover the bundle, or an assessor cannot tell
+	// whether they are running what we described.
+	if len(k.InputDigests) < 20 {
+		t.Fatalf("only %d inputs are digested", len(k.InputDigests))
+	}
+	for _, path := range []string{"assurance/claims.json", "ledger/records.json",
+		"passport.json"} {
+		if k.InputDigests[path] == "" {
+			t.Fatalf("no digest for %s", path)
+		}
+	}
+
+	// And the negative-result instruction, which is the result most
+	// likely to be misreported.
+	if !strings.Contains(k.NegativeResultMeaning, "stated scope is evidence") {
+		t.Fatalf("the kit does not say what a negative result is worth: %q",
+			k.NegativeResultMeaning)
+	}
+	if !strings.Contains(k.NegativeResultMeaning, "is NOT on that list") {
+		t.Fatal("the kit does not say that finding a documented weakness is not a finding")
+	}
+}
+
+// TestTheKnownFailureModesIncludeTheMutationSuitesOwnLimit.
+//
+// Resisting known mutations is not proof that unknown ones are
+// impossible, and the capsule is where an assessor will look for that
+// caveat.
+func TestTheKnownFailureModesIncludeTheMutationSuitesOwnLimit(t *testing.T) {
+	k := VeriqoChallengeKit()
+	var found bool
+	for _, f := range k.KnownFailureModes {
+		if strings.Contains(f.Consequence, "not proof that") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the known failure modes do not admit that the mutation suite proves " +
+			"robustness against the classes it thought of, not impossibility")
+	}
+}
