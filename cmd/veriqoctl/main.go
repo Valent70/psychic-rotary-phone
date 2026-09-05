@@ -29,6 +29,7 @@ import (
 	"veriqo/pkg/assurance/selfdoubt"
 	"veriqo/pkg/contract"
 	"veriqo/pkg/domain"
+	"veriqo/pkg/epistemic"
 	"veriqo/pkg/evidence/redaction/corpus"
 	"veriqo/pkg/gates"
 	"veriqo/pkg/ontology"
@@ -40,6 +41,7 @@ import (
 
 const usage = `veriqoctl -- report what VERIQO is
 
+  firewall     the four epistemic inequalities and VERIQO's own states
   metrics      three registers that are deliberately never combined
   honesty      what each overclaim check can and cannot catch (H1-H5)
   assurance    the master assurance graph: gate -> control -> claim ->
@@ -88,6 +90,7 @@ func main() {
 	reports := map[string]func() (string, error){
 		"assurance": assuranceReport,
 		"metrics":   metricsReport,
+		"firewall":  firewallReport,
 		"honesty":   honestyReport,
 		"readiness": readinessReport,
 		"debt":      debtReport,
@@ -100,7 +103,7 @@ func main() {
 		"claims":    claimsReport,
 		"api":       apiReport,
 	}
-	order := []string{"readiness", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
+	order := []string{"readiness", "firewall", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
 		"ontology", "templates", "failures", "claims", "api"}
 
 	var run []string
@@ -143,6 +146,28 @@ func assuranceReport() (string, error) {
 }
 
 func metricsReport() (string, error) { return metrics.VeriqoPanel() }
+
+// firewallReport shows the four inequalities against VERIQO's own
+// evidence position, so the principle is demonstrated rather than
+// merely stated.
+func firewallReport() (string, error) {
+	s := epistemic.Set{Observations: []epistemic.Observation{
+		{Subject: "the code and its tests", State: epistemic.Verified,
+			Value: "built, tested and attacked by the implementer"},
+		{Subject: "the assurance register's evidence", State: epistemic.Present,
+			Value: "internal evidence only"},
+		{Subject: "an independent security assessment", State: epistemic.Absent},
+		{Subject: "a real-world document corpus", State: epistemic.Absent},
+		{Subject: "operational history", State: epistemic.Absent},
+		{Subject: "a legal opinion on restricted source classes", State: epistemic.Unexamined,
+			Why: "no counsel has been engaged in any jurisdiction (ED-010)"},
+		{Subject: "cross-implementation canonicaliser conformance", State: epistemic.Unexamined,
+			Why: "no independent RFC 8785 implementation has been fed the same inputs (ED-011)"},
+		{Subject: "recoverability of redacted derivatives", State: epistemic.Unexamined,
+			Why: "no recovery has ever been attempted, by anyone (ED-004)"},
+	}}
+	return s.Report(), nil
+}
 
 func honestyReport() (string, error) {
 	s, err := honesty.Veriqo()

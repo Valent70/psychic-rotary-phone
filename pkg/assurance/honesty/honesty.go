@@ -309,18 +309,80 @@ func (s *Suite) Missing() []Level {
 	return out
 }
 
-// Report renders the suite.
+// EpistemicSource is who is doing the evaluating.
+//
+// # Why the levels are grouped rather than counted
+//
+// A dashboard showing
+//
+//	H1 [x]  H2 [x]  H3 [x]  H4 [x]  H5 [ ]
+//
+// is read by every human being who sees it as "four of five --
+// nearly certified". That reading is not careless; it is what a
+// five-item checklist MEANS. And it is wrong, because H5 is not the
+// next item on the list.
+//
+// H1 through H4 are all VERIQO evaluating VERIQO. H5 is an
+// INDEPENDENT PARTY evaluating VERIQO. The difference between them is
+// not one more check -- it is a change of who is speaking, and no
+// number of internal checks moves any distance toward it.
+//
+// So the levels are grouped by epistemic source and never counted.
+// There is deliberately no Fraction, no Score, no Percent and no
+// "4/5" anywhere in this package.
+type EpistemicSource string
+
+const (
+	// SelfEvaluated: VERIQO evaluating VERIQO.
+	SelfEvaluated EpistemicSource = "INTERNAL CLAIM SCREENING"
+	// IndependentlyEvaluated: a party that is not VERIQO.
+	IndependentlyEvaluated EpistemicSource = "EXTERNAL CLAIM VALIDATION"
+)
+
+// Source returns who evaluates at this level.
+func (l Level) Source() EpistemicSource {
+	if l == H5 {
+		return IndependentlyEvaluated
+	}
+	return SelfEvaluated
+}
+
+// Group returns the suite's checks split by who does the evaluating.
+func (s *Suite) Group(src EpistemicSource) []Check {
+	var out []Check
+	for _, c := range s.checks {
+		if c.Level.Source() == src {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// Report renders the suite, grouped by epistemic source.
 func (s *Suite) Report() string {
 	var b strings.Builder
-	b.WriteString("HONESTY CHECK LEVELS\n")
+	b.WriteString("OVERCLAIM CHECK LEVELS\n")
 	b.WriteString("  A check that detects overclaim can itself overclaim. These are\n")
 	b.WriteString("  graded so that a weak check cannot be reported as a strong one.\n\n")
-	for _, c := range s.checks {
-		b.WriteString("  " + strings.ReplaceAll(strings.TrimRight(c.Describe(), "\n"),
-			"\n", "\n  ") + "\n\n")
+	b.WriteString("  They are grouped by WHO EVALUATES, not counted. H5 is not the next\n")
+	b.WriteString("  item on a checklist -- it is a change of who is speaking, and no\n")
+	b.WriteString("  number of internal checks moves any distance toward it.\n\n")
+
+	for _, src := range []EpistemicSource{SelfEvaluated, IndependentlyEvaluated} {
+		fmt.Fprintf(&b, "%s\n", src)
+		checks := s.Group(src)
+		if len(checks) == 0 {
+			b.WriteString("  NOT PERFORMED. No check in this group exists.\n\n")
+			continue
+		}
+		for _, c := range checks {
+			b.WriteString("  " + strings.ReplaceAll(strings.TrimRight(c.Describe(), "\n"),
+				"\n", "\n  ") + "\n\n")
+		}
 	}
+
 	h := s.Highest()
-	fmt.Fprintf(&b, "  Highest level reached: %s\n", h)
+	fmt.Fprintf(&b, "  Strongest check performed: %s (%s)\n", h, h.Source())
 	if !h.CatchesADeliberateOverclaim() {
 		b.WriteString("  No check here can catch an author who is trying. H1 to H3 catch\n")
 		b.WriteString("  carelessness, which is worth catching and is a different thing.\n")
@@ -331,6 +393,11 @@ func (s *Suite) Report() string {
 			ns = append(ns, l.String())
 		}
 		fmt.Fprintf(&b, "  Not performed at all: %s\n", strings.Join(ns, ", "))
+	}
+	if len(s.Group(IndependentlyEvaluated)) == 0 {
+		b.WriteString("\n  Everything above is VERIQO evaluating VERIQO. That is the whole\n")
+		b.WriteString("  of the first group and it is the whole of what exists. It is not\n")
+		b.WriteString("  four fifths of anything.\n")
 	}
 	b.WriteString("\n  The count of checks is not the measure. A suite of forty H1 checks\n")
 	b.WriteString("  reaches H1, and reporting an average would let quantity substitute\n")

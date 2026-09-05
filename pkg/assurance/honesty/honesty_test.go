@@ -197,3 +197,75 @@ func TestTheZeroLevelIsNoCheck(t *testing.T) {
 		t.Fatal("no check at all catches a deliberate overclaim")
 	}
 }
+
+// TestTheReportNeverPresentsTheLevelsAsAFraction.
+//
+// "H1 [x] H2 [x] H3 [x] H4 [x] H5 [ ]" is read by every human being
+// as "four of five -- nearly certified". That reading is not careless;
+// it is what a five-item checklist MEANS. And it is wrong.
+func TestTheReportNeverPresentsTheLevelsAsAFraction(t *testing.T) {
+	out := suite(t).Report()
+	for _, forbidden := range []string{"4/5", "4 of 5", "80%", "of 5 ", "/5"} {
+		if strings.Contains(out, forbidden) {
+			t.Fatalf("the report presents the levels as a fraction (%q):\n%s", forbidden, out)
+		}
+	}
+	if regexpDigitSlashDigit(out) {
+		t.Fatalf("the report contains an N/M form:\n%s", out)
+	}
+	// The grouping must be what the reader sees instead.
+	for _, want := range []string{
+		"INTERNAL CLAIM SCREENING",
+		"EXTERNAL CLAIM VALIDATION",
+		"NOT PERFORMED. No check in this group exists.",
+		"It is not\n  four fifths of anything.",
+		"a change of who is speaking",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("the report omits %q:\n%s", want, out)
+		}
+	}
+}
+
+func regexpDigitSlashDigit(s string) bool {
+	for i := 1; i+1 < len(s); i++ {
+		if s[i] == '/' && s[i-1] >= '0' && s[i-1] <= '9' && s[i+1] >= '0' && s[i+1] <= '9' {
+			return true
+		}
+	}
+	return false
+}
+
+// TestH5IsAChangeOfEpistemicSourceNotTheNextCheckbox.
+func TestH5IsAChangeOfEpistemicSourceNotTheNextCheckbox(t *testing.T) {
+	for _, l := range []Level{H1, H2, H3, H4} {
+		if l.Source() != SelfEvaluated {
+			t.Fatalf("%s is not grouped as self-evaluated", l)
+		}
+	}
+	if H5.Source() != IndependentlyEvaluated {
+		t.Fatalf("H5 is grouped as %s", H5.Source())
+	}
+	s := suite(t)
+	if n := len(s.Group(IndependentlyEvaluated)); n != 0 {
+		t.Fatalf("%d externally evaluated checks exist; if that is now true, the party "+
+			"must be named and this test changed deliberately", n)
+	}
+	if len(s.Group(SelfEvaluated)) == 0 {
+		t.Fatal("no self-evaluated checks; the grouping is not exercised")
+	}
+}
+
+// TestThePackageOffersNoScoreOfAnyKind. The absence is the design.
+func TestThePackageOffersNoScoreOfAnyKind(t *testing.T) {
+	s := suite(t)
+	// Highest returns a LEVEL, which is a name, not a number that
+	// invites comparison against a maximum.
+	h := s.Highest()
+	if !h.Valid() {
+		t.Fatal("Highest returned an invalid level")
+	}
+	if strings.Contains(s.Report(), "score") || strings.Contains(s.Report(), "Score") {
+		t.Fatal("the report offers a score")
+	}
+}

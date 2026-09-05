@@ -17,105 +17,146 @@ func profile(t *testing.T) *Profile {
 	return p
 }
 
-// TestThereIsNoAggregateScore. The whole point of the package is the
-// absence, so it is asserted rather than assumed.
-func TestThereIsNoAggregateScore(t *testing.T) {
-	p := profile(t)
-	// Weakest returns a dimension, not a number.
-	d, l := p.Weakest()
-	if !d.Valid() {
-		t.Fatalf("Weakest returned %q", d)
-	}
-	if l != NotStarted {
-		t.Fatalf("the weakest dimension is at %s", l)
-	}
-	if strings.Contains(p.Report(), "%") {
-		t.Fatal("a percentage reached the readiness report")
-	}
-	if !strings.Contains(p.Sentence(), "no single figure is offered") {
-		t.Fatalf("the summary sentence does not say why: %s", p.Sentence())
-	}
-}
-
-// TestADimensionRequiringAnOutsidePartyCannotBeSelfAssessed.
+// TestTheStatusNamesTheBlockingPartyRatherThanAPosition.
 //
-// "We believe we would pass a pentest" is a hope, not an assessment,
-// and a model that recorded it as one would defeat the purpose.
-func TestADimensionRequiringAnOutsidePartyCannotBeSelfAssessed(t *testing.T) {
-	for _, d := range []Dimension{ProductionInfra, ExternalValidation} {
-		a := Assessment{Dimension: d, Level: Substantial, Basis: "we are confident",
-			AssessedBy: "VERIQO engineering", Blockers: []string{"none we can see"}}
-		if err := a.Validate(); !errors.Is(err, ErrSelfAssessed) {
-			t.Fatalf("%s was self-assessed at SUBSTANTIAL: %v", d, err)
-		}
-		// NOT_STARTED is the one honest internal answer.
-		a.Level = NotStarted
-		a.Blockers = nil
-		if err := a.Validate(); err != nil {
-			t.Fatalf("%s at NOT_STARTED was refused: %v", d, err)
-		}
-		// An external assessor may record more.
-		a.Level = High
-		a.External = true
-		a.AssessedBy = "Acme Security"
-		a.Blockers = []string{"the report's scope excluded the anchor"}
-		if err := a.Validate(); err != nil {
-			t.Fatalf("an external assessment was refused: %v", err)
-		}
+// A level invites "how much further"; that is the right question for
+// work the builder can do and the wrong one for everything else,
+// because the answer is not "further" but "somebody else".
+func TestTheStatusNamesTheBlockingPartyRatherThanAPosition(t *testing.T) {
+	want := map[Dimension]Status{
+		Architecture: InternallyAssured, Semantics: InternallyAssured,
+		Implementation: InternallyAssured,
+		Security:       PendingExternal, Cryptography: PendingExternal,
+		Legal:      PendingCounsel,
+		DataRights: PendingPartner,
+		Operations: NotYetProven,
+		Production: NotQualified,
 	}
-}
-
-// TestTheFirstThreeDimensionsAreSelfAssessable. A team can judge its
-// own architecture; refusing that would make the model unusable.
-func TestTheFirstThreeDimensionsAreSelfAssessable(t *testing.T) {
-	want := map[Dimension]bool{Architecture: true, Semantics: true, Implementation: true,
-		ProductionInfra: false, ExternalValidation: false}
+	byDim := map[Dimension]Assessment{}
+	for _, a := range profile(t).All() {
+		byDim[a.Dimension] = a
+	}
 	for d, w := range want {
-		if d.SelfAssessable() != w {
-			t.Fatalf("%s.SelfAssessable() = %v", d, d.SelfAssessable())
+		if byDim[d].Status != w {
+			t.Fatalf("%s is %s, want %s. If a party has now acted, they must be named and "+
+				"this test changed deliberately", d, byDim[d].Status, w)
+		}
+	}
+	if len(Dimensions()) != 9 {
+		t.Fatalf("%d dimensions", len(Dimensions()))
+	}
+}
+
+// TestThereIsNoAggregateScore. The absence is the design.
+func TestThereIsNoAggregateScore(t *testing.T) {
+	r := profile(t).Report()
+	if strings.Contains(r, "%") {
+		t.Fatalf("a percentage reached the readiness report:\n%s", r)
+	}
+	if strings.Contains(strings.ToLower(r), "score") {
+		t.Fatal("the report offers a score")
+	}
+	if !strings.Contains(profile(t).Sentence(), "not more of the same work") {
+		t.Fatalf("the summary does not say why no figure is offered: %s",
+			profile(t).Sentence())
+	}
+}
+
+// TestTheReportAnswersWhoDoWeNeed.
+//
+// This is the readiness answer that is actually useful. A percentage
+// cannot express "the remaining work is a procurement problem".
+func TestTheReportAnswersWhoDoWeNeed(t *testing.T) {
+	p := profile(t)
+	blocked := p.BlockedOn()
+	for _, who := range []string{
+		"an independent assessor", "legal counsel, per jurisdiction",
+		"a commercial partner",
+	} {
+		if len(blocked[who]) == 0 {
+			t.Fatalf("no dimension is blocked on %q", who)
+		}
+	}
+	r := p.Report()
+	if !strings.Contains(r, "WHO WE NEED") {
+		t.Fatalf("the report does not group by blocking party:\n%s", r)
+	}
+	// Security and cryptography are separated because they are
+	// different procurements, and the report must show that.
+	if len(blocked["an independent assessor"]) < 2 {
+		t.Fatal("security and cryptography have collapsed into one row; they are blocked " +
+			"on different specialists")
+	}
+}
+
+// TestADimensionNeedingAnOutsidePartyCannotBeSelfAssessedAsAssured.
+func TestADimensionNeedingAnOutsidePartyCannotBeSelfAssessedAsAssured(t *testing.T) {
+	for _, d := range []Dimension{Security, Cryptography, Legal, DataRights,
+		Operations, Production} {
+		a := Assessment{Dimension: d, Status: InternallyAssured, Basis: "we are confident",
+			AssessedBy: "VERIQO engineering", Needs: []string{"nothing we can see"}}
+		if err := a.Validate(); !errors.Is(err, ErrSelfAssessed) {
+			t.Fatalf("%s was self-assessed as INTERNALLY_ASSURED: %v", d, err)
+		}
+	}
+	// QUALIFIED is unreachable from inside on any dimension.
+	a := Assessment{Dimension: Architecture, Status: Qualified, Basis: "done",
+		AssessedBy: "VERIQO engineering"}
+	if err := a.Validate(); !errors.Is(err, ErrSelfAssessed) {
+		t.Fatalf("the builder recorded QUALIFIED: %v", err)
+	}
+	a.External = true
+	a.AssessedBy = "Acme Security"
+	if err := a.Validate(); err != nil {
+		t.Fatalf("an external QUALIFIED assessment was refused: %v", err)
+	}
+}
+
+// TestAnUnsettledStatusMustNameWhatWouldSettleIt.
+//
+// A status with no stated need is a complaint.
+func TestAnUnsettledStatusMustNameWhatWouldSettleIt(t *testing.T) {
+	a := Assessment{Dimension: Security, Status: PendingExternal,
+		Basis: "waiting", AssessedBy: "VERIQO engineering"}
+	if err := a.Validate(); err == nil {
+		t.Fatal("an unsettled dimension named nothing that would settle it")
+	}
+	for _, x := range profile(t).All() {
+		if x.Status.Settled() {
+			continue
+		}
+		if len(x.Needs) == 0 {
+			t.Fatalf("%s names no need", x.Dimension)
+		}
+		for _, n := range x.Needs {
+			if len(strings.Fields(n)) < 3 {
+				t.Fatalf("%s has a need too short to act on: %q", x.Dimension, n)
+			}
 		}
 	}
 }
 
-// TestEveryDimensionMustBeAssessed. An omitted dimension is one nobody
-// looked at, not one that does not apply -- and omitting it is how the
-// weakest axis disappears from a report.
-func TestEveryDimensionMustBeAssessed(t *testing.T) {
+// TestEveryDimensionIsAssessed. An omitted dimension is one nobody
+// looked at, and omitting it is how the weakest axis disappears.
+func TestEveryDimensionIsAssessed(t *testing.T) {
 	all := profile(t).All()
-	if len(all) != 5 {
-		t.Fatalf("%d dimensions", len(all))
+	if len(all) != 9 {
+		t.Fatalf("%d dimensions assessed", len(all))
 	}
 	if _, err := New(all[0], all[1]); err == nil {
-		t.Fatal("a profile with three dimensions missing was accepted")
+		t.Fatal("a profile with seven dimensions missing was accepted")
 	}
 	if _, err := New(append(all, all[0])...); err == nil {
 		t.Fatal("a dimension assessed twice was accepted")
 	}
 }
 
-// TestAnAssessmentShortOfReadyMustNameItsBlockers.
-func TestAnAssessmentShortOfReadyMustNameItsBlockers(t *testing.T) {
-	a := Assessment{Dimension: Architecture, Level: High, Basis: "it is good",
-		AssessedBy: "VERIQO engineering"}
-	if err := a.Validate(); err == nil {
-		t.Fatal("a dimension short of READY named nothing standing in the way")
-	}
-	a.Blockers = []string{"no outside architect has reviewed it"}
-	if err := a.Validate(); err != nil {
-		t.Fatalf("a blocked assessment was refused: %v", err)
-	}
-	a.Basis = ""
-	if err := a.Validate(); !errors.Is(err, ErrNoBasis) {
-		t.Fatalf("an assessment with no basis validated: %v", err)
-	}
-}
-
-// TestVeriqoIsNotExternallyTouchedAndSaysSo.
-func TestVeriqoIsNotExternallyTouchedAndSaysSo(t *testing.T) {
+// TestNothingIsExternallyAssessedAndTheReportSaysSo.
+func TestNothingIsExternallyAssessedAndTheReportSaysSo(t *testing.T) {
 	p := profile(t)
 	if p.ExternallyTouched() {
-		t.Fatal("a dimension claims an external assessment; if that is now true, the " +
-			"assessor must be named and this test changed deliberately")
+		t.Fatal("a dimension claims an external assessment; the assessor must be named " +
+			"and this test changed deliberately")
 	}
 	if !strings.Contains(p.Report(),
 		"No dimension has been assessed by anybody outside the builder") {
@@ -128,65 +169,44 @@ func TestVeriqoIsNotExternallyTouchedAndSaysSo(t *testing.T) {
 	}
 }
 
-// TestTheTwoExternalDimensionsAreNotStarted. This is the substantive
-// claim the profile makes about VERIQO, and it should fail loudly the
-// moment it changes.
-func TestTheTwoExternalDimensionsAreNotStarted(t *testing.T) {
+// TestNothingRemainingIsMovableByTheBuilderAlone.
+//
+// The substantive claim: every unsettled dimension needs a party. It
+// should fail loudly the moment that changes in either direction.
+func TestNothingRemainingIsMovableByTheBuilderAlone(t *testing.T) {
 	p := profile(t)
-	byDim := map[Dimension]Assessment{}
-	for _, a := range p.All() {
-		byDim[a.Dimension] = a
+	if r := p.SelfReachableRemaining(); len(r) != 0 {
+		t.Fatalf("dimensions still movable by the builder alone: %v", r)
 	}
-	for _, d := range []Dimension{ProductionInfra, ExternalValidation} {
-		if byDim[d].Level != NotStarted {
-			t.Fatalf("%s is at %s", d, byDim[d].Level)
-		}
-	}
-	blocked := p.Blocked()
-	if len(blocked) != 5 {
-		t.Fatalf("%d of 5 dimensions are short of READY", len(blocked))
-	}
-	// Every blocker on the external dimensions cites an evidence debt,
-	// so the readiness model and the register cannot drift apart.
-	for _, d := range []Dimension{ProductionInfra, ExternalValidation} {
-		for _, b := range blocked[d] {
-			if !strings.Contains(b, "ED-") {
-				t.Fatalf("%s blocker %q cites no evidence debt", d, b)
-			}
-		}
+	if !strings.Contains(p.Report(), "Nothing remaining is movable by the builder alone") {
+		t.Fatalf("the report does not say so:\n%s", p.Report())
 	}
 }
 
-// TestTheSummarySentenceIsGeneratedNotWritten. A hand-written summary
-// drifts away from the assessments; a generated one cannot.
-func TestTheSummarySentenceIsGeneratedNotWritten(t *testing.T) {
-	s := profile(t).Sentence()
-	lower := strings.ToLower(s)
-	for _, want := range []string{"architecture high", "implementation substantial",
-		"production infra not started", "external validation not started"} {
-		if !strings.Contains(lower, want) {
-			t.Fatalf("the sentence omits %q: %s", want, s)
+// TestTheStatusVocabularyDistinguishesWaitingFromNotHavingRun.
+//
+// NOT_YET_PROVEN and the PENDING statuses are different situations:
+// one is waiting on a party, the other on infrastructure and time.
+func TestTheStatusVocabularyDistinguishesWaitingFromNotHavingRun(t *testing.T) {
+	if NotYetProven.BlockedOn() == PendingExternal.BlockedOn() {
+		t.Fatal("NOT_YET_PROVEN and PENDING_EXTERNAL name the same blocker")
+	}
+	if !strings.Contains(NotYetProven.BlockedOn(), "not a party") {
+		t.Fatalf("NOT_YET_PROVEN does not say nobody is being waited on: %q",
+			NotYetProven.BlockedOn())
+	}
+	for _, s := range []Status{PendingExternal, PendingCounsel, PendingPartner} {
+		if s.BlockedOn() == "" {
+			t.Fatalf("%s names no party", s)
+		}
+		if s.SelfReachable() {
+			t.Fatalf("%s was marked self-reachable", s)
 		}
 	}
-	if strings.Contains(strings.ToLower(s), "ready for production") {
-		t.Fatalf("the sentence claims production readiness: %s", s)
+	if NotSpecified != "NOT_SPECIFIED" {
+		t.Fatal("the zero-ish status is not NOT_SPECIFIED")
 	}
-}
-
-// TestTheScaleHasNoMidpointToSplit. A five-point numeric scale invites
-// arithmetic; four named states that mean different kinds of thing do
-// not.
-func TestTheScaleHasNoMidpointToSplit(t *testing.T) {
-	if len(Levels()) != 5 {
-		t.Fatalf("%d levels", len(Levels()))
-	}
-	if NotStarted != 0 {
-		t.Fatal("the zero level is not NOT_STARTED; an unpopulated assessment would " +
-			"default to something better than nothing")
-	}
-	for _, l := range Levels() {
-		if !l.Valid() || strings.HasPrefix(l.String(), "Level(") {
-			t.Fatalf("%d has no name", int(l))
-		}
+	if len(Statuses()) != 9 {
+		t.Fatalf("%d statuses", len(Statuses()))
 	}
 }

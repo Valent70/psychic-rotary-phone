@@ -85,9 +85,14 @@ run "every mandatory gate rests on VERIQO alone" bash -c '
     go run ./cmd/veriqoctl assurance | grep -q "20 mandatory gate(s) rest entirely on VERIQO"'
 run "readiness offers no aggregate figure" bash -c '
     ! go run ./cmd/veriqoctl readiness | grep -q "%"'
-run "the two external dimensions are NOT_STARTED" bash -c '
-    n=$(go run ./cmd/veriqoctl readiness | grep -cE "^  (PRODUCTION_INFRA|EXTERNAL_VALIDATION) +NOT_STARTED")
-    [ "$n" -eq 2 ]'
+run "every readiness status names its blocking party" bash -c '
+    out=$(go run ./cmd/veriqoctl readiness) || exit 1
+    printf "%s" "$out" | grep -q "SECURITY         -> PENDING_EXTERNAL" &&
+    printf "%s" "$out" | grep -q "LEGAL            -> PENDING_COUNSEL" &&
+    printf "%s" "$out" | grep -q "DATA_RIGHTS      -> PENDING_PARTNER" &&
+    printf "%s" "$out" | grep -q "PRODUCTION       -> NOT_QUALIFIED"'
+run "nothing remaining is movable by the builder alone" bash -c '
+    go run ./cmd/veriqoctl readiness | grep -q "Nothing remaining is movable by the builder alone"'
 run "every evidence debt has an owner and a risk" bash -c '
     out=$(go run ./cmd/veriqoctl debt) || exit 1
     o=$(printf "%s" "$out" | grep -c "owner:")
@@ -123,6 +128,13 @@ run "no honesty check is described above its level" bash -c '
     go run ./cmd/veriqoctl honesty >/dev/null'
 run "the check suite does not reach H5" bash -c '
     go run ./cmd/veriqoctl honesty | grep -q "Not performed at all: INDEPENDENT_EXTERNAL_REVIEW"'
+run "the levels are grouped, never counted as a fraction" bash -c '
+    out=$(go run ./cmd/veriqoctl honesty) || exit 1
+    printf "%s" "$out" | grep -q "INTERNAL CLAIM SCREENING" &&
+    printf "%s" "$out" | grep -q "EXTERNAL CLAIM VALIDATION" &&
+    ! printf "%s" "$out" | grep -qE "[0-9]/[0-9]|[0-9] of [0-9]"'
+run "the epistemic firewall states its four inequalities" bash -c '
+    go run ./cmd/veriqoctl firewall | grep -q "unreadable != verified"'
 run "the three metric registers are not combined" bash -c '
     out=$(go run ./cmd/veriqoctl metrics) || exit 1
     printf "%s" "$out" | grep -q "no total below" &&
