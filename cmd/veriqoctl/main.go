@@ -29,6 +29,7 @@ import (
 	"veriqo/pkg/assurance/selfdoubt"
 	"veriqo/pkg/contract"
 	"veriqo/pkg/domain"
+	"veriqo/pkg/engine"
 	"veriqo/pkg/epistemic"
 	"veriqo/pkg/epistemic/ladder"
 	"veriqo/pkg/evidence/redaction/corpus"
@@ -42,6 +43,8 @@ import (
 
 const usage = `veriqoctl -- report what VERIQO is
 
+  engines      the four engines, what each may not do, and why DECIDE
+               is not VERIQO's
   firewall     the four epistemic inequalities and VERIQO's own states
   ladder       what was seen, separated from what it was taken to mean
   metrics      three registers that are deliberately never combined
@@ -84,6 +87,7 @@ reads and does not trust the system it is checking.
 var reports = map[string]func() (string, error){
 	"assurance":   assuranceReport,
 	"metrics":     metricsReport,
+	"engines":     enginesReport,
 	"firewall":    firewallReport,
 	"ladder":      ladderReport,
 	"honesty":     honestyReport,
@@ -105,7 +109,7 @@ var reports = map[string]func() (string, error){
 // It leads with readiness and procurement because a reader who stops
 // after the first screen should have been told what is missing and
 // what it costs, not what works.
-var order = []string{"readiness", "procurement", "firewall", "ladder", "metrics",
+var order = []string{"readiness", "procurement", "engines", "firewall", "ladder", "metrics",
 	"honesty", "assurance", "debt", "scorecard", "gates", "corpus",
 	"ontology", "templates", "failures", "claims", "api"}
 
@@ -166,6 +170,11 @@ func assuranceReport() (string, error) {
 }
 
 func metricsReport() (string, error) { return metrics.VeriqoPanel() }
+
+// enginesReport prints the four-engine decomposition and the act each
+// engine is forbidden. The diagram is in pkg/engine's doc comment; what
+// this prints is the part the build checks.
+func enginesReport() (string, error) { return engine.Describe(), nil }
 
 // ladderReport demonstrates the rungs on the audit's own three
 // sentences, because the distinction is easier to see than to state.

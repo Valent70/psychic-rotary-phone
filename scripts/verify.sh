@@ -125,6 +125,13 @@ run "the challenge is executable, not documentary" bash -c '
     grep -q "EXPECTED OUTPUTS -- stated in advance" "$k" &&
     grep -q "NEGATIVE CASES -- attacks that must be refused" "$k" &&
     grep -q "KNOWN FAILURE MODES -- wrong, and not fixed" "$k"'
+run "the four engines are separated" bash -c '
+    out=$(go run ./cmd/veriqoctl engines) || exit 1
+    printf "%s" "$out" | grep -q "DECIDE is not." &&
+    printf "%s" "$out" | grep -q "closed by a human principal only" &&
+    printf "%s" "$out" | grep -q "may not   rank, score or select between readings"'
+run "a decision that cannot be re-run or disproved is refused" bash -c '
+    go test ./pkg/engine/ -run "TestSealRefusesAPassportThatCannotBeReRun|TestVeriqoMayNotCloseTheDecision" -count=1 >/dev/null'
 run "the epistemic ladder separates seeing from concluding" bash -c '
     go run ./cmd/veriqoctl ladder | grep -q "what was seen, what it was taken to mean"'
 run "the procurement graph names a critical path" bash -c '
