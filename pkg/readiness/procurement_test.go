@@ -247,3 +247,114 @@ func TestCostIsABandNotAFigure(t *testing.T) {
 		}
 	}
 }
+
+// --- Round 6: the five battlefields ---
+
+// TestEveryBattlefieldStatesAFailConditionNotJustAPass.
+//
+// A pass condition alone is a target. Without a matching fail
+// condition, a disappointing result gets reinterpreted afterwards as
+// a partial success, and the battlefield establishes nothing.
+func TestEveryBattlefieldStatesAFailConditionNotJustAPass(t *testing.T) {
+	for _, f := range Battlefields() {
+		if len(strings.Fields(f.Pass)) < 8 {
+			t.Errorf("battlefield %d states its pass condition in %d words",
+				f.N, len(strings.Fields(f.Pass)))
+		}
+		if len(strings.Fields(f.Fail)) < 8 {
+			t.Errorf("battlefield %d states no real fail condition, so it is a target "+
+				"rather than a test", f.N)
+		}
+		if strings.EqualFold(f.Pass, f.Fail) {
+			t.Errorf("battlefield %d passes and fails on the same condition", f.N)
+		}
+	}
+}
+
+// TestEveryMeasureNamesItsDenominator.
+//
+// "anomalies raised" is unreadable. Out of how many vessel-days?
+func TestEveryMeasureNamesItsDenominator(t *testing.T) {
+	for _, f := range Battlefields() {
+		if len(f.Measures) == 0 {
+			t.Errorf("battlefield %d measures nothing", f.N)
+		}
+		for _, m := range f.Measures {
+			// A duration has no denominator and must say so, rather
+			// than being silently exempt.
+			bare := strings.Contains(m, "no denominator")
+			if !bare && !strings.Contains(m, "/") && !strings.Contains(m, "per ") &&
+				!strings.Contains(m, "p50") {
+				t.Errorf("battlefield %d measure %q names no denominator", f.N, m)
+			}
+		}
+	}
+}
+
+// TestBattlefieldFourDoesNotPassOnAgreement.
+//
+// The subtlest one. A blind reader who agrees with VERIQO for reasons
+// the passport does not contain has been persuaded rather than
+// informed, and counting that as a pass would reward a document that
+// convinces without explaining.
+func TestBattlefieldFourDoesNotPassOnAgreement(t *testing.T) {
+	var four Battlefield
+	for _, f := range Battlefields() {
+		if f.N == 4 {
+			four = f
+		}
+	}
+	if four.N != 4 {
+		t.Fatal("battlefield 4 is missing")
+	}
+	if !strings.Contains(four.Pass, "NOT the pass condition") {
+		t.Errorf("battlefield 4 may be passed by agreement: %q", four.Pass)
+	}
+	if !strings.Contains(strings.ToLower(four.Fail), "persuad") {
+		t.Errorf("battlefield 4 does not name persuasion as a failure: %q", four.Fail)
+	}
+}
+
+// TestEveryNamedBlockerExists.
+//
+// A battlefield pointing at a blocker that is not on the procurement
+// graph is an intention with an identifier attached.
+func TestEveryNamedBlockerExists(t *testing.T) {
+	p, err := VeriqoPlan()
+	if err != nil {
+		t.Fatal(err)
+	}
+	known := map[string]bool{}
+	for _, b := range p.All() {
+		known[b.ID] = true
+	}
+	for _, f := range Battlefields() {
+		for _, id := range f.Blockers {
+			if !known[id] {
+				t.Errorf("battlefield %d depends on %q, which is not on the procurement "+
+					"graph", f.N, id)
+			}
+		}
+	}
+}
+
+// TestEveryBattlefieldSaysWhyItCannotStartToday.
+func TestEveryBattlefieldSaysWhyItCannotStartToday(t *testing.T) {
+	for _, f := range Battlefields() {
+		if len(strings.Fields(f.WhyNotYet)) < 8 {
+			t.Errorf("battlefield %d does not say what stops it starting", f.N)
+		}
+	}
+}
+
+// TestTheBattlefieldReportIsDeterministicAndFits.
+func TestTheBattlefieldReportIsDeterministicAndFits(t *testing.T) {
+	if BattlefieldReport() != BattlefieldReport() {
+		t.Error("BattlefieldReport() is not deterministic")
+	}
+	for _, line := range strings.Split(BattlefieldReport(), "\n") {
+		if len([]rune(line)) > 78 {
+			t.Errorf("a %d-column line will wrap: %q", len([]rune(line)), line)
+		}
+	}
+}

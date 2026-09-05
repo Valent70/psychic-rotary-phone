@@ -259,7 +259,8 @@ func negatedBefore(upper string, idx int) bool {
 		// the opposite of a claim to be accredited, and a check that
 		// could not tell the two apart would push the system towards
 		// deleting the honest sentence.
-		"NEEDS", "NEED:", "BLOCKED", "REQUIRED", "MUST ", "BUY", "PROCURE", "OWNER:"} {
+		"NEEDS", "NEED:", "BLOCKED", "REQUIRED", "MUST ", "BUY", "PROCURE", "OWNER:",
+		"MOVED BY", "DONE BY", "ENGAGE", "PARTY", "VALIDATOR", "NOT YET", "WAITING"} {
 		if strings.Contains(before, n) {
 			return true
 		}

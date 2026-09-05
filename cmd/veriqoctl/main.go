@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"veriqo/pkg/api"
+	"veriqo/pkg/assurance/boundary"
 	"veriqo/pkg/assurance/capsule"
 	"veriqo/pkg/assurance/failureclass"
 	"veriqo/pkg/assurance/honesty"
@@ -28,12 +29,15 @@ import (
 	"veriqo/pkg/assurance/register"
 	"veriqo/pkg/assurance/selfdoubt"
 	"veriqo/pkg/contract"
+	"veriqo/pkg/dashboard"
 	"veriqo/pkg/domain"
 	"veriqo/pkg/engine"
 	"veriqo/pkg/epistemic"
 	"veriqo/pkg/epistemic/ladder"
 	"veriqo/pkg/evidence/redaction/corpus"
+	"veriqo/pkg/freeze"
 	"veriqo/pkg/gates"
+	"veriqo/pkg/intel/maritime/flagship"
 	"veriqo/pkg/ontology"
 	"veriqo/pkg/policy"
 	"veriqo/pkg/readiness"
@@ -51,6 +55,13 @@ const usage = `veriqoctl -- report what VERIQO is
   honesty      what each overclaim check can and cannot catch (H1-H5)
   assurance    the master assurance graph: gate -> control -> claim ->
                evidence -> validator -> level -> release decision
+  headline     the nine measures that lead, none of which VERIQO can move
+  boundary     where VERIQO stops verifying itself, and why the line is there
+  freeze       what Round 6 built, what it refused, and under whose warrant
+  battlefields the five places VERIQO stops being tested against itself
+  passport     the flagship decision passport -- the document a customer buys
+  triage       one AIS observation and every cause consistent with it
+  copies       five reports, three observations: corroboration that is repetition
   readiness    nine dimensions, each status naming who is blocking it
   procurement  the same blockers as a schedule: who sells it, what they
                must hand back, what must be true first, and the critical path
@@ -85,23 +96,30 @@ reads and does not trust the system it is checking.
 // that is missing from `order` is silently unreachable from `all`.
 // Both have happened. TestEveryReportIsReachable holds them together.
 var reports = map[string]func() (string, error){
-	"assurance":   assuranceReport,
-	"metrics":     metricsReport,
-	"engines":     enginesReport,
-	"firewall":    firewallReport,
-	"ladder":      ladderReport,
-	"honesty":     honestyReport,
-	"readiness":   readinessReport,
-	"procurement": procurementReport,
-	"debt":        debtReport,
-	"gates":       gatesReport,
-	"scorecard":   scorecardReport,
-	"corpus":      corpusReport,
-	"ontology":    ontologyReport,
-	"templates":   templatesReport,
-	"failures":    failuresReport,
-	"claims":      claimsReport,
-	"api":         apiReport,
+	"assurance":    assuranceReport,
+	"metrics":      metricsReport,
+	"engines":      enginesReport,
+	"headline":     headlineReport,
+	"boundary":     boundaryReport,
+	"freeze":       freezeReport,
+	"battlefields": battlefieldsReport,
+	"passport":     passportReport,
+	"triage":       triageReport,
+	"copies":       copiesReport,
+	"firewall":     firewallReport,
+	"ladder":       ladderReport,
+	"honesty":      honestyReport,
+	"readiness":    readinessReport,
+	"procurement":  procurementReport,
+	"debt":         debtReport,
+	"gates":        gatesReport,
+	"scorecard":    scorecardReport,
+	"corpus":       corpusReport,
+	"ontology":     ontologyReport,
+	"templates":    templatesReport,
+	"failures":     failuresReport,
+	"claims":       claimsReport,
+	"api":          apiReport,
 }
 
 // order is the sequence `veriqoctl all` prints.
@@ -109,7 +127,8 @@ var reports = map[string]func() (string, error){
 // It leads with readiness and procurement because a reader who stops
 // after the first screen should have been told what is missing and
 // what it costs, not what works.
-var order = []string{"readiness", "procurement", "engines", "firewall", "ladder", "metrics",
+var order = []string{"headline", "boundary", "freeze", "battlefields", "passport",
+	"triage", "copies", "readiness", "procurement", "engines", "firewall", "ladder", "metrics",
 	"honesty", "assurance", "debt", "scorecard", "gates", "corpus",
 	"ontology", "templates", "failures", "claims", "api"}
 
@@ -175,6 +194,60 @@ func metricsReport() (string, error) { return metrics.VeriqoPanel() }
 // engine is forbidden. The diagram is in pkg/engine's doc comment; what
 // this prints is the part the build checks.
 func enginesReport() (string, error) { return engine.Describe(), nil }
+
+// headlineReport leads with the nine measures, none of which VERIQO
+// can raise by working harder. The test count is deliberately not
+// among them.
+func headlineReport() (string, error) {
+	b, err := dashboard.Veriqo()
+	if err != nil {
+		return "", err
+	}
+	return b.Report(), nil
+}
+
+// boundaryReport prints where the assurance ladder stops.
+func boundaryReport() (string, error) { return boundary.Report(), nil }
+
+// freezeReport prints what Round 6 built and what it refused itself.
+func freezeReport() (string, error) {
+	r, err := freeze.Round6()
+	if err != nil {
+		return "", err
+	}
+	return r.Report(), nil
+}
+
+func battlefieldsReport() (string, error) { return readiness.BattlefieldReport(), nil }
+
+// passportReport prints the flagship decision passport. It is the
+// longest report here and the only one a customer would read first.
+func passportReport() (string, error) {
+	p, err := flagship.Passport()
+	if err != nil {
+		return "", err
+	}
+	return p.Render(), nil
+}
+
+// triageReport shows one AIS observation with every cause consistent
+// with it, and no cause selected.
+func triageReport() (string, error) {
+	t, err := flagship.Triage()
+	if err != nil {
+		return "", err
+	}
+	return t.Report(), nil
+}
+
+// copiesReport shows five reports reducing to three observations.
+func copiesReport() (string, error) {
+	an, err := flagship.CopyAnalysis()
+	if err != nil {
+		return "", err
+	}
+	return an.Report(), nil
+}
 
 // ladderReport demonstrates the rungs on the audit's own three
 // sentences, because the distinction is easier to see than to state.

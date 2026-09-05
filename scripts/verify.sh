@@ -125,6 +125,41 @@ run "the challenge is executable, not documentary" bash -c '
     grep -q "EXPECTED OUTPUTS -- stated in advance" "$k" &&
     grep -q "NEGATIVE CASES -- attacks that must be refused" "$k" &&
     grep -q "KNOWN FAILURE MODES -- wrong, and not fixed" "$k"'
+run "the assurance ladder has a stated boundary" bash -c '
+    out=$(go run ./cmd/veriqoctl boundary) || exit 1
+    printf "%s" "$out" | grep -q "THE BOUNDARY" &&
+    printf "%s" "$out" | grep -q "reachable by writing Go"'
+run "a fifth layer of self-verification is refused" bash -c '
+    go test ./pkg/assurance/boundary/ -run "TestAVerifierForTheVerifierIsRefused|TestAGoodRationaleDoesNotBuyAWayPastTheBoundary" -count=1 >/dev/null'
+run "the freeze refused something Round 6 wanted" bash -c '
+    go test ./pkg/freeze/ -run "TestRound6RefusedSomething|TestTheRefusedWorkIncludesSomethingWorthDoing" -count=1 >/dev/null'
+run "the test count is not the headline" bash -c '
+    out=$(go run ./cmd/veriqoctl headline) || exit 1
+    ! printf "%s" "$out" | grep -qE "^ +(tests passed|test count)" &&
+    printf "%s" "$out" | grep -q "test count is deliberately absent"'
+run "NOT MEASURED is not rendered as zero" bash -c '
+    out=$(go run ./cmd/veriqoctl headline) || exit 1
+    printf "%s" "$out" | grep -q "NOT MEASURED" &&
+    printf "%s" "$out" | grep -q "NOT MEASURED is not zero"'
+run "nothing on the headline is movable by VERIQO alone" bash -c '
+    go test ./pkg/dashboard/ -run TestNothingOnTheBoardIsMovableByVeriqoAlone -count=1 >/dev/null'
+run "an AIS gap is never called spoofing" bash -c '
+    go test ./pkg/intel/maritime/ -run "TestSpoofingIsNeverTheOnlyExplanation|TestTheStatementNeverNamesACause" -count=1 >/dev/null'
+run "no discriminator for spoofing lives inside AIS" bash -c '
+    go test ./pkg/intel/maritime/ -run TestNoDiscriminatorLivesInsideAIS -count=1 >/dev/null'
+run "fifty copies of one story are one observation" bash -c '
+    go test ./pkg/qualification/independence/ -run "TestFiftyCopiesOfOneStoryAreOneObservation|TestThereIsNoFunctionThatReportsIndependence" -count=1 >/dev/null'
+run "the flagship passport refuses to conclude" bash -c '
+    out=$(go run ./cmd/veriqoctl passport) || exit 1
+    printf "%s" "$out" | grep -q "INSUFFICIENT_TO_DECIDE" &&
+    printf "%s" "$out" | grep -q "VERIQO assembled this decision. It did not take it." &&
+    printf "%s" "$out" | grep -q "NOT_EXTERNALLY_QUALIFIED"'
+run "the flagship passport says it is synthetic first" bash -c '
+    go run ./cmd/veriqoctl passport | head -8 | grep -q "SYNTHETIC"'
+run "the passport cuts five accounts to three observations" bash -c '
+    go run ./cmd/veriqoctl copies | grep -q "EFFECTIVE OBSERVATIONS: 3"'
+run "every battlefield states a fail condition" bash -c '
+    go test ./pkg/readiness/ -run "TestEveryBattlefieldStatesAFailConditionNotJustAPass|TestBattlefieldFourDoesNotPassOnAgreement" -count=1 >/dev/null'
 run "the four engines are separated" bash -c '
     out=$(go run ./cmd/veriqoctl engines) || exit 1
     printf "%s" "$out" | grep -q "DECIDE is not." &&
