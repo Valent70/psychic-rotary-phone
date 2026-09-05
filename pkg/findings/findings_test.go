@@ -94,12 +94,12 @@ func request(t *testing.T) MintRequest {
 	return MintRequest{
 		ID: "finding:f1", CaseID: "case-1",
 		Claim: testClaim(), Proof: testProof(t, true),
-		Confidence:  vector(t),
-		Limitations: []string{"the discharge survey covers one tank of three"},
-		Proposer:    person("human:analyst-1"),
-		Approver:    person("human:reviewer-1"),
+		Confidence:    vector(t),
+		Limitations:   []string{"the discharge survey covers one tank of three"},
+		Proposer:      person("human:analyst-1"),
+		Approver:      person("human:reviewer-1"),
 		ApproverGrant: grantFor("human:reviewer-1", authority.Reviewer),
-		At:          now,
+		At:            now,
 	}
 }
 
