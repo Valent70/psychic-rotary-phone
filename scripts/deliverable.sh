@@ -25,8 +25,8 @@ D="$WORK/$NAME"
 mkdir -p "$D/reports" "$OUT"
 
 echo "==> generating the reports"
-for r in readiness metrics honesty assurance debt gates scorecard corpus ontology \
-         templates failures claims api all; do
+for r in readiness firewall metrics honesty assurance debt gates scorecard corpus \
+         ontology templates failures claims api all; do
     go run ./cmd/veriqoctl "$r" > "$D/reports/$r.txt" 2>&1
 done
 
@@ -76,6 +76,11 @@ git archive --format=tar --prefix=source/ HEAD | tar -x -C "$D"
     echo "Check the capsule without trusting any of the above:"
     echo
     echo "  cd source && go run ./cmd/veriqo-verify ../capsule"
+    echo
+    echo "And read capsule/CHALLENGE.txt first. This capsule is not assembled to"
+    echo "show that VERIQO is safe -- it is assembled to make it as easy as"
+    echo "possible for you to show that it is not, and it ranks our own weakest"
+    echo "points by name."
     echo
     echo "The verifier recomputes every digest, rehashes the ledger from genesis,"
     echo "and DERIVES the qualification state rather than reading it. The worked"

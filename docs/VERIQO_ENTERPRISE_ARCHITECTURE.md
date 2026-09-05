@@ -3,7 +3,7 @@
 ## Evidence-Qualified Intelligence OS — Enterprise Architecture and Assurance Report
 
 **Repository:** `veriqo` (Go 1.24.7) · **Branch:** `claude/veriqo-enterprise-architecture-7j56b9`  
-**Report date:** 5 September 2026 · **Round 3** (supersedes Rounds 1 and 2)
+**Report date:** 5 September 2026 · **Round 4** (supersedes Rounds 1–3)
 
 **Status: SPECIFICATIONALLY IMPLEMENTED. NOT PRODUCTION QUALIFIED.**
 
@@ -13,7 +13,226 @@ is not VERIQO. Nothing in the assurance register is above `INTERNALLY_ASSURED`.
 
 ---
 
-## 0. What changed in Round 3
+## 0. What changed in Round 4
+
+The Round 3 audit was titled *Epistemic Firewall*, and it named the deepest
+principle in the system so far — plus five ways the honest machinery could still
+mislead.
+
+| # | Finding | The failure it names |
+|---|---|---|
+| 1 | **The Epistemic Firewall** | `unknown → assumed → scored → trusted → decision`, where nothing is ever falsified |
+| 2 | **H1–H4 as pseudo-certification** | "4/5 — nearly certified". H5 is not the next checkbox |
+| 3 | **No assurance mutation testing** | Nothing attacked the assurance graph *itself* |
+| 4 | **A readiness *level* hides *who* is blocking** | "How much further?" is the wrong question when the answer is "somebody else" |
+| 5 | **Source confidence as one number** | A legality objection offset by a fresh timestamp |
+| 6 | **Assurance bureaucracy risk** | More registers, more ledgers — and no investigation moving faster |
+
+### 0.1 The Epistemic Firewall
+
+> **Unreadable evidence can never increase assurance.**
+
+Four refusals, stated as inequalities because each names a pair that a system,
+left alone, will eventually treat as identical:
+
+```
+UNREADABLE   != VERIFIED     a document nobody could parse has not been
+                             checked and found clean -- it has not been checked
+UNPARSEABLE  != ABSENT       a field that failed to decode is a FAULT in the
+                             observation; one that is not there is a FACT
+MISSING      != VALID        skipping a check is not passing it
+UNKNOWN      != NEGATIVE     not having found something is not having found
+                             its absence
+```
+
+Every one of these failures happens through a **zero value**: an unpopulated
+field is empty, empty compares equal to "nothing was there", and that is
+routinely read as "nothing is wrong". So `pkg/epistemic` makes the unreadable
+case a *value* rather than an absence, and the zero value is `UNEXAMINED` — not
+"fine", and not "absent" either, because **nobody looked, and that is a third
+thing**.
+
+Two consequences worth stating. `ABSENT` deliberately cannot increase assurance:
+confirmed absence is real information *about what is not there*. And coverage
+reports four counts, **never a ratio** — "4 of 6" reads as two-thirds of the way
+to something, and the missing two are not two-thirds of anything: one of them may
+be the one that mattered.
+
+### 0.2 H5 is not the next checkbox
+
+```
+H1 [x]  H2 [x]  H3 [x]  H4 [x]  H5 [ ]
+```
+
+Every human being reads that as *"four of five — nearly certified"*. The reading
+is not careless; it is **what a five-item checklist means**. And it is wrong:
+
+```
+H1..H4   VERIQO evaluating VERIQO
+H5       an INDEPENDENT PARTY evaluating VERIQO
+```
+
+That is not one more check. It is a **change of who is speaking**, and no number
+of internal checks moves any distance toward it. So the levels are grouped by
+epistemic source and never counted:
+
+```
+INTERNAL CLAIM SCREENING     H1 H2 H3 H4
+EXTERNAL CLAIM VALIDATION    NOT PERFORMED. No check in this group exists.
+```
+
+There is no `Fraction`, no `Score`, no `Percent` and no `N/M` anywhere in the
+package — and a test asserts the report contains none. It ends: *"Everything above
+is VERIQO evaluating VERIQO. It is not four fifths of anything."*
+
+### 0.3 Assurance mutation testing
+
+`test/adversarial` assumes somebody who wants to change what VERIQO says about the
+**world**. `test/assurancemutation` assumes the likelier attacker: somebody who
+wants to change what VERIQO says about **itself** — not a hostile outsider, an
+insider under commercial pressure three days before a deadline, editing a field.
+
+Nine targets, every one rejected:
+
+| Mutation | Rejected because |
+|---|---|
+| Validator changed to VERIQO | The validator must not be the implementer |
+| Independence claimed without attestation | `AttestedBy` cannot be empty or self |
+| Internal evidence relabelled external | The class check runs on the validator |
+| Artefact hash removed | A report could be reused for a later version |
+| Claim level raised | Unsupported by evidence of the required class |
+| Open counterexample hidden by raising the level | Caps at `IMPLEMENTED` |
+| Qualification emitted above the evidence | Corrected downward at **every** surface |
+| Gate stripped of its controls | Refused at construction |
+| Every gate's required level lowered | Release still refused — the **debts** block it independently |
+
+That last row is the structural result: if lowering the bar closed a gate, the bar
+would be the only thing holding it — **and a bar is a number in a file**.
+
+A mutation suite asserts something a test suite cannot: that each *specific field*
+is load-bearing. A field nobody checks can be changed freely, and no test that only
+exercises valid records will ever notice.
+
+### 0.4 A status that names a party
+
+| Dimension | Status | Blocked on |
+|---|---|---|
+| Architecture | `INTERNALLY_ASSURED` | — |
+| Semantics | `INTERNALLY_ASSURED` | — |
+| Implementation | `INTERNALLY_ASSURED` | — |
+| **Security** | `PENDING_EXTERNAL` | An independent assessor |
+| **Cryptography** | `PENDING_EXTERNAL` | An independent assessor |
+| **Legal** | `PENDING_COUNSEL` | Counsel, per jurisdiction |
+| **Data rights** | `PENDING_PARTNER` | A commercial partner |
+| **Operations** | `NOT_YET_PROVEN` | Nobody — infrastructure and time |
+| **Production** | `NOT_QUALIFIED` | Every dimension above |
+
+A *level* invites "how much further?" — the right question for work the builder can
+do and the wrong one for everything else. A **status names the party**. Nine
+dimensions rather than five, because collapsing security with cryptography, or data
+rights with legal, hides that they are blocked on **different parties with
+different lead times**: one row says *find an assessor*; two say *find an assessor
+and a cryptographer*, which is a different procurement.
+
+The report's most useful section is now **WHO WE NEED**, and it ends with:
+*nothing remaining is movable by the builder alone.*
+
+### 0.5 The Source Trust Vector
+
+```
+source confidence = 0.8
+```
+
+is the most damaging simplification available in this domain. A source whose
+`ATTRIBUTION` is unknown and whose `AUTHENTICITY` is confirmed is not "somewhat
+trustworthy" — it is **a document we can prove is genuine and cannot say who
+wrote**. That is a specific situation with specific consequences, and 0.8 erases
+it.
+
+Worse, the number is directional in a way its users forget: a weakness in
+`LEGALITY` cannot be compensated by strength in `TIMELINESS`. Averaging them
+produces a figure in which **a lawyer's objection is offset by a fresh timestamp**.
+
+Nine dimensions, no combining function. Only `LEGALITY` is disqualifying —
+everything else weakens, and weakness is for a human to weigh. `Weakest()` returns
+a **dimension**, because the answer to "how much can I trust this" is a name.
+
+### 0.6 Track B: the maritime chain, and an answer that is not a finding
+
+The audit's sharpest strategic warning: VERIQO must not become an *assurance
+bureaucracy machine* — more registers, more ledgers, more manifests, and no
+investigation moving faster.
+
+```
+        INTELLIGENCE OS                    TRUST OS
+        What happened?                     Can we prove it?
+        What is happening?                 Why should we trust it?
+        What may happen?                   What contradicts it?
+                    \                     /
+                     DECISION PASSPORT
+```
+
+`test/maritime` runs one vertical end to end: observation → evidence → provenance
+→ independence → contradiction → hypothesis → **decision passport** → replay. The
+case has the shape real ones have — two AIS vendors reselling one network are
+**one producer**; an anonymous tip resolves to **nobody** and makes the whole
+structure `UNASSESSABLE`.
+
+And the result is deliberately **not a finding**:
+
+```
+H1  0.38   cargo was loaded during the gap
+H2  0.34   ballast was taken on and the earlier draught was stale
+H3  0.28   the draught values are a data-entry artefact
+x H4  0.00 the vessel left and returned
+           -- under 4 NM either side of the gap; no departure could produce that
+
+NO HYPOTHESIS IS MEANINGFULLY AHEAD.
+```
+
+That is the answer real evidence gives most of the time, and **a pipeline that can
+only produce conclusions is one that will produce them when it should not.**
+
+### 0.7 The Decision Passport, and the ordering rule
+
+A dashboard says *"here is the answer"*. A passport says: here is the answer, the
+evidence, the contradictions, the provenance, the uncertainty, and exactly what
+would overturn it.
+
+**The unflattering numbers come first.** Contradictions and unresolved questions
+render *above* the hypotheses; qualification and external validation are the last
+thing a reader sees. Ordering is not presentation here — a document that leads with
+its conclusion and buries its contradictions is **making an argument**, and this is
+not supposed to be one.
+
+The header counts cannot drift from the lists: a summary that disagrees with its
+own body is how a document becomes a misrepresentation without anybody lying.
+
+### 0.8 The External Challenge Package
+
+The capsule is no longer assembled to *prove VERIQO is safe*. It is assembled to
+**make it easy for an outsider to prove VERIQO wrong** — almost the same files, a
+completely different document, and only the second is worth an assessor's time.
+
+`CHALLENGE.txt` ranks our own weakest points, by name:
+
+1. **The canonicaliser** — every digest passes through it; a divergence would be
+   invisible from inside (ED-011)
+2. **The verifier's shared code** — if you do not supply your own canonicaliser, our
+   verifier's PASS is worth less than it looks
+3. **Redaction irrecoverability** — we claim absence in twelve encodings, not
+   irrecoverability, and nobody has ever tried (ED-004)
+4. **The injection defence** — ten tests, no counterexamples, written by the people
+   who wrote the defence (ED-005)
+5. **The assurance layer itself** — nine mutation targets; find a tenth
+6. **The source-class lawfulness model** — engineering's reading, not counsel's (ED-010)
+
+It also says what would *not* be a useful finding: *that the system is not
+production ready. It says so itself, in code, on every run.*
+
+---
+
+## 0b. What changed in Round 3
 
 The Round 2 audit found something more uncomfortable than a missing feature: **the
 system's own honesty machinery could produce false assurance.** Six findings, all
@@ -199,7 +418,7 @@ where to look, and its consequence.
 
 ---
 
-## 0b. What changed in Round 2
+## 0c. What changed in Round 2
 
 Round 1 built the qualification kernel and reported honestly on it. The audit that
 followed made a sharper point, and it was correct:
@@ -223,7 +442,7 @@ Plus: readiness as five dimensions instead of a percentage; the gate lifecycle a
 state machine; `ESTIMATE ≠ MEASURED ≠ VALIDATED ≠ PRODUCTION_PROVEN` as a type; the
 decision passport as six product kinds; and the repository hygiene the audit flagged.
 
-**62 packages · 161 files · ~51,300 lines · 870 tests · `go vet` clean · verify.sh 27/27.**
+**65 packages · 168 files · ~54,000 lines · 918 tests · `go vet` clean · verify.sh 31/31.**
 
 *And the number above is exactly the kind of figure §0.1 exists to warn you about.*
 
@@ -744,7 +963,7 @@ examined, attacked, validated or corroborated any part of this system.*
 ## 15. Verification
 
 ```
-./scripts/verify.sh    # 27 passed, 0 failed, 16 explicitly NOT run
+./scripts/verify.sh    # 31 passed, 0 failed, 16 explicitly NOT run
 ```
 
 The honesty checks fail the build if the system starts overstating itself:
@@ -792,7 +1011,23 @@ real, and this report is written so that no reader can conclude otherwise.
 
 ---
 
-## 17. The honest summary
+## 17. Do not chase GREEN
+
+The audit's closing point, and the right one to end on.
+
+VERIQO must not be built to produce GREEN. It must be built so that GREEN appears
+**only when it is earned** — because in maritime dispute, commodity, insurance and
+trade finance, **one false green can be worth millions**, and a correct RED is worth
+far more than a wrong GREEN.
+
+Everything in this report is downstream of that. The refusals, the four
+inequalities, the mutation suite, the status that names a party, the passport that
+leads with its contradictions — none of them make the system look better. Every one
+of them makes it harder for the system to look better than it is.
+
+---
+
+## 18. The honest summary
 
 > Architecture high, semantics high, implementation substantial. Production
 > infrastructure not started, external validation not started. The weakest dimension is

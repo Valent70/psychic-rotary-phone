@@ -14,7 +14,7 @@ import "fmt"
 // Software returns what the builder has established alone.
 func Software() (*Set, error) {
 	return New(SoftwareVerification,
-		Measure{Register: SoftwareVerification, Name: "tests", Value: "870",
+		Measure{Register: SoftwareVerification, Name: "tests", Value: "918",
 			Basis: "counted from the module: every function named Test* in a _test.go file",
 			Caveat: "a test count is not a quality measure. The cheapest way to raise it " +
 				"is to assert what the code already does, and nothing here distinguishes " +
@@ -26,9 +26,10 @@ func Software() (*Set, error) {
 				"looked. This is level A1 of three (developer / independent grey-box / " +
 				"black-box), and A2 and A3 have not happened"},
 		Measure{Register: SoftwareVerification, Name: "defects found by attacking",
-			Value: "3, all fixed",
-			Basis: "the adversarial suite's first run: two in the ledger's tamper " +
-				"detection, one in the redaction worker's size handling",
+			Value: "4, all fixed",
+			Basis: "the adversarial suites' first runs: two in the ledger's tamper " +
+				"detection, one in the redaction worker's size handling, and one in the " +
+				"verifier itself -- it silently skipped unparseable JSON",
 			Caveat: "this is the most informative number in this register, and it is " +
 				"also evidence that the earlier tests were not looking in the right " +
 				"places. Two of the three were in controls a marketing claim would rest on"},
