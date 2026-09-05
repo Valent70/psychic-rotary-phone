@@ -74,6 +74,41 @@ verifier: for that, use veriqo-verify, which recomputes rather than
 reads and does not trust the system it is checking.
 `
 
+// reports is every report veriqoctl can produce, keyed by subcommand.
+//
+// It is package-level, with `order` beside it, because the two have to
+// agree: a name in `order` that is missing from `reports` makes
+// `veriqoctl all` panic on a nil function, and a report in `reports`
+// that is missing from `order` is silently unreachable from `all`.
+// Both have happened. TestEveryReportIsReachable holds them together.
+var reports = map[string]func() (string, error){
+	"assurance":   assuranceReport,
+	"metrics":     metricsReport,
+	"firewall":    firewallReport,
+	"ladder":      ladderReport,
+	"honesty":     honestyReport,
+	"readiness":   readinessReport,
+	"procurement": procurementReport,
+	"debt":        debtReport,
+	"gates":       gatesReport,
+	"scorecard":   scorecardReport,
+	"corpus":      corpusReport,
+	"ontology":    ontologyReport,
+	"templates":   templatesReport,
+	"failures":    failuresReport,
+	"claims":      claimsReport,
+	"api":         apiReport,
+}
+
+// order is the sequence `veriqoctl all` prints.
+//
+// It leads with readiness and procurement because a reader who stops
+// after the first screen should have been told what is missing and
+// what it costs, not what works.
+var order = []string{"readiness", "procurement", "firewall", "ladder", "metrics",
+	"honesty", "assurance", "debt", "scorecard", "gates", "corpus",
+	"ontology", "templates", "failures", "claims", "api"}
+
 func main() {
 	flag.Usage = func() { fmt.Fprint(os.Stderr, usage) }
 	flag.Parse()
@@ -90,27 +125,6 @@ func main() {
 		}
 		return
 	}
-
-	reports := map[string]func() (string, error){
-		"assurance":   assuranceReport,
-		"metrics":     metricsReport,
-		"firewall":    firewallReport,
-		"ladder":      ladderReport,
-		"honesty":     honestyReport,
-		"readiness":   readinessReport,
-		"procurement": procurementReport,
-		"debt":        debtReport,
-		"gates":       gatesReport,
-		"scorecard":   scorecardReport,
-		"corpus":      corpusReport,
-		"ontology":    ontologyReport,
-		"templates":   templatesReport,
-		"failures":    failuresReport,
-		"claims":      claimsReport,
-		"api":         apiReport,
-	}
-	order := []string{"readiness", "procurement", "firewall", "ladder", "metrics", "honesty", "assurance", "debt", "scorecard", "gates", "corpus",
-		"ontology", "templates", "failures", "claims", "api"}
 
 	var run []string
 	if cmd == "all" {
